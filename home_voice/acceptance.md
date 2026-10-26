@@ -1,4 +1,8 @@
-# Jarvis doma — praktické ověření (dosud neprovedeno)
+# Jarvis doma — ověření
+
+Automaticky prošlo 54 testů včetně 8 testů skutečných YAML/Jinja podmínek a modelovaných stavových sekvencí TV automatiky. [CI 40353927336](https://github.com/mlegnavsky/jarvis/actions/runs/40353927336) ověřilo i sestavení a start doplňků na zdrojovém commitu `69bbdc76c45be9789dab84ebefa9668bc86c9800`. To nenahrazuje HA runtime ani akustické zkoušky.
+
+## Praktické ověření — dosud neprovedeno
 
 Testy provádět nejprve bez povolených domácích změn. U každé zkoušky zaznamenat úspěšná oslovení, falešná probuzení, srozumitelnost a odezvu. Audio soukromých rozhovorů není nutné ukládat. Samotný test nepotvrzuje rozpoznávání identity mluvčího.
 
