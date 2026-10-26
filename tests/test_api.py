@@ -1,4 +1,7 @@
 import tempfile
+import asyncio
+from app.actions import Actions
+from app.audit import Audit
 import unittest
 from pathlib import Path
 from aiohttp.test_utils import TestClient, TestServer
@@ -109,3 +112,22 @@ class APITests(unittest.IsolatedAsyncioTestCase):
         response = await self.http.post('/v1/actions', headers=self.headers(), data='not json')
         self.assertEqual(response.status, 400)
         self.assertIn('error', await response.json())
+
+    async def test_interrupted_action_is_not_replayed_after_restart(self):
+        directory = Path(self.tmp.name)
+        actions = Actions(self.ha, self.options, directory, Audit(directory))
+        original = self.ha.service
+        async def interrupted(*args):
+            await original(*args)
+            raise asyncio.CancelledError()
+        self.ha.service = interrupted
+        body = {'entity_id': 'light.test', 'service': 'light.turn_on', 'data': {}}
+        with self.assertRaises(asyncio.CancelledError):
+            await actions.execute(body, 'interrupted')
+        self.ha.service = original
+        await self.http.close()
+        await self.open_client()
+        response = await self.action(body, key='interrupted')
+        self.assertEqual(response.status, 409)
+        self.assertEqual((await response.json())['error'], 'action_outcome_unknown')
+        self.assertEqual(len(self.fixture.effects), 1)

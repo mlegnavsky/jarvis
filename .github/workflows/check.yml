@@ -27,3 +27,11 @@ jobs:
           context: ./${{ matrix.app }}
           platforms: linux/arm64,linux/amd64
           push: false
+      - name: Load amd64 image for startup check
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.app }}
+          platforms: linux/amd64
+          load: true
+          tags: jarvis-smoke:local
+      - run: python scripts/smoke_container.py ${{ matrix.app }}
