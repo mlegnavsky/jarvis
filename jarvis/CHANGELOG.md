@@ -1,3 +1,8 @@
+# 0.2.3 — nové vydání pro Green
+
+- Nové číslo vydání v manifestu i programu; zahrnuje opravu původu přihlašovacího formuláře a diagnostiku z verze 0.2.2.
+- Nastavení a klíče se nemění. Zbývající chybu OAuth je nutné ověřit po instalaci; změna čísla verze sama neopravuje nesoulad údajů aktualizační entity Home Assistantu.
+
 # 0.2.2 — experimental diagnostics
 
 - Distinguish missing form transaction, unknown/consumed transaction, expiration and invalidated configuration during browser consent. Token endpoints retain generic invalid_grant responses.
