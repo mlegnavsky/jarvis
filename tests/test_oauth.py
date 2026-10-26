@@ -97,6 +97,23 @@ class OAuthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.headers['Referrer-Policy'], 'same-origin')
         await self.authorize()
 
+    async def test_consent_csp_allows_registered_callback_redirect(self):
+        response = await self.http.get('/oauth/authorize', params=self.params())
+        policy = response.headers['Content-Security-Policy']
+        directives = {part.strip().split()[0]: part.strip().split()[1:]
+                      for part in policy.split(';') if part.strip()}
+        self.assertEqual(set(directives['form-action']), {"'self'", 'https://chatgpt.com'})
+        self.assertEqual(directives['default-src'], ["'none'"])
+        self.assertEqual(directives['frame-ancestors'], ["'none'"])
+        code = await self.authorize()
+        self.assertEqual((await self.exchange(code)).status, 200)
+
+    async def test_invalid_callback_cannot_inject_csp_sources(self):
+        self.oauth.redirects = ["https://chatgpt.com;evil.test/callback"]
+        response = await self.http.get('/oauth/authorize', params=self.params())
+        self.assertEqual(response.status, 503)
+        self.assertNotIn('evil.test', response.headers['Content-Security-Policy'])
+
     async def test_consent_rejects_null_missing_and_foreign_origins(self):
         for origin in (None, 'null', 'https://evil.test'):
             headers = {} if origin is None else {'Origin': origin}

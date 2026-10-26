@@ -61,7 +61,9 @@ class OAuth:
             raise APIError(503, 'mcp_setup_required')
         for value in self.redirects:
             target = urlsplit(value)
-            if target.scheme != 'https' or not target.hostname or target.username or target.password or target.fragment or target.query:
+            if (target.scheme != 'https' or not target.hostname or target.username or target.password
+                    or target.fragment or target.query
+                    or not re.fullmatch(r'[a-zA-Z0-9.-]+(?::[0-9]+)?', target.netloc)):
                 raise APIError(503, 'mcp_setup_required')
 
     def scopes(self):
@@ -151,8 +153,15 @@ class OAuth:
     def install(self, app):
         @web.middleware
         async def boundary(request, handler):
+            form_sources = "'self'"
             try:
                 self.ready()
+                # Chromium checks the redirect destination of a form POST
+                # against the initiating document's form-action policy too.
+                # Origins come only from validated, pre-registered callbacks;
+                # OAuth authorize/token still enforce exact redirect URIs.
+                form_sources += ' ' + ' '.join(sorted({
+                    'https://' + urlsplit(value).netloc for value in self.redirects}))
                 if request.headers.get('Origin') and request.headers['Origin'] != self.origin:
                     raise APIError(403, 'invalid_origin')
                 response = await handler(request)
@@ -162,7 +171,7 @@ class OAuth:
                 response = web.json_response({'error': 'invalid_request'}, status=400)
             response.headers.update({'Cache-Control': 'no-store', 'Pragma': 'no-cache',
                 'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff',
-                'Content-Security-Policy': "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"})
+                'Content-Security-Policy': "default-src 'none'; form-action " + form_sources + "; frame-ancestors 'none'; base-uri 'none'"})
             return response
         # This middleware is path-scoped so existing REST authentication is unchanged.
         @web.middleware

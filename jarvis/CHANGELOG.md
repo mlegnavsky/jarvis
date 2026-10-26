@@ -1,3 +1,9 @@
+# 0.2.4
+
+- Oprava přesměrování přihlášení do ChatGPT: CSP formuláře dovoluje vlastní server a domény předem nastavených návratových adres. Chromium tak neblokuje návrat po prvním potvrzení.
+- Přesná kontrola návratové adresy, Origin, CSRF, cookies a PKCE zůstává zachována. Domény návratových adres jsou ověřené před sestavením CSP.
+- Ověřeno testy HTTP hlaviček a OAuth; dokončení skutečného spojení ChatGPT vyžaduje nový pokus po aktualizaci.
+
 # 0.2.3
 
 - Nové číslo vydání v manifestu i programu; zahrnuje opravu původu přihlašovacího formuláře a diagnostiku z verze 0.2.2.
