@@ -1,3 +1,10 @@
+# 3.0.0
+
+- Sjednocené vydání Jarvise 3.0.0: stejné číslo v manifestu, běžícím programu a seznamu změn.
+- Automatická kontrola vydání odmítne nesoulad verzí a nadpisy seznamu změn, které Home Assistant neumí správně vybrat. Regresní testy ověřují skutečné odmítnutí vadných balíčků.
+- Obsahuje opravu OAuth CSP přesměrování z 0.2.4 a podrobnou diagnostiku autorizace. Nastavení a klíče zůstávají kompatibilní.
+- Živé připojení ChatGPT je třeba potvrdit po instalaci; aktualizace neřeší obnovování uložených údajů aktualizační entity Home Assistantu.
+
 # 0.2.4
 
 - Oprava přesměrování přihlášení do ChatGPT: CSP formuláře dovoluje vlastní server a domény předem nastavených návratových adres. Chromium tak neblokuje návrat po prvním potvrzení.

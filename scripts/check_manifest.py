@@ -1,10 +1,18 @@
 from pathlib import Path
 import ast
+import re
 import yaml
 
 for name in ('jarvis', 'jarvis_updater'):
     directory = Path(name)
     config = yaml.safe_load((directory / 'config.yaml').read_text())
+    version = config['version']
+    assert isinstance(version, str) and re.fullmatch(r'\d+\.\d+\.\d+', version), f'{name}: invalid release version'
+    changelog = (directory / 'CHANGELOG.md').read_text()
+    headings = [line for line in changelog.splitlines() if line.startswith('# ')]
+    assert headings and headings[0] == f'# {version}', f'{name}: changelog must start with exact manifest version'
+    assert all(re.fullmatch(r'# \d+\.\d+\.\d+', line) for line in headings), f'{name}: changelog version headings must have no suffix'
+    assert len(headings) == len(set(headings)), f'{name}: duplicate changelog version'
     assert config['slug'] == name
     assert 'aarch64' in config['arch']
     assert config['init'] is False
@@ -16,6 +24,10 @@ for name in ('jarvis', 'jarvis_updater'):
     for source in directory.rglob('*.py'):
         ast.parse(source.read_text())
 main = yaml.safe_load(Path('jarvis/config.yaml').read_text())
+runtime = ast.parse(Path('jarvis/app/__init__.py').read_text())
+runtime_versions = [ast.literal_eval(node.value) for node in runtime.body if isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name) and target.id == 'VERSION' for target in node.targets)]
+assert runtime_versions == [main['version']], 'Jarvis runtime version must match manifest version'
 assert main['options']['writes_enabled'] is False
 assert main['options']['maintenance_enabled'] is False
 assert main['hassio_role'] == 'default'
@@ -23,4 +35,4 @@ updater = yaml.safe_load(Path('jarvis_updater/config.yaml').read_text())
 assert updater['hassio_role'] == 'manager'
 assert updater['options']['updates_enabled'] is False
 assert 'ports' not in updater
-print('Manifests, permissions, pinned dependencies and Python syntax: OK')
+print('Release versions, HA changelogs, manifests, permissions, pinned dependencies and Python syntax: OK')
