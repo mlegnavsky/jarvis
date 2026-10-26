@@ -159,7 +159,7 @@ class OAuth:
             except (ValueError, UnicodeError):
                 response = web.json_response({'error': 'invalid_request'}, status=400)
             response.headers.update({'Cache-Control': 'no-store', 'Pragma': 'no-cache',
-                'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff',
+                'Referrer-Policy': 'same-origin', 'X-Content-Type-Options': 'nosniff',
                 'Content-Security-Policy': "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"})
             return response
         # This middleware is path-scoped so existing REST authentication is unchanged.

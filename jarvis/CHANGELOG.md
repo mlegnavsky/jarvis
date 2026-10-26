@@ -1,3 +1,9 @@
+# 0.2.1 — experimental
+
+- Fix browser OAuth consent rejected as invalid_origin: use same-origin referrer policy so form POST retains its Origin, without sending referrers to other origins.
+- Keep exact Origin, cookie and CSRF checks; missing, null and foreign origins remain rejected.
+- Regression tests cover the login response policy and denied origins. Actual ChatGPT completion still requires verification on Green.
+
 # 0.2.0 — experimental
 
 - OAuth-protected MCP connector with separate read/control/maintenance scopes.

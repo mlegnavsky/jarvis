@@ -89,6 +89,22 @@ class OAuthTests(unittest.IsolatedAsyncioTestCase):
             headers={'Origin': ORIGIN}, allow_redirects=False)
         self.assertEqual(response.status, 403)
 
+    async def test_login_page_preserves_same_origin_form_submission(self):
+        response = await self.http.get('/oauth/authorize', params=self.params())
+        # Fetch §3.2: no-referrer turns a navigation POST Origin into null,
+        # which the consent endpoint correctly rejects. Keep referrers local
+        # while preserving the browser's Origin on the same-origin form POST.
+        self.assertEqual(response.headers['Referrer-Policy'], 'same-origin')
+        await self.authorize()
+
+    async def test_consent_rejects_null_missing_and_foreign_origins(self):
+        for origin in (None, 'null', 'https://evil.test'):
+            headers = {} if origin is None else {'Origin': origin}
+            response = await self.http.post('/oauth/consent', headers=headers,
+                data={'owner_secret': OPTIONS['oauth_owner_secret']}, allow_redirects=False)
+            self.assertEqual(response.status, 403)
+            self.assertEqual((await response.json())['error'], 'invalid_origin')
+
     async def test_refresh_rotation_reuse_revokes_family_and_survives_restart(self):
         tokens = await (await self.exchange(await self.authorize())).json()
         self.oauth = OAuth(dict(OPTIONS), Path(self.tmp.name))
