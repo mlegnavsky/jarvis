@@ -1,3 +1,9 @@
+# 3.0.2
+
+- Obnova přihlášení přijme vynechaný parametr resource pouze u platného refresh tokenu svázaného s tímto Jarvisem. Klient nemusí při obnově opakovat již udělenou adresu API.
+- Výslovně chybná adresa, neplatné či odvolané tokeny a opakované použití refresh tokenu se nadále odmítají. Doba platnosti a rozsah oprávnění se nemění.
+- Regresní test obnovy přes skutečný HTTP endpoint po restartu a test zachování kontroly adresy API. Oprava neprokazuje příčinu všech odhlášení na straně konektoru.
+
 # 3.0.1
 
 - Podpora výslovně povoleného zamknutí lock.lock bez předávání kódu. Odemykání zůstává nepodporované.

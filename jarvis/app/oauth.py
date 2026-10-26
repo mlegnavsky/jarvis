@@ -262,7 +262,10 @@ class OAuth:
             if any(len(values.getall(key)) != 1 for key in values):
                 raise APIError(400, 'invalid_request')
             self.client(request, values)
-            if values.get('resource') != self.resource:
+            # A refresh grant already carries its audience. Clients may omit
+            # resource on renewal; an explicitly supplied target stays exact.
+            if (values.get('resource') != self.resource
+                    and not (values.get('grant_type') == 'refresh_token' and 'resource' not in values)):
                 raise APIError(400, 'invalid_target')
             reuse = False
             with self.db() as db:
@@ -279,6 +282,8 @@ class OAuth:
                     tokens = self.issue(db, code['scopes'])
                 elif values.get('grant_type') == 'refresh_token':
                     refresh = self.load(db, 'refresh', values.get('refresh_token'))
+                    if refresh.get('resource') != self.resource:
+                        raise APIError(400, 'invalid_target')
                     if refresh.get('used'):
                         self.revoke_family(db, refresh['family'])
                         reuse = True

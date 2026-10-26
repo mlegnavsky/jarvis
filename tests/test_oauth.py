@@ -165,6 +165,34 @@ class OAuthTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(APIError):
             changed.verify('Bearer '+tokens['access_token'], 'jarvis:read')
 
+    async def test_refresh_without_resource_preserves_granted_audience_after_restart(self):
+        tokens = await (await self.exchange(await self.authorize())).json()
+        await self.http.close()
+        self.oauth = OAuth(dict(OPTIONS), Path(self.tmp.name))
+        app = web.Application()
+        self.oauth.install(app)
+        self.http = TestClient(TestServer(app))
+        await self.http.start_server()
+        response = await self.http.post('/oauth/token', data={
+            'grant_type': 'refresh_token', 'refresh_token': tokens['refresh_token'],
+            'client_id': 'jarvis-chatgpt', 'client_secret': OPTIONS['oauth_client_secret']})
+        self.assertEqual(response.status, 200, await response.text())
+        rotated = await response.json()
+        granted = self.oauth.verify('Bearer '+rotated['access_token'], 'jarvis:read')
+        self.assertEqual(granted['resource'], ORIGIN+'/mcp')
+        self.assertNotEqual(rotated['refresh_token'], tokens['refresh_token'])
+
+    async def test_refresh_rejects_explicit_wrong_resource_without_consuming_token(self):
+        tokens = await (await self.exchange(await self.authorize())).json()
+        data = {'grant_type': 'refresh_token', 'refresh_token': tokens['refresh_token'],
+                'client_id': 'jarvis-chatgpt', 'client_secret': OPTIONS['oauth_client_secret']}
+        for resource in ('https://evil.test/mcp', ''):
+            response = await self.http.post('/oauth/token', data={**data, 'resource': resource})
+            self.assertEqual(response.status, 400)
+            self.assertEqual((await response.json())['error'], 'invalid_target')
+        response = await self.http.post('/oauth/token', data={**data, 'resource': ORIGIN+'/mcp'})
+        self.assertEqual(response.status, 200)
+
     async def test_expired_and_revoked_tokens_fail_closed(self):
         tokens = await (await self.exchange(await self.authorize())).json()
         response = await self.http.post('/oauth/revoke', data={'client_id': 'jarvis-chatgpt',
