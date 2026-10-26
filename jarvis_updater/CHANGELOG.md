@@ -1,4 +1,4 @@
-# 0.1.0 — experimental
+# 0.1.0
 
 - Fresh inventory through Supervisor Core REST and WebSocket.
 - Authenticated REST API, disabled-by-default allowlisted actions, durable idempotency and local audit.
