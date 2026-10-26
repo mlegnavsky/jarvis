@@ -7,13 +7,21 @@
 - Simulovaný Supervisor: záloha před aktualizací, její chyba blokuje update, zákaz jiných cílů, shoda verze a zdraví, obnova úlohy po restartu bez opakování aktualizace.
 - Kontrola manifestů, syntaxe a připnutých přímých závislostí.
 
+## MCP/OAuth 0.2.0 — automatické ověření
+
+46 testů prošlo včetně oficiálního MCP klienta 2.3.0. Ověřeny PKCE, callback/resource/client binding, oddělení REST tokenů, browser CSRF, expirace/revokace/rotace relací a rozsahy, stránkování, opakování povelu a omezení protokolových verzí.
+
+[CI běh 40343390859](https://github.com/mlegnavsky/jarvis/actions/runs/40343390859) úspěšně sestavil oba obrazy pro arm64/amd64 a spustil oba amd64 kontejnery s kontrolou autentizace na zdrojovém commitu `ed6e0cdc433572fc406f4037abc820114b6b472b`. Následný dokumentační commit zaznamenává tyto výsledky. Dva nálezy nezávislé kontroly byly reprodukovány a opraveny.
+
+Skutečné přihlášení v ChatGPT/Green/mobil/hlas zůstává neověřené; konkrétní checklist je v [chatgpt.md](chatgpt.md).
+
 ## Před instalací
 
 - [x] CI testy i sestavení obou kontejnerů pro arm64/amd64 jsou zelené.
 - [x] V CI provedena zkouška spuštění obou amd64 kontejnerů a autentizace proti simulovanému Supervisoru. Běh arm64 na skutečném Greenu zůstává neověřený.
 - [ ] Kód zkontrolován a schválen k začlenění do hlavní větve.
 
-Ověřeno 26. 10. 2026 na zdrojovém commitu `9a93a5b60a29e8868c97a80fc9c4700d034604b9`: [CI běh 40338981827](https://github.com/mlegnavsky/jarvis/actions/runs/40338981827). Všech 27 testů prošlo. Kontrola celé větve neodhalila Critical/Important nálezy.
+Původní verze 0.1.0 ověřena 26. 10. 2026 na zdrojovém commitu `9a93a5b60a29e8868c97a80fc9c4700d034604b9`: [CI běh 40338981827](https://github.com/mlegnavsky/jarvis/actions/runs/40338981827). Všech 27 testů prošlo. Kontrola celé větve neodhalila Critical/Important nálezy.
 
 ## Na Greenu — DOSUD NEPROVEDENO
 
