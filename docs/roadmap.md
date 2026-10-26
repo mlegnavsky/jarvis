@@ -7,7 +7,7 @@ První priorita je spolehlivé spojení a správně ověřený výsledek. Násle
 | 1. Skutečné spojení | Green → Cloudflare → OAuth/MCP → ChatGPT | Přihlášení, čerstvý stav, restart, mobilní data |
 | 2. Mapa domu | Oblasti, srozumitelné české názvy a seznam ovladatelných zařízení | Skutečný inventář; nic nenavrhovat podle domnělých zařízení |
 | 3. Běžné ovládání | Světla, vybrané zásuvky, scény a nastavení topení | Úzké služby, fyzické potvrzení výsledku, oprávnění pro jednotlivé cíle |
-| 4. Dostupnost a hlas | Skutečný ChatGPT hlas doma i na mobilu; nejprve existující počítač | Postup v [voice.md](voice.md); samostatně ověřit nástroje, rozhovor a oprávnění každého klienta |
+| 4. Dostupnost a hlas | Doma Jarvis přes OpenAI + místní Hey Jarvis; na mobilu Anička v ChatGPT | Postup v [voice.md](voice.md); samostatně ověřit nástroje, rozhovor a oprávnění každého klienta |
 | 5. Dohled a upozornění | Výpadky zařízení, teploty, baterie senzorů, chybové stavy | Lokální HA automatizace a oznámení, fungující i bez otevřeného chatu |
 | 6. Topení a energie | FVE Deye, baterie, přebytky, AKU a vytápění podle skutečně zapojeného systému | Nejdříve pouze měření; ověřené senzory, limity a ruční režim |
 | 7. Další členové domácnosti | Individuální účty, odvolání přístupu, role host/dítě/správce | Přechod na vhodného identity providera; současný jeden owner se nesdílí |

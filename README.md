@@ -7,7 +7,7 @@ Experimentální doplňky pro načtení aktuálního stavu domácnosti, povolen�
 
 Kód vzniká zde → po kontrole se začlení do hlavní větve a zvýší verze → Supervisor nabídne aktualizaci → povolený požadavek spustí zálohu, aktualizaci a kontrolu. GitHub není tunel ani spojení do domácnosti.
 
-[Instalace](docs/install.md) · [ChatGPT MCP/OAuth](docs/chatgpt.md) · [Propojení a API](docs/connection.md) · [Další rozvoj](docs/roadmap.md) · [Aktualizace a obnova](docs/updates.md) · [Ověření na Greenu](docs/acceptance.md)
+[Domácí hlasový Jarvis](home_voice/README.md) · [Instalace](docs/install.md) · [ChatGPT MCP/OAuth](docs/chatgpt.md) · [Propojení a API](docs/connection.md) · [Další rozvoj](docs/roadmap.md) · [Aktualizace a obnova](docs/updates.md) · [Ověření na Greenu](docs/acceptance.md)
 
 ## Lokální ověření
 
