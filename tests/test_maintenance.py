@@ -1,6 +1,7 @@
 import asyncio
 import tempfile
 import unittest
+import updater
 from pathlib import Path
 from aiohttp import web
 from aiohttp.test_utils import TestServer, TestClient
@@ -16,6 +17,8 @@ class SupervisorFixture:
         self.version = '0.1.0'
         self.latest = '0.2.0'
         self.slug = 'abc123_jarvis_updater'
+        self.jarvis_options = {'api_token': 'j' * 40, 'maintenance_enabled': False,
+                               'maintenance_token': '', 'writes_enabled': True}
         self.app = web.Application()
         self.app.router.add_route('*', '/{path:.*}', self.handle)
         self.server = TestServer(self.app)
@@ -30,7 +33,12 @@ class SupervisorFixture:
         if path == '/addons/self/info':
             value = {'slug': self.slug}
         elif path == '/addons/abc123_jarvis/info':
-            value = {'slug': 'abc123_jarvis', 'version': self.version, 'version_latest': self.latest, 'state': 'started'}
+            value = {'slug': 'abc123_jarvis', 'version': self.version, 'version_latest': self.latest, 'state': 'started', 'options': dict(self.jarvis_options)}
+        elif path == '/addons/abc123_jarvis/options':
+            self.jarvis_options = body['options']
+            value = {}
+        elif path == '/addons/abc123_jarvis/restart':
+            value = {}
         elif path == '/backups/new/partial':
             if self.backup_fails:
                 return web.json_response({'result': 'error', 'message': 'private diagnostic'})
@@ -82,6 +90,82 @@ class MaintenanceTests(unittest.IsolatedAsyncioTestCase):
         backup = next(body for path, body in self.fixture.effects if path == '/backups/new/partial')
         self.assertEqual(backup['addons'], ['abc123_jarvis'])
         self.assertFalse(backup['homeassistant'])
+
+    async def test_automatic_pairing_is_opt_in(self):
+        self.assertTrue(hasattr(updater, 'auto_pair'), 'Automatic pairing is not implemented')
+        options = {'updates_enabled': True}
+        await updater.auto_pair(self.sup, Path(self.tmp.name), options)
+        self.assertEqual(self.fixture.effects, [])
+        self.assertNotIn('api_token', options)
+
+    async def test_automatic_pairing_preserves_options_backs_up_and_survives_restart(self):
+        self.assertTrue(hasattr(updater, 'auto_pair'), 'Automatic pairing is not implemented')
+        directory = Path(self.tmp.name)
+        options = {'updates_enabled': True, 'auto_pairing': True}
+        await updater.auto_pair(self.sup, directory, options)
+        self.assertGreaterEqual(len(options['api_token']), 32)
+        self.assertNotEqual(options['api_token'], self.fixture.jarvis_options['api_token'])
+        self.assertEqual(options['jarvis_api_token'], 'j' * 40)
+        self.assertTrue(self.fixture.jarvis_options['writes_enabled'])
+        self.assertTrue(self.fixture.jarvis_options['maintenance_enabled'])
+        self.assertEqual(self.fixture.jarvis_options['maintenance_token'], options['api_token'])
+        paths = [p for p, _ in self.fixture.effects]
+        self.assertLess(paths.index('/backups/new/partial'), paths.index('/addons/abc123_jarvis/options'))
+        self.assertLess(paths.index('/addons/abc123_jarvis/options'), paths.index('/addons/abc123_jarvis/restart'))
+        self.assertEqual((directory / 'pairing.json').stat().st_mode & 0o777, 0o600)
+        self.fixture.effects.clear()
+        again = {'updates_enabled': True, 'auto_pairing': True}
+        await updater.auto_pair(self.sup, directory, again)
+        self.assertEqual(again['api_token'], options['api_token'])
+        self.assertEqual(self.fixture.effects, [])
+
+    async def test_automatic_pairing_blocks_failed_backup_and_unrelated_target(self):
+        self.assertTrue(hasattr(updater, 'auto_pair'), 'Automatic pairing is not implemented')
+        self.fixture.backup_fails = True
+        with self.assertRaises(APIError):
+            await updater.auto_pair(self.sup, Path(self.tmp.name), {'updates_enabled': True, 'auto_pairing': True})
+        self.assertNotIn('/addons/abc123_jarvis/options', [p for p, _ in self.fixture.effects])
+        self.fixture.effects.clear()
+        self.fixture.slug = 'core_unrelated'
+        with self.assertRaises(APIError):
+            await updater.auto_pair(self.sup, Path(self.tmp.name), {'updates_enabled': True, 'auto_pairing': True})
+        self.assertEqual(self.fixture.effects, [])
+
+    async def test_automatic_pairing_does_not_reenable_revoked_permission(self):
+        self.assertTrue(hasattr(updater, 'auto_pair'), 'Automatic pairing is not implemented')
+        await updater.auto_pair(self.sup, Path(self.tmp.name), {'updates_enabled': True, 'auto_pairing': True})
+        self.fixture.jarvis_options['maintenance_enabled'] = False
+        self.fixture.effects.clear()
+        with self.assertRaises(APIError) as caught:
+            await updater.auto_pair(self.sup, Path(self.tmp.name), {'updates_enabled': True, 'auto_pairing': True})
+        self.assertEqual(caught.exception.code, 'pairing_permission_revoked')
+        self.assertEqual(self.fixture.effects, [])
+
+    async def test_automatic_pairing_does_not_restore_removed_credentials(self):
+        await updater.auto_pair(self.sup, Path(self.tmp.name), {'updates_enabled': True, 'auto_pairing': True})
+        self.fixture.jarvis_options['maintenance_token'] = ''
+        self.fixture.effects.clear()
+        with self.assertRaises(APIError) as caught:
+            await updater.auto_pair(self.sup, Path(self.tmp.name), {'updates_enabled': True, 'auto_pairing': True})
+        self.assertEqual(caught.exception.code, 'pairing_credentials_changed')
+        self.assertEqual(self.fixture.effects, [])
+
+    async def test_interrupted_pairing_never_restores_revoked_permission(self):
+        original = self.sup.request
+        async def interrupted(method, path, body=None):
+            if path.endswith('/restart'):
+                raise APIError(502, 'supervisor_unavailable')
+            return await original(method, path, body)
+        self.sup.request = interrupted
+        with self.assertRaises(APIError):
+            await updater.auto_pair(self.sup, Path(self.tmp.name), {'updates_enabled': True, 'auto_pairing': True})
+        self.sup.request = original
+        self.fixture.jarvis_options['maintenance_enabled'] = False
+        self.fixture.effects.clear()
+        with self.assertRaises(APIError) as caught:
+            await updater.auto_pair(self.sup, Path(self.tmp.name), {'updates_enabled': True, 'auto_pairing': True})
+        self.assertEqual(caught.exception.code, 'pairing_permission_revoked')
+        self.assertEqual(self.fixture.effects, [])
 
     async def test_backup_failure_blocks_update(self):
         self.fixture.backup_fails = True
@@ -148,3 +232,4 @@ class MaintenanceTests(unittest.IsolatedAsyncioTestCase):
         self.health_ok = False
         result = await self.finished(await self.worker.start({'version': '0.2.0'}, 'job-1'))
         self.assertEqual(result['state'], 'failed')
+

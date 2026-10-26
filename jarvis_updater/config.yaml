@@ -1,5 +1,5 @@
 name: Jarvis Updater
-version: "0.1.0"
+version: "0.2.0"
 slug: jarvis_updater
 description: Experimental backup and verified updates for the sibling Jarvis app only
 url: https://github.com/mlegnavsky/jarvis
@@ -15,7 +15,10 @@ options:
   api_token: ""
   jarvis_api_token: ""
   updates_enabled: false
+  auto_pairing: false
 schema:
   api_token: password
   jarvis_api_token: password
   updates_enabled: bool
+  auto_pairing: bool
+

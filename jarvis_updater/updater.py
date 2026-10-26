@@ -5,6 +5,8 @@ import hmac
 import json
 import os
 import re
+import secrets
+import logging
 import uuid
 from pathlib import Path
 
@@ -173,6 +175,92 @@ class Maintenance:
                 await task
 
 
+async def auto_pair(supervisor, directory, options):
+    """Opt-in setup of this repository's sibling, without exposing credentials."""
+    if options.get('auto_pairing') is not True:
+        return
+    if options.get('updates_enabled') is not True:
+        raise APIError(403, 'pairing_permission_required')
+    if options.get('api_token') or options.get('jarvis_api_token'):
+        raise APIError(409, 'pairing_manual_tokens_present')
+    own = await supervisor.request('GET', '/addons/self/info')
+    match = re.fullmatch(r'([a-z0-9]+)_jarvis_updater', own.get('slug', ''))
+    if not match:
+        raise APIError(409, 'unexpected_updater_identity')
+    target = match[1] + '_jarvis'
+    info = await supervisor.request('GET', '/addons/' + target + '/info')
+    current = info.get('options')
+    if not isinstance(current, dict) or not isinstance(current.get('api_token'), str) or len(current['api_token']) < 32:
+        raise APIError(503, 'pairing_jarvis_not_configured')
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / 'pairing.json'
+
+    def persist(value):
+        temporary = path.with_suffix('.tmp')
+        with open(temporary, 'w', encoding='utf-8') as file:
+            os.chmod(temporary, 0o600)
+            json.dump(value, file)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, path)
+        descriptor = os.open(directory, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+    if path.exists():
+        try:
+            pairing = json.loads(path.read_text())
+        except (OSError, ValueError):
+            raise APIError(503, 'pairing_storage_invalid') from None
+        if (not isinstance(pairing, dict) or pairing.get('target') != target
+                or not isinstance(pairing.get('token'), str) or len(pairing['token']) < 32):
+            raise APIError(503, 'pairing_storage_invalid')
+        os.chmod(path, 0o600)
+    else:
+        if current.get('maintenance_token'):
+            raise APIError(409, 'pairing_existing_credentials')
+        pairing = {'target': target, 'token': secrets.token_urlsafe(48), 'activated': False}
+        persist(pairing)
+    token = pairing['token']
+    grant_started = pairing.get('grant_started') is True or pairing.get('activated') is True
+    if grant_started and current.get('maintenance_token') != token:
+        raise APIError(403, 'pairing_credentials_changed')
+    if current.get('maintenance_token') not in ('', None, token):
+        raise APIError(409, 'pairing_existing_credentials')
+    if grant_started and current.get('maintenance_enabled') is not True:
+        raise APIError(403, 'pairing_permission_revoked')
+    changed = current.get('maintenance_token') != token or current.get('maintenance_enabled') is not True
+    if changed:
+        backup = await supervisor.request('POST', '/backups/new/partial', {
+            'name': 'Jarvis before automatic pairing', 'addons': [target],
+            'homeassistant': False, 'background': False})
+        if not isinstance(backup.get('slug'), str) or not backup['slug']:
+            raise APIError(502, 'backup_not_confirmed')
+        # Re-read after backup: never overwrite concurrent changes with stale options.
+        latest = await supervisor.request('GET', '/addons/' + target + '/info')
+        if latest.get('options') != current:
+            raise APIError(409, 'pairing_options_changed')
+        # Record authorization history before the side effect, including timeouts.
+        # An interrupted first write must fail closed rather than restore revocation.
+        pairing['grant_started'] = True
+        persist(pairing)
+        await supervisor.request('POST', '/addons/' + target + '/options', {
+            'options': {**current, 'maintenance_enabled': True, 'maintenance_token': token}})
+        confirmed = await supervisor.request('GET', '/addons/' + target + '/info')
+        actual = confirmed.get('options', {})
+        if actual.get('maintenance_token') != token or actual.get('maintenance_enabled') is not True:
+            raise APIError(502, 'pairing_options_not_confirmed')
+    if changed or pairing.get('activated') is not True:
+        await supervisor.request('POST', '/addons/' + target + '/restart', {})
+        pairing['activated'] = True
+        persist(pairing)
+    # Runtime-only credentials: never put them in a response or log.
+    options['api_token'] = token
+    options['jarvis_api_token'] = current['api_token']
+
+
 def create_updater(worker, options):
     @web.middleware
     async def guard(request, handler):
@@ -208,6 +296,10 @@ async def main_app():
     directory = Path('/data')
     options = json.loads((directory / 'options.json').read_text())
     supervisor = Supervisor(os.environ['SUPERVISOR_TOKEN'])
+    try:
+        await auto_pair(supervisor, directory, options)
+    except APIError as error:
+        logging.error('Automatic pairing unavailable: %s', error.code)
     async def health(slug, version):
         token = options.get('jarvis_api_token', '')
         if len(token) < 32:
@@ -233,3 +325,4 @@ async def main_app():
 
 if __name__ == '__main__':
     web.run_app(main_app(), host='0.0.0.0', port=8100, access_log=None, print=None)
+
