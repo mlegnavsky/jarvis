@@ -1,6 +1,6 @@
 # Propojení a API
 
-Tento projekt poskytuje REST API. **Není to zatím MCP server ani OAuth konektor pro ChatGPT.** Kód v GitHubu ani Cloudflare Tunnel nedávají chatu oprávnění ovládat dům. Samostatným dalším krokem bude vybrat podporovanou autorizovanou integraci, implementovat ji a ověřit skutečné čtení i povel z mobilu a tohoto prostředí. Bearer token se nemá posílat do konverzace.
+Tento dokument popisuje původní REST API. Verze 0.2.0 navíc obsahuje experimentální [MCP/OAuth konektor](chatgpt.md). Kód v GitHubu ani Cloudflare Tunnel samy nedávají chatu oprávnění ovládat dům. Skutečné propojení ChatGPT vyžaduje instalaci, OAuth souhlas a praktické ověření. REST bearer token do přihlašování ChatGPT nepatří a neposílá se do konverzace.
 
 Domácí hlasové Assist zařízení, rozpoznávání řeči a mobilní Assist jsou další integrační úkol. Nelze zatím slíbit společnou historii tohoto chatu, nepřetržité naslouchání ani automatický přenos paměti.
 

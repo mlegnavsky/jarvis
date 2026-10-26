@@ -1,0 +1,3 @@
+# Test-only interoperability client; never installed in the Green images.
+mcp==2.3.0
+PyYAML==6.0.3

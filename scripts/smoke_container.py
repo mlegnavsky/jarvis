@@ -1,5 +1,6 @@
 """CI-only container startup/authentication smoke check with a fake Supervisor."""
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -26,6 +27,7 @@ class Handler(BaseHTTPRequestHandler):
 HTTPServer(('0.0.0.0',80), Handler).serve_forever()
 '''
 port = 8099 if app == 'jarvis' else 8100
+expected_version = re.search(r'^version: "([^"]+)"', (Path(app) / 'config.yaml').read_text(), re.MULTILINE)[1]
 probe = '''import json, urllib.request, urllib.error
 base = 'http://127.0.0.1:PORT'
 path = '/v1/health' if PORT == 8099 else '/v1/jobs/missing'
@@ -38,11 +40,11 @@ request = urllib.request.Request(base + path, headers={'Authorization': 'Bearer 
 try:
     response = urllib.request.urlopen(request)
     assert PORT == 8099
-    assert json.load(response)['version'] == '0.1.0'
+    assert json.load(response)['version'] == EXPECTED_VERSION
 except urllib.error.HTTPError as error:
     assert PORT == 8100 and error.code == 404
     assert json.load(error)['error'] == 'job_not_found'
-'''.replace('PORT', str(port))
+'''.replace('PORT', str(port)).replace('EXPECTED_VERSION', repr(expected_version))
 with tempfile.TemporaryDirectory() as temporary:
     options = Path(temporary) / 'options.json'
     options.write_text(json.dumps({'api_token': 'x'*32}))

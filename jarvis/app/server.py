@@ -11,6 +11,7 @@ from .audit import Audit
 from .ha import HAClient, UpstreamError
 from .policy import APIError
 from .maintenance import MaintenanceBridge
+from .mcp import install_mcp
 
 
 def create_app(ha, options, directory, watch=True):
@@ -24,7 +25,7 @@ def create_app(ha, options, directory, watch=True):
     @web.middleware
     async def boundary(request, handler):
         try:
-            if request.path != '/healthz':
+            if request.path != '/healthz' and request.path != '/mcp' and not request.path.startswith(('/oauth/', '/.well-known/oauth-')):
                 if not isinstance(token, str) or len(token) < 32:
                     raise APIError(503, 'setup_required')
                 supplied = request.headers.get('Authorization', '')
@@ -68,6 +69,7 @@ def create_app(ha, options, directory, watch=True):
         body = await request.json() if request.method == 'POST' else None
         status, value = await bridge.request(request.method, path, body, request.headers.get('Idempotency-Key'))
         return web.json_response(value, status=status)
+    install_mcp(app, options, directory, ha, actions, bridge, audit)
     app.router.add_get('/v1/maintenance/check', maintenance)
     app.router.add_get('/v1/maintenance/jobs/{id}', maintenance)
     app.router.add_post('/v1/maintenance/update', maintenance)

@@ -1,5 +1,5 @@
 name: Jarvis
-version: "0.1.0"
+version: "0.2.0"
 slug: jarvis
 description: Current home inventory and authenticated controlled actions. Experimental.
 url: https://github.com/mlegnavsky/jarvis
@@ -19,6 +19,11 @@ ports_description:
   8099/tcp: Authenticated Jarvis API (route through Cloudflare Tunnel; never forward router ports)
 options:
   api_token: ""
+  mcp_enabled: false
+  oauth_public_url: ""
+  oauth_client_secret: ""
+  oauth_owner_secret: ""
+  oauth_redirect_uris: []
   writes_enabled: false
   maintenance_enabled: false
   maintenance_token: ""
@@ -26,6 +31,12 @@ options:
   allowed_services: []
 schema:
   api_token: password
+  mcp_enabled: bool
+  oauth_public_url: str
+  oauth_client_secret: password
+  oauth_owner_secret: password
+  oauth_redirect_uris:
+    - str
   writes_enabled: bool
   maintenance_enabled: bool
   maintenance_token: password
