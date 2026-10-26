@@ -1,3 +1,9 @@
+# 0.2.2 — experimental diagnostics
+
+- Distinguish missing form transaction, unknown/consumed transaction, expiration and invalidated configuration during browser consent. Token endpoints retain generic invalid_grant responses.
+- Synchronize the runtime version with the add-on manifest.
+- Does not claim to fix the remaining Green consent failure; the next fresh attempt supplies evidence without exposing credentials or transaction values.
+
 # 0.2.1 — experimental
 
 - Fix browser OAuth consent rejected as invalid_origin: use same-origin referrer policy so form POST retains its Origin, without sending referrers to other origins.

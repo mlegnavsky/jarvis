@@ -105,6 +105,29 @@ class OAuthTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(response.status, 403)
             self.assertEqual((await response.json())['error'], 'invalid_origin')
 
+    async def test_consent_distinguishes_missing_unknown_expired_and_invalidated_flow(self):
+        from app.oauth import digest
+        headers = {'Origin': ORIGIN}
+        response = await self.http.post('/oauth/consent', headers=headers, data={})
+        self.assertEqual((await response.json())['error'], 'authorization_form_missing')
+        response = await self.http.post('/oauth/consent', headers=headers, data={'transaction': 'unknown'})
+        self.assertEqual((await response.json())['error'], 'authorization_not_found')
+        for change, expected in [('expires', 'authorization_expired'), ('generation', 'authorization_invalidated')]:
+            response = await self.http.get('/oauth/authorize', params=self.params())
+            transaction = re.search('name="transaction" value="([^"]+)"', await response.text())[1]
+            with self.oauth.db() as db:
+                if change == 'expires':
+                    db.execute('UPDATE artifacts SET expires=0 WHERE hash=?', (digest(transaction),))
+                else:
+                    data = self.oauth.load(db, 'flow', transaction)
+                    data['generation'] = 'old'
+                    self.oauth.update(db, transaction, data)
+            response = await self.http.post('/oauth/consent', headers=headers, data={'transaction': transaction})
+            self.assertEqual(response.status, 400)
+            body = await response.json()
+            self.assertEqual(body['error'], expected)
+            self.assertNotIn(transaction, str(body))
+
     async def test_refresh_rotation_reuse_revokes_family_and_survives_restart(self):
         tokens = await (await self.exchange(await self.authorize())).json()
         self.oauth = OAuth(dict(OPTIONS), Path(self.tmp.name))

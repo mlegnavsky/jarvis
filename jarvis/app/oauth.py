@@ -81,13 +81,15 @@ class OAuth:
 
     def load(self, db, kind, value):
         if not isinstance(value, str) or len(value) > 512:
-            raise APIError(400, 'invalid_grant')
+            raise APIError(400, 'authorization_form_missing' if kind == 'flow' else 'invalid_grant')
         row = db.execute('SELECT kind,expires,data FROM artifacts WHERE hash=?', (digest(value),)).fetchone()
-        if not row or row[0] != kind or row[1] <= time.time():
-            raise APIError(400, 'invalid_grant')
+        if not row or row[0] != kind:
+            raise APIError(400, 'authorization_not_found' if kind == 'flow' else 'invalid_grant')
+        if row[1] <= time.time():
+            raise APIError(400, 'authorization_expired' if kind == 'flow' else 'invalid_grant')
         data = json.loads(row[2])
         if data['generation'] != self.generation or data.get('revoked'):
-            raise APIError(400, 'invalid_grant')
+            raise APIError(400, 'authorization_invalidated' if kind == 'flow' else 'invalid_grant')
         return data
 
     def update(self, db, value, data):

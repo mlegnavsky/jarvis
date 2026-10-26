@@ -1,5 +1,5 @@
 name: Jarvis
-version: "0.2.1"
+version: "0.2.2"
 slug: jarvis
 description: Current home inventory and authenticated controlled actions. Experimental.
 url: https://github.com/mlegnavsky/jarvis
