@@ -61,22 +61,43 @@ actions:
       volume_level: "{{ quiet_volume }}"
   - variables:
       finish_by: "{{ as_timestamp(now()) + 120 }}"
-  - repeat:
-      sequence:
-        - wait_template: "{{ is_state(satellite, 'idle') }}"
-          timeout: "{{ [1, (finish_by - as_timestamp(now())) | int(0)] | max }}"
-          continue_on_timeout: true
-        - delay: "00:00:02"
-      until:
-        - condition: template
-          value_template: >-
-            {{ not wait.completed or is_state(satellite, 'idle')
-               or as_timestamp(now()) >= finish_by }}
+      ready_to_restore: false
+      disconnected_at_start: >-
+        {{ not (is_state(satellite, 'idle') or is_state(satellite, 'listening')
+                or is_state(satellite, 'processing') or is_state(satellite, 'responding')) }}
+  - if:
+      - condition: template
+        value_template: "{{ is_state(satellite, 'idle') }}"
+    then:
+      - delay: "00:00:02"
+      - variables:
+          ready_to_restore: >-
+            {{ is_state(satellite, 'idle') and as_timestamp(now()) < finish_by
+               and as_timestamp(now()) - as_timestamp(states[satellite].last_changed) >= 2 }}
+    else:
+      - wait_for_trigger:
+          - trigger: state
+            entity_id: !input satellite
+            to: idle
+            for:
+              seconds: 2
+            id: ready
+          - trigger: state
+            entity_id: !input satellite
+            to:
+              - unavailable
+              - unknown
+            id: disconnected
+        timeout: "{{ [1, (finish_by - as_timestamp(now())) | int(0)] | max }}"
+        continue_on_timeout: true
+      - variables:
+          ready_to_restore: >-
+            {{ wait.completed and wait.trigger is not none and wait.trigger.id == 'ready' }}
   - if:
       - condition: template
         value_template: >-
           {% set volume = state_attr(tv, 'volume_level') -%}
-          {{ wait.completed
+          {{ ready_to_restore and not disconnected_at_start
              and as_timestamp(now()) < finish_by
              and is_state(satellite, 'idle')
              and is_state(tv, 'playing')

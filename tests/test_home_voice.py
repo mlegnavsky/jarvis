@@ -19,10 +19,11 @@ class HomeVoiceTests(unittest.TestCase):
         self.env = NativeEnvironment()
         self.env.globals.update(is_state=lambda entity, state: (self.tv_state if entity=='media_player.tv' else self.satellite_state)==state,
             state_attr=lambda entity, key: self.attrs.get(key), is_number=lambda value: type(value) in (float, int),
-            now=lambda: 100, as_timestamp=lambda value: float(value))
+            now=lambda: 100, as_timestamp=lambda value: float(value),
+            states={'assist_satellite.jarvis': SimpleNamespace(last_changed=98)})
         self.env.filters['bitwise_and'] = lambda left, right: int(left) & int(right)
         self.context = {'tv': 'media_player.tv', 'satellite': 'assist_satellite.jarvis', 'quiet_volume': 0.15,
-            'original_volume': 0.6, 'finish_by': 220, 'wait': SimpleNamespace(completed=True)}
+            'original_volume': 0.6, 'finish_by': 220, 'ready_to_restore': True, 'disconnected_at_start': False, 'wait': SimpleNamespace(completed=True)}
 
     def render(self, template):
         return self.env.from_string(template).render(**self.context)
@@ -59,7 +60,7 @@ class HomeVoiceTests(unittest.TestCase):
             self.satellite_state = state
             self.assertFalse(self.can_restore())
         self.satellite_state = 'idle'
-        self.context['wait'].completed = False
+        self.context['ready_to_restore'] = False
         self.assertFalse(self.can_restore())
 
     def test_manual_volume_mute_and_stopped_tv_prevent_restore(self):
@@ -77,16 +78,42 @@ class HomeVoiceTests(unittest.TestCase):
         self.assertEqual(trigger['from'], 'idle')
         self.assertEqual(trigger['to'], 'listening')
         self.assertEqual(self.render(self.blueprint['actions'][2]['variables']['finish_by']), 220)
-        self.assertEqual(self.blueprint['actions'][3]['repeat']['sequence'][1]['delay'], '00:00:02')
+        self.assertEqual(self.blueprint['actions'][3]['then'][0]['delay'], '00:00:02')
         restore = self.blueprint['actions'][-1]['then'][0]
         self.assertEqual(self.render(restore['data']['volume_level']), 0.6)
 
-    def test_followup_listening_keeps_waiting_until_idle_or_deadline(self):
-        until = self.blueprint['actions'][3]['repeat']['until'][0]['value_template']
-        self.satellite_state = 'listening'
-        self.assertFalse(self.render(until))
-        self.satellite_state = 'idle'
-        self.assertTrue(self.render(until))
-        self.satellite_state = 'processing'
+    def resolve_wait(self, events):
+        # Generic state-trigger/for semantics applied to the shipped wait triggers.
+        definitions = self.blueprint['actions'][3]['else'][0]['wait_for_trigger']
+        candidates = []
+        for index, (at, state) in enumerate(events):
+            for definition in definitions:
+                target = definition['to']
+                if state not in (target if isinstance(target, list) else [target]):
+                    continue
+                due = at + definition.get('for', {}).get('seconds', 0)
+                next_at = events[index+1][0] if index+1 < len(events) else float('inf')
+                if due <= next_at:
+                    candidates.append((due, definition['id']))
+        return min(candidates)
+
+    def test_followup_resets_continuous_idle_debounce(self):
+        at, trigger = self.resolve_wait([(1, 'idle'), (2, 'listening'), (2.5, 'idle')])
+        self.assertEqual((at, trigger), (4.5, 'ready'))
+
+    def test_disconnect_then_idle_latches_cancellation(self):
+        at, trigger = self.resolve_wait([(0.2, 'unavailable'), (0.5, 'idle')])
+        self.assertEqual((at, trigger), (0.2, 'disconnected'))
+        gate = self.blueprint['actions'][3]['else'][1]['variables']['ready_to_restore']
+        self.context['wait'] = SimpleNamespace(completed=True, trigger=SimpleNamespace(id=trigger))
+        self.context['ready_to_restore'] = self.render(gate)
+        self.assertFalse(self.can_restore())
+
+    def test_initial_idle_requires_full_debounce_and_deadline(self):
+        self.env.globals['states']['assist_satellite.jarvis'].last_changed = 99.5
+        gate = self.blueprint['actions'][3]['then'][1]['variables']['ready_to_restore']
+        self.assertFalse(self.render(gate))
+        self.env.globals['states']['assist_satellite.jarvis'].last_changed = 98
+        self.assertTrue(self.render(gate))
         self.context['finish_by'] = 90
-        self.assertTrue(self.render(until))
+        self.assertFalse(self.render(gate))
