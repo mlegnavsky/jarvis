@@ -1,0 +1,29 @@
+name: Check Jarvis
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r jarvis/requirements.txt PyYAML==6.0.3
+      - run: PYTHONPATH=jarvis:jarvis_updater python -m unittest discover -s tests -t . -v
+      - run: python scripts/check_manifest.py
+  containers:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [jarvis, jarvis_updater]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.app }}
+          platforms: linux/arm64,linux/amd64
+          push: false
