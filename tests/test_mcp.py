@@ -107,7 +107,7 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual({t['name'] for t in tools}, {'jarvis_status', 'jarvis_inventory'})
 
     async def test_notifications_and_media_type_checks(self):
-        headers = {'Authorization': 'Bearer '+self.token, 'Accept': 'application/json, text/event-stream'}
+        headers = {'Authorization': 'Bearer '+self.token, 'Accept': 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-11-25'}
         response = await self.http.post('/mcp', json={'jsonrpc': '2.0', 'method': 'notifications/initialized'}, headers=headers)
         self.assertEqual(response.status, 202)
         self.assertEqual(await response.read(), b'')
@@ -127,3 +127,12 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
                     result = await session.call_tool('jarvis_inventory', {'kind': 'states', 'limit': 1})
                     self.assertFalse(result.is_error)
                     self.assertEqual(result.structured_content['items'][0]['entity_id'], 'light.test')
+
+    async def test_march_is_not_negotiated_or_accepted_as_supported(self):
+        response = await self.rpc('initialize', {'protocolVersion': '2025-03-26', 'capabilities': {}, 'clientInfo': {'name': 'old', 'version': '1'}})
+        self.assertEqual((await response.json())['result']['protocolVersion'], '2025-11-25')
+        self.assertEqual((await self.rpc('tools/list', **{'MCP-Protocol-Version': '2025-03-26'})).status, 400)
+        response = await self.http.post('/mcp', json={'jsonrpc': '2.0', 'id': 1, 'method': 'initialize',
+            'params': {'protocolVersion': '2025-11-25'}}, headers={'Authorization': 'Bearer '+self.token,
+            'Accept': 'application/json, text/event-stream'})
+        self.assertEqual(response.status, 200)

@@ -33,6 +33,8 @@ Zápisové nástroje nejsou při vypnutých funkcích ani v katalogu. Každý po
 
 Stránkování používá offset nad právě načteným snapshotem; při změně inventáře mezi dotazy se mohou stránky posunout. Není to stabilní exportní kurzor. Automatizace jsou vidět ve states/entities; nevystavuje se jejich YAML.
 
+MCP transport podporuje verze `2025-06-18` a `2025-11-25`, s JSON odpověďmi bez SSE streamu. Po initialize klient posílá podporovanou verzi v `MCP-Protocol-Version`. Starší březnový protokol s batch požadavky ani nová generace 2026 se neoznačují za podporované.
+
 ## Relace, odpojení a rotace
 
 - Kód platí 60 sekund a je jednorázový, browserový souhlas 5 minut. Povinné PKCE S256, resource odpovídá přesně MCP URL, callback i issuer jsou kontrolované.

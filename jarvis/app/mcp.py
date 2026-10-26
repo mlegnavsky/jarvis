@@ -6,7 +6,7 @@ from .oauth import OAuth
 from .policy import APIError
 from .ha import UpstreamError
 
-VERSIONS = ('2025-03-26', '2025-06-18', '2025-11-25')
+VERSIONS = ('2025-06-18', '2025-11-25')
 
 
 def schema(properties=None, required=()):
@@ -133,8 +133,6 @@ def install_mcp(app, options, directory, ha, actions, bridge, audit):
                 response = web.Response(status=405, headers={'Allow': 'POST'})
             else:
                 version = request.headers.get('MCP-Protocol-Version', '2025-03-26')
-                if version not in VERSIONS:
-                    raise APIError(400, 'unsupported_protocol_version')
                 accept = request.headers.get('Accept', '')
                 if 'application/json' not in accept or 'text/event-stream' not in accept:
                     raise APIError(406, 'mcp_accept_required')
@@ -150,6 +148,8 @@ def install_mcp(app, options, directory, ha, actions, bridge, audit):
                         or ('id' in message and type(message['id']) not in (str, int))):
                     raise APIError(400, 'invalid_rpc_request')
                 method, params, identifier = message['method'], message.get('params', {}), message.get('id')
+                if version not in VERSIONS and not (method == 'initialize' and 'MCP-Protocol-Version' not in request.headers):
+                    raise APIError(400, 'unsupported_protocol_version')
                 if 'id' not in message:
                     if method not in ('notifications/initialized', 'notifications/cancelled'):
                         raise APIError(400, 'unsupported_notification')

@@ -139,3 +139,23 @@ class OAuthTests(unittest.IsolatedAsyncioTestCase):
         response = await self.http.get('/.well-known/oauth-protected-resource/mcp',
             headers={'Host': 'evil.test', 'X-Forwarded-Host': 'evil.test'})
         self.assertEqual((await response.json())['resource'], ORIGIN+'/mcp')
+
+    async def test_basic_auth_form_decodes_punctuation_in_secret(self):
+        from urllib.parse import quote_plus
+        await self.http.close()
+        secret = 'c'*32 + '+/=:% '
+        self.oauth = OAuth({**OPTIONS, 'oauth_client_secret': secret}, Path(self.tmp.name))
+        app = web.Application()
+        self.oauth.install(app)
+        self.http = TestClient(TestServer(app))
+        await self.http.start_server()
+        code = await self.authorize()
+        basic = base64.b64encode(('jarvis-chatgpt:'+quote_plus(secret)).encode()).decode()
+        response = await self.http.post('/oauth/token', headers={'Authorization': 'Basic '+basic}, data={
+            'grant_type': 'authorization_code', 'code': code, 'code_verifier': VERIFIER,
+            'redirect_uri': CALLBACK, 'resource': ORIGIN+'/mcp'})
+        self.assertEqual(response.status, 200)
+        tokens = await response.json()
+        response = await self.http.post('/oauth/revoke', headers={'Authorization': 'Basic '+basic},
+            data={'token': tokens['refresh_token']})
+        self.assertEqual(response.status, 200)

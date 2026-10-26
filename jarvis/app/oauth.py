@@ -10,7 +10,7 @@ import re
 import secrets
 import sqlite3
 import time
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import urlencode, urlsplit, unquote_plus
 
 from aiohttp import web
 from .policy import APIError
@@ -133,6 +133,7 @@ class OAuth:
                 raise APIError(401, 'invalid_client')
             try:
                 identifier, secret = base64.b64decode(header[6:], validate=True).decode().split(':', 1)
+                identifier, secret = unquote_plus(identifier), unquote_plus(secret)
             except (ValueError, UnicodeError):
                 raise APIError(401, 'invalid_client') from None
         if identifier != CLIENT or not equal(secret, self.secret):
