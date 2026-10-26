@@ -9,9 +9,11 @@
 
 ## Před instalací
 
-- [ ] CI testy i sestavení obou kontejnerů pro arm64/amd64 jsou zelené.
-- [ ] Provedena zkouška spuštění sestavených kontejnerů. Lokální prostředí při vývoji nemělo Docker; samotné lokální testy tuto zkoušku nenahrazují.
+- [x] CI testy i sestavení obou kontejnerů pro arm64/amd64 jsou zelené.
+- [x] V CI provedena zkouška spuštění obou amd64 kontejnerů a autentizace proti simulovanému Supervisoru. Běh arm64 na skutečném Greenu zůstává neověřený.
 - [ ] Kód zkontrolován a schválen k začlenění do hlavní větve.
+
+Ověřeno 26. 10. 2026 na zdrojovém commitu `9a93a5b60a29e8868c97a80fc9c4700d034604b9`: [CI běh 40338981827](https://github.com/mlegnavsky/jarvis/actions/runs/40338981827). Všech 27 testů prošlo. Kontrola celé větve neodhalila Critical/Important nálezy.
 
 ## Na Greenu — DOSUD NEPROVEDENO
 
