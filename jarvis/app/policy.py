@@ -22,7 +22,7 @@ def validate_action(body, options):
         raise APIError(403, 'action_not_allowed')
     if service.split('.')[0] != entity.split('.')[0]:
         raise APIError(403, 'domain_mismatch')
-    no_data = {'light.turn_off', 'switch.turn_on', 'switch.turn_off', 'automation.turn_on'}
+    no_data = {'light.turn_off', 'switch.turn_on', 'switch.turn_off', 'automation.turn_on', 'lock.lock'}
     if service in no_data:
         valid = not data
     elif service == 'light.turn_on':
@@ -49,3 +49,4 @@ def validate_current_state(service, data, state):
             raise APIError(400, 'temperature_out_of_range')
     if service == 'climate.set_hvac_mode' and data['hvac_mode'] not in attrs.get('hvac_modes', []):
         raise APIError(400, 'invalid_hvac_mode')
+

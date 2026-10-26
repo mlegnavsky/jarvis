@@ -44,7 +44,8 @@ class HomeFixture:
         if path.startswith('/core/api/services/'):
             body = await request.json()
             self.effects.append((path, body))
-            self.states[0]['state'] = 'on'
+            target = next(s for s in self.states if s['entity_id'] == body['entity_id'])
+            target['state'] = 'locked' if path == '/core/api/services/lock/lock' else 'on'
             return web.json_response(self.states)
         if path == '/info':
             return web.json_response({'result': 'ok', 'data': {'arch': 'aarch64'}})
@@ -73,3 +74,4 @@ class HomeFixture:
                 }
                 await ws.send_json({'id': cmd['id'], 'type': 'result', 'success': True, 'result': values[cmd['type']]})
         return ws
+

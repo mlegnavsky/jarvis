@@ -1,3 +1,8 @@
+# 3.0.1
+
+- Podpora výslovně povoleného zamknutí lock.lock bez předávání kódu. Odemykání zůstává nepodporované.
+- Test ověřuje stav před a po zamknutí a zabránění opakování stejného povelu.
+
 # 3.0.0
 
 - Sjednocené vydání Jarvise 3.0.0: stejné číslo v manifestu, běžícím programu a seznamu změn.
@@ -41,3 +46,4 @@
 - Authenticated REST API, disabled-by-default allowlisted actions, durable idempotency and local audit.
 - Optional bridge to separate Supervisor updater with backup and post-update verification.
 - Real Green deployment, restoration and ChatGPT connection remain unverified.
+

@@ -76,6 +76,30 @@ class APITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status, 409)
         self.assertEqual(len(self.fixture.effects), 1)
 
+    async def test_lock_reads_state_and_does_not_repeat_on_retry(self):
+        self.fixture.states.append({'entity_id': 'lock.test', 'state': 'unlocked', 'attributes': {}})
+        self.options['allowed_entities'].append('lock.test')
+        self.options['allowed_services'].append('lock.lock')
+        body = {'entity_id': 'lock.test', 'service': 'lock.lock', 'data': {}}
+        response = await self.action(body, key='lock-request')
+        self.assertEqual(response.status, 200)
+        result = await response.json()
+        self.assertEqual(result['before']['state'], 'unlocked')
+        self.assertEqual(result['after']['state'], 'locked')
+        response = await self.action(body, key='lock-request')
+        self.assertEqual(response.status, 200)
+        self.assertEqual(self.fixture.effects, [('/core/api/services/lock/lock', {'entity_id': 'lock.test'})])
+
+    async def test_lock_rejects_parameters_and_unlock(self):
+        self.fixture.states.append({'entity_id': 'lock.test', 'state': 'unlocked', 'attributes': {}})
+        self.options['allowed_entities'].append('lock.test')
+        self.options['allowed_services'].extend(['lock.lock', 'lock.unlock'])
+        response = await self.action({'entity_id': 'lock.test', 'service': 'lock.lock', 'data': {'code': 'test'}}, key='invalid-lock')
+        self.assertEqual(response.status, 400)
+        response = await self.action({'entity_id': 'lock.test', 'service': 'lock.unlock', 'data': {}}, key='unlock-rejected')
+        self.assertEqual(response.status, 403)
+        self.assertEqual(self.fixture.effects, [])
+
     async def test_disallowed_entity_and_service_do_not_execute(self):
         for entity, service in [('light.other', 'light.turn_on'), ('light.test', 'homeassistant.restart'), ('light.test', 'switch.turn_on')]:
             response = await self.action({'entity_id': entity, 'service': service, 'data': {}}, key=(service+entity).replace('.', '_'))
@@ -131,3 +155,4 @@ class APITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status, 409)
         self.assertEqual((await response.json())['error'], 'action_outcome_unknown')
         self.assertEqual(len(self.fixture.effects), 1)
+
