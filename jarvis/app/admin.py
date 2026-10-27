@@ -8,11 +8,14 @@ import re
 import sqlite3
 from .config_files import ConfigFiles
 from .ha import now
-from . import diagnostics
+from . import diagnostics, integration_admin
 from .ha import UpstreamError
 from .policy import APIError
 
 FIELDS = {
+    'integration_reload': {'entry_id', 'expected_revision'},
+    'integration_options_start': {'entry_id', 'expected_revision'},
+    'integration_options_submit': {'flow_id', 'expected_revision', 'user_input'},
     'automations_reload': {'expected_revision'},
     'device_metadata': {'device_id', 'area_id', 'name_by_user', 'expected_revision'},
     'addon_install': {'slug', 'expected_version'}, 'addon_update': {'slug', 'expected_version'},
@@ -73,6 +76,7 @@ class Admin:
         self.tasks = set()
         self.lock = asyncio.Lock()
         with self.db() as db:
+            db.execute('CREATE TABLE IF NOT EXISTS integration_flows (flow_id TEXT PRIMARY KEY, entry_id TEXT, closed INTEGER)')
             db.execute('CREATE TABLE IF NOT EXISTS jobs (key TEXT PRIMARY KEY, fingerprint TEXT, operation TEXT, '
                        'arguments TEXT, state TEXT, result TEXT, backup_slug TEXT, before_data TEXT)')
             columns = {row[1] for row in db.execute('PRAGMA table_info(jobs)')}
@@ -113,6 +117,15 @@ class Admin:
             raise APIError(400, 'invalid_admin_query')
         if query == 'diagnostics':
             return await diagnostics.diagnose(self.sup)
+        if query == 'integrations':
+            return await integration_admin.entries(self)
+        if query == 'integration':
+            return await integration_admin.entry(self, target)
+        if query == 'integration_options':
+            return integration_admin.public_form(await integration_admin.get_form(self, target))
+        if query == 'voice_pipelines':
+            value = await diagnostics.websocket_query(self.sup, 'assist_pipeline/pipeline/list')
+            return redact(value)
         if query == 'device':
             devices, entities, areas = await asyncio.gather(self.sup.registry('device'), self.sup.registry('entity'), self.sup.registry('area'))
             device = next((d for d in devices if d.get('id') == target), None)
@@ -192,6 +205,11 @@ class Admin:
             repository_url(args['repository_url'])
         if 'changes' in args and not isinstance(args['changes'], dict):
             raise APIError(400, 'invalid_admin_options')
+        for field in ('entry_id', 'flow_id'):
+            if field in args:
+                integration_admin.identifier(args[field])
+        if 'user_input' in args and not isinstance(args['user_input'], dict):
+            raise APIError(400, 'invalid_integration_input')
         if operation == 'device_metadata':
             for field in ('device_id', 'area_id'):
                 if field == 'area_id' and args[field] is None:
@@ -250,6 +268,8 @@ class Admin:
 
     async def perform(self, key, operation, args):
         self.allowed(write=True)
+        if operation.startswith('integration_'):
+            return await integration_admin.change(self, key, operation, args)
         if operation == 'automations_reload':
             before = self.files.read('automations.yaml')
             if before['revision'] != args['expected_revision']:

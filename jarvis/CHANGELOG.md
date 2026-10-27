@@ -1,3 +1,9 @@
+# 3.6.0
+
+- Nativní správa integrací: přehled s podporou options a revizemi, bezpečné otevření a odesílání konfiguračních formulářů, znovunačtení konkrétní integrace s ověřením loaded.
+- Options flows jsou svázané s Jarvisem a trvalým deníkem, cizí/uzavřené flows a změněné formuláře jsou odmítnuté. Před otevřením flow záloha HA; citlivá data a výchozí hodnoty formulářů se nevracejí do chatu.
+- Přehled hlasových pipeline a jejich výchozího výběru. Dokončení formuláře znamená potvrzené uložení HA, nikoli fyzickou funkčnost zařízení nebo nezávislý readback všech nastavení.
+
 # 3.5.0
 
 - Správa místnosti a uživatelského názvu zařízení přes nativní registr Home Assistantu: kontrola revize, ověření oblasti, trvalý before-image a readback. Nemění identifikátory, párování, firmware ani přihlašovací údaje.
