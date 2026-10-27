@@ -8,7 +8,10 @@ from .ha import UpstreamError
 from .management import BRIDGE_SERVICES
 from .admin import FIELDS
 
-ADMIN_READS = ['overview', 'addons', 'addon', 'store', 'backups', 'files', 'file', 'jobs', 'job', 'config_check']
+ADMIN_READS = ['overview', 'addons', 'addon', 'store', 'backups', 'files', 'file', 'jobs', 'job', 'config_check',
+               'diagnostics', 'permission_map', 'core_logs', 'supervisor_logs', 'addon_logs', 'repositories', 'store_addon']
+GATEWAY_INVOKE = web.AppKey('gateway_invoke', object)
+MCP_OAUTH = web.AppKey('mcp_oauth', OAuth)
 
 VERSIONS = ('2025-06-18', '2025-11-25')
 
@@ -108,6 +111,7 @@ def compact(item, kind):
 
 def install_mcp(app, options, directory, ha, actions, bridge, audit, management=None, admin=None):
     oauth = OAuth(options, directory)
+    app[MCP_OAUTH] = oauth
     oauth.install(app)
 
     def challenge(scope='jarvis:read'):
@@ -120,7 +124,7 @@ def install_mcp(app, options, directory, ha, actions, bridge, audit, management=
     async def invoke(name, args):
         if name == 'jarvis_status':
             return result({'version': VERSION, 'stream_connected': ha.stream_connected,
-                'capabilities_version': 3, 'tools': [t['name'] for t in catalog(options)],
+                'capabilities_version': 4, 'tools': [t['name'] for t in catalog(options)],
                 'writes_enabled': options.get('writes_enabled') is True,
                 'maintenance_enabled': options.get('maintenance_enabled') is True})
         if name == 'jarvis_inventory':
@@ -134,6 +138,17 @@ def install_mcp(app, options, directory, ha, actions, bridge, audit, management=
                 'next_offset': offset+limit if offset+limit < len(items) else None,
                 'items': [compact(item, kind) for item in items[offset:offset+limit]]}, failed)
         if name == 'jarvis_action':
+            if args['service'] == 'jarvis.gateway':
+                if args['entity_id'] != 'jarvis.system' or set(args['data']) != {'action'}:
+                    raise APIError(400, 'invalid_gateway_action')
+                action = args['data']['action']
+                if action == 'status':
+                    status, value = await bridge.request('GET', '/v1/gateway/status')
+                elif action == 'activate':
+                    status, value = await bridge.request('POST', '/v1/gateway/activate', {}, args['request_id'])
+                else:
+                    raise APIError(400, 'invalid_gateway_action')
+                return result(value, status >= 400)
             if args['service'] == 'jarvis.admin':
                 if args['entity_id'] != 'jarvis.system':
                     raise APIError(400, 'invalid_admin_target')
@@ -225,7 +240,7 @@ def install_mcp(app, options, directory, ha, actions, bridge, audit, management=
                             scope = definition['securitySchemes'][0]['scopes'][0]
                             try:
                                 oauth.verify(request.headers.get('Authorization'), scope)
-                                if definition['name'] == 'jarvis_action' and (args.get('service') in BRIDGE_SERVICES or args.get('service') == 'jarvis.admin'):
+                                if definition['name'] == 'jarvis_action' and args.get('service', '').startswith('jarvis.'):
                                     scope = 'jarvis:maintain'
                                     oauth.verify(request.headers.get('Authorization'), scope)
                                 value = await invoke(definition['name'], args)
@@ -246,3 +261,4 @@ def install_mcp(app, options, directory, ha, actions, bridge, audit, management=
         return response
 
     app.router.add_route('*', '/mcp', endpoint)
+    app[GATEWAY_INVOKE] = invoke

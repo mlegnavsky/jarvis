@@ -13,7 +13,7 @@ class MaintenanceBridge:
         token = self.options.get('maintenance_token', '')
         if not isinstance(token, str) or len(token) < 32:
             raise APIError(503, 'maintenance_setup_required')
-        allowed = (method == 'GET' and (path == '/v1/check' or re.fullmatch(r'/v1/jobs/[a-f0-9]{32}', path))) or (method == 'POST' and path == '/v1/update')
+        allowed = (method == 'GET' and (path in ('/v1/check', '/v1/gateway/status') or re.fullmatch(r'/v1/jobs/[a-f0-9]{32}', path))) or (method == 'POST' and path in ('/v1/update', '/v1/gateway/activate'))
         if not allowed:
             raise APIError(400, 'invalid_maintenance_path')
         own = await self.ha.request('GET', '/addons/self/info')

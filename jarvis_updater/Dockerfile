@@ -4,4 +4,5 @@ WORKDIR /opt/jarvis
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY updater.py ./
+COPY gateway ./gateway
 CMD ["python", "updater.py"]

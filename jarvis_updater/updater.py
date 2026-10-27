@@ -14,9 +14,12 @@ import aiohttp
 from aiohttp import web
 
 
-class APIError(Exception):
-    def __init__(self, status, code):
-        self.status, self.code = status, code
+try:
+    from .gateway.policy import APIError
+    from .gateway import Gateway
+except ImportError:  # Add-on entrypoint runs as a script.
+    from gateway.policy import APIError
+    from gateway import Gateway
 
 
 class Supervisor:
@@ -261,10 +264,12 @@ async def auto_pair(supervisor, directory, options):
     options['jarvis_api_token'] = current['api_token']
 
 
-def create_updater(worker, options):
+def create_updater(worker, options, gateway=None):
     @web.middleware
     async def guard(request, handler):
         try:
+            if gateway and (request.path == '/mcp' or request.path.startswith('/oauth/') or request.path.startswith('/.well-known/oauth-')):
+                return await handler(request)
             token = options.get('api_token', '')
             if not isinstance(token, str) or len(token) < 32:
                 raise APIError(503, 'setup_required')
@@ -277,7 +282,7 @@ def create_updater(worker, options):
             return web.json_response({'error': error.code}, status=error.status, headers={'Cache-Control': 'no-store'})
         except (ValueError, UnicodeError):
             return web.json_response({'error': 'invalid_json'}, status=400)
-    app = web.Application(middlewares=[guard], client_max_size=4096)
+    app = web.Application(middlewares=[guard], client_max_size=512*1024)
     async def check(request):
         return web.json_response(await worker.check())
     async def job(request):
@@ -289,6 +294,18 @@ def create_updater(worker, options):
     app.router.add_get('/v1/check', check)
     app.router.add_get('/v1/jobs/{id}', job)
     app.router.add_post('/v1/update', update)
+    if gateway:
+        async def activate(request):
+            return web.json_response(await gateway.activate(request.headers.get('Idempotency-Key')), status=202)
+        async def gateway_status(request):
+            gateway.enabled()
+            return web.json_response(gateway.status())
+        async def rescue(request):
+            return web.json_response(await gateway.rescue(await request.json()), status=202)
+        app.router.add_post('/v1/gateway/activate', activate)
+        app.router.add_get('/v1/gateway/status', gateway_status)
+        app.router.add_post('/v1/rescue', rescue)
+        gateway.install(app)
     return app
 
 
@@ -313,10 +330,18 @@ async def main_app():
         except (aiohttp.ClientError, TimeoutError, ValueError):
             return False
     worker = Maintenance(supervisor, directory, health)
-    app = create_updater(worker, options)
+    gateway = Gateway(worker, options, directory)
+    if gateway.state['phase'] == 'inactive':
+        try:
+            await gateway.prepare()
+        except Exception:
+            logging.error('Gateway preparation unavailable')
+    app = create_updater(worker, options, gateway)
     async def lifecycle(application):
         await worker.recover()
+        await gateway.recover()
         yield
+        await gateway.close()
         await worker.close()
         await supervisor.close()
     app.cleanup_ctx.append(lifecycle)

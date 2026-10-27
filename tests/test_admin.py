@@ -38,10 +38,17 @@ class AdminSupervisor:
                 self.installed['core_editor']['version'] = '1.2'
                 return {}
             return {'slug': path.rsplit('/', 1)[1], 'version': '1.2'}
+        if path == '/store/repositories':
+            if method == 'POST':
+                self.repository = body['repository']
+            return [{'slug': 'test', 'source': getattr(self, 'repository', 'https://github.com/a/b')}]
         if path.startswith('/addons/core_editor/'):
             verb = path.rsplit('/', 1)[1]
             if verb == 'info':
                 return {**self.installed['core_editor'], 'options': dict(self.installed['core_editor']['options'])}
+            if verb == 'uninstall':
+                del self.installed['core_editor']
+                return {}
             if verb == 'options':
                 self.installed['core_editor']['options'] = body['options']
                 return {}
@@ -134,7 +141,7 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(APIError):
                 await self.worker.start(operation, args, 'bad')
         with self.worker.db() as db:
-            db.execute("INSERT INTO jobs VALUES ('interrupted','fingerprint','core_restart','{}','running',NULL,NULL,NULL)")
+            db.execute("INSERT INTO jobs (key,fingerprint,operation,arguments,state,result,backup_slug,before_data) VALUES ('interrupted','fingerprint','core_restart','{}','running',NULL,NULL,NULL)")
         await self.worker.recover()
         self.assertEqual(self.worker.job('interrupted')['state'], 'unknown')
         self.assertEqual(self.sup.effects, [])
@@ -147,3 +154,71 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['state'], 'failed')
         self.assertEqual(result['result']['error'], 'addon_options_invalid')
         self.assertFalse(any(p.endswith('/options') or p == '/backups/new/partial' for p, _ in self.sup.effects))
+
+    async def test_uninstall_backup_and_installed_readback(self):
+        result = await self.complete('addon_uninstall', {'slug': 'core_editor', 'expected_version': '1.0'}, 'uninstall')
+        self.assertEqual(result['state'], 'verified', result)
+        self.assertEqual(self.sup.effects[0][0], '/backups/new/partial')
+        self.assertEqual(self.sup.effects[0][1]['addons'], ['core_editor'])
+        self.assertEqual(result['backup_slug'], 'testbackup')
+        self.assertIsNotNone(result['created_at'])
+        self.assertIsNotNone(result['finished_at'])
+        self.assertEqual(result['request_id'], 'uninstall')
+        self.assertNotIn('private-value', str(result))
+
+    async def test_uninstall_protects_updater_and_connectivity(self):
+        for target in ('self', 'abc_jarvis', 'abc_jarvis_updater', 'abc_cloudflared', 'abc_wireguard'):
+            result = await self.complete('addon_uninstall', {'slug': target, 'expected_version': '1.0'}, target)
+            self.assertEqual(result['state'], 'failed', result)
+        self.assertEqual(self.sup.effects, [])
+
+    async def test_repository_add_url_validation_and_readback(self):
+        for url in ('http://github.com/a/b', 'https://github.com/a/b?token=secret', 'https://user:pass@github.com/a/b',
+                    'https://evil.test/a/b', 'https://github.com/a/b/../../x', 'https://github.com/a/b#main'):
+            with self.assertRaises(APIError):
+                await self.worker.start('repository_add', {'repository_url': url}, 'invalid-repo')
+        result = await self.complete('repository_add', {'repository_url': 'https://github.com/a/b'}, 'repo')
+        self.assertEqual(result['state'], 'verified', result)
+        self.assertEqual((await self.worker.read('repositories'))['total'], 1)
+
+    async def test_options_restore_private_before_image(self):
+        info = await self.worker.read('addon', 'core_editor')
+        changed = await self.complete('addon_options', {'slug': 'core_editor', 'expected_revision': info['options_revision'],
+                                       'changes': {'mode': 'new'}}, 'change')
+        restored = await self.complete('addon_options_restore', {'slug': 'core_editor', 'backup_id': 'change',
+                                      'expected_revision': changed['result']['options_revision']}, 'restore')
+        self.assertEqual(restored['state'], 'verified', restored)
+        self.assertEqual(self.sup.installed['core_editor']['options']['mode'], 'old')
+        self.assertEqual(self.sup.installed['core_editor']['options']['password'], 'private-value')
+        self.assertNotIn('private-value', str(restored))
+
+    async def test_schema_migration_preserves_existing_history(self):
+        import sqlite3
+        from app.admin import Admin
+        other = self.root/'old'
+        other.mkdir()
+        db = sqlite3.connect(other/'admin.sqlite')
+        db.execute('CREATE TABLE jobs (key TEXT PRIMARY KEY,fingerprint TEXT,operation TEXT,arguments TEXT,state TEXT,result TEXT,backup_slug TEXT,before_data TEXT)')
+        db.execute("INSERT INTO jobs VALUES ('old','fp','core_restart','{}','unknown',NULL,NULL,NULL)")
+        db.commit()
+        db.close()
+        worker = Admin(self.sup, self.options, other, Audit(other), self.worker.files)
+        self.assertEqual(worker.job('old')['state'], 'unknown')
+        self.assertIsNone(worker.job('old')['created_at'])
+        await worker.close()
+
+    async def test_uninstall_missing_readback_is_unverified(self):
+        original = self.sup.request
+        async def request(method, path, body=None):
+            if path == '/addons' and 'core_editor' not in self.sup.installed:
+                return {}
+            return await original(method, path, body)
+        self.sup.request = request
+        result = await self.complete('addon_uninstall', {'slug': 'core_editor', 'expected_version': '1.0'}, 'missing-readback')
+        self.assertEqual(result['state'], 'unverified', result)
+
+    async def test_uninstall_backup_failure_never_uninstalls(self):
+        self.sup.backup_fails = True
+        result = await self.complete('addon_uninstall', {'slug': 'core_editor', 'expected_version': '1.0'}, 'backup-fail')
+        self.assertEqual(result['state'], 'unknown')
+        self.assertFalse(any(p.endswith('/uninstall') for p, _ in self.sup.effects))

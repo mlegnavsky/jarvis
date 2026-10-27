@@ -38,5 +38,10 @@ assert main.get('map') == [{'type': 'homeassistant_config', 'read_only': False, 
 updater = yaml.safe_load(Path('jarvis_updater/config.yaml').read_text())
 assert updater['hassio_role'] == 'manager'
 assert updater['options']['updates_enabled'] is False
-assert 'ports' not in updater
+assert updater.get('ports') == {'8100/tcp': None}, 'Gateway starts internal-only until explicit verified handover'
+assert Path('jarvis_updater/gateway/oauth.py').read_text() == Path('jarvis/app/oauth.py').read_text(), 'OAuth source parity must be preserved'
+gateway_runtime = ast.parse(Path('jarvis_updater/gateway/__init__.py').read_text())
+gateway_versions = [ast.literal_eval(node.value) for node in gateway_runtime.body if isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name) and target.id == 'GATEWAY_VERSION' for target in node.targets)]
+assert gateway_versions == [updater['version']], 'Gateway runtime version must match Updater manifest'
 print('Release versions, HA changelogs, manifests, permissions, pinned dependencies and Python syntax: OK')

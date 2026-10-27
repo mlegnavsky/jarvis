@@ -14,6 +14,7 @@ from .maintenance import MaintenanceBridge
 from .mcp import install_mcp
 from .management import Management
 from .admin import Admin
+from .gateway_backend import install_backend
 
 
 def create_app(ha, options, directory, watch=True):
@@ -75,6 +76,7 @@ def create_app(ha, options, directory, watch=True):
     admin_supervisor = HAClient(ha.token, ha.base, timeout=1200)
     admin = Admin(admin_supervisor, options, directory, audit)
     install_mcp(app, options, directory, ha, actions, bridge, audit, management, admin)
+    install_backend(app, ha, options, directory, audit)
     async def administration(application):
         await admin.recover()
         yield

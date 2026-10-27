@@ -1,3 +1,11 @@
+# 3.3.0
+
+- Dokončená správa doplňků: přidání GitHub repozitáře, odinstalování s předchozí zálohou a ověřením nepřítomnosti, obnova options z privátního before-image. Připojení a řídicí doplňky jsou chráněné proti odinstalování touto obecnou cestou.
+- Diagnostika odděluje dostupnost jednotlivých vrstev a měří jejich odezvu, čte omezené redigované logy, systémové zdroje, integrace a opravy. Mapa oprávnění zahrnuje i registrované vypnuté/nenačtené entity a jejich přiřazení.
+- Historie úloh obsahuje korelační request_id, časy a metadata změněných polí bez hodnot klíčů a konfigurací.
+- Interní kontrakt pro nezávislou bránu Updateru: ověřené předání katalogu/volání, serializovaný přenos OAuth databáze, pozastavení mutací při migraci a nevratné potvrzení přesunu autority.
+- Trvalý hlídač návratu původní veřejné cesty přežije restart či nespustitelnou novou bránu; po potvrzení nové OAuth autority se stará databáze nesmí znovu aktivovat.
+
 # 3.2.0
 
 - Správa z kanceláře: Supervisor manager a jediný zapisovatelný mount konfigurace HA /homeassistant. Bez Docker API, host network, shellu nebo vypínání ochrany hostitele. Vyžaduje existující povolení údržby a zápisů.

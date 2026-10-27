@@ -79,6 +79,10 @@ class HomeFixture:
             return web.json_response(self.states)
         if path == '/info':
             return web.json_response({'result': 'ok', 'data': {'arch': 'aarch64'}})
+        if path == '/addons/self/info':
+            return web.json_response({'result': 'ok', 'data': {'slug': 'fixture_jarvis', 'network': {'8099/tcp': 8099}}})
+        if path == '/addons/fixture_jarvis_updater/info':
+            return web.json_response({'result': 'ok', 'data': {'slug': 'fixture_jarvis_updater', 'network': {'8100/tcp': None}}})
         return web.json_response({}, status=404)
 
     async def websocket(self, request):

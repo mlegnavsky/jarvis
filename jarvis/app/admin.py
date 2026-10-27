@@ -7,6 +7,8 @@ import os
 import re
 import sqlite3
 from .config_files import ConfigFiles
+from .ha import now
+from . import diagnostics
 from .ha import UpstreamError
 from .policy import APIError
 
@@ -14,6 +16,9 @@ FIELDS = {
     'addon_install': {'slug', 'expected_version'}, 'addon_update': {'slug', 'expected_version'},
     'addon_start': {'slug', 'expected_version'}, 'addon_stop': {'slug', 'expected_version'},
     'addon_restart': {'slug', 'expected_version'},
+    'addon_uninstall': {'slug', 'expected_version'},
+    'repository_add': {'repository_url'},
+    'addon_options_restore': {'slug', 'backup_id', 'expected_revision'},
     'addon_options': {'slug', 'expected_revision', 'changes'},
     'core_restart': set(), 'core_update': {'version'}, 'backup_create': set(),
     'backup_restore': {'backup_slug', 'target'},
@@ -36,12 +41,20 @@ def slug(value):
     return value
 
 
+def repository_url(value):
+    if not isinstance(value, str) or not re.fullmatch(r'https://github\.com/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}/?', value):
+        raise APIError(400, 'invalid_repository_url')
+    return value.rstrip('/')
+
+
 def redact(value):
     if isinstance(value, dict):
         return {k: '<redacted>' if re.search(r'password|secret|token|credential|api.?key|private.?key', k, re.I)
                 else redact(v) for k, v in value.items()}
     if isinstance(value, list):
         return [redact(v) for v in value]
+    if isinstance(value, str) and diagnostics.SUSPECT.search(value):
+        return '<redacted>'
     return value
 
 
@@ -60,6 +73,10 @@ class Admin:
         with self.db() as db:
             db.execute('CREATE TABLE IF NOT EXISTS jobs (key TEXT PRIMARY KEY, fingerprint TEXT, operation TEXT, '
                        'arguments TEXT, state TEXT, result TEXT, backup_slug TEXT, before_data TEXT)')
+            columns = {row[1] for row in db.execute('PRAGMA table_info(jobs)')}
+            for name in ('created_at', 'started_at', 'finished_at', 'summary'):
+                if name not in columns:
+                    db.execute('ALTER TABLE jobs ADD COLUMN '+name+' TEXT')
         os.chmod(self.path, 0o600)
 
     @contextmanager
@@ -80,16 +97,33 @@ class Admin:
     def job(self, key):
         self.allowed()
         with self.db() as db:
-            row = db.execute('SELECT operation,state,result,backup_slug FROM jobs WHERE key=?', (key,)).fetchone()
+            row = db.execute('SELECT operation,state,result,backup_slug,created_at,started_at,finished_at,summary FROM jobs WHERE key=?', (key,)).fetchone()
         if not row:
             raise APIError(404, 'admin_job_not_found')
         return {'id': key, 'operation': row[0], 'state': row[1],
-                'result': json.loads(row[2]) if row[2] else None, 'backup_slug': row[3]}
+                'result': json.loads(row[2]) if row[2] else None, 'backup_slug': row[3],
+                'request_id': key, 'created_at': row[4], 'started_at': row[5], 'finished_at': row[6],
+                'summary': json.loads(row[7]) if row[7] else None}
 
     async def read(self, query, target=''):
         self.allowed()
         if not isinstance(query, str) or not isinstance(target, str) or len(target) > 400:
             raise APIError(400, 'invalid_admin_query')
+        if query == 'diagnostics':
+            return await diagnostics.diagnose(self.sup)
+        if query == 'permission_map':
+            return await diagnostics.permission_map(self.sup, self.options)
+        if query in ('core_logs', 'addon_logs', 'supervisor_logs'):
+            path = '/addons/'+slug(target)+'/logs' if query == 'addon_logs' else ('/core/logs' if query == 'core_logs' else '/supervisor/logs')
+            return await diagnostics.stage(lambda: diagnostics.logs(self.sup, path), lambda v: v)
+        if query == 'repositories':
+            value = await self.sup.request('GET', '/store/repositories')
+            items = value if isinstance(value, list) else value.get('repositories', [])
+            return {'items': [redact(diagnostics.select(i, ('slug', 'name', 'source'))) for i in items[:100]],
+                    'total': len(items), 'truncated': len(items)>100}
+        if query == 'store_addon':
+            value = await self.sup.request('GET', '/store/addons/'+slug(target))
+            return {**addon_summary(value), **diagnostics.select(value, ('description', 'arch', 'homeassistant', 'stage', 'build'))}
         if query == 'file':
             return self.files.read(target)
         if query == 'files':
@@ -143,6 +177,8 @@ class Admin:
         if 'expected_revision' in args and (not isinstance(args['expected_revision'], str)
                 or not re.fullmatch(r'missing|[a-f0-9]{64}', args['expected_revision'])):
             raise APIError(400, 'invalid_admin_revision')
+        if 'repository_url' in args:
+            repository_url(args['repository_url'])
         if 'changes' in args and not isinstance(args['changes'], dict):
             raise APIError(400, 'invalid_admin_options')
         if 'path' in args:
@@ -164,7 +200,11 @@ class Admin:
             else:
                 if db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0] >= 1000:
                     raise APIError(503, 'admin_journal_full')
-                db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,NULL,NULL,NULL)', (key, fingerprint, operation, encode(args), 'queued'))
+                summary = {'operation': operation, 'target': args.get('slug', args.get('path', args.get('target', args.get('repository_url')))),
+                           'changed_fields': sorted(args.get('changes', {})),
+                           'expected_version': args.get('expected_version'), 'restore_from': args.get('backup_id')}
+                db.execute('INSERT INTO jobs (key,fingerprint,operation,arguments,state,created_at,summary) VALUES (?,?,?,?,?,?,?)',
+                           (key, fingerprint, operation, encode(args), 'queued', now(), encode(summary)))
         if not row:
             task = asyncio.create_task(self.run(key, operation, args))
             self.tasks.add(task)
@@ -173,7 +213,10 @@ class Admin:
 
     def remember(self, key, before):
         with self.db() as db:
-            db.execute('UPDATE jobs SET before_data=? WHERE key=?', (encode(before), key))
+            row = db.execute('SELECT summary FROM jobs WHERE key=?', (key,)).fetchone()
+            summary = json.loads(row[0]) if row and row[0] else {}
+            summary['before_revision'] = revision(before.get('options', before))
+            db.execute('UPDATE jobs SET before_data=?,summary=? WHERE key=?', (encode(before), encode(summary), key))
 
     async def backup(self, key, addon=None):
         info = await self.sup.request('POST', '/backups/new/partial', {
@@ -203,12 +246,29 @@ class Admin:
             self.remember(key, before)
             return {**self.files.write(name, desired, args['expected_revision']), 'backup_id': key,
                     'activation_performed': False}
+        if operation == 'repository_add':
+            url = repository_url(args['repository_url'])
+            await self.sup.request('POST', '/store/repositories', {'repository': url})
+            repos = await self.sup.request('GET', '/store/repositories')
+            return {'verified': any(i.get('source', '').rstrip('/') == url for i in (repos if isinstance(repos, list) else repos.get('repositories', []))),
+                    'repository_url': url}
         own = (await self.sup.request('GET', '/addons/self/info'))['slug']
         target = args.get('slug')
-        if target == own and operation != 'addon_options':
+        if target == 'self':
+            target = own
+        if target == own and operation not in ('addon_options', 'addon_options_restore'):
             raise APIError(409, 'use_jarvis_updater_for_self')
         if operation == 'addon_stop' and target == own.rsplit('_jarvis', 1)[0]+'_jarvis_updater':
             raise APIError(409, 'updater_stop_protected')
+        if operation in ('addon_uninstall', 'addon_options_restore'):
+            installed = await self.sup.request('GET', '/addons')
+            details = next((i for i in installed.get('addons', []) if i.get('slug') == target), {})
+            protected = target in (own, own.rsplit('_jarvis', 1)[0]+'_jarvis_updater') or re.search(
+                r'cloudflar|cloudflared|tunnel|tailscale|wireguard|zerotier|nginx|proxy', target+' '+str(details.get('name', '')), re.I)
+            if protected:
+                raise APIError(409, 'admin_connectivity_target_protected')
+            if not details:
+                raise APIError(404, 'admin_addon_not_installed')
         if operation.startswith('addon_'):
             if operation == 'addon_install':
                 installed = await self.sup.request('GET', '/addons')
@@ -225,13 +285,21 @@ class Admin:
             else:
                 before = await self.sup.request('GET', '/addons/'+target+'/info')
                 self.remember(key, before)
-                if operation == 'addon_options':
+                if operation in ('addon_options', 'addon_options_restore'):
                     current = before.get('options', {})
                     if revision(current) != args['expected_revision']:
                         raise APIError(409, 'addon_options_changed')
-                    if target == own and set(args['changes']) - {'allowed_entities', 'allowed_services'}:
+                    if operation == 'addon_options_restore':
+                        with self.db() as db:
+                            row = db.execute('SELECT operation,before_data FROM jobs WHERE key=?', (args['backup_id'],)).fetchone()
+                        saved = json.loads(row[1]) if row and row[1] else {}
+                        if not row or row[0] not in ('addon_options', 'addon_options_restore') or saved.get('slug') != target or not isinstance(saved.get('options'), dict):
+                            raise APIError(404, 'admin_options_backup_not_found')
+                        desired = saved['options']
+                    else:
+                        desired = {**current, **args['changes']}
+                    if target == own and set(args.get('changes', {})) - {'allowed_entities', 'allowed_services'}:
                         raise APIError(403, 'self_credentials_and_connection_protected')
-                    desired = {**current, **args['changes']}
                     validation = await self.sup.request('POST', '/addons/'+target+'/options/validate', desired)
                     if validation.get('valid') is not True:
                         raise APIError(400, 'addon_options_invalid')
@@ -239,7 +307,7 @@ class Admin:
                     raise APIError(409, 'addon_version_changed')
                 await self.backup(key, target)
                 latest = await self.sup.request('GET', '/addons/'+target+'/info')
-                if operation == 'addon_options':
+                if operation in ('addon_options', 'addon_options_restore'):
                     if latest.get('options', {}) != current:
                         raise APIError(409, 'addon_options_changed')
                     await self.sup.request('POST', '/addons/'+target+'/options', {'options': desired})
@@ -249,11 +317,15 @@ class Admin:
                         raise APIError(409, 'addon_version_changed')
                     path = '/store/addons/'+target+'/update' if verb == 'update' else '/addons/'+target+'/'+verb
                     await self.sup.request('POST', path, {})
+            if operation == 'addon_uninstall':
+                installed = await self.sup.request('GET', '/addons')
+                return {'verified': isinstance(installed.get('addons'), list) and not any(i.get('slug') == target for i in installed['addons']), 'slug': target,
+                        'installed': any(i.get('slug') == target for i in installed.get('addons', []))}
             after = await self.sup.request('GET', '/addons/'+target+'/info')
-            if operation == 'addon_options':
+            if operation in ('addon_options', 'addon_options_restore'):
                 verified = after.get('options', {}) == desired
                 if verified and target == own:
-                    self.options.update(args['changes'])
+                    self.options.update(args.get('changes', {}))
                 return {'verified': verified, 'addon': addon_summary(after), 'options_revision': revision(after.get('options', {})),
                         'activation_performed': target == own}
             expected_state = 'stopped' if operation == 'addon_stop' else 'started'
@@ -294,7 +366,7 @@ class Admin:
     async def run(self, key, operation, args):
         async with self.lock:
             with self.db() as db:
-                db.execute("UPDATE jobs SET state='running' WHERE key=?", (key,))
+                db.execute("UPDATE jobs SET state='running',started_at=? WHERE key=?", (now(), key))
             self.audit.write('administration', 'started')
             try:
                 result = await self.perform(key, operation, args)
@@ -306,13 +378,13 @@ class Admin:
             except Exception:
                 state, result = 'unknown', {'error': 'admin_internal_outcome_unknown', 'retry_with_new_key': False}
             with self.db() as db:
-                db.execute('UPDATE jobs SET state=?,result=? WHERE key=?', (state, encode(result), key))
+                db.execute('UPDATE jobs SET state=?,result=?,finished_at=? WHERE key=?', (state, encode(result), now(), key))
             self.audit.write('administration', state)
 
     async def recover(self):
         with self.db() as db:
-            db.execute("UPDATE jobs SET state='unknown',result=? WHERE state IN ('queued','running')",
-                       (encode({'error': 'admin_interrupted', 'retry_with_new_key': False}),))
+            db.execute("UPDATE jobs SET state='unknown',result=?,finished_at=? WHERE state IN ('queued','running')",
+                       (encode({'error': 'admin_interrupted', 'retry_with_new_key': False}), now()))
 
     async def close(self):
         for task in tuple(self.tasks):

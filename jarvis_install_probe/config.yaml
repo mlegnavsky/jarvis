@@ -1,0 +1,13 @@
+name: Jarvis Installation Probe
+version: "0.0.1"
+slug: jarvis_install_probe
+description: Temporary permission-free installation/uninstallation acceptance probe
+url: https://github.com/mlegnavsky/jarvis
+arch:
+  - aarch64
+  - amd64
+startup: application
+boot: manual
+init: false
+options: {}
+schema: {}

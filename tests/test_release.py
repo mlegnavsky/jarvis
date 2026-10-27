@@ -46,3 +46,10 @@ class ReleaseTests(unittest.TestCase):
         for changes in ({'map': [{'type': 'ssl', 'read_only': False}]}, {'full_access': True}, {'host_pid': True}):
             path.write_text(yaml.safe_dump({**original, **changes}))
             self.assertNotEqual(self.check().returncode, 0)
+
+    def test_oauth_gateway_drift_blocks_release(self):
+        path = self.root / 'jarvis_updater/gateway/oauth.py'
+        path.write_text(path.read_text()+'\n# unreviewed divergence\n')
+        result = self.check()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('OAuth source parity', result.stderr)

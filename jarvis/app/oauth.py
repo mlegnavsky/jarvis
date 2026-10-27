@@ -1,5 +1,6 @@
 """Single-owner, pre-registered OAuth client. Not a general identity provider."""
 import base64
+import asyncio
 from contextlib import contextmanager
 import hashlib
 import hmac
@@ -37,6 +38,8 @@ class OAuth:
         self.resource = self.origin + '/mcp'
         self.generation = digest(json.dumps([self.origin, self.redirects, self.secret, self.owner], sort_keys=True))
         self.path = directory / 'oauth.sqlite'
+        self.pause_path = directory / 'gateway-migration.pause'
+        self.mutation_lock = asyncio.Lock()
         with self.db() as db:
             db.execute('CREATE TABLE IF NOT EXISTS artifacts (hash TEXT PRIMARY KEY, kind TEXT, expires REAL, data TEXT)')
             db.execute('CREATE TABLE IF NOT EXISTS attempts (at REAL)')
@@ -177,6 +180,12 @@ class OAuth:
         @web.middleware
         async def scoped(request, handler):
             if request.path.startswith('/oauth/') or request.path.startswith('/.well-known/oauth-'):
+                if request.method == 'POST' or request.path == '/oauth/authorize':
+                    async with self.mutation_lock:
+                        if self.pause_path.exists():
+                            return web.json_response({'error': 'oauth_migration_paused'}, status=503,
+                                                     headers={'Cache-Control': 'no-store', 'Retry-After': '3'})
+                        return await boundary(request, handler)
                 return await boundary(request, handler)
             return await handler(request)
         app.middlewares.append(scoped)
