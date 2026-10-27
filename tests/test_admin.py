@@ -141,6 +141,52 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['state'], 'verified')
         self.assertEqual(len(self.sup.effects), 1)
 
+    async def test_workspace_file_write_move_delete_and_restore(self):
+        from app.workspace_files import WorkspaceFiles
+        self.worker.workspaces['addons'] = WorkspaceFiles(self.ha_root, 'addons')
+        result = await self.complete('workspace_write', {'workspace': 'addons', 'path': 'probe/main.py', 'content': 'value = 1\n', 'expected_revision': 'missing'}, 'source-write')
+        self.assertEqual(result['state'], 'verified', result)
+        before = await self.worker.read('workspace_file', 'addons:probe/main.py')
+        moved = await self.complete('workspace_move', {'workspace': 'addons', 'path': 'probe/main.py', 'destination': 'probe/other.py', 'expected_revision': before['revision'], 'destination_revision': 'missing'}, 'source-move')
+        self.assertEqual(moved['state'], 'verified', moved)
+        undo = await self.complete('workspace_move_restore', {'backup_id': 'source-move', 'expected_revision': 'missing', 'destination_revision': before['revision']}, 'undo-move')
+        self.assertEqual(undo['state'], 'verified', undo)
+        self.assertEqual((await self.worker.read('workspace_file', 'addons:probe/main.py'))['content'], 'value = 1\n')
+        moved = await self.complete('workspace_move', {'workspace': 'addons', 'path': 'probe/main.py', 'destination': 'probe/other.py', 'expected_revision': before['revision'], 'destination_revision': 'missing'}, 'source-move-again')
+        self.assertEqual(moved['state'], 'verified', moved)
+        after = await self.worker.read('workspace_file', 'addons:probe/other.py')
+        deleted = await self.complete('workspace_delete', {'workspace': 'addons', 'path': 'probe/other.py', 'expected_revision': after['revision']}, 'source-delete')
+        self.assertEqual(deleted['state'], 'verified', deleted)
+        restored = await self.complete('workspace_restore', {'backup_id': 'source-delete', 'expected_revision': 'missing'}, 'source-restore')
+        self.assertEqual(restored['state'], 'verified', restored)
+        self.assertEqual((await self.worker.read('workspace_file', 'addons:probe/other.py'))['content'], 'value = 1\n')
+
+    async def test_local_rebuild_checks_self_source_revision_and_preserves_state(self):
+        from app.workspace_files import WorkspaceFiles
+        self.worker.workspaces['addons'] = WorkspaceFiles(self.ha_root, 'addons')
+        files = self.worker.workspaces['addons']
+        files.write('probe/config.yaml', 'slug: probe\nversion: "1.0"\n', 'missing')
+        files.write('probe/Dockerfile', 'FROM scratch\n', 'missing')
+        source = await self.worker.read('source_project', 'probe')
+        async def request(method, path, body=None):
+            if path == '/addons/self/info':
+                return {'slug': 'abc_jarvis'}
+            if path == '/addons/local_probe/info':
+                return {'slug': 'local_probe', 'version': '1.0', 'state': 'stopped', 'repository': 'local'}
+            self.sup.effects.append((path, body))
+            return {'slug': 'backup'} if path == '/backups/new/partial' else {}
+        self.sup.request = request
+        args = {'slug': 'local_probe', 'project': 'probe', 'expected_version': '1.0', 'expected_revision': source['revision']}
+        result = await self.complete('local_addon_rebuild', args, 'local-build')
+        self.assertEqual(result['state'], 'verified', result)
+        self.assertEqual(self.sup.effects[-1][0], '/addons/local_probe/rebuild')
+        self.assertFalse(result['result']['application_functionality_verified'])
+        stale = await self.complete('local_addon_rebuild', {**args, 'expected_revision': '0'*64}, 'stale-build')
+        self.assertEqual(stale['state'], 'failed')
+        own = await self.complete('local_addon_rebuild', {**args, 'slug': 'abc_jarvis'}, 'self-build')
+        self.assertEqual(own['state'], 'failed')
+        self.assertEqual(len(self.sup.effects), 2)
+
     async def test_backup_failure_and_protected_target_prevent_side_effect(self):
         self.sup.backup_fails = True
         result = await self.complete('addon_update', {'slug': 'core_editor', 'expected_version': '1.2'}, 'fail')

@@ -34,7 +34,7 @@ assert runtime_versions == [main['version']], 'Jarvis runtime version must match
 assert main['options']['writes_enabled'] is False
 assert main['options']['maintenance_enabled'] is False
 assert main['hassio_role'] == 'manager', 'Office administration requires the explicit Supervisor manager role'
-assert main.get('map') == [{'type': 'homeassistant_config', 'read_only': False, 'path': '/homeassistant'}], 'Only HA configuration may be mounted'
+assert main.get('map') == [{'type': kind, 'read_only': False, 'path': path} for kind, path in [('homeassistant_config', '/homeassistant'), ('local_apps', '/addons'), ('share', '/share'), ('media', '/media')]], 'Only explicit managed workspaces may be mounted'
 updater = yaml.safe_load(Path('jarvis_updater/config.yaml').read_text())
 assert updater['hassio_role'] == 'manager'
 assert updater['options']['updates_enabled'] is False

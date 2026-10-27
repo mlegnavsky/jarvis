@@ -1,3 +1,9 @@
+# 3.8.0
+
+- Správa zdrojů lokálních doplňků a sdílených souborů/médií přes explicitní mounty addons/share/media. Čtení, zápis, přesun, smazání a obnova jednotlivého souboru s kontrolou revize, trvalým before-image a zachováním executable oprávnění zdrojů.
+- Nahrávání binárních médií po blocích do privátního stagingu, maximálně8MiB na soubor. Ověření velikosti/SHA256 a cílové revize před atomickým zveřejněním; odmítnutí symlinků, hardlinků a citlivých cest.
+- Řízené přestavění již instalovaného lokálního doplňku se zálohou, kontrolou verze a fingerprintu spravovaných zdrojů. Ověření image/stavu není samo o sobě funkční test aplikace.
+
 # 3.7.0
 
 - Správa samostatných agentů/služeb integrace pomocí nativních subentry formulářů (například konverzace, STT a TTS OpenAI). Každý formulář má trvalou vazbu na odpovídající nativní route a revizi.

@@ -8,11 +8,13 @@ import re
 import sqlite3
 from .config_files import ConfigFiles
 from .ha import now
-from . import diagnostics, integration_admin
+from . import diagnostics, integration_admin, workspace_admin
+from .workspace_files import WorkspaceFiles, Uploads
 from .ha import UpstreamError
 from .policy import APIError
 
 FIELDS = {
+    **workspace_admin.FIELDS,
     'integration_subentry_options_start': {'entry_id', 'subentry_id', 'expected_revision'},
     'integration_reload': {'entry_id', 'expected_revision'},
     'integration_options_start': {'entry_id', 'expected_revision'},
@@ -73,6 +75,8 @@ class Admin:
     def __init__(self, supervisor, options, directory, audit, files=None):
         self.sup, self.options, self.audit = supervisor, options, audit
         self.files = files or ConfigFiles()
+        self.workspaces = {name: WorkspaceFiles(__import__('pathlib').Path('/'+name), name) for name in ('addons', 'share', 'media')}
+        self.uploads = Uploads(directory/'uploads')
         self.path = directory / 'admin.sqlite'
         self.tasks = set()
         self.lock = asyncio.Lock()
@@ -120,6 +124,20 @@ class Admin:
             raise APIError(400, 'invalid_admin_query')
         if query == 'diagnostics':
             return await diagnostics.diagnose(self.sup)
+        if query == 'workspaces':
+            return {'items': [{'name': n, 'available': f.root.is_dir()} for n, f in self.workspaces.items()], 'max_upload_bytes': 8*1024*1024, 'chunk_bytes': 128*1024}
+        if query == 'workspace_files':
+            return workspace_admin.workspace(self, target).inventory()
+        if query == 'workspace_file':
+            name, separator, path = target.partition(':')
+            if not separator:
+                raise APIError(400, 'workspace_path_required')
+            return workspace_admin.workspace(self, name).read(path)
+        if query == 'source_project':
+            return workspace_admin.project(self, target)
+        if query == 'upload':
+            meta, part = self.uploads.info(target)
+            return {**meta, 'offset': part.stat().st_size}
         if query == 'integrations':
             return await integration_admin.entries(self)
         if query == 'integration':
@@ -225,7 +243,10 @@ class Admin:
             if name is not None and (not isinstance(name, str) or not 1 <= len(name) <= 150 or not name.isprintable()):
                 raise APIError(400, 'invalid_device_metadata')
         if 'path' in args:
-            self.files.parts(args['path'])
+            if operation not in workspace_admin.FIELDS:
+                self.files.parts(args['path'])
+        if operation in workspace_admin.FIELDS:
+            workspace_admin.validate(self, operation, args)
         if operation == 'file_write':
             self.files.validate(args['path'], args['content'])
         if operation == 'backup_restore' and args['target'] != 'homeassistant':
@@ -273,6 +294,8 @@ class Admin:
 
     async def perform(self, key, operation, args):
         self.allowed(write=True)
+        if operation in workspace_admin.FIELDS:
+            return await workspace_admin.perform(self, key, operation, args)
         if operation.startswith('integration_'):
             return await integration_admin.change(self, key, operation, args)
         if operation == 'automations_reload':

@@ -1,5 +1,5 @@
 name: Jarvis
-version: "3.7.0"
+version: "3.8.0"
 slug: jarvis
 description: Current home inventory and authenticated controlled actions. Experimental.
 url: https://github.com/mlegnavsky/jarvis
@@ -17,6 +17,15 @@ map:
   - type: homeassistant_config
     read_only: false
     path: /homeassistant
+  - type: local_apps
+    read_only: false
+    path: /addons
+  - type: share
+    read_only: false
+    path: /share
+  - type: media
+    read_only: false
+    path: /media
 ports:
   8099/tcp: 8099
 ports_description:

@@ -9,7 +9,7 @@ from .management import BRIDGE_SERVICES
 from .admin import FIELDS
 
 ADMIN_READS = ['overview', 'addons', 'addon', 'store', 'backups', 'files', 'file', 'jobs', 'job', 'config_check',
-               'integrations', 'integration', 'integration_subentries', 'integration_options', 'voice_pipelines', 'device', 'diagnostics', 'permission_map', 'core_logs', 'supervisor_logs', 'addon_logs', 'repositories', 'store_addon']
+               'workspaces', 'workspace_files', 'workspace_file', 'source_project', 'upload', 'integrations', 'integration', 'integration_subentries', 'integration_options', 'voice_pipelines', 'device', 'diagnostics', 'permission_map', 'core_logs', 'supervisor_logs', 'addon_logs', 'repositories', 'store_addon']
 GATEWAY_INVOKE = web.AppKey('gateway_invoke', object)
 MCP_OAUTH = web.AppKey('mcp_oauth', OAuth)
 
