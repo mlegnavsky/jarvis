@@ -1,5 +1,5 @@
 # Register in Settings > Dashboards > Resources (storage mode), in addition
 # to frontend.extra_module_url. This loads the custom cards for existing
 # browser sessions when Lovelace refreshes its resources.
-url: /local/jarvis-energy-weather-v2.js?v=2.0.0
+url: /local/jarvis-energy-weather-v2.js?v=2.0.1
 type: module
