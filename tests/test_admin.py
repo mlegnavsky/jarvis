@@ -37,7 +37,7 @@ class AdminSupervisor:
             if path.endswith('/update'):
                 self.installed['core_editor']['version'] = '1.2'
                 return {}
-            return {'slug': path.rsplit('/', 1)[1], 'version': '1.2'}
+            return {'slug': path.rsplit('/', 1)[1], 'version': None, 'version_latest': '1.2'}
         if path == '/store/repositories':
             if method == 'POST':
                 self.repository = body['repository']

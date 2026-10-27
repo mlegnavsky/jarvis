@@ -275,11 +275,11 @@ class Admin:
                 if any(i.get('slug') == target for i in installed.get('addons', [])):
                     raise APIError(409, 'addon_already_installed')
                 offered = await self.sup.request('GET', '/store/addons/'+target)
-                if offered.get('version') != args['expected_version']:
+                if (offered.get('version_latest') or offered.get('version')) != args['expected_version']:
                     raise APIError(409, 'addon_version_changed')
                 await self.backup(key)
                 latest = await self.sup.request('GET', '/store/addons/'+target)
-                if latest.get('version') != args['expected_version']:
+                if (latest.get('version_latest') or latest.get('version')) != args['expected_version']:
                     raise APIError(409, 'addon_version_changed')
                 await self.sup.request('POST', '/store/addons/'+target+'/install', {'background': False})
             else:

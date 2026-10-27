@@ -1,3 +1,7 @@
+# 3.3.1
+
+- Instalace dosud nenainstalovaného doplňku porovnává nabízenou version_latest; prázdná version označuje chybějící instalaci, nikoli změnu nabídky. Kontrola před i po záloze a ověření instalované verze zůstávají zachované.
+
 # 3.3.0
 
 - Dokončená správa doplňků: přidání GitHub repozitáře, odinstalování s předchozí zálohou a ověřením nepřítomnosti, obnova options z privátního before-image. Připojení a řídicí doplňky jsou chráněné proti odinstalování touto obecnou cestou.
