@@ -24,6 +24,8 @@ class IntegrationAdminTests(unittest.IsolatedAsyncioTestCase):
                         v = ws.value
                         if v['type'] == 'config_entries/get':
                             data = [{'entry_id': 'entry1', 'domain': 'test', 'title': 'Test', 'state': 'loaded', 'supports_options': True, 'data': {'password': 'secret'}}]
+                        elif v['type'] == 'config_entries/subentries/list':
+                            data = [{'subentry_id': 'sub1', 'subentry_type': 'conversation', 'title': 'Agent'}]
                         else:
                             data = {'pipelines': [], 'preferred_pipeline': None}
                         return {'id': 1, 'success': True, 'result': data}
@@ -55,6 +57,20 @@ class IntegrationAdminTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(value['items'][0]['supports_options'])
         self.assertNotIn('secret', str(value))
         self.assertIn('revision', value['items'][0])
+
+    async def test_nested_schema_defaults_and_suggestions_are_not_exposed(self):
+        from app.integration_admin import public_form
+        value = public_form({'type': 'form', 'data_schema': [{'name': 'nested', 'schema': [{'name': 'arbitrary', 'default': 'secret', 'description': {'suggested_value': 'secret'}}]}]})
+        self.assertNotIn('secret', str(value))
+
+    async def test_subentry_settings_use_owned_native_subentry_route(self):
+        sub = (await self.worker.read('integration_subentries', 'entry1'))['items'][0]
+        opened = await self.complete('integration_subentry_options_start', {'entry_id': 'entry1', 'subentry_id': 'sub1', 'expected_revision': sub['revision']}, 'sub-open')
+        self.assertEqual(opened['state'], 'verified', opened)
+        self.assertTrue(any(p == '/core/api/config/config_entries/subentries/flow' for _, p, _ in self.calls))
+        form = await self.worker.read('integration_options', 'flow1')
+        self.assertEqual(form['step_id'], 'init')
+        self.assertEqual(self.calls[-1][1], '/core/api/config/config_entries/subentries/flow/flow1')
 
     async def test_owned_options_form_submission_is_revision_checked_and_not_repeated(self):
         item = (await self.worker.read('integrations'))['items'][0]

@@ -13,6 +13,7 @@ from .ha import UpstreamError
 from .policy import APIError
 
 FIELDS = {
+    'integration_subentry_options_start': {'entry_id', 'subentry_id', 'expected_revision'},
     'integration_reload': {'entry_id', 'expected_revision'},
     'integration_options_start': {'entry_id', 'expected_revision'},
     'integration_options_submit': {'flow_id', 'expected_revision', 'user_input'},
@@ -77,6 +78,8 @@ class Admin:
         self.lock = asyncio.Lock()
         with self.db() as db:
             db.execute('CREATE TABLE IF NOT EXISTS integration_flows (flow_id TEXT PRIMARY KEY, entry_id TEXT, closed INTEGER)')
+            if 'kind' not in {r[1] for r in db.execute('PRAGMA table_info(integration_flows)')}:
+                db.execute("ALTER TABLE integration_flows ADD COLUMN kind TEXT DEFAULT 'options'")
             db.execute('CREATE TABLE IF NOT EXISTS jobs (key TEXT PRIMARY KEY, fingerprint TEXT, operation TEXT, '
                        'arguments TEXT, state TEXT, result TEXT, backup_slug TEXT, before_data TEXT)')
             columns = {row[1] for row in db.execute('PRAGMA table_info(jobs)')}
@@ -121,6 +124,8 @@ class Admin:
             return await integration_admin.entries(self)
         if query == 'integration':
             return await integration_admin.entry(self, target)
+        if query == 'integration_subentries':
+            return await integration_admin.subentries(self, target)
         if query == 'integration_options':
             return integration_admin.public_form(await integration_admin.get_form(self, target))
         if query == 'voice_pipelines':
@@ -205,7 +210,7 @@ class Admin:
             repository_url(args['repository_url'])
         if 'changes' in args and not isinstance(args['changes'], dict):
             raise APIError(400, 'invalid_admin_options')
-        for field in ('entry_id', 'flow_id'):
+        for field in ('entry_id', 'flow_id', 'subentry_id'):
             if field in args:
                 integration_admin.identifier(args[field])
         if 'user_input' in args and not isinstance(args['user_input'], dict):

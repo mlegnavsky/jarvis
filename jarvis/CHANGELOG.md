@@ -1,3 +1,8 @@
+# 3.7.0
+
+- Správa samostatných agentů/služeb integrace pomocí nativních subentry formulářů (například konverzace, STT a TTS OpenAI). Každý formulář má trvalou vazbu na odpovídající nativní route a revizi.
+- Existující options flows zůstávají platné při migraci databáze. Přehled subentries nevrací přihlašovací data.
+
 # 3.6.0
 
 - Nativní správa integrací: přehled s podporou options a revizemi, bezpečné otevření a odesílání konfiguračních formulářů, znovunačtení konkrétní integrace s ověřením loaded.
