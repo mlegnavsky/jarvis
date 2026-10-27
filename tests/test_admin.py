@@ -97,6 +97,50 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(APIError):
             await self.worker.start('addon_install', {'slug': 'core_new', 'expected_version': 'different'}, 'install')
 
+    async def test_device_metadata_revision_and_verified_readback_without_replay(self):
+        device = {'id': 'dev1', 'area_id': 'hall', 'name_by_user': None}
+        async def registry(kind):
+            return [dict(device)] if kind == 'device' else ([{'area_id': 'living'}] if kind == 'area' else [])
+        self.sup.registry = registry
+        class WS:
+            async def send_json(ws, value):
+                self.sup.effects.append(('device_update', value))
+                device.update({k: value[k] for k in ('area_id', 'name_by_user')})
+            async def receive_json(ws):
+                return {'id': 1, 'success': True, 'result': dict(device)}
+            async def close(ws):
+                pass
+        async def websocket():
+            return WS()
+        self.sup._websocket = websocket
+        self.sup.timeout = 1
+        before = await self.worker.read('device', 'dev1')
+        args = {'device_id': 'dev1', 'area_id': 'living', 'name_by_user': 'Voice Living', 'expected_revision': before['revision']}
+        result = await self.complete('device_metadata', args, 'move-device')
+        self.assertEqual(result['state'], 'verified', result)
+        self.assertEqual(device['area_id'], 'living')
+        self.assertEqual(device['name_by_user'], 'Voice Living')
+        await self.worker.start('device_metadata', args, 'move-device')
+        self.assertEqual(len(self.sup.effects), 1)
+        stale = await self.complete('device_metadata', args, 'stale-move')
+        self.assertEqual(stale['state'], 'failed')
+        self.assertEqual(len(self.sup.effects), 1)
+
+    async def test_automation_reload_requires_current_file_revision(self):
+        async def request(method, path, body=None):
+            self.sup.effects.append(path)
+            self.assertEqual(path, '/core/api/services/automation/reload')
+            return []
+        self.sup.request = request
+        self.worker.files.write('automations.yaml', '[]', 'missing')
+        current = self.worker.files.read('automations.yaml')
+        failed = await self.complete('automations_reload', {'expected_revision': '0'*64}, 'stale-reload')
+        self.assertEqual(failed['state'], 'failed')
+        self.assertEqual(self.sup.effects, [])
+        result = await self.complete('automations_reload', {'expected_revision': current['revision']}, 'reload')
+        self.assertEqual(result['state'], 'verified')
+        self.assertEqual(len(self.sup.effects), 1)
+
     async def test_backup_failure_and_protected_target_prevent_side_effect(self):
         self.sup.backup_fails = True
         result = await self.complete('addon_update', {'slug': 'core_editor', 'expected_version': '1.2'}, 'fail')

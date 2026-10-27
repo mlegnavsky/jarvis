@@ -13,6 +13,8 @@ from .ha import UpstreamError
 from .policy import APIError
 
 FIELDS = {
+    'automations_reload': {'expected_revision'},
+    'device_metadata': {'device_id', 'area_id', 'name_by_user', 'expected_revision'},
     'addon_install': {'slug', 'expected_version'}, 'addon_update': {'slug', 'expected_version'},
     'addon_start': {'slug', 'expected_version'}, 'addon_stop': {'slug', 'expected_version'},
     'addon_restart': {'slug', 'expected_version'},
@@ -111,6 +113,15 @@ class Admin:
             raise APIError(400, 'invalid_admin_query')
         if query == 'diagnostics':
             return await diagnostics.diagnose(self.sup)
+        if query == 'device':
+            devices, entities, areas = await asyncio.gather(self.sup.registry('device'), self.sup.registry('entity'), self.sup.registry('area'))
+            device = next((d for d in devices if d.get('id') == target), None)
+            if device is None:
+                raise APIError(404, 'device_not_found')
+            metadata = {k: device.get(k) for k in ('area_id', 'name_by_user')}
+            return {'device': diagnostics.select(device, ('id', 'name', 'name_by_user', 'area_id', 'manufacturer', 'model')),
+                    'revision': revision(metadata), 'areas': areas,
+                    'entities': [diagnostics.select(e, ('id', 'entity_id', 'name', 'original_name', 'area_id', 'disabled_by')) for e in entities if e.get('device_id') == target]}
         if query == 'permission_map':
             return await diagnostics.permission_map(self.sup, self.options)
         if query in ('core_logs', 'addon_logs', 'supervisor_logs'):
@@ -181,6 +192,15 @@ class Admin:
             repository_url(args['repository_url'])
         if 'changes' in args and not isinstance(args['changes'], dict):
             raise APIError(400, 'invalid_admin_options')
+        if operation == 'device_metadata':
+            for field in ('device_id', 'area_id'):
+                if field == 'area_id' and args[field] is None:
+                    continue
+                if not isinstance(args[field], str) or not re.fullmatch(r'[a-zA-Z0-9_-]{1,128}', args[field]):
+                    raise APIError(400, 'invalid_device_metadata')
+            name = args['name_by_user']
+            if name is not None and (not isinstance(name, str) or not 1 <= len(name) <= 150 or not name.isprintable()):
+                raise APIError(400, 'invalid_device_metadata')
         if 'path' in args:
             self.files.parts(args['path'])
         if operation == 'file_write':
@@ -230,6 +250,27 @@ class Admin:
 
     async def perform(self, key, operation, args):
         self.allowed(write=True)
+        if operation == 'automations_reload':
+            before = self.files.read('automations.yaml')
+            if before['revision'] != args['expected_revision']:
+                raise APIError(409, 'config_revision_conflict')
+            self.remember(key, before)
+            await self.sup.request('POST', '/core/api/services/automation/reload', {})
+            after = self.files.read('automations.yaml')
+            return {'verified': after['revision'] == args['expected_revision'], 'revision': after['revision'],
+                    'activation_performed': True}
+        if operation == 'device_metadata':
+            before = await self.read('device', args['device_id'])
+            if before['revision'] != args['expected_revision']:
+                raise APIError(409, 'device_metadata_changed')
+            if args['area_id'] is not None and not any(a['area_id'] == args['area_id'] for a in before['areas']):
+                raise APIError(404, 'area_not_found')
+            self.remember(key, before)
+            desired = {k: args[k] for k in ('area_id', 'name_by_user')}
+            await diagnostics.websocket_query(self.sup, 'config/device_registry/update', {'device_id': args['device_id'], **desired})
+            after = await self.read('device', args['device_id'])
+            return {'verified': all(after['device'].get(k) == v for k, v in desired.items()),
+                    'device': after['device'], 'revision': after['revision'], 'backup_id': key}
         if operation.startswith('file_'):
             desired = args.get('content') if operation == 'file_write' else None
             name = args.get('path')

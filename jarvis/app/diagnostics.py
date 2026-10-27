@@ -47,12 +47,12 @@ async def logs(sup, path):
         return value
 
 
-async def websocket_query(sup, command):
+async def websocket_query(sup, command, arguments=None):
     ws = None
     try:
         async with asyncio.timeout(sup.timeout):
             ws = await sup._websocket()
-            await ws.send_json({'id': 1, 'type': command})
+            await ws.send_json({**(arguments or {}), 'id': 1, 'type': command})
             value = await ws.receive_json()
             if value.get('id') != 1 or value.get('success') is not True:
                 raise ValueError('diagnostic_unavailable')

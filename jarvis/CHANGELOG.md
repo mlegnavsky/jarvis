@@ -1,3 +1,8 @@
+# 3.5.0
+
+- Správa místnosti a uživatelského názvu zařízení přes nativní registr Home Assistantu: kontrola revize, ověření oblasti, trvalý before-image a readback. Nemění identifikátory, párování, firmware ani přihlašovací údaje.
+- Čtení konkrétního zařízení včetně souvisejících entit a oblastí pro ověřené přesuny a návazné úpravy automatizací.
+
 # 3.4.0
 
 - Přepnutí známého světla přes light.toggle proběhne v jednom volání: aktuální stav, konkrétní zapnutí/vypnutí a ověření cílového stavu. Vyžaduje povolené zapnutí i vypnutí; nepřijímá další parametry ani neznámý stav.
