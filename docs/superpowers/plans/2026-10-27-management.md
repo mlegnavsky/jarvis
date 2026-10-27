@@ -9,12 +9,12 @@ Scope: read selected HA system configuration, run HA configuration validation, l
 Limitations: HA's editor API offers no atomic compare-and-swap against independent UI edits. Revision checking prevents known stale writes but cannot eliminate the final external race. Stored definition verification does not establish execution or physical results. No installation of other add-ons or arbitrary configuration.yaml edits.
 
 Tasks:
-- [ ] Add failing HTTP fixture tests for missing definitions versus unavailable API, rejected writes, successful config readback.
-- [ ] Add HAClient bounded automation API methods and configuration diagnostics.
-- [ ] Add failing management tests: backup, stale revision, idempotency across restart, uncertain outcome, restore, disabled default and permissions.
-- [ ] Implement SQLite journal with before-images and fail-closed replay; backups precede effects.
-- [ ] Add MCP tools and end-to-end authorization/argument validation tests.
-- [ ] Run full test suite, manifest checks and CI arm64/amd64 build/start checks.
-- [ ] Release 3.1.0, update through Updater, record backup and verified job, check live diagnostics and report any unavailable live verification separately.
+- [x] Add failing HTTP fixture tests for missing definitions versus unavailable API, rejected writes, successful config readback.
+- [x] Add HAClient bounded automation API methods and configuration diagnostics.
+- [x] Add failing management tests: backup, stale revision, idempotency across restart, uncertain outcome, restore, disabled default and permissions.
+- [x] Implement SQLite journal with before-images and fail-closed replay; backups precede effects.
+- [x] Add MCP tools and end-to-end authorization/argument validation tests.
+- [x] Run full test suite, manifest checks and CI arm64/amd64 build/start checks.
+- [x] Release 3.1.0, update through Updater, record backup and verified job, check live diagnostics and report any unavailable live verification separately.
 
 Review focus: absent config integration must not be interpreted as missing automation; stale or conflicting requests never write; unknown outcomes never repeat; secrets never enter audit metadata; tests never operate physical devices.
