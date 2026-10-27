@@ -12,6 +12,7 @@ from .ha import HAClient, UpstreamError
 from .policy import APIError
 from .maintenance import MaintenanceBridge
 from .mcp import install_mcp
+from .management import Management
 
 
 def create_app(ha, options, directory, watch=True):
@@ -69,7 +70,8 @@ def create_app(ha, options, directory, watch=True):
         body = await request.json() if request.method == 'POST' else None
         status, value = await bridge.request(request.method, path, body, request.headers.get('Idempotency-Key'))
         return web.json_response(value, status=status)
-    install_mcp(app, options, directory, ha, actions, bridge, audit)
+    management = Management(ha, options, directory, audit)
+    install_mcp(app, options, directory, ha, actions, bridge, audit, management)
     app.router.add_get('/v1/maintenance/check', maintenance)
     app.router.add_get('/v1/maintenance/jobs/{id}', maintenance)
     app.router.add_post('/v1/maintenance/update', maintenance)

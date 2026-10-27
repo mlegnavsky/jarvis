@@ -136,3 +136,54 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
             'params': {'protocolVersion': '2025-11-25'}}, headers={'Authorization': 'Bearer '+self.token,
             'Accept': 'application/json, text/event-stream'})
         self.assertEqual(response.status, 200)
+
+    async def test_management_tools_require_maintain_and_write_gate(self):
+        await self.http.close()
+        self.options['maintenance_enabled'] = True
+        self.http = TestClient(TestServer(create_app(self.ha, self.options, Path(self.tmp.name), watch=False)))
+        await self.http.start_server()
+        arguments = {'operation': 'save', 'id': 'jarvis_draft', 'expected_revision': 'missing',
+                     'request_id': 'draft-1', 'config': {'alias': 'Draft', 'initial_state': False,
+                                                       'triggers': [], 'actions': []}}
+        call = {'name': 'jarvis_automation_change', 'arguments': arguments}
+        result = (await (await self.rpc('tools/call', call)).json())['result']
+        self.assertTrue(result['isError'])
+        self.assertEqual(self.fixture.effects, [])
+        token = (await (await self.exchange(await self.authorize(scope='jarvis:read jarvis:maintain'))).json())['access_token']
+        result = (await (await self.rpc('tools/call', call, token=token)).json())['result']
+        self.assertFalse(result['isError'])
+        self.assertTrue(result['structuredContent']['verified'])
+        self.assertFalse(self.fixture.automations['jarvis_draft']['initial_state'])
+        result = (await (await self.rpc('tools/call', {'name': 'jarvis_diagnostics', 'arguments': {'check_config': True}}, token=token)).json())['result']
+        self.assertEqual(result['structuredContent']['validation']['result'], 'valid')
+        result = (await (await self.rpc('tools/call', {'name': 'jarvis_automation_backups', 'arguments': {}}, token=token)).json())['result']
+        self.assertEqual(result['structuredContent']['items'][0]['backup_id'], 'draft-1')
+        self.assertNotIn('config', result['structuredContent']['items'][0])
+        invalid = {**arguments, 'operation': 'anything'}
+        response = await self.rpc('tools/call', {'name': 'jarvis_automation_change', 'arguments': invalid}, token=token)
+        self.assertEqual((await response.json())['error']['code'], -32602)
+        self.assertEqual(len(self.fixture.effects), 1)
+
+    async def test_existing_action_bridge_requires_both_scopes_and_preserves_id(self):
+        await self.http.close()
+        self.options['maintenance_enabled'] = True
+        self.http = TestClient(TestServer(create_app(self.ha, self.options, Path(self.tmp.name), watch=False)))
+        await self.http.start_server()
+        args = {'entity_id': 'automation.jarvis_probe', 'service': 'jarvis.automation_save',
+                'request_id': 'bridge-save', 'data': {'expected_revision': 'missing',
+                'config': {'alias': 'Probe', 'initial_state': False, 'triggers': [], 'actions': []}}}
+        for scopes in ('jarvis:read jarvis:control', 'jarvis:read jarvis:maintain'):
+            token = (await (await self.exchange(await self.authorize(scope=scopes))).json())['access_token']
+            result = (await (await self.rpc('tools/call', {'name': 'jarvis_action', 'arguments': args}, token=token)).json())['result']
+            self.assertTrue(result['isError'])
+            self.assertEqual(self.fixture.effects, [])
+        token = (await (await self.exchange(await self.authorize(scope='jarvis:read jarvis:control jarvis:maintain'))).json())['access_token']
+        for _ in range(2):
+            result = (await (await self.rpc('tools/call', {'name': 'jarvis_action', 'arguments': args}, token=token)).json())['result']
+            self.assertTrue(result['structuredContent']['verified'])
+        self.assertEqual(self.fixture.effects, [('POST', 'jarvis_probe')])
+        self.assertEqual(self.fixture.automations['jarvis_probe']['id'], 'jarvis_probe')
+        invalid = {**args, 'entity_id': 'light.jarvis_probe', 'request_id': 'wrong-target'}
+        result = (await (await self.rpc('tools/call', {'name': 'jarvis_action', 'arguments': invalid}, token=token)).json())['result']
+        self.assertTrue(result['isError'])
+        self.assertEqual(len(self.fixture.effects), 1)

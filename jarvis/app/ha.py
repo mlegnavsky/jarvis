@@ -1,9 +1,11 @@
 """Bounded internal Home Assistant API access. Never returns stale snapshots."""
 import asyncio
+import re
 from datetime import datetime, timezone
 from urllib.parse import quote
 
 import aiohttp
+from .policy import APIError
 
 
 def now():
@@ -114,6 +116,29 @@ class HAClient:
 
     async def state(self, entity_id):
         return await self.request('GET', '/core/api/states/' + quote(entity_id, safe=''))
+
+    async def automation(self, method, identifier, config=None):
+        if (method not in ('GET', 'POST', 'DELETE') or not isinstance(identifier, str)
+                or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', identifier)):
+            raise APIError(400, 'invalid_automation_target')
+        session = await self._session()
+        try:
+            async with session.request(method, self.base + '/core/api/config/automation/config/' + identifier,
+                    json=config, headers={'Authorization': 'Bearer ' + self.token},
+                    timeout=aiohttp.ClientTimeout(total=self.timeout), allow_redirects=False) as response:
+                # A route-level 404 must never be mistaken for a missing item.
+                value = await response.json()
+                if method == 'GET' and response.status == 404 and value == {'message': 'Resource not found'}:
+                    return None
+                if method == 'POST' and response.status == 400:
+                    raise APIError(400, 'automation_config_rejected')
+                if response.status != 200 or not isinstance(value, dict):
+                    raise UpstreamError('automation_api_unavailable')
+                if method != 'GET' and value.get('result') != 'ok':
+                    raise UpstreamError('automation_write_unconfirmed')
+                return value
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+            raise UpstreamError('automation_api_unavailable') from exc
 
     async def service(self, domain, service, data):
         return await self.request('POST', '/core/api/services/' + domain + '/' + service, data)

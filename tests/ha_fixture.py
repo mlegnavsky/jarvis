@@ -10,6 +10,9 @@ class HomeFixture:
         self.unsupported = set()
         self.delay = 0
         self.effects = []
+        self.automations = {}
+        self.reject_automation = False
+        self.automation_api_missing = False
         self.sockets = []
         self.app = web.Application()
         self.app.router.add_get('/core/websocket', self.websocket)
@@ -32,6 +35,22 @@ class HomeFixture:
         if self.unavailable:
             return web.json_response({}, status=503)
         path = request.path
+        if path.startswith('/core/api/config/automation/config/'):
+            if self.automation_api_missing:
+                return web.Response(status=404)
+            identifier = path.rsplit('/', 1)[1]
+            if request.method == 'GET':
+                return web.json_response(self.automations[identifier]) if identifier in self.automations else web.json_response({'message': 'Resource not found'}, status=404)
+            if self.reject_automation:
+                return web.json_response({'message': 'Message malformed'}, status=400)
+            self.effects.append((request.method, identifier))
+            if request.method == 'POST':
+                self.automations[identifier] = {'id': identifier, **await request.json()}
+            elif request.method == 'DELETE':
+                self.automations.pop(identifier, None)
+            return web.json_response({'result': 'ok'})
+        if path == '/core/api/config/core/check_config':
+            return web.json_response({'result': 'valid', 'errors': None})
         if path == '/core/api/states':
             return web.json_response(self.states)
         if path.startswith('/core/api/states/'):

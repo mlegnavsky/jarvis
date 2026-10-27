@@ -1,3 +1,11 @@
+# 3.1.0
+
+- Vzdálená diagnostika vybraného nastavení HA, kontrola konfigurace a přehled automatizací přes MCP.
+- Čtení a revizemi chráněné ukládání, mazání a obnova editorových automatizací. Před zápisem se trvale uloží původní definice; výsledek se ověřuje zpětným načtením. Neověřuje se vykonání ani fyzický stav.
+- Nové/obnovené definice mají initial_state=false. To není potvrzení vypnutí již běžící nezměněné automatizace. Aktivace je samostatný povel.
+- Kompatibilní přístup přes jarvis_action pro již otevřené chaty vyžaduje současně oprávnění control i maintain. Běžné povely si ponechávají své seznamy povolených entit/služeb.
+- Lokální deník má limit 1000 změn a po naplnění odmítá další změny včetně obnovy; diagnostika ukazuje zbývající kapacitu. Deník se automaticky nemaže.
+
 # 3.0.2
 
 - Obnova přihlášení přijme vynechaný parametr resource pouze u platného refresh tokenu svázaného s tímto Jarvisem. Klient nemusí při obnově opakovat již udělenou adresu API.
