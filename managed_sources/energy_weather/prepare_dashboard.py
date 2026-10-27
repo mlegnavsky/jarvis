@@ -13,11 +13,11 @@ config.with_suffix('.prepared.yaml').write_text(s)
 d=yaml.safe_load(dashboard.read_text())
 for v in d['views']:
  if v.get('path')=='energie':
-  if not any('custom:jarvis-energy-weather' in str(section) for section in v.get('sections',[])):
-   v['sections'].append({'type':'grid','column_span':3,'cards':[{'type':'custom:jarvis-energy-weather','mode':'energy','grid_options':{'columns':'full'}}]})
+  if not any('custom:jarvis-weather-sun-card' in str(section) for section in v.get('sections',[])):
+   v['sections'].append({'type':'grid','column_span':3,'cards':[{'type':'custom:jarvis-weather-sun-card','mode':'energy','grid_options':{'columns':'full'}}]})
  if v.get('path')=='pocasi':
-  if not any(c.get('type')=='custom:jarvis-energy-weather' for c in v['cards']):
-   v['cards'].append({'type':'custom:jarvis-energy-weather','mode':'weather'})
+  if not any(c.get('type')=='custom:jarvis-weather-sun-card' for c in v['cards']):
+   v['cards'].append({'type':'custom:jarvis-weather-sun-card','mode':'weather'})
   cards=v.pop('cards',None)
   if cards is not None:
    for card in cards: card['grid_options']={'columns':'full'}
