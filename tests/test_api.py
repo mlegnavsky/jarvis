@@ -95,6 +95,34 @@ class APITests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.get('target_state_verified'), result)
         self.assertEqual(result['after']['state'], 'off')
 
+    async def test_toggle_resolves_and_confirms_once_even_after_restart(self):
+        self.options['allowed_services'].append('light.turn_off')
+        body = {'entity_id': 'light.test', 'service': 'light.toggle', 'data': {}}
+        for initial, expected, verb in [('off', 'on', 'turn_on'), ('on', 'off', 'turn_off')]:
+            self.fixture.states[0]['state'] = initial
+            response = await self.action(body, key='toggle-'+initial)
+            self.assertEqual(response.status, 200, await response.text())
+            result = await response.json()
+            self.assertTrue(result['target_state_verified'])
+            self.assertEqual(result['after']['state'], expected)
+            self.assertEqual(result['resolved_service'], 'light.'+verb)
+        await self.http.close()
+        await self.open_client()
+        replay = await (await self.action(body, key='toggle-off')).json()
+        self.assertTrue(replay['replayed'])
+        self.assertEqual(self.fixture.states[0]['state'], 'off')
+        self.assertEqual(len(self.fixture.effects), 2)
+
+    async def test_toggle_requires_both_permissions_and_known_binary_state(self):
+        body = {'entity_id': 'light.test', 'service': 'light.toggle', 'data': {}}
+        self.assertEqual((await self.action(body, key='toggle-denied')).status, 403)
+        self.options['allowed_services'].append('light.turn_off')
+        for state in ('unavailable', 'unknown', 'unexpected'):
+            self.fixture.states[0]['state'] = state
+            self.assertEqual((await self.action(body, key='toggle-'+state)).status, 409)
+        self.assertEqual((await self.action({**body, 'data': {'brightness': 50}}, key='toggle-data')).status, 400)
+        self.assertEqual(len(self.fixture.effects), 0)
+
     async def test_confirmation_timeout_never_claims_target_success_or_resends(self):
         self.fixture.light_update_enabled = False
         actions = Actions(self.ha, self.options, Path(self.tmp.name), Audit(Path(self.tmp.name)), confirmation_timeout=0.06)

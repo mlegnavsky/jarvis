@@ -51,6 +51,10 @@ class Actions:
             try:
                 before = await self.ha.state(entity)
                 validate_current_state(service, data, before)
+                if service == 'light.toggle':
+                    if before.get('state') not in ('on', 'off'):
+                        raise APIError(409, 'entity_state_not_binary')
+                    service = 'light.turn_off' if before['state'] == 'on' else 'light.turn_on'
                 self.audit.write('action', 'started')
                 domain, name = service.split('.')
                 result = await self.ha.service(domain, name, {**data, 'entity_id': entity})
@@ -78,7 +82,7 @@ class Actions:
                 except (UpstreamError, TimeoutError):
                     pass
                 status, response = 200, {'accepted': True, 'before': before, 'after': after,
-                    'result': result, 'state_observed': after is not None,
+                    'result': result, 'resolved_service': service, 'state_observed': after is not None,
                     'target_state_verified': matches(after) if target else None, 'replayed': False,
                     'confirmation_ms': round((time.monotonic()-confirmation_started)*1000),
                     'request_ms': round((time.monotonic()-started)*1000)}

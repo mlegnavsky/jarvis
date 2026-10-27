@@ -18,11 +18,12 @@ def validate_action(body, options):
         raise APIError(400, 'invalid_entity')
     if not isinstance(service, str) or not isinstance(data, dict):
         raise APIError(400, 'invalid_action')
-    if entity not in options.get('allowed_entities', []) or service not in options.get('allowed_services', []):
+    required_services = {'light.turn_on', 'light.turn_off'} if service == 'light.toggle' else {service}
+    if entity not in options.get('allowed_entities', []) or not required_services <= set(options.get('allowed_services', [])):
         raise APIError(403, 'action_not_allowed')
     if service.split('.')[0] != entity.split('.')[0]:
         raise APIError(403, 'domain_mismatch')
-    no_data = {'light.turn_off', 'switch.turn_on', 'switch.turn_off', 'automation.turn_on', 'lock.lock'}
+    no_data = {'light.toggle', 'light.turn_off', 'switch.turn_on', 'switch.turn_off', 'automation.turn_on', 'lock.lock'}
     if service in no_data:
         valid = not data
     elif service == 'light.turn_on':

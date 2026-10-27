@@ -1,3 +1,8 @@
+# 3.4.0
+
+- Přepnutí známého světla přes light.toggle proběhne v jednom volání: aktuální stav, konkrétní zapnutí/vypnutí a ověření cílového stavu. Vyžaduje povolené zapnutí i vypnutí; nepřijímá další parametry ani neznámý stav.
+- Trvalá idempotence zachovává původní výsledek přepnutí i po restartu. Opakovaný request_id světlo znovu nepřepne. Odpověď obsahuje resolved_service a měření request_ms/confirmation_ms.
+
 # 3.3.1
 
 - Instalace dosud nenainstalovaného doplňku porovnává nabízenou version_latest; prázdná version označuje chybějící instalaci, nikoli změnu nabídky. Kontrola před i po záloze a ověření instalované verze zůstávají zachované.
