@@ -217,7 +217,7 @@ class OAuth:
             page = ('<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
                 '<title>Připojit Jarvise</title><h1>Připojit Jarvise k ChatGPT</h1>'
                 '<p>Povolujete přístup k domácnosti: '+html.escape(', '.join(scopes))+'</p>'
-                '<p>jarvis:read = čtení; jarvis:control = povolené povely; jarvis:maintain = aktualizace.</p>'
+                '<p>jarvis:read = čtení; jarvis:control = povolené povely; jarvis:maintain = správa konfigurace, doplňků a aktualizace.</p>'
                 '<form method="post" action="/oauth/consent">'
                 '<input type="hidden" name="transaction" value="'+transaction+'">'
                 '<input type="hidden" name="csrf" value="'+csrf+'">'

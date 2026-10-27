@@ -187,3 +187,22 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
         result = (await (await self.rpc('tools/call', {'name': 'jarvis_action', 'arguments': invalid}, token=token)).json())['result']
         self.assertTrue(result['isError'])
         self.assertEqual(len(self.fixture.effects), 1)
+
+    async def test_admin_bridge_and_tools_require_maintain_and_validate_operations(self):
+        await self.http.close()
+        self.options['maintenance_enabled'] = True
+        self.http = TestClient(TestServer(create_app(self.ha, self.options, Path(self.tmp.name), watch=False)))
+        await self.http.start_server()
+        args = {'entity_id': 'jarvis.system', 'service': 'jarvis.admin', 'request_id': 'admin-read',
+                'data': {'action': 'read', 'query': 'jobs'}}
+        control = await self.control_token()
+        result = (await (await self.rpc('tools/call', {'name': 'jarvis_action', 'arguments': args}, token=control)).json())['result']
+        self.assertTrue(result['isError'])
+        token = (await (await self.exchange(await self.authorize(scope='jarvis:read jarvis:control jarvis:maintain'))).json())['access_token']
+        result = (await (await self.rpc('tools/call', {'name': 'jarvis_action', 'arguments': args}, token=token)).json())['result']
+        self.assertFalse(result['isError'])
+        self.assertEqual(result['structuredContent']['items'], [])
+        response = await self.rpc('tools/call', {'name': 'jarvis_admin_change', 'arguments':
+                                  {'operation': 'shell', 'arguments': {}, 'request_id': 'bad-admin'}}, token=token)
+        self.assertEqual((await response.json())['error']['code'], -32602)
+        self.assertEqual(self.fixture.effects, [])

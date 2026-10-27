@@ -1,3 +1,11 @@
+# 3.2.0
+
+- Správa z kanceláře: Supervisor manager a jediný zapisovatelný mount konfigurace HA /homeassistant. Bez Docker API, host network, shellu nebo vypínání ochrany hostitele. Vyžaduje existující povolení údržby a zápisů.
+- Přehled doplňků, obchodu, redigovaných options s revizí, záloh, konfiguračních souborů a trvalých úloh. Instalace/aktualizace a start/stop/restart doplňků, změny options, restart/aktualizace Core a cílená obnova přes výslovné operace.
+- Systémové změny probíhají v úlohách se zálohou a readback. queued/running/unknown/unverified není úspěch. Přerušené úlohy se znovu nespouštějí. Samotné přijetí obnovy se neoznačuje za ověřenou konfiguraci.
+- Atomické textové úpravy konfigurace/vlastního kódu: revize SHA-256, trvalý before-image, obnova, kontrola syntaxe YAML/JSON/Python bez vykonávání. Explicitní kořeny, odmítnutí symlinků a hardlinků; nečte .storage ani secrets.yaml. Zápis sám neaktivuje kód ani nerestartuje HA.
+- Živé aktualizace Jarvise dál výhradně přes samostatný Updater; vlastní připojení a přihlašovací klíče jsou chráněné. Povolené entity/služby lze změnit přes vlastní options a projeví se bez restartu.
+
 # 3.1.1
 
 - Světla se po povelu ověřují přímo v Jarvisovi: nejvýše 1,2 sekundy se čeká na cílový stav v HA. Při target_state_verified=true odpadá další volání inventáře z chatu.

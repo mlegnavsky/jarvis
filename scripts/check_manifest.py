@@ -19,6 +19,9 @@ for name in ('jarvis', 'jarvis_updater'):
     assert not config.get('privileged')
     assert not config.get('docker_api')
     assert not config.get('host_network')
+    assert not config.get('full_access')
+    assert not config.get('host_pid')
+    assert not config.get('host_dbus')
     assert set(config['options']) == set(config['schema'])
     assert all('==' in line for line in (directory / 'requirements.txt').read_text().splitlines() if line.strip())
     for source in directory.rglob('*.py'):
@@ -30,7 +33,8 @@ runtime_versions = [ast.literal_eval(node.value) for node in runtime.body if isi
 assert runtime_versions == [main['version']], 'Jarvis runtime version must match manifest version'
 assert main['options']['writes_enabled'] is False
 assert main['options']['maintenance_enabled'] is False
-assert main['hassio_role'] == 'default'
+assert main['hassio_role'] == 'manager', 'Office administration requires the explicit Supervisor manager role'
+assert main.get('map') == [{'type': 'homeassistant_config', 'read_only': False, 'path': '/homeassistant'}], 'Only HA configuration may be mounted'
 updater = yaml.safe_load(Path('jarvis_updater/config.yaml').read_text())
 assert updater['hassio_role'] == 'manager'
 assert updater['options']['updates_enabled'] is False

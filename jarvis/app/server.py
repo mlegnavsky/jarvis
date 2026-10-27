@@ -13,6 +13,7 @@ from .policy import APIError
 from .maintenance import MaintenanceBridge
 from .mcp import install_mcp
 from .management import Management
+from .admin import Admin
 
 
 def create_app(ha, options, directory, watch=True):
@@ -47,7 +48,7 @@ def create_app(ha, options, directory, watch=True):
         response.headers['X-Content-Type-Options'] = 'nosniff'
         return response
 
-    app = web.Application(middlewares=[boundary], client_max_size=16*1024)
+    app = web.Application(middlewares=[boundary], client_max_size=512*1024)
 
     async def alive(request):
         return web.json_response({'status': 'alive'})
@@ -71,7 +72,14 @@ def create_app(ha, options, directory, watch=True):
         status, value = await bridge.request(request.method, path, body, request.headers.get('Idempotency-Key'))
         return web.json_response(value, status=status)
     management = Management(ha, options, directory, audit)
-    install_mcp(app, options, directory, ha, actions, bridge, audit, management)
+    admin_supervisor = HAClient(ha.token, ha.base, timeout=1200)
+    admin = Admin(admin_supervisor, options, directory, audit)
+    install_mcp(app, options, directory, ha, actions, bridge, audit, management, admin)
+    async def administration(application):
+        await admin.recover()
+        yield
+        await admin.close()
+    app.cleanup_ctx.append(administration)
     app.router.add_get('/v1/maintenance/check', maintenance)
     app.router.add_get('/v1/maintenance/jobs/{id}', maintenance)
     app.router.add_post('/v1/maintenance/update', maintenance)

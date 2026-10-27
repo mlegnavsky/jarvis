@@ -1,5 +1,5 @@
 name: Jarvis
-version: "3.1.1"
+version: "3.2.0"
 slug: jarvis
 description: Current home inventory and authenticated controlled actions. Experimental.
 url: https://github.com/mlegnavsky/jarvis
@@ -12,7 +12,11 @@ init: false
 homeassistant: "2026.6.0"
 homeassistant_api: true
 hassio_api: true
-hassio_role: default
+hassio_role: manager
+map:
+  - type: homeassistant_config
+    read_only: false
+    path: /homeassistant
 ports:
   8099/tcp: 8099
 ports_description:

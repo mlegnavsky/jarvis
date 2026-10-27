@@ -38,3 +38,11 @@ class ReleaseTests(unittest.TestCase):
         result = self.check()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('changelog', result.stderr)
+
+    def test_unexpected_mount_or_host_privileges_block_release(self):
+        import yaml
+        path = self.root / 'jarvis/config.yaml'
+        original = yaml.safe_load(path.read_text())
+        for changes in ({'map': [{'type': 'ssl', 'read_only': False}]}, {'full_access': True}, {'host_pid': True}):
+            path.write_text(yaml.safe_dump({**original, **changes}))
+            self.assertNotEqual(self.check().returncode, 0)
