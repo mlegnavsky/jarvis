@@ -9,13 +9,13 @@ Rozhraní: systémový přehled, nainstalované/dostupné doplňky, podrobnosti 
 Soubory: textové konfigurační a zdrojové soubory v explicitních kořenech HA; žádná .storage, secrets.yaml, databáze nebo libovolný hostitelský soubor. Relativní cesty, odmítnutí symlinků/hardlinků, atomický zápis a SHA-256 revize. Syntax YAML/JSON/Python se ověří bez spuštění. Původní obsah trvale uložen před změnou; obnova je samostatná úloha. Zápis se automaticky nespouští ani nerestartuje HA.
 
 Postup:
-- [ ] Testy cesty/symlinky, validace syntaxe, atomické zápisy a revize.
-- [ ] Implementace bezpečného přístupu k souborům.
-- [ ] Testy úloh: záloha před efektem, idempotence, chyba zálohy, neznámý výsledek po restartu, přesné cíle a obnova souboru.
-- [ ] Implementace Supervisor administrace a deníku; redakce options a výsledků.
-- [ ] MCP + kompatibilní jarvis_action most s control i maintain oprávněním.
-- [ ] Manifest manager + homeassistant_config mount, výslovná testovaná permission gate.
-- [ ] Nezávislá kontrola, kompletní testy/CI, vydání a upgrade přes Updater.
-- [ ] Živě ověřit Supervisor přehled, mount, vytvoření/úpravu/obnovu/odstranění izolovaného testovacího souboru a kontrolu HA. Instalaci cizího doplňku neoznačit za živě ověřenou, dokud není skutečně požadován konkrétní doplněk.
+- [x] Testy cesty/symlinky, validace syntaxe, atomické zápisy a revize.
+- [x] Implementace bezpečného přístupu k souborům.
+- [x] Testy úloh: záloha před efektem, idempotence, chyba zálohy, neznámý výsledek po restartu, přesné cíle a obnova souboru.
+- [x] Implementace Supervisor administrace a deníku; redakce options a výsledků.
+- [x] MCP + kompatibilní jarvis_action most s control i maintain oprávněním.
+- [x] Manifest manager + homeassistant_config mount, výslovná testovaná permission gate.
+- [x] Nezávislá kontrola, kompletní testy/CI, vydání a upgrade přes Updater.
+- [x] Živě ověřit Supervisor přehled, mount, vytvoření/úpravu/obnovu/odstranění izolovaného testovacího souboru a kontrolu HA. Instalaci cizího doplňku neoznačit za živě ověřenou, dokud není skutečně požadován konkrétní doplněk.
 
 Limity: připojení zůstává závislé na internetu/napájení. Žádný automatický slib, že již neexistuje žádná překážka. Deník uchovává výsledky; přerušené úlohy se nikdy znovu nespouštějí. Změna mountu/oprávnění musí být ověřena na skutečném Greenu, ne pouze z manifestu.
