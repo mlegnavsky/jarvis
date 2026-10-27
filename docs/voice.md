@@ -9,4 +9,10 @@ Předchozí návrh stavět domácí stálý poslech na skutečné aplikaci ChatG
 
 Připravené soubory, pipeline, instrukce, TV automatizace a přesný checklist: **[home_voice/README.md](../home_voice/README.md)**.
 
-Zatím není nasazený fyzický satelit, OpenAI účet/klíč nebyl konfigurován a žádná API konverzace se neprovedla. Získání credentials a první spárování proběhne doma, nikoli v této veřejné dokumentaci.
+## Ověřený stav 27. 10. 2026
+
+Vzdálená správa je dostupná přes Jarvis3.5.0 a nezávislou bránu Updater1.0.0. Martin přesunul funkční Voice PE z chodby do obýváku. Jeho zařízení i zděděné oblasti entit nyní odpovídají obýváku, název je „Hlasový terminál - Obývák“. Původní odpojený terminál má odlišný název a nemá přiřazenou oblast. Identifikátory a párování jsou zachované.
+
+Funkční terminál odpovídá jako idle, mikrofon není ztlumený a probouzecí slovo je Hey Jarvis. Dvě existující automatizace hlasitosti byly přesměrovány na skutečný terminál, načteny a jejich stav on ověřen. Jejich původní pravidla hlasitosti nebyla změněna. Akustický test nebyl proveden z kanceláře.
+
+OpenAI konverzace/STT/TTS i místní hlasové aplikace jsou přítomné. Přesná aktivní preferred pipeline a vazba starého lokálního Jarvis Core0.1.0 dosud nejsou potvrzené; nelze tvrdit synchronizovanou paměť ani hotové hlasové testy jen z přítomnosti integrací. Starší podrobný instalační návod v home_voice je návrh, nikoli autoritativní popis aktuální pipeline.

@@ -1,6 +1,6 @@
 # Jarvis doma — připravený instalační balíček
 
-**Stav: připraveno ke konfiguraci; skutečné nasazení a akustické ověření neprovedeno.** Tento adresář nezakládá zařízení, API účet ani pipeline automaticky. Green nyní není dostupný z kanceláře a dosud nemáme potvrzený konkrétní hlasový satelit/TV. První spárování hardwaru a vložení tajných údajů musí proběhnout v HA UI; potom lze pokračovat vzdálenou správou v rámci připojeného rozhraní.
+**Stav k 27. 10. 2026:** původní návrh níže je instalační návod, nikoli ověřená aktivní pipeline. Vzdálený přístup už funguje. Funkční Voice PE byl přesunut z chodby do obýváku, jeho oblast/název a dva návazné triggery hlasitosti byly opraveny a ověřeny. Terminál je dostupný, mikrofon zapnutý, Hey Jarvis nastavené. Akustický test, přesná preferred pipeline a role lokálního Jarvis Core zůstávají neověřené. Aktuální zjištění viz [docs/voice.md](../docs/voice.md).
 
 ## Vybrané zapojení
 
