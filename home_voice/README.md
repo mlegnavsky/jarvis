@@ -1,6 +1,6 @@
 # Jarvis doma — připravený instalační balíček
 
-**Stav k 27. 10. 2026:** původní návrh níže je instalační návod, nikoli ověřená aktivní pipeline. Vzdálený přístup už funguje. Funkční Voice PE byl přesunut z chodby do obýváku, jeho oblast/název a dva návazné triggery hlasitosti byly opraveny a ověřeny. Terminál je dostupný, mikrofon zapnutý, Hey Jarvis nastavené. Preferred pipeline byla ověřena jako Whisper → Extended OpenAI Conversation → OpenAI TTS (onyx). Akustický test a role lokálního Jarvis Core zůstávají neověřené. Aktuální zjištění viz [docs/voice.md](../docs/voice.md).
+**Stav k 27. 10. 2026:** původní návrh níže je instalační návod, nikoli ověřená aktivní pipeline. Vzdálený přístup už funguje. Funkční Voice PE byl přesunut z chodby do obýváku, jeho oblast/název a dva návazné triggery hlasitosti byly opraveny a ověřeny. Terminál je dostupný, mikrofon zapnutý, Hey Jarvis nastavené. Preferred pipeline byla ověřena jako Whisper → Extended OpenAI Conversation → OpenAI TTS (onyx). Akustický test zůstává neověřený. Zdroj lokálního Jarvis Core byl načten; Core0.1.0 poskytuje pouze stavový HTTP server bez AI/STT/TTS. Aktuální zjištění viz [docs/voice.md](../docs/voice.md).
 
 ## Vybrané zapojení
 

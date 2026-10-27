@@ -1,6 +1,6 @@
 # Správa aplikací a integrací — stav 27. 10. 2026
 
-Main Jarvis3.7.0, nezávislá brána Updater1.0.0. Rozlišujeme Supervisor aplikace, integrace HA, vlastní kód a firmware fyzických zařízení. Žádná univerzální operace neumožňuje měnit uzavřený program či firmware bez zdrojů a podporovaného sestavení.
+Main Jarvis3.8.0, nezávislá brána Updater1.0.0. Rozlišujeme Supervisor aplikace, integrace HA, vlastní kód a firmware fyzických zařízení. Žádná univerzální operace neumožňuje měnit uzavřený program či firmware bez zdrojů a podporovaného sestavení.
 
 ## Ověřené společné operace
 
@@ -22,7 +22,7 @@ Formuláře nevracejí data/context/result ani výchozí či suggested hodnoty, 
 | --- | --- | --- |
 | Jarvis | Oprávnění, MCP, řízená údržba | Vlastní Git, sestavení a nasazení ověřené |
 | Jarvis Updater | Aktualizace, brána, revokace | Vlastní Git; aktualizace přes Main Admin |
-| Jarvis Core0.1.0 | Jméno, uživatel, API credential přes options | Lokální zdroj není současným mountem dostupný; role/další použití neprokázané |
+| Jarvis Core0.1.0 | Jméno, uživatel, API credential přes options | Zdroj dostupný ve workspace addons; verzovaný snímek uložen. Core0.1.0 je pouze stavový HTTP server |
 | Piper | Hlas, backend, rychlost/parametry syntézy | Vyžaduje spravovanou vlastní verzi zdrojového projektu |
 | Whisper | Model, jazyk, STT knihovna a parametry | Vyžaduje vlastní sestavení |
 | Speech-to-Phrase | App options; HA pipeline zvlášť | Vyžaduje vlastní sestavení |
@@ -33,7 +33,7 @@ Formuláře nevracejí data/context/result ani výchozí či suggested hodnoty, 
 | Terminal & SSH | Dostupné app options | Není zde poskytován libovolný shell |
 | Advanced SSH & Web Terminal | Dostupné app options | Není zde poskytován libovolný shell |
 
-Vlastní HA integrace v custom_components lze upravovat přes existující souborové operace s revizí a before-image. Pro aktivaci použít podporovaný reload, případně ověřený restart HA. Libovolná úprava kódu jiné aplikace vyžaduje přístup k jejím zdrojům, vlastní build/repozitář a konkrétní test změny; není automaticky prokázaná samotným manager oprávněním.
+Vlastní HA integrace v custom_components lze upravovat přes existující souborové operace s revizí a before-image. Pro aktivaci použít podporovaný reload, případně ověřený restart HA. Správa lokálních zdrojů, médií a rebuild viz workspaces-and-local-builds.md. Libovolná úprava kódu jiné aplikace vyžaduje přístup k jejím zdrojům, vlastní build/repozitář a konkrétní test změny; není automaticky prokázaná samotným manager oprávněním.
 
 ## Aktuálně ověřené hlasové zapojení
 
