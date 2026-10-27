@@ -27,6 +27,8 @@ Recovery controls: status, restart sibling Jarvis, verified update, restore only
 
 ## Acceptance
 
+Completed: see [live verification](../../verification-resilient-admin-2026-10-27.md). Final Main release is 3.3.1 after correcting the live store version contract; Updater 1.0.0. Actual outage, restore, install/uninstall and update checks passed.
+
 - OAuth grant and refresh survive authority migration; anonymous/insufficient-scope calls rejected. Backend failure still permits authenticated recovery; stale home values never substituted.
 - Existing complete suite, arm64/amd64 builds and startup checks pass. Independent code review of control-plane migration before live activation.
 - Upgrade main, upgrade Updater via main Admin (Updater cannot update itself), verify gateway internally, activate same public endpoint, verify external access. Then stop Jarvis briefly through a recovery test with guaranteed delayed restart and verify gateway survives the outage; restart/readback verified.
