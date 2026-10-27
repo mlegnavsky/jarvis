@@ -1,3 +1,10 @@
+# 3.1.1
+
+- Světla se po povelu ověřují přímo v Jarvisovi: nejvýše 1,2 sekundy se čeká na cílový stav v HA. Při target_state_verified=true odpadá další volání inventáře z chatu.
+- Přidáno měření request_ms a confirmation_ms. Jde o čas uvnitř Jarvise, nikoli celkovou latenci chatu nebo důkaz fyzického osvětlení.
+- Při timeoutu nebo výpadku se úspěch cílového stavu netvrdí a povel se znovu neodesílá. Trvalá ochrana proti opakování zůstává zachována.
+- Regresní testy opožděného zapnutí, vypnutí a neobdrženého potvrzení.
+
 # 3.1.0
 
 - Vzdálená diagnostika vybraného nastavení HA, kontrola konfigurace a přehled automatizací přes MCP.

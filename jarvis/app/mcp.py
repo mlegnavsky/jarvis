@@ -30,7 +30,7 @@ def catalog(options):
                     'offset': {'type': 'integer', 'minimum': 0, 'maximum': 100000},
                     'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100}}), 'jarvis:read', True)]
     if options.get('writes_enabled') is True:
-        tools.append(tool('jarvis_action', 'Proveď pouze uživatelem požadovaný povolený povel. request_id zachovej při opakování téhož záměru. Při neznámém výsledku neposílej nový klíč. accepted není potvrzení fyzického výsledku.',
+        tools.append(tool('jarvis_action', 'Proveď pouze uživatelem požadovaný povolený povel. request_id zachovej při opakování téhož záměru. Při neznámém výsledku neposílej nový klíč. accepted není potvrzení fyzického výsledku. U světel target_state_verified=true a replayed=false potvrzuje cílový stav a požadovaný jas v HA; další inventář není potřeba. Při replayed=true jde o historické pozorování, nikoli aktuální stav.',
             schema({'request_id': text, 'entity_id': text, 'service': text, 'data': {'type': 'object'}},
                    ('request_id', 'entity_id', 'service', 'data')), 'jarvis:control', False))
     if options.get('maintenance_enabled') is True:

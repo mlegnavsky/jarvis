@@ -76,6 +76,54 @@ class APITests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status, 409)
         self.assertEqual(len(self.fixture.effects), 1)
 
+    async def test_one_call_waits_for_delayed_light_confirmation_and_replays_result(self):
+        self.fixture.light_update_delay = 0.08
+        response = await self.action({'entity_id': 'light.test', 'service': 'light.turn_on', 'data': {}}, key='delayed-light')
+        result = await response.json()
+        self.assertTrue(result.get('target_state_verified'), result)
+        self.assertEqual(result['after']['state'], 'on')
+        self.assertGreaterEqual(result['confirmation_ms'], 50)
+        self.assertEqual(await (await self.action({'entity_id': 'light.test', 'service': 'light.turn_on', 'data': {}}, key='delayed-light')).json(), {**result, 'replayed': True})
+        self.assertEqual(len(self.fixture.effects), 1)
+
+    async def test_delayed_turn_off_is_confirmed_in_same_response(self):
+        self.options['allowed_services'].append('light.turn_off')
+        self.fixture.states[0]['state'] = 'on'
+        self.fixture.light_update_delay = 0.08
+        response = await self.action({'entity_id': 'light.test', 'service': 'light.turn_off', 'data': {}}, key='delayed-off')
+        result = await response.json()
+        self.assertTrue(result.get('target_state_verified'), result)
+        self.assertEqual(result['after']['state'], 'off')
+
+    async def test_confirmation_timeout_never_claims_target_success_or_resends(self):
+        self.fixture.light_update_enabled = False
+        actions = Actions(self.ha, self.options, Path(self.tmp.name), Audit(Path(self.tmp.name)), confirmation_timeout=0.06)
+        status, result = await actions.execute({'entity_id': 'light.test', 'service': 'light.turn_on', 'data': {}}, 'no-confirmation')
+        self.assertEqual(status, 200)
+        self.assertTrue(result['accepted'])
+        self.assertFalse(result['target_state_verified'])
+        self.assertEqual(result['after']['state'], 'off')
+        self.assertLess(result['confirmation_ms'], 500)
+        self.assertEqual(len(self.fixture.effects), 1)
+
+    async def test_already_on_wrong_brightness_is_not_confirmed(self):
+        self.fixture.states[0].update(state='on', attributes={'brightness': 10})
+        self.fixture.light_update_enabled = False
+        actions = Actions(self.ha, self.options, Path(self.tmp.name), Audit(Path(self.tmp.name)), confirmation_timeout=0.06)
+        _, result = await actions.execute({'entity_id': 'light.test', 'service': 'light.turn_on', 'data': {'brightness': 100}}, 'brightness-mismatch')
+        self.assertFalse(result['target_state_verified'])
+
+    async def test_replay_is_marked_historical_after_light_state_changes(self):
+        body = {'entity_id': 'light.test', 'service': 'light.turn_on', 'data': {}}
+        result = await (await self.action(body, key='historical')).json()
+        self.assertTrue(result['target_state_verified'])
+        self.assertFalse(result['replayed'])
+        self.fixture.states[0]['state'] = 'off'
+        replay = await (await self.action(body, key='historical')).json()
+        self.assertTrue(replay['replayed'])
+        self.assertEqual(self.fixture.states[0]['state'], 'off')
+        self.assertEqual(len(self.fixture.effects), 1)
+
     async def test_lock_reads_state_and_does_not_repeat_on_retry(self):
         self.fixture.states.append({'entity_id': 'lock.test', 'state': 'unlocked', 'attributes': {}})
         self.options['allowed_entities'].append('lock.test')

@@ -10,6 +10,8 @@ class HomeFixture:
         self.unsupported = set()
         self.delay = 0
         self.effects = []
+        self.light_update_delay = 0
+        self.light_update_enabled = True
         self.automations = {}
         self.reject_automation = False
         self.automation_api_missing = False
@@ -64,7 +66,16 @@ class HomeFixture:
             body = await request.json()
             self.effects.append((path, body))
             target = next(s for s in self.states if s['entity_id'] == body['entity_id'])
-            target['state'] = 'locked' if path == '/core/api/services/lock/lock' else 'on'
+            state = 'locked' if path == '/core/api/services/lock/lock' else 'off' if path.endswith('/turn_off') else 'on'
+            updated = {'state': state}
+            if 'brightness' in body:
+                updated['state'] = 'on' if body['brightness'] else 'off'
+                updated['attributes'] = {**target['attributes'], 'brightness': body['brightness']}
+            if path.startswith('/core/api/services/light/') and self.light_update_delay:
+                if self.light_update_enabled:
+                    asyncio.get_running_loop().call_later(self.light_update_delay, target.update, updated)
+            elif self.light_update_enabled or not path.startswith('/core/api/services/light/'):
+                target.update(updated)
             return web.json_response(self.states)
         if path == '/info':
             return web.json_response({'result': 'ok', 'data': {'arch': 'aarch64'}})
