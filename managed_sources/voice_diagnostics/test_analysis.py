@@ -33,3 +33,18 @@ class AnalysisTests(unittest.TestCase):
   self.assertEqual(r['duration_s'],30)
   self.assertEqual(r['analyzed_duration_s'],20)
   self.assertTrue(r['truncated_analysis'])
+ def test_merge_preserves_history_and_replaces_current_run(self):
+  result=self.a.merge_runs([{'id':'old','started_at':'a'},{'id':'current','started_at':'b','complete':False}],
+                           [{'id':'current','started_at':'b','complete':True}],limit=1)
+  self.assertEqual(result,[{'id':'current','started_at':'b','complete':True}])
+ def test_empty_transcript_is_not_success_even_if_pipeline_ended(self):
+  result=self.a.summarize_run('r',[{'type':'run-start','timestamp':'2026-10-28T00:00:00+00:00'},
+   {'type':'run-end','timestamp':'2026-10-28T00:00:05+00:00'}])
+  self.assertEqual(result['outcome'],'no_transcript_observed')
+ def test_homepod_playback_time_is_not_mislabeled_pure_synthesis(self):
+  events=[{'type':'tts-start','timestamp':'2026-10-28T00:00:00+00:00'},
+   {'type':'tts-end','timestamp':'2026-10-28T00:00:12+00:00','data':{'tts_output':{'url':'/api/jarvis_homepod_output/silence.wav'}}}]
+  result=self.a.summarize_run('r',events)
+  self.assertIsNone(result['timings_s']['tts_generation_or_cache'])
+  self.assertEqual(result['timings_s']['tts_synthesis_and_homepod_output'],12)
+  self.assertIn('HomePod',result['note'])

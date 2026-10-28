@@ -48,6 +48,10 @@ def summarize_run(run_id, events):
     transcript = ''
     engine = None
     error = None
+    continuation = None
+    satellite_id = None
+    timeline = []
+    homepod_output = False
     for event in events:
         kind = str(event.get('type',''))
         try:
@@ -55,6 +59,11 @@ def summarize_run(run_id, events):
         except (KeyError,ValueError,TypeError):
             continue
         data=event.get('data') or {}
+        if kind=='tts-end' and (data.get('tts_output') or {}).get('url')=='/api/jarvis_homepod_output/silence.wav':
+            homepod_output=True
+        timeline.append({'type':kind[:80], 'at':event['timestamp']})
+        if kind=='run-start': satellite_id=data.get('satellite_id')
+        if kind=='intent-end': continuation=(data.get('intent_output') or {}).get('continue_conversation')
         if kind=='stt-start': engine=data.get('engine')
         if kind=='stt-end': transcript=str(data.get('stt_output',{}).get('text',''))[:500]
         if kind=='error': error=str(data.get('code','unknown'))[:80]
@@ -62,10 +71,20 @@ def summarize_run(run_id, events):
         return round(max(0,times[b]-times[a]),3) if a in times and b in times else None
     return {'id':str(run_id), 'started_at':next((e.get('timestamp') for e in events if e.get('type')=='run-start'),None),
             'complete':'run-end' in times,'error':error,'engine':engine,'transcript':transcript,
+            'continue_conversation':continuation,'satellite_id':satellite_id,
+            'speech_started':'stt-vad-start' in times,'timeline':timeline[-40:],
+            'outcome':('error' if error else 'in_progress' if 'run-end' not in times else 'no_transcript_observed' if not transcript.strip() else 'intent_completed' if 'intent-end' in times else 'transcript_only'),
             'timings_s':{'capture_until_vad_end':span('stt-start','stt-vad-end'),
                          'stt_processing':span('stt-vad-end','stt-end'),
                          'stt_including_capture':span('stt-start','stt-end'),
                          'intent':span('intent-start','intent-end'),
-                         'tts_generation_or_cache':span('tts-start','tts-end'),
+                         'tts_generation_or_cache':None if homepod_output else span('tts-start','tts-end'),
+                         'tts_synthesis_and_homepod_output':span('tts-start','tts-end') if homepod_output else None,
                          'total_pipeline':span('run-start','run-end')},
-            'note':'Pipeline completion excludes satellite audio download and playback.'}
+            'note':('Pipeline includes awaited HomePod rendering/playback; satellite receives only silent completion.' if homepod_output else 'Pipeline completion excludes satellite audio download and playback.')}
+
+
+def merge_runs(previous, current, limit=20):
+    merged={r['id']:r for r in previous if isinstance(r,dict) and 'id' in r}
+    merged.update({r['id']:r for r in current if isinstance(r,dict) and 'id' in r})
+    return sorted(merged.values(),key=lambda r:r.get('started_at') or '')[-limit:]
