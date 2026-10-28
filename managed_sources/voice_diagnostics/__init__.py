@@ -190,6 +190,37 @@ async def async_setup(hass, config):
             report['self_test']['finished_at']=dt_util.utcnow().isoformat()
             await poll()
 
+    async def companion_test():
+        from homeassistant.components import conversation
+        from homeassistant.components.assist_pipeline import async_get_pipelines, async_update_pipeline
+        from homeassistant.core import Context
+        from custom_components.extended_openai_conversation.dialogue import normalized
+        result_report={'status':'running','turns':[]}
+        report['companion_test']=result_report
+        await save()
+        try:
+            for pipeline in async_get_pipelines(hass):
+                if pipeline.id=='01kw4sat65taw1y72xzrv2xyj4' and pipeline.conversation_engine=='conversation.extended_openai_conversation':
+                    await async_update_pipeline(hass,pipeline,prefer_local_intents=False)
+                    result_report['local_interception_disabled']=True
+            conversation_id=None
+            for text in ('V této zkoušce je hrdinou modrý drak jménem Róza. Jen krátce potvrď, že si to pamatuješ.',
+                         'Jak se jmenuje hrdina a jakou má barvu?', 'Děkuji, konec.'):
+                async with asyncio.timeout(60):
+                    result=await conversation.async_converse(hass,text,conversation_id,Context(),language='cs',agent_id='conversation.extended_openai_conversation')
+                conversation_id=result.conversation_id
+                speech=result.response.as_dict().get('speech',{}).get('plain',{}).get('speech','')
+                result_report['turns'].append({'input':text,'response':speech,'continue_conversation':result.continue_conversation})
+                await save()
+            turns=result_report['turns']
+            recall=normalized(turns[1]['response'])
+            result_report['passed']=bool(turns[0]['continue_conversation'] and turns[1]['continue_conversation'] and not turns[2]['continue_conversation'] and 'roza' in recall and 'modr' in recall)
+            result_report['status']='complete'
+        except Exception as exc:
+            result_report.update(status='error',error=type(exc).__name__,passed=False)
+        report['status']='companion_ready' if result_report.get('passed') else 'companion_test_failed'
+        await save()
+
     async def arm(_call=None):
         arm_capture()
         await save()
@@ -202,7 +233,7 @@ async def async_setup(hass, config):
         report['status']='monitoring'
         await poll()
         await asyncio.sleep(30)
-        await self_test()
+        await companion_test()
     if hass.is_running:hass.async_create_task(start())
     else:hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED,start)
     await save()
