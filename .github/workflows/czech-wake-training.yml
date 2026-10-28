@@ -1,0 +1,62 @@
+name: Experimental Czech wake model training
+
+on:
+  push:
+    branches: [training/czech-wake-candidates-20261028]
+    paths:
+      - tools/wake_training/**
+      - .github/workflows/czech-wake-training.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: czech-wake-training-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  train:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        target: [rozsvit, zhasni, jarvis, zamkni, odemkni]
+    env:
+      OMP_NUM_THREADS: '2'
+      TF_NUM_INTRAOP_THREADS: '2'
+      TF_NUM_INTEROP_THREADS: '2'
+      CUDA_VISIBLE_DEVICES: '-1'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Verify input and composition tests
+        run: |
+          python -m unittest discover -s tools/wake_training -q
+          python -m unittest discover -s managed_sources/companion -p test_wake_commands.py -q
+      - name: Install public training tools
+        run: |
+          git clone https://github.com/kahrendt/microWakeWord.git upstream-microwakeword
+          git -C upstream-microwakeword checkout 4665173cd35f1cff9a61e06fc427f124766c488e
+          python -m pip install 'git+https://github.com/whatsnowplaying/audio-metadata@d4ebb238e6a401bb1a5aaaac60c9e2b3cb30929f'
+          python -m pip install -e ./upstream-microwakeword piper-tts 'tensorflow==2.18.1' 'numpy==2.0.2' 'datasets[audio]==3.6.0'
+          python -m pip freeze > training-environment.txt
+      - name: Train and evaluate synthetic candidate
+        run: python tools/wake_training/train.py '${{ matrix.target }}'
+      - name: Preserve candidate and diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: experimental-czech-${{ matrix.target }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            wake-training-output/
+            training-environment.txt
