@@ -4,9 +4,9 @@ Managed patch of the installed Extended OpenAI Conversation agent. Copy conversa
 
 The agent keeps follow-up listening enabled for ordinary answers, not only questions. Exact Czech stop expressions are intercepted before model/tool execution. Same-device context can be resumed for15min only if no explicit conversation ID was provided. Up to32turns/20min of follow-ups and16storedsessions are retained; turn count is independent of context truncation. Audio silence/timeouts still follow the native satellite. This is turn-based continued conversation, not full-duplex Realtime or guaranteed arbitrary barge-in.
 
-Companion instructions are appended to existing user instructions, preserving device permission/confirmation requirements and prohibiting invented shared ChatGPT memory. Existing OpenAI STT/Onyx are preserved. Native local-intent interception is disabled only for the specifically managed Jarvis pipeline so follow-ups and stop phrases reach the same agent. Sensitive transcript INFO logging is lowered to DEBUG.
+Companion instructions are appended to existing user instructions, preserving device permission/confirmation requirements and prohibiting invented shared ChatGPT memory. Existing OpenAI STT/Onyx are preserved. The managed Jarvis pipeline uses local interception disabled so follow-ups and stop phrases reach the same agent. Diagnostics now only observes that setting and never rewrites it. Exact light commands are handled locally inside this agent, before any LLM query. Sensitive transcript INFO logging is lowered to DEBUG.
 
-The diagnostic integration runs a synthetic text-only recall/stop test after activation. It does not execute household actions or play audio. The final microphone-follow-up and interruption behavior must be tested physically. Direct policy tests and actual agent-method boundary tests cover statements, stop-vs-film-ending, explicit session IDs, and bounded continuation despite truncated history.
+The diagnostic integration offers an explicitly invoked run_companion_test service for synthetic text-only recall/stop tests; boot no longer contacts the model or rewrites the pipeline. It does not execute household actions or play audio. The final microphone-follow-up and interruption behavior must be tested physically. Direct policy tests and actual agent-method boundary tests cover statements, stop-vs-film-ending, explicit session IDs, and bounded continuation despite truncated history.
 
 ## Personality and local memory
 
@@ -21,3 +21,9 @@ Only explicitly exposed live entities enter the on-turn context. Cooking observa
 The diagnostic snapshot also includes the separately deployed version-scoped native turn-taking controller. It bounds empty follow-up listening to 3 seconds after a statement and 6 after a question, and changes the written name Jarvis to Džárvis only at the targeted non-streamed TTS boundary. It does not implement arbitrary acoustic interruption.
 
 Verification after speaker integration: 24 companion tests, 20 speaker policy/coordinator/hook/transport tests, 2 backend quality tests, 6 diagnostic tests and the repository's complete 159-test suite. Native reports record separate fictional memory, state-observation, identity, actual conversation recall and local-model bridge tests, with their limited scopes.
+
+## Room-relative lights
+
+After “Hey Jarvis” (or during the existing follow-up window), “rozsviť”, “rozsviť to”, “zhasni”, and “zhasni to” target only exposed lights in the microphone device's registered room. An explicit “v koupelně” or “v chodbičce” overrides that source room. Entity area overrides device area for lights. Missing/ambiguous/unknown rooms never target the whole house or fall back to the living room. Text-only clients without a microphone room must name a room. Only exact light forms take this shortcut; complex requests retain the existing agent behavior. Service errors or delayed state updates are never described as verified success.
+
+These words are command intents, not new acoustic wake words. Custom Czech wake words require trained microWakeWord models and firmware validation. The existing model remains Hey Jarvis. Voice identification still requires real enrollment; no text test creates a household profile.

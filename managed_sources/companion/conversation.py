@@ -7,6 +7,7 @@ import json
 import logging
 import time
 from .runtime import CompanionRuntime
+from .room_commands import async_handle_room_command
 from .dialogue import COMPANION_INSTRUCTIONS, is_pause, is_stop, recent_session, should_continue
 from typing import Any, Literal
 
@@ -179,11 +180,22 @@ class ExtendedOpenAIAgentEntity(
         companion_turn = await self._companion.prepare(user_input, conversation_id, exposed_entities)
         if companion_turn.reset_history or self._history_principals.get(conversation_id) != companion_turn.principal:
             self.history.pop(conversation_id, None)
-        if companion_turn.local_reply is not None:
+        local_reply = companion_turn.local_reply
+        if local_reply is None:
+            local_reply = await async_handle_room_command(self.hass, user_input, exposed_entities)
+        if local_reply is not None:
             local_response = intent.IntentResponse(language=user_input.language)
-            local_response.async_set_speech(companion_turn.local_reply)
+            local_response.async_set_speech(local_reply)
+            started = self._dialogue_started.setdefault(conversation_id, time.monotonic())
+            turns = self._dialogue_turns.get(conversation_id, 0) + 1
+            self._dialogue_turns[conversation_id] = turns
+            continuing = should_continue(user_input.text, local_reply, turns, time.monotonic()-started)
+            while len(self._dialogue_started) > 16:
+                oldest = next(iter(self._dialogue_started))
+                self._dialogue_started.pop(oldest, None)
+                self._dialogue_turns.pop(oldest, None)
             return conversation.ConversationResult(response=local_response,
-                conversation_id=conversation_id, continue_conversation=True)
+                conversation_id=conversation_id, continue_conversation=continuing)
         if conversation_id in self.history:
             messages = self.history[conversation_id]
         else:

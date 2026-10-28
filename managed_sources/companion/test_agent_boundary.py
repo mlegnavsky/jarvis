@@ -6,6 +6,7 @@ from types import SimpleNamespace as NS
 import time
 import asyncio
 import unittest
+from room_commands import async_handle_room_command
 from dialogue import is_stop, is_pause, recent_session, should_continue
 class Speech:
  def __init__(self,**kw):pass
@@ -17,7 +18,7 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
   fn=next(n for n in cls.body if isinstance(n,ast.AsyncFunctionDef) and n.name==name)
   fn.returns=None
   for arg in fn.args.args:arg.annotation=None
-  ns={'time':time,'is_stop':is_stop,'is_pause':is_pause,'recent_session':recent_session,'should_continue':should_continue,
+  ns={'async_handle_room_command':async_handle_room_command,'time':time,'is_stop':is_stop,'is_pause':is_pause,'recent_session':recent_session,'should_continue':should_continue,
       'conversation':NS(ConversationResult=lambda **kw:NS(**kw)), 'intent':NS(IntentResponse=Speech),
       'async_get_chat_session':lambda hass,c:nullcontext(NS()),'async_get_chat_log':lambda *args:nullcontext(NS()),
       'CONF_ATTACH_USERNAME':'attach','DEFAULT_ATTACH_USERNAME':False,'EVENT_CONVERSATION_FINISHED':'event',
@@ -55,3 +56,26 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
    result=await self.method('_async_handle_message')(agent,user,NS(conversation_id='c'))
    self.assertEqual(result.continue_conversation,i<31)
   self.assertEqual(agent._dialogue_turns['c'],32)
+
+ async def test_room_command_uses_local_handler_and_never_model(self):
+  async def forbidden(*a,**kw):raise AssertionError('model must not run')
+  class Companion:
+   async def prepare(self,*a):return NS(reset_history=False,principal='p',local_reply=None)
+  agent=NS(_companion=Companion(),_history_principals={},history={},get_exposed_entities=lambda:[],
+   _recent_devices={},_dialogue_started={},_dialogue_turns={},hass=NS(),query=forbidden,
+   _generate_system_message=lambda *a:(_ for _ in ()).throw(AssertionError('local command must not prepare model prompt')))
+  fn=self.method('_async_handle_message')
+  async def local(*a):return 'Rozsvítil jsem světla. Místnost: Obývák.'
+  fn.__globals__['async_handle_room_command']=local
+  result=await fn(agent,NS(text='Rozsviť',language='cs',device_id='mic'),NS(conversation_id='c'))
+  self.assertIn('Obývák',result.response.text)
+ async def test_local_commands_do_not_leak_unbounded_session_counters(self):
+  class Companion:
+   async def prepare(self,*a):return NS(reset_history=False,principal='p',local_reply='Místní odpověď.')
+  agent=NS(_companion=Companion(),_history_principals={},history={},get_exposed_entities=lambda:[],
+   _recent_devices={},_dialogue_started={},_dialogue_turns={},hass=NS())
+  fn=self.method('_async_handle_message')
+  for n in range(40):
+   await fn(agent,NS(text='Rozsviť',language='cs',device_id='mic'),NS(conversation_id=str(n)))
+  self.assertLessEqual(len(agent._dialogue_turns),16)
+  self.assertLessEqual(len(agent._dialogue_started),16)

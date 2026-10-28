@@ -67,3 +67,45 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(calls)
   run.pipeline.id='other';run.process_event(Event('intent-progress',{'tts_start_streaming':True}))
   self.assertEqual(len(calls),1)
+ async def test_new_activation_cancels_owned_answer_only(self):
+  began=asyncio.Event();stopped=[]
+  async def play(media):began.set();await asyncio.Event().wait()
+  async def stop():stopped.append(True)
+  router,run,calls=self.setup_route(play,stop)
+  task=asyncio.create_task(run.text_to_speech('První odpověď'));await began.wait()
+  other=type(run)();other.__dict__.update(run.__dict__);other.id='new-activation'
+  other.process_event(Event('run-start',{'conversation_id':'new'}))
+  await asyncio.sleep(0)
+  self.assertTrue(task.cancelling(),'a new targeted activation must cancel the old answer')
+  with self.assertRaises(asyncio.CancelledError):await task
+  self.assertEqual(stopped,[True])
+ async def test_unrelated_activation_preserves_answer(self):
+  began=asyncio.Event();finish=asyncio.Event();stopped=[]
+  async def play(media):began.set();await finish.wait()
+  async def stop():stopped.append(True)
+  router,run,calls=self.setup_route(play,stop)
+  task=asyncio.create_task(run.text_to_speech('Odpověď'));await began.wait()
+  other=type(run)();other.__dict__.update(run.__dict__);other.id='other';other.pipeline=NS(id='other')
+  other.process_event(Event('run-start',{}));await asyncio.sleep(0)
+  self.assertFalse(task.cancelling());finish.set();await task;self.assertFalse(stopped)
+ async def test_new_activation_cancels_generation_before_any_playback(self):
+  generated=asyncio.Event();finish_generation=asyncio.Event();played=[]
+  async def play(media):played.append(media)
+  router,run,calls=self.setup_route(play)
+  # Pause the original Core TTS stage through its event boundary.
+  # A controlled native TTS implementation is needed before adapter installation.
+  hass=object()
+  class Pipeline:
+   def process_event(self,event):pass
+   async def text_to_speech(self,text,override_media_path=None):
+    generated.set();await finish_generation.wait()
+    self.process_event(Event('tts-end',{'tts_output':{'media_id':'old'}}))
+  self.assertEqual(install(hass,Pipeline,router,'2026.6.4','pipeline','satellite'),'active')
+  a=Pipeline();a.hass=hass;a.pipeline=NS(id='pipeline');a._satellite_id='satellite';a.id='a'
+  a.process_event(Event('run-start',{}))
+  task=asyncio.create_task(a.text_to_speech('old'));await generated.wait()
+  b=Pipeline();b.__dict__.update(a.__dict__);b.id='b';b.process_event(Event('run-start',{}))
+  finish_generation.set()
+  try:await task
+  except asyncio.CancelledError:pass
+  self.assertEqual(played,[],'obsolete TTS must never start playback')

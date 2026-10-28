@@ -13,10 +13,11 @@ class OutputError(Exception):
 
 class Router:
  def __init__(self,play,stop):
-  self.play=play;self.stop=stop;self.lock=asyncio.Lock();self.active=None
+  self.play=play;self.stop=stop;self.lock=asyncio.Lock();self.active=None;self.tasks={};self.latest=None
   self.started=0;self.completed=0;self.cancelled=0;self.failed=0;self.last_error=None
  async def answer(self,run,output):
   async with self.lock:
+   if self.latest is not None and self.latest!=str(run.id):raise asyncio.CancelledError()
    self.active=str(run.id);self.started+=1
    try:
     async with asyncio.timeout(180):await self.play(output['media_id'])
@@ -34,6 +35,18 @@ class Router:
     except Exception:pass
     raise
    finally:self.active=None
+ def activate(self,run_id):
+  self.latest=str(run_id)
+  for owner,task in list(self.tasks.items()):
+   if owner!=self.latest and not task.done():task.cancel()
+ def begin(self,run):
+  owner=str(run.id)
+  if self.latest is None:self.latest=owner
+  if owner!=self.latest:raise asyncio.CancelledError()
+  self.tasks[owner]=asyncio.current_task()
+ def end(self,run):
+  owner=str(run.id)
+  if self.tasks.get(owner) is asyncio.current_task():self.tasks.pop(owner,None)
  def snapshot(self):
   return {'started':self.started,'completed':self.completed,'cancelled':self.cancelled,
           'failed':self.failed,'active':self.active is not None,'last_error':self.last_error}
@@ -46,6 +59,7 @@ def install(hass,pipeline_class,router,core_version,pipeline_id,satellite_id,err
   return (run.hass is hass and run.pipeline.id==pipeline_id and run._satellite_id==satellite_id
           and not str(run.id).startswith('synthetic-'))
  def process_event(run,event):
+  if matches(run) and str(event.type)=='run-start':router.activate(str(run.id))
   if matches(run) and getattr(run,'_jarvis_homepod_hold',False):
    if str(event.type)=='tts-end':
     run._jarvis_homepod_event=event;return None
@@ -54,6 +68,7 @@ def install(hass,pipeline_class,router,core_version,pipeline_id,satellite_id,err
   return original_event(run,event)
  async def text_to_speech(run,tts_input,override_media_path=None):
   if not matches(run):return await original_tts(run,tts_input,override_media_path)
+  router.begin(run)
   run._jarvis_homepod_hold=True;run._jarvis_homepod_event=None
   try:
    await original_tts(run,tts_input,override_media_path)
@@ -65,13 +80,14 @@ def install(hass,pipeline_class,router,core_version,pipeline_id,satellite_id,err
    original_event(run,replace(event,data={'tts_output':silent}))
   except asyncio.CancelledError:
    control=pipeline_class.__dict__.get('_jarvis_turn_adapter')
-   if control is not None:control.pending=None
+   if control is not None and (control.pending or {}).get('run_id')==str(run.id):control.pending=None
    raise
   except Exception as exc:
    control=pipeline_class.__dict__.get('_jarvis_turn_adapter')
-   if control is not None:control.pending=None
+   if control is not None and (control.pending or {}).get('run_id')==str(run.id):control.pending=None
    raise error_class(code='tts-failed',message='HomePod output failed; terminal speech remains disabled') from exc
   finally:
+   router.end(run)
    del run._jarvis_homepod_hold;del run._jarvis_homepod_event
  pipeline_class.process_event=process_event
  pipeline_class.text_to_speech=text_to_speech

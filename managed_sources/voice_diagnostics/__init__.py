@@ -26,7 +26,7 @@ SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 async def async_setup(hass, config):
     root=Path(hass.config.path('jarvis_workspace/voice_diagnostics'))
     capture=root/'capture'
-    report={'version':2,'started_at':dt_util.utcnow().isoformat(),'self_test':{'status':'pending'},
+    report={'version':2,'started_at':dt_util.utcnow().isoformat(),'self_test':{'status':'not_run','reason':'explicit_service_required'},
             'runs':[],'audio':[],'playback':[],'status':'starting','capture_expires_at':None,'capture_deadline_scope':'New recordings disabled after 15 minutes; an active HA run may finish afterward (pipeline timeout up to 5 minutes).'}
     # Restore only bounded diagnostic history, never runtime deadlines or captures.
     def previous_report():
@@ -219,19 +219,15 @@ async def async_setup(hass, config):
             report['self_test']['finished_at']=dt_util.utcnow().isoformat()
             await poll()
 
-    async def companion_test():
+    async def companion_test(_call=None):
         from homeassistant.components import conversation
-        from homeassistant.components.assist_pipeline import async_get_pipelines, async_update_pipeline
         from homeassistant.core import Context
         from custom_components.extended_openai_conversation.dialogue import normalized
         result_report={'status':'running','turns':[]}
         report['companion_test']=result_report
         await save()
         try:
-            for pipeline in async_get_pipelines(hass):
-                if pipeline.id=='01kw4sat65taw1y72xzrv2xyj4' and pipeline.conversation_engine=='conversation.extended_openai_conversation':
-                    await async_update_pipeline(hass,pipeline,prefer_local_intents=False)
-                    result_report['local_interception_disabled']=True
+            result_report['pipeline_configuration_changed']=False
             conversation_id=None
             for text in ('V této zkoušce je hrdinou modrý drak jménem Róza. Jen krátce potvrď, že si to pamatuješ.',
                          'Jak se jmenuje hrdina a jakou má barvu?', 'Děkuji, konec.'):
@@ -278,6 +274,7 @@ async def async_setup(hass, config):
         await save()
     hass.services.async_register(DOMAIN,'run_self_test',self_test,schema=vol.Schema({}))
     hass.services.async_register(DOMAIN,'arm_capture',arm,schema=vol.Schema({}))
+    hass.services.async_register(DOMAIN,'run_companion_test',companion_test,schema=vol.Schema({}))
     async_track_time_interval(hass,poll,timedelta(seconds=5))
     async_track_state_change_event(hass,[PLAYER,SATELLITE],state_changed)
     async def start(_event=None):
@@ -288,8 +285,15 @@ async def async_setup(hass, config):
             report['native_turn_probe']={'status':'error','error':type(exc).__name__}
         report['status']='monitoring'
         await poll()
-        await asyncio.sleep(30)
-        await companion_test()
+        report['status']='monitoring' if controller.status=='active' else controller.status
+        report['companion_test']={'status':'not_run','reason':'explicit_service_required'}
+        report['pipeline_configuration_changed']=False
+        try:
+            from custom_components.extended_openai_conversation.room_commands import native_resolution_probe
+            report['room_commands']=native_resolution_probe(hass)
+        except Exception as exc:
+            report['room_commands']={'status':'error','error':type(exc).__name__}
+        await save()
     if hass.is_running:hass.async_create_task(start())
     else:hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED,start)
     await save()
