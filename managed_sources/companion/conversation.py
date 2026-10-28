@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
-from .dialogue import COMPANION_INSTRUCTIONS, is_stop, recent_session, should_continue
+from .runtime import CompanionRuntime
+from .dialogue import COMPANION_INSTRUCTIONS, is_pause, is_stop, recent_session, should_continue
 from typing import Any, Literal
 
 from openai._exceptions import OpenAIError
@@ -111,9 +113,12 @@ class ExtendedOpenAIAgentEntity(
         self.entry = entry
         self.subentry = subentry
         self.history: dict[str, list[dict]] = {}
+        self._history_principals = {}
+        self._companion_lock = asyncio.Lock()
         self._recent_devices = {}
         self._dialogue_started = {}
         self._dialogue_turns = {}
+        self._companion = CompanionRuntime(hass, subentry.subentry_id)
 
         self.options = subentry.data
         self._attr_unique_id = subentry.subentry_id
@@ -138,6 +143,11 @@ class ExtendedOpenAIAgentEntity(
         previous = recent_session(self._recent_devices, device, time.monotonic())
         if not user_input.conversation_id and previous in self.history:
             user_input.conversation_id = previous
+        if is_pause(user_input.text):
+            self._recent_devices.pop(device, None)
+            result = intent.IntentResponse(language=user_input.language)
+            result.async_set_speech("")
+            return conversation.ConversationResult(response=result, conversation_id=user_input.conversation_id, continue_conversation=False)
         if is_stop(user_input.text):
             self._recent_devices.pop(device, None)
             self.history.pop(user_input.conversation_id, None)
@@ -150,7 +160,8 @@ class ExtendedOpenAIAgentEntity(
             async_get_chat_session(self.hass, user_input.conversation_id) as session,
             async_get_chat_log(self.hass, session, user_input) as chat_log,
         ):
-            return await self._async_handle_message(user_input, chat_log)
+            async with self._companion_lock:
+                return await self._async_handle_message(user_input, chat_log)
 
     async def _async_handle_message(
         self,
@@ -161,6 +172,14 @@ class ExtendedOpenAIAgentEntity(
         exposed_entities = self.get_exposed_entities()
 
         conversation_id = chat_log.conversation_id
+        companion_turn = await self._companion.prepare(user_input, conversation_id, exposed_entities)
+        if companion_turn.reset_history or self._history_principals.get(conversation_id) != companion_turn.principal:
+            self.history.pop(conversation_id, None)
+        if companion_turn.local_reply is not None:
+            local_response = intent.IntentResponse(language=user_input.language)
+            local_response.async_set_speech(companion_turn.local_reply)
+            return conversation.ConversationResult(response=local_response,
+                conversation_id=conversation_id, continue_conversation=True)
         if conversation_id in self.history:
             messages = self.history[conversation_id]
         else:
@@ -188,8 +207,10 @@ class ExtendedOpenAIAgentEntity(
 
         messages.append(user_message)
 
+        memory_context = {"role": "system", "content": companion_turn.prompt}
+        query_messages = [messages[0], memory_context, *messages[1:]]
         try:
-            query_response = await self.query(user_input, messages, exposed_entities, 0)
+            query_response = await self.query(user_input, query_messages, exposed_entities, 0)
         except OpenAIError as err:
             _LOGGER.error(err)
             intent_response = intent.IntentResponse(language=user_input.language)
@@ -211,11 +232,17 @@ class ExtendedOpenAIAgentEntity(
                 response=intent_response, conversation_id=conversation_id
             )
 
+        # The transient per-principal memory context must never remain in chat
+        # history, especially if the next request belongs to another HA user.
+        messages = [message for message in query_messages if message is not memory_context]
+        response_text = await self._companion.finish(companion_turn, query_response.message.content or "")
         msg = query_response.message.model_dump(exclude_none=True)
+        msg["content"] = response_text
         if msg.get("tool_calls") == []:
             msg.pop("tool_calls", None)
         messages.append(msg)
         self.history[conversation_id] = messages
+        self._history_principals[conversation_id] = companion_turn.principal
         started = self._dialogue_started.setdefault(conversation_id, time.monotonic())
         self._dialogue_turns[conversation_id] = self._dialogue_turns.get(conversation_id, 0) + 1
         if user_input.device_id:
@@ -223,6 +250,7 @@ class ExtendedOpenAIAgentEntity(
         while len(self.history) > 16:
             oldest = next(iter(self.history))
             del self.history[oldest]
+            self._history_principals.pop(oldest, None)
             self._dialogue_started.pop(oldest, None)
             self._dialogue_turns.pop(oldest, None)
         while len(self._recent_devices) > 16:
@@ -239,9 +267,7 @@ class ExtendedOpenAIAgentEntity(
         )
 
         intent_response = intent.IntentResponse(language=user_input.language)
-        intent_response.async_set_speech(query_response.message.content)
-
-        response_text = query_response.message.content or ""
+        intent_response.async_set_speech(response_text)
         continue_listening = should_continue(user_input.text, response_text,
             self._dialogue_turns[conversation_id], time.monotonic()-started)
         if not continue_listening:
@@ -298,6 +324,7 @@ class ExtendedOpenAIAgentEntity(
                     "name": state.name,
                     "state": self.hass.states.get(entity_id).state,
                     "aliases": aliases,
+                    "last_changed": state.last_changed.isoformat(),
                 }
             )
         return exposed_entities
@@ -336,7 +363,11 @@ class ExtendedOpenAIAgentEntity(
                     break
 
             if last_user_message_index is not None:
-                del messages[1:last_user_message_index]
+                # Keep this turn's identity/memory context during recursive tool calls.
+                messages[1:last_user_message_index] = [
+                    item for item in messages[1:last_user_message_index]
+                    if item.get("role") == "system"
+                ]
                 # refresh system prompt when all messages are deleted
                 messages[0] = self._generate_system_message(
                     exposed_entities, user_input
@@ -591,4 +622,3 @@ class OpenAIQueryResponse:
         """Initialize OpenAI query response value object."""
         self.response = response
         self.message = message
-

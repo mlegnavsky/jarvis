@@ -1,9 +1,23 @@
 # Jarvis companion conversation
 
-Managed patch of the installed Extended OpenAI Conversation agent. Copy conversation.py and dialogue.py into that integration, then restart HA. Preserve the original file revision for rollback. Upstream/HACS updates can overwrite this managed customization; re-review upstream changes before reapplying.
+Managed patch of the installed Extended OpenAI Conversation agent. Copy conversation.py, dialogue.py, runtime.py, memory.py and awareness.py into that integration, then restart HA. Preserve the original file revision for rollback. Upstream/HACS updates can overwrite this managed customization; re-review upstream changes before reapplying.
 
 The agent keeps follow-up listening enabled for ordinary answers, not only questions. Exact Czech stop expressions are intercepted before model/tool execution. Same-device context can be resumed for15min only if no explicit conversation ID was provided. Up to32turns/20min of follow-ups and16storedsessions are retained; turn count is independent of context truncation. Audio silence/timeouts still follow the native satellite. This is turn-based continued conversation, not full-duplex Realtime or guaranteed arbitrary barge-in.
 
 Companion instructions are appended to existing user instructions, preserving device permission/confirmation requirements and prohibiting invented shared ChatGPT memory. Existing OpenAI STT/Onyx are preserved. Native local-intent interception is disabled only for the specifically managed Jarvis pipeline so follow-ups and stop phrases reach the same agent. Sensitive transcript INFO logging is lowered to DEBUG.
 
 The diagnostic integration runs a synthetic text-only recall/stop test after activation. It does not execute household actions or play audio. The final microphone-follow-up and interruption behavior must be tested physically. Direct policy tests and actual agent-method boundary tests cover statements, stop-vs-film-ending, explicit session IDs, and bounded continuation despite truncated history.
+
+## Personality and local memory
+
+Moderate dry sarcasm, factual provenance, natural listening/advice and respectful disagreement are prompt rules. Optional joke suffixes are filtered locally: at least two intervening turns, no similar joke within 30 days, and no joke suffix on serious topics. Family forms of address are Martine, Šarloto, Iris, Petře and Dano. A spoken introduction supplies a session address, never authenticated identity.
+
+`Zapamatuj si: …` stores a dated explicit note. `Zapamatuj si pro domácnost: …` stores a shared note only for an authenticated HA user. `Zapomeň moje poznámky` clears that principal's notes/topics and local history. Verified text users have a private SQLite profile under `jarvis_workspace/companion_memory/`; unverified satellite/voice guests have bounded session-only memory. Original utterances are retained as topics with dates/sources, not invented summaries. Do not describe this as deployed biometric recognition or voice-based durable personal memory. Granular spoken note correction and voice enrollment remain future work.
+
+## Device observations
+
+Only explicitly exposed live entities enter the on-turn context. Cooking observations require a supported domain, appliance name and active state with valid timezone-aware last_changed, plus five minutes since first verified observation, at least two conversational turns and a 40-minute cooldown. A situation is offered at most once; refusals suppress it. Direct commands take priority. There is no automatic announcement, background microphone, recipe search or physical action. An entity's absence never proves a device is absent from the home. The current non-smart stove cannot be observed.
+
+The diagnostic snapshot also includes the separately deployed version-scoped native turn-taking controller. It bounds empty follow-up listening to 3 seconds after a statement and 6 after a question, and changes the written name Jarvis to Džárvis only at the targeted non-streamed TTS boundary. It does not implement arbitrary acoustic interruption.
+
+Verification: 19 companion tests, 6 diagnostic tests and the repository's complete 159-test suite. Native report records separate fictional memory, state-observation, identity and actual conversation recall tests, with their limited scopes.

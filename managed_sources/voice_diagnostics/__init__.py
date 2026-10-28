@@ -13,7 +13,8 @@ from homeassistant.components.tts.media_source import generate_media_source_id
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.helpers.event import async_track_time_interval, async_track_state_change_event
 from homeassistant.util import dt as dt_util
-from .analysis import audio_metrics, summarize_run, word_error
+from .analysis import audio_metrics, summarize_run, word_error, merge_runs
+from .turn_taking import install, native_probe, spoken_name
 
 DOMAIN='jarvis_voice_diagnostics'
 CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_EXTRA)
@@ -25,8 +26,30 @@ SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 async def async_setup(hass, config):
     root=Path(hass.config.path('jarvis_workspace/voice_diagnostics'))
     capture=root/'capture'
-    report={'version':1,'started_at':dt_util.utcnow().isoformat(),'self_test':{'status':'pending'},
+    report={'version':2,'started_at':dt_util.utcnow().isoformat(),'self_test':{'status':'pending'},
             'runs':[],'audio':[],'playback':[],'status':'starting','capture_expires_at':None,'capture_deadline_scope':'New recordings disabled after 15 minutes; an active HA run may finish afterward (pipeline timeout up to 5 minutes).'}
+    # Restore only bounded diagnostic history, never runtime deadlines or captures.
+    def previous_report():
+        try:
+            path=root/'report.json'
+            if path.stat().st_size > 256*1024: return {}
+            data=json.loads(path.read_text(encoding='utf-8'))
+            return data if isinstance(data,dict) else {}
+        except (OSError,ValueError): return {}
+    previous=await hass.async_add_executor_job(previous_report)
+    for field,limit in (('runs',20),('audio',5),('playback',30)):
+        values=previous.get(field)
+        if isinstance(values,list):report[field]=[v for v in values if isinstance(v,dict)][-limit:]
+    report['previous_boot_started_at']=previous.get('started_at')
+    from homeassistant.const import __version__ as core_version
+    from homeassistant.components.assist_pipeline.pipeline import PipelineRun, SpeechToTextError
+    from homeassistant.components.assist_pipeline.vad import VoiceCommandSegmenter
+    from custom_components.extended_openai_conversation.dialogue import followup_seconds
+    controller=install(hass,PipelineRun,SpeechToTextError,core_version,
+                       '01kw4sat65taw1y72xzrv2xyj4',SATELLITE,followup_seconds)
+    old_turns=previous.get('turn_taking')
+    if isinstance(old_turns,dict):controller.restore_history(old_turns.get('events'))
+    report['turn_taking']=controller.snapshot()
     lock=asyncio.Lock()
     poll_lock=asyncio.Lock()
     save_lock=asyncio.Lock()
@@ -43,6 +66,8 @@ async def async_setup(hass, config):
         temp.replace(root/'report.json')
 
     async def save():
+        report['updated_at']=dt_util.utcnow().isoformat()
+        report['turn_taking']=controller.snapshot()
         snapshot=json.loads(json.dumps(report))
         async with save_lock:
             await hass.async_add_executor_job(save_sync,snapshot)
@@ -103,7 +128,7 @@ async def async_setup(hass, config):
                         summary=summarize_run(run_id,[asdict(e) for e in list(run.events)])
                         summary['pipeline_id']=pipeline_id
                         runs.append(summary)
-                report['runs']=sorted(runs,key=lambda r:r['started_at'] or '')[-20:]
+                report['runs']=merge_runs(report['runs'],runs)
                 if capture_deadline and time.monotonic()>=capture_deadline:
                     cfg=hass.data.get(DATA_CONFIG,{})
                     if cfg.get(CONF_DEBUG_RECORDING_DIR)==str(capture):
@@ -123,6 +148,10 @@ async def async_setup(hass, config):
         state=event.data.get('new_state')
         if state is None:return
         entry={'entity_id':state.entity_id,'state':state.state,'at':dt_util.utcnow().isoformat()}
+        if controller.events:entry['last_pipeline_run_id']=controller.events[-1].get('run_id')
+        if state.entity_id==SATELLITE:
+            entry['pending_continue_conversation']=controller.pending is not None
+            entry['expected_wait_s']=controller.pending['seconds'] if controller.pending else None
         if state.entity_id==PLAYER:
             if state.state=='playing' and playback_start is None: playback_start=time.monotonic()
             elif state.state!='playing' and playback_start is not None:
@@ -216,9 +245,32 @@ async def async_setup(hass, config):
             recall=normalized(turns[1]['response'])
             result_report['passed']=bool(turns[0]['continue_conversation'] and turns[1]['continue_conversation'] and not turns[2]['continue_conversation'] and 'roza' in recall and 'modr' in recall)
             result_report['status']='complete'
+            from custom_components.extended_openai_conversation.memory import fictional_probe
+            from custom_components.extended_openai_conversation.awareness import ConversationAwareness
+            from custom_components.extended_openai_conversation.dialogue import COMPANION_INSTRUCTIONS
+            report['personality_memory_test']=await hass.async_add_executor_job(fictional_probe)
+            clock=[1793188800.]
+            awareness=ConversationAwareness(clock=lambda:clock[0])
+            stove={'entity_id':'switch.fictional_stove','name':'Sporák','state':'on','last_changed':'2026-10-28T12:00:00+00:00'}
+            early=awareness.context('fictional',[stove],'Jak se máš?')
+            clock[0]+=300
+            ready=awareness.context('fictional',[stove],'Jak se máš?')
+            clock[0]+=2400
+            repeated=awareness.context('fictional-next',[stove],'Jak se máš?')
+            report['device_awareness_test']={'passed':not early['optional_observation_allowed'] and ready['optional_observation_allowed'] and not repeated['optional_observation_allowed'],
+                'scope':'fictional clock and exposed entity; no physical device or audio',
+                'minimum_delay_s':300,'cooldown_s':2400,'automatic_announcements':False}
+            import hashlib
+            report['personality_memory_test']['prompt_sha256']=hashlib.sha256(COMPANION_INSTRUCTIONS.encode()).hexdigest()
+            # A separate synthetic identity turn verifies the deployed prompt.
+            async with asyncio.timeout(60):
+                identity=await conversation.async_converse(hass,'Jak se jmenuješ?',None,Context(),language='cs',agent_id='conversation.extended_openai_conversation')
+            answer=identity.response.as_dict().get('speech',{}).get('plain',{}).get('speech','')
+            report['identity_test']={'status':'complete','response':answer,
+                'tts_input':spoken_name(answer),'passed':'jarvis' in normalized(answer) and 'Džárvis' in spoken_name(answer)}
         except Exception as exc:
             result_report.update(status='error',error=type(exc).__name__,passed=False)
-        report['status']='companion_ready' if result_report.get('passed') else 'companion_test_failed'
+        report['status']='companion_ready' if result_report.get('passed') and report.get('personality_memory_test',{}).get('passed') and report.get('device_awareness_test',{}).get('passed') else 'companion_test_failed'
         await save()
 
     async def arm(_call=None):
@@ -229,7 +281,11 @@ async def async_setup(hass, config):
     async_track_time_interval(hass,poll,timedelta(seconds=5))
     async_track_state_change_event(hass,[PLAYER,SATELLITE],state_changed)
     async def start(_event=None):
-        arm_capture()
+        # No automatic microphone recording after reboot; capture stays opt-in.
+        try:
+            report['native_turn_probe']=await native_probe(hass,PipelineRun,VoiceCommandSegmenter)
+        except Exception as exc:
+            report['native_turn_probe']={'status':'error','error':type(exc).__name__}
         report['status']='monitoring'
         await poll()
         await asyncio.sleep(30)

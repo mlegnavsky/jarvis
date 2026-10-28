@@ -4,8 +4,9 @@ from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace as NS
 import time
+import asyncio
 import unittest
-from dialogue import is_stop, recent_session, should_continue
+from dialogue import is_stop, is_pause, recent_session, should_continue
 class Speech:
  def __init__(self,**kw):pass
  def async_set_speech(self,text):self.text=text
@@ -16,7 +17,7 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
   fn=next(n for n in cls.body if isinstance(n,ast.AsyncFunctionDef) and n.name==name)
   fn.returns=None
   for arg in fn.args.args:arg.annotation=None
-  ns={'time':time,'is_stop':is_stop,'recent_session':recent_session,'should_continue':should_continue,
+  ns={'time':time,'is_stop':is_stop,'is_pause':is_pause,'recent_session':recent_session,'should_continue':should_continue,
       'conversation':NS(ConversationResult=lambda **kw:NS(**kw)), 'intent':NS(IntentResponse=Speech),
       'async_get_chat_session':lambda hass,c:nullcontext(NS()),'async_get_chat_log':lambda *args:nullcontext(NS()),
       'CONF_ATTACH_USERNAME':'attach','DEFAULT_ATTACH_USERNAME':False,'EVENT_CONVERSATION_FINISHED':'event',
@@ -25,7 +26,7 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
   return ns[name]
  async def test_explicit_conversation_id_is_preserved(self):
   async def handle(user,log):return user.conversation_id
-  agent=NS(hass=NS(),_recent_devices={'dev':('old',time.monotonic())},history={'old':[]},_async_handle_message=handle)
+  agent=NS(hass=NS(),_companion_lock=asyncio.Lock(),_recent_devices={'dev':('old',time.monotonic())},history={'old':[]},_async_handle_message=handle)
   user=NS(text='Ahoj',device_id='dev',conversation_id='new')
   self.assertEqual(await self.method('async_process')(agent,user),'new')
  async def test_stop_never_calls_model(self):
@@ -38,7 +39,10 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
   async def query(user,messages,entities,depth):
    messages[:]=messages[:1] # emulate context truncation at the API boundary
    return NS(message=NS(content='Navazuji na rozhovor.',model_dump=lambda **kw:{'role':'assistant','content':'Navazuji na rozhovor.'}),response=NS(model_dump=lambda:{}))
-  agent=NS(history={'c':[{'role':'system'}]},_recent_devices={},_dialogue_started={},_dialogue_turns={},options={},subentry=NS(subentry_id='s'),hass=NS(bus=NS(async_fire=lambda *args:None)),get_exposed_entities=lambda:[],query=query)
+  class Companion:
+   async def prepare(self,*args):return NS(reset_history=False,principal='guest:c',local_reply=None,prompt='memory data')
+   async def finish(self,turn,response):return response
+  agent=NS(_companion=Companion(),_history_principals={'c':'guest:c'},history={'c':[{'role':'system'}]},_recent_devices={},_dialogue_started={},_dialogue_turns={},options={},subentry=NS(subentry_id='s'),hass=NS(bus=NS(async_fire=lambda *args:None)),get_exposed_entities=lambda:[],query=query)
   user=NS(text='Pokračuj',device_id='dev',language='cs',conversation_id='c',context=NS(user_id=None))
   for i in range(32):
    result=await self.method('_async_handle_message')(agent,user,NS(conversation_id='c'))
