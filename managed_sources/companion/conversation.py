@@ -143,6 +143,10 @@ class ExtendedOpenAIAgentEntity(
         previous = recent_session(self._recent_devices, device, time.monotonic())
         if not user_input.conversation_id and previous in self.history:
             user_input.conversation_id = previous
+        if is_pause(user_input.text) or is_stop(user_input.text):
+            speaker = getattr(self.hass, 'data', {}).get('jarvis_speaker_identity')
+            if speaker:
+                speaker.cancel_for(user_input)
         if is_pause(user_input.text):
             self._recent_devices.pop(device, None)
             result = intent.IntentResponse(language=user_input.language)

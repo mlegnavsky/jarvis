@@ -51,6 +51,45 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
   await self.runtime.prepare(self.user('Ahoj',None,'a'),'c')
   turn=await self.runtime.prepare(self.user('Ahoj',None,'b'),'c')
   self.assertTrue(turn.reset_history)
+ async def test_recognized_voice_has_own_durable_notes_without_ha_authentication(self):
+  class Speaker:
+   async def turn(self,*args):return {'status':'recognized','profile':'martin','name':'Martin','score':.96}
+  self.hass.data={'jarvis_speaker_identity':Speaker()}
+  turn=await self.runtime.prepare(self.user('Zapamatuj si: Můj drak je zelený.'),'c')
+  self.assertEqual(turn.principal,'voice:martin')
+  self.assertFalse(turn.verified)
+  self.assertEqual(turn.address,'Martine')
+  self.assertIn('hlasov',turn.local_reply)
+  self.assertTrue(self.runtime.store.context('voice:martin')['notes'])
+  self.assertFalse(self.runtime.store.context('auth:martin')['notes'])
+ async def test_unknown_voice_after_known_voice_does_not_inherit_personal_context(self):
+  class Speaker:
+   result={'status':'recognized','profile':'martin','name':'Martin','score':.96}
+   async def turn(self,*args):return self.result
+  speaker=Speaker();self.hass.data={'jarvis_speaker_identity':speaker}
+  await self.runtime.prepare(self.user('Zapamatuj si: Můj drak je zelený.'),'c')
+  speaker.result={'status':'unknown'}
+  turn=await self.runtime.prepare(self.user('Jak se dnes máš?'),'c')
+  self.assertTrue(turn.reset_history)
+  self.assertIsNone(turn.address)
+  self.assertNotIn('Můj drak',turn.prompt)
+ async def test_voice_enrollment_returns_local_reply_without_pretending_authenticated_identity(self):
+  class Speaker:
+   async def turn(self,*args):return {'status':'enrolling','local_reply':'Potřebuji ještě dvě ukázky.'}
+  self.hass.data={'jarvis_speaker_identity':Speaker()}
+  turn=await self.runtime.prepare(self.user('Zkušební věta pro hlasový profil.'),'c')
+  self.assertEqual(turn.local_reply,'Potřebuji ještě dvě ukázky.')
+  self.assertFalse(turn.verified)
+ async def test_unknown_voice_never_reuses_guest_private_context(self):
+  class Speaker:
+   async def turn(self,*args):return {'status':'unknown'}
+  self.hass.data={'jarvis_speaker_identity':Speaker()}
+  await self.runtime.prepare(self.user('Jsem Martin'),'c')
+  note=await self.runtime.prepare(self.user('Zapamatuj si: Martinova soukromá poznámka.'),'c')
+  self.assertFalse(note.store.context(note.principal)['notes'])
+  other=await self.runtime.prepare(self.user('Jsem Iris'),'c')
+  self.assertTrue(other.reset_history)
+  self.assertNotIn('Martinova',other.prompt)
 
 class PolicyTests(unittest.TestCase):
  def test_fictional_native_probe(self):self.assertTrue(fictional_probe()['passed'])

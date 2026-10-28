@@ -35,6 +35,13 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
   user=NS(text='Děkuji, konec.',device_id='dev',conversation_id='old',language='cs')
   result=await self.method('async_process')(agent,user)
   self.assertFalse(result.continue_conversation);self.assertNotIn('old',agent.history)
+ async def test_stop_cancels_pending_voice_enrollment(self):
+  cancelled=[]
+  speaker=NS(cancel_for=lambda user:cancelled.append(user.device_id))
+  agent=NS(hass=NS(data={'jarvis_speaker_identity':speaker}),_recent_devices={},history={},_dialogue_started={},_dialogue_turns={})
+  user=NS(text='Děkuji, konec.',device_id='dev',conversation_id='c',language='cs')
+  await self.method('async_process')(agent,user)
+  self.assertEqual(cancelled,['dev'])
  async def test_turn_bound_survives_real_method_with_truncated_history(self):
   async def query(user,messages,entities,depth):
    messages[:]=messages[:1] # emulate context truncation at the API boundary
