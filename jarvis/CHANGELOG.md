@@ -1,3 +1,7 @@
+# 3.11.0
+
+- Nativní integrace Home Assistantu pro explicitně delegovanou správu firmwaru vybraných terminálů. Můstek používá vlastní omezený příkaz HA, nikoli zakázanou větev Supervisor proxy. Přístup nepotřebuje browserovou relaci ani udržování přihlášení.
+
 # 3.10.1
 
 - Aktivace explicitního seznamu firmware_targets zachovává ochranu přihlašovacích a spojovacích údajů. Rozlišení fází nativního připojení bez výpisu tokenů nebo serverových odpovědí.

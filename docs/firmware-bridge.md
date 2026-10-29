@@ -1,4 +1,4 @@
-# Firmware bridge — Jarvis 3.10.0
+# Firmware bridge — Jarvis 3.11.0
 
 Uses the existing authenticated `jarvis_action` route: service `jarvis.admin`, entity `jarvis.system`. Existing maintenance/write gates and maintain OAuth scope apply. No dashboard browser sign-in, no disabled authentication, no shell or arbitrary URL proxy.
 
@@ -12,4 +12,4 @@ Changes use durable Admin request IDs. `firmware_compile` and `firmware_install`
 
 `firmware_config_restore` requires target, expected_revision and backup_id of the model install. It restores the local before-image without flashing. Model assets remain available for audit/reuse. Neither config restoration nor the Supervisor backup constitutes automatic bootloader rollback on devices that do not support it.
 
-The adapter targets Device Builder 1.25 native task API and HA Core 2026.6.4 authenticated Supervisor ingress session API. Unsupported upstream protocols fail closed with generic errors, never returning session tokens or raw output. Firmware source must not be edited simultaneously in another client during a build/install; revision checks detect drift, but an already-started native OTA is not automatically undone.
+The addon invokes the explicitly installed HA integration jarvis_firmware_bridge through its admin-only, five-command WebSocket capability. Both integration targets and addon firmware_targets must authorize the configuration. The Core integration privately uses Device Builder 1.25 native tasks via authenticated Supervisor ingress. It does not expose session credentials or a generic Supervisor proxy; the addon never calls the Supervisor/hassio command prefixes prohibited by its Core WebSocket proxy. Core creates its own fresh private sessions after restart, so browser sessions are not required. Unsupported upstream protocols fail closed with generic errors, never returning session tokens or raw output. Firmware source must not be edited simultaneously in another client during a build/install; revision checks detect drift, but an already-started native OTA is not automatically undone.

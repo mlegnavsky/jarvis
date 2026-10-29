@@ -2,81 +2,33 @@ import unittest
 from app.firmware_client import FirmwareClient
 from app.ha import UpstreamError
 
-
 class Socket:
-    def __init__(self, messages):
-        self.messages, self.sent, self.closed = list(messages), [], False
-    async def send_json(self, value):
-        self.sent.append(value)
-    async def receive_json(self):
-        value = self.messages.pop(0)
-        if callable(value):
-            return value(self.sent[-1])
-        return value
-    async def close(self):
-        self.closed = True
-
-
+ def __init__(self,messages):self.messages=list(messages);self.sent=[];self.closed=False
+ async def send_json(self,value):self.sent.append(value)
+ async def receive_json(self):return self.messages.pop(0)
+ async def close(self):self.closed=True
 class Supervisor:
-    base = 'http://supervisor'
-    def __init__(self):
-        self.core = Socket([{'id': 1, 'success': True, 'result': {'session': 'private-session'}}])
-        self.builder = Socket([{'server_version': '1.25.0', 'requires_auth': False},
-                               {'message_id': 'unrelated', 'result': 'ignore'},
-                               lambda sent: {'message_id': sent['message_id'], 'result': {'job_id': 'job1', 'status': 'queued'}}])
-        self.connections = []
-        self.requests = []
-    async def _websocket(self):
-        return self.core
-    async def request(self, method, path):
-        self.requests.append((method, path))
-        return {'state': 'started', 'ingress_url': '/api/hassio_ingress/opaque-token'}
-    async def _session(self):
-        return self
-    async def ws_connect(self, url, **kwargs):
-        self.connections.append((url, kwargs))
-        return self.builder
+ def __init__(self,reply=None):self.socket=Socket([reply or {'id':1,'success':True,'result':{'configured':[]}}])
+ async def _websocket(self):return self.socket
 
-
-class FirmwareClientTests(unittest.IsolatedAsyncioTestCase):
-    async def test_core_authenticated_ingress_correlates_and_closes(self):
-        sup = Supervisor()
-        result = await FirmwareClient(sup).call('firmware/compile', {'configuration': 'voice.yaml'})
-        self.assertEqual(result, {'job_id': 'job1', 'status': 'queued'})
-        self.assertEqual(sup.core.sent, [{'id': 1, 'type': 'supervisor/api', 'endpoint': '/ingress/session', 'method': 'post', 'data': {}}])
-        self.assertEqual(sup.connections[0][0], 'http://supervisor/ingress/opaque-token/ws')
-        self.assertEqual(sup.connections[0][1]['headers'], {'Cookie': 'ingress_session=private-session'})
-        self.assertTrue(sup.core.closed and sup.builder.closed)
-        self.assertEqual(sup.builder.sent[0]['args'], {'configuration': 'voice.yaml'})
-
-    async def test_unknown_command_never_opens_transport(self):
-        sup = Supervisor()
-        with self.assertRaises(UpstreamError):
-            await FirmwareClient(sup).call('devices/update_config', {})
-        self.assertEqual(sup.core.sent, [])
-
-    async def test_raw_remote_error_and_tokens_never_escape(self):
-        sup = Supervisor()
-        sup.builder.messages = [{'requires_auth': False}, lambda sent: {'message_id': sent['message_id'], 'error_code': 'internal_error', 'details': 'private-session password secret'}]
-        with self.assertRaisesRegex(UpstreamError, '^firmware_unavailable$'):
-            await FirmwareClient(sup).call('devices/list', {})
-        self.assertTrue(sup.builder.closed and sup.core.closed)
-
-    async def test_invalid_ingress_path_and_rejected_core_fail_closed(self):
-        for result in ({'id': 1, 'success': False, 'error': {'message': 'secret'}}, {'id': 1, 'success': True, 'result': {'session': 'bad\r\n'}}):
-            sup = Supervisor()
-            sup.core.messages = [result]
-            with self.assertRaises(UpstreamError):
-                await FirmwareClient(sup).call('devices/list', {})
-            self.assertEqual(sup.connections, [])
-            self.assertTrue(sup.core.closed)
-
-    async def test_frame_flood_is_bounded_and_closes(self):
-        sup = Supervisor()
-        sup.builder.messages = [{'requires_auth': False}] + [{'message_id': 'other'}] * 100
-        with self.assertRaises(UpstreamError):
-            await FirmwareClient(sup).call('devices/list', {})
-        self.assertTrue(sup.builder.closed)
+class TransportTests(unittest.IsolatedAsyncioTestCase):
+ async def test_uses_explicit_native_ha_capability_not_supervisor_proxy(self):
+  sup=Supervisor();value=await FirmwareClient(sup).call('devices/list')
+  self.assertEqual(value,{'configured':[]})
+  self.assertEqual(sup.socket.sent,[{'id':1,'type':'jarvis_firmware_bridge/request','command':'devices/list','args':{}}])
+  self.assertTrue(sup.socket.closed)
+ async def test_native_errors_never_expose_messages_or_credentials(self):
+  sup=Supervisor({'id':1,'success':False,'error':{'code':'native_unavailable','message':'private-session-secret'}})
+  with self.assertRaisesRegex(UpstreamError,'firmware_unavailable') as caught:await FirmwareClient(sup).call('devices/list')
+  self.assertNotIn('private',str(caught.exception));self.assertTrue(sup.socket.closed)
+ async def test_unknown_commands_rejected_before_connection(self):
+  sup=Supervisor()
+  with self.assertRaises(UpstreamError):await FirmwareClient(sup).call('arbitrary/shell')
+  self.assertEqual(sup.socket.sent,[])
+ async def test_uncorrelated_frames_are_bounded(self):
+  sup=Supervisor();sup.socket.messages=[{'id':99}]*70
+  with self.assertRaises(UpstreamError):await FirmwareClient(sup).call('devices/list')
+  self.assertTrue(sup.socket.closed)
 
 class NativeResponseTests(unittest.TestCase):
     def test_native_list_and_reachability_fields(self):
