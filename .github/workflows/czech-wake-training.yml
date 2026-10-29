@@ -1,7 +1,12 @@
 name: Experimental Czech wake model training
 
-# Direct command wake words paused at the owner's request.
+# Jarvis pronunciation retraining; other targets remain paused.
 on:
+  push:
+    branches: [training/czech-wake-candidates-20261028]
+    paths:
+      - tools/wake_training/**
+      - .github/workflows/czech-wake-training.yml
   workflow_dispatch:
 
 permissions:
