@@ -1,0 +1,6 @@
+{
+  "test": "plesk-unattended-deployment",
+  "marker": "lab-hook-20261029-acceptance-1",
+  "status": "verification_requested",
+  "production_changes": false
+}
