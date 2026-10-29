@@ -43,13 +43,15 @@ async def async_setup(hass, config):
         if isinstance(values,list):report[field]=[v for v in values if isinstance(v,dict)][-limit:]
     report['previous_boot_started_at']=previous.get('started_at')
     from homeassistant.const import __version__ as core_version
-    from homeassistant.components.assist_pipeline.pipeline import PipelineRun, PipelineInput, PipelineStage, SpeechToTextError
+    from homeassistant.components.assist_pipeline.pipeline import PipelineRun, PipelineInput, PipelineStage, PipelineEvent, PipelineEventType, DATA_LAST_WAKE_UP, WAKE_WORD_COOLDOWN, SpeechToTextError
     from homeassistant.components.assist_pipeline.vad import VoiceCommandSegmenter
     from custom_components.extended_openai_conversation.dialogue import followup_seconds
     controller=install(hass,PipelineRun,SpeechToTextError,core_version,
                        '01kw4sat65taw1y72xzrv2xyj4',SATELLITE,followup_seconds)
     report['direct_wake']=install_direct_wake(hass,PipelineInput,PipelineStage,core_version,
-                       '01kw4sat65taw1y72xzrv2xyj4',SATELLITE)
+                       '01kw4sat65taw1y72xzrv2xyj4',SATELLITE,
+                       last_wakeups=hass.data.setdefault(DATA_LAST_WAKE_UP,{}),cooldown=WAKE_WORD_COOLDOWN,
+                       end_event=lambda:PipelineEvent(PipelineEventType.STT_VAD_END,{'timestamp':0}))
     old_turns=previous.get('turn_taking')
     if isinstance(old_turns,dict):controller.restore_history(old_turns.get('events'))
     report['turn_taking']=controller.snapshot()
