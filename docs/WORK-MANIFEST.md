@@ -73,4 +73,4 @@ Používej storage a backup_retention před údržbou, deployment_acquire/prepar
 
 ## Laboratoř a archiv vydání
 
-Aktuální provozní postup: docs/LAB-AND-RELEASES.md. Laboratoř laborator.odladeni.cz používá pouze větev lab/plesk-bootstrap-20261029; produkce feat/jarvis-addon. Publikace do Gitu, nasazení souborů a aktivní runtime jsou oddělené důkazy. Zálohy domácnosti nikdy nepatří do veřejného archivu. Chybějící privátní export záloh a Plesk webhook eviduj jako mezery, nikoli hotové schopnosti.
+Aktuální provozní postup: docs/LAB-AND-RELEASES.md. Laboratoř laborator.odladeni.cz používá pouze větev lab/plesk-bootstrap-20261029; produkce feat/jarvis-addon. Publikace do Gitu, nasazení souborů a aktivní runtime jsou oddělené důkazy. Zálohy domácnosti nikdy nepatří do veřejného archivu. Plesk webhook a živá publikace ověřeny commitem30348df692f92e6833a926254eba3a9e933669f7 / run40891692482. Privátní HA zálohy musí podle vlastníka na vlastní server. Cílový SFTP účet a soukromá složka dosud nejsou připojené; tato mezera trvá. Podrobnosti v LAB-AND-RELEASES.md.
