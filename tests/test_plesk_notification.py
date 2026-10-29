@@ -13,3 +13,11 @@ class NotificationTests(unittest.TestCase):
  def test_rejects_credentials(self):
   m=self.module()
   with self.assertRaises(ValueError):m.canonical_url('https://user:pass@lister.thajsky-raj.cz/modules/git/public/web-hook.php?uuid=x')
+
+ def test_sends_post_and_accepts_204(self):
+  from unittest.mock import patch,MagicMock
+  m=self.module();response=MagicMock();response.status=204;response.__enter__.return_value=response
+  opener=MagicMock();opener.open.return_value=response
+  with patch.dict(m.os.environ,{'LAB_WEBHOOK':'https://give-get.com:8443/modules/git/public/web-hook.php?uuid=test'}),patch.object(m.urllib.request,'build_opener',return_value=opener):
+   self.assertEqual(m.main(),0)
+  self.assertEqual(opener.open.call_args.args[0].get_method(),'POST')

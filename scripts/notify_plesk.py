@@ -19,10 +19,10 @@ def main():
   print('::warning::Plesk notification not configured. Live deployment unverified.');return 0
  try:
   url=canonical_url(value)
-  with urllib.request.build_opener(NoRedirect).open(url,timeout=30) as response:
-   if response.status!=200:raise ValueError('unexpected response')
+  with urllib.request.build_opener(NoRedirect).open(urllib.request.Request(url,data=b'',method='POST'),timeout=30) as response:
+   if response.status not in (200,202,204):raise ValueError('unexpected response')
   print('Plesk notification accepted; HTTP content still requires verification.');return 0
  except Exception as e:
   # Exception text can contain the private URL. Never print it.
-  print('::error::Plesk notification failed ('+type(e).__name__+'); secret URL omitted.');return 1
+  print('::error::Plesk notification failed ('+type(e).__name__+str(getattr(e,'code',''))+'); secret URL omitted.');return 1
 if __name__=='__main__':raise SystemExit(main())
