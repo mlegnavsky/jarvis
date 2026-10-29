@@ -9,3 +9,16 @@ Approved spec: the user's full operations table and six improvement requirements
 5. Source publish/update, free approved backups, activate heating fix and current integration in one Core restart, then check bridge/voice/heating. Update manifest and checkpoint with deployed vs prepared status.
 
 Constraints: no secrets or personal voice models in Git; no arbitrary shell/proxy, no security bypass; no extra Core/OS upgrades; preserve unknown request IDs and reconcile. Deleting four named backups already authorized; first36c1e560 removed through existing logged-in UI and confirmed absent. Browser then lost session; do not invent credentials. Remaining91ee007c/fd90919a/e7b028f1 should use new API after update.
+
+## Execution ledger
+
+Task1 complete: backup/delete metadata guards, storage and preparation diagnostics; three live deletions verified.
+Task2 complete: lease/preview/apply/rollback, live activation and file rollback proof verified.
+Task3 complete: persisted validated heating configure, CAS under decision lock,300→301→300 live without restart.
+Task4 simulation/CI complete; persistent hosted HA blocked by missing host administration. Compose fixture prepared; no fabricated hosted success.
+Task5 complete:3.12.0 updated, heat1.1.0 activated, voice/heat readback and settings restored.
+Ruling: retention remains preview-only because authorization names four exact deletions, not future arbitrary backup purge.
+Ruling: deployment ownership coordinates Admin routes; independent updater/manual UI remain outside the lease and are documented.
+Ruling: no claim of arbitrary Python hot reload; ordinary parameters use configure, code uses real activation.
+Independent review: operations_review; all important findings addressed, final fixes covered by regression/scenario tests,203 addon+21 heating passing and CI green.
+Deferred infrastructure: actual Docker/VM host access is unavailable through current PHP-only Odladeni connector; no extra authentication or arbitrary shell proxy introduced.

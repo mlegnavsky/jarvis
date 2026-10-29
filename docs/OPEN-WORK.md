@@ -1,30 +1,24 @@
-# Rozpracováno — stav 29. 10. 2026
+# Stav práce — 29.10.2026, po nasazení3.12.0
 
-Před každou navazující prací obnov živý stav; níže je poslední doložený checkpoint, nikoli permanentně aktuální telemetrie.
+## Dokončeno a živě ověřeno
 
-## 1. Dokončit opravu hlášení topení
+- Jarvis3.12.0: updater job fe80a464e071434aa44666c6c80c743c verified, backup20e5ace6.
+- Schválené zálohy91ee007c/fd90919a/e7b028f1 odstraněny novým backup_delete API, všechny tři joby verified.36c1e560 dříve odstraněna přes již přihlášenou UI správu. Žádné další zálohy odstraněny nebyly. Protected9659c1f3 a94e01687 zachovány. Po úklidu3.8GiB volných.
+- Původní heat101-activate-20261029 zůstává historicky unknown po odmítnuté přípravě; NESPOUŠTĚT znovu. Nahrazeno doloženým novým nasazením níže.
+- Topení1.1.0 včetně opravy staré chyby: ops312-heating-plan-20261029 / ops312-heating-apply-20261029 dokončeno10:50:55UTC, phase active_verified, backup4bb0a0c2, Core2026.6.4. Oba runtime senzory potvrdily version1.1.0.
+- Parametry bez restartu ověřeny: min_off_s300→301→300, oba joby verified a původní revize nastavení2e33ab6517018b1048706474a7b0d8c69a2db7095f6d48eeba3ecfc35040ecef obnovena. Výchozí dohodnuté podmínky zachovány.
+- Živý test souběžného zápisu ops312-lock-conflict-proof správně selhal deployment_owned_by_another_work před zápisem.
+- Živý návrat testovacího souboru ops312-rollback-proof-plan: apply verified/file_written (nikoli runtime active), rollback verified/rolled_back_files, soubor deployment-proof.txt opět missing. Produkční soubory tím nebyly vraceny.
+- Hlasový smoke: Jarvis zvolen, mute off, satellite idle. Žádný akustický test ani nové nahrávání neproběhlo.
+- CI commit724ec35ad0524d557d37697b32ccec1e92a7eebc: oba běhy40860262447/40860252736 success.203 addon testů,21 testů topení,5 firmware-native testů, kontejnerové buildy/startup. Zdroj implementaceb1e4d520d0383b3b9489017b3be04d4a78231afd.
 
-- Příčina: poslední chyba ovládání zůstávala uložena i po pozdějším dosažení požadovaného stavu zásuvky.
-- Oprava integrace jarvis_solar_heating 1.0.1 publikována v Gitu, commit c32db75b973d50bca5f9140a263b8c762a0f828d.
-- Nasazené soubory verified: heat101-file-0-20261029 a heat101-file-1-20261029. Regresní test opožděného potvrzení prošel, celkem17 testů topení a193 addon testů.
-- Aktivace NENÍ dokončená. Job heat101-activate-20261029 je unknown. Supervisor log přesně dokládá odmítnutí přípravné zálohy pro nedostatek prostoru (1,5GB); backup_slug null. Neopakovat naslepo.
-- Po vyřešení prostoru znovu ověř fázi/živý stav, pak dokonči potřebnou aktivaci a potvrď, že obývák ukazuje správný aktuální důvod místo staré chyby.
+## Zbývající skutečné hranice
 
-## 2. Schválené uvolnění místa
+1. Trvale hostovaný oddělený Home Assistant ještě není spuštěný. Připravený Docker Compose v testing/compose.yaml. Lokální a GitHub simulace fungují. Odladění konektor potvrzuje PHP správu, proc_open=false; žádný SSH/Docker/VM nástroj ani dříve ověřený samostatný HA runtime nebyl nalezen. Potřeba skutečný připojený kontejnerový/VM host, nikoli pouze subdoména. Nežádat uživatele o vložení hesla do chatu.
+2. Retence vrací bezpečný náhled (keep_latest3 + protected); automatické mazání je vypnuté. Schválení čtyř přesných smazání není souhlas s neomezeným budoucím mazáním. Pro automatický úklid nejdřív určit a schválit rozsah/uchovávání.
+3. Deployment lease chrání Admin operace, nikoli nezávislý updater, ruční UI ani cizí přímé zapisovače. Ti musí respektovat proces a CAS. Source_commit je deklarovaný operátorem; soubory jsou ověřeny přes konkrétní hash, nikoli vzdálené kryptografické ověření Gitu v Greenu.
+4. TV/SledovaniTV/Discovery: funkční přímé URL ani celý kanálový povel stále neověřen. Řeší oddělený TV work; nespouštět souběžný Core restart bez koordinace.
 
-Martin již výslovně schválil odstranění čtyř starších průběžných záloh. Nežádat znovu souhlas se stejným mazáním. K 29.10. v 10:04UTC nebyla žádná z nich smazána.
+## Pro pokračování
 
-| Schválený slug | Datum UTC | Poslední známá velikost MB |
-|---|---|---:|
-| 91ee007c | 2026-10-29 05:34 | 615,62 |
-| fd90919a | 2026-10-29 05:39 | 615,84 |
-| e7b028f1 | 2026-10-29 05:47 | 616,14 |
-| 36c1e560 | 2026-10-29 05:52 | 616,35 |
-
-Celkem přibližně2464MB. Před odstraněním znovu ověř existenci, název Jarvis before remote administration a protected=false. Pokud metadata neodpovídají, nesmaž jinou zálohu jako náhradu.
-
-Zachovat zejména protected automatickou9659c1f3 a nejnovější ověřenou před topením94e01687, plus všechny ostatní neschválené zálohy. Mazání není ve stávajícím Jarvis Admin implementováno. Tato mezera se nesmí zamlčet ani vydávat za chybějící uživatelské heslo.
-
-## 3. TV / Apple TV
-
-Oddělená zařízení; cíl: zapnout TV a Apple TV, otevřít SledovaniTV a přehrát Discovery. Veřejná dokumentace HA potvrzuje obecné deep links; konkrétní funkční URL Discovery v tvOS aplikaci nebylo dohledáno ani otestováno. Nic neoznačovat za nasazenou automatizaci. Vyhnout se souběžným změnám Core z několika worků.
+Čti AGENTS.md → WORK-MANIFEST → OPERATIONS-3.12.md → operations-manifest.json. Ověř deployment_status a aktuální runtime; nepřebírej staré hodnoty jako živé. Všechny další změny běžných parametrů dělej heating_settings, ne editací konstant a restartem. Pro nové zdroje používej připravený bundle + runtime checks. Doplňky/Core/OS neupgradovat hromadně jako vedlejší efekt údržby.

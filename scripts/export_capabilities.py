@@ -23,7 +23,7 @@ def export():
             'completion_state': 'verified', 'unknown_outcome': 'reconcile_before_retry',
             'operations': dict(sorted(operations.items())),
             'known_missing': ['hosted_container_runtime_access', 'verified_discovery_channel_link'],
-            'workflow': 'docs/WORK-MANIFEST.md', 'open_work': 'docs/OPEN-WORK.md'}
+            'evidence_registry':'docs/capability-evidence.json', 'workflow': 'docs/WORK-MANIFEST.md', 'open_work': 'docs/OPEN-WORK.md'}
 
 if __name__ == '__main__':
     output = ROOT / 'docs/operations-manifest.json'

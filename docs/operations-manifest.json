@@ -330,6 +330,7 @@
     "hosted_container_runtime_access",
     "verified_discovery_channel_link"
   ],
+  "evidence_registry": "docs/capability-evidence.json",
   "workflow": "docs/WORK-MANIFEST.md",
   "open_work": "docs/OPEN-WORK.md"
 }

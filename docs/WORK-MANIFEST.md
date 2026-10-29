@@ -8,7 +8,7 @@ Verze dokumentu 1; stav zjištěný 29. 10. 2026. Vlastník Martin Legnavský. Z
 |---|---|
 | Repo | mlegnavsky/jarvis |
 | Nasazovaná větev | feat/jarvis-addon; main není zdroj aktuálně instalovaného doplňku |
-| Jarvis | b4b773b1_jarvis, naposledy ověřeno 3.11.1 |
+| Jarvis | b4b773b1_jarvis, naposledy ověřeno 3.12.0 |
 | Stabilní brána a updater | b4b773b1_jarvis_updater; OAuth a rescue nezávislé na Core |
 | Green | HA Core 2026.6.4; neupgradovat v rámci běžných oprav |
 | Přímý vstup | Jarvis plugin: jarvis_action, jarvis_inventory, update a rescue |
@@ -31,10 +31,10 @@ Strojový soubor operations-manifest.json generuje `python scripts/export_capabi
 | Změny integrací | Nativní options/reload a revize; podporované rozsahy podle kontraktu |
 | Automatizace | YAML úprava + automations_reload, potom kontrola entity a výsledku |
 | Aktualizace Jarvise | update_check/update/update_job; úspěch až verified |
-| Zálohy | Výpis, vytvoření a obnova implementovány; mazání CHYBÍ |
+| Zálohy | Výpis, vytvoření, obnova a cílené mazání s CAS implementovány; tři živá mazání verified ve 3.12.0 |
 | Firmware a soukromé wake modely | Přímé compile/install/model_install/restore; živý OTA ověřen 29.10.; cíle výslovně povolené |
 | Mikrofon a hlas | Stav/diagnostika a výslovně aktivované záznamy; nejde o neomezený permanentní přenos |
-| Volné místo, retence a cílené mazání záloh | Nedostatečný kontrakt; prioritní rozšíření, ne hotová schopnost |
+| Volné místo, retence a cílené mazání záloh | Čtení místa, preflight a bezpečný náhled retence ve 3.12.0; automatické plošné mazání vypnuté |
 | TV / Discovery | Otevření konkrétního kanálu SledovaniTV neověřeno; nezaměňovat obecnou podporu deep links za funkční odkaz |
 | Libovolný shell, root, DNS/router a účty všech služeb | Neověřeno / tímto manifestem se nezřizuje |
 
@@ -47,7 +47,7 @@ Strojový soubor operations-manifest.json generuje `python scripts/export_capabi
 - Před velkou zálohou ověř prostor, pokud existuje povolené čtení. Když neexistuje, eviduj tuto mezeru; nehádej volné místo.
 - U selhání bez začaté mutace odliš chybu přípravy od neznámého výsledku. Pokud stávající rozhraní vrátí unknown, respektuj ho a proveď reconciliaci pomocí úlohy, logu a aktuálního stavu.
 
-## Prioritní doplnění správy — zatím neimplementováno
+## Historické požadavky — implementace a hranice ve 3.12.0
 
 1. Cílené `backup_delete` pouze pro explicitně schválené slugy; nejprve načíst metadata, blokovat protected a chráněné poslední zálohy, CAS, trvalý request_id, ověřit nepřítomnost po smazání. Žádný plošný příkaz „smaž vše“.
 2. Čtení diskového prostoru a velikostí záloh přímo přes podporované Supervisor API. Vrátit potřebné minimum dat.
@@ -55,7 +55,7 @@ Strojový soubor operations-manifest.json generuje `python scripts/export_capabi
 4. Jednoznačný stav nasazení: source_published / file_written / activation_pending / active_verified / blocked, včetně důvodu a potřebného dalšího kroku.
 5. Cílené a testované reloady dalších součástí, kde je podporuje HA; neslibovat obecný hot reload libovolného Pythonu.
 
-Implementace těchto bodů potřebuje skutečnou dostupnou nasazovací cestu. Je-li nová verze blokována místem a povinnou zálohou, nejprve vyřeš tento bootstrap přes již dostupnou autorizovanou správu. Neobcházej ochranu a nevytvářej další vrstvy kódu bez možnosti je aktivovat.
+Stav implementace a konkrétní hranice popisuje docs/OPERATIONS-3.12.md. Nativní hot reload libovolného Pythonu ani trvale hostovaný testovací HA nejsou hotové. Implementace dalších bodů potřebuje skutečnou dostupnou nasazovací cestu. Je-li nová verze blokována místem a povinnou zálohou, nejprve vyřeš tento bootstrap přes již dostupnou autorizovanou správu. Neobcházej ochranu a nevytvářej další vrstvy kódu bez možnosti je aktivovat.
 
 ## Ověřování a rychlost
 
@@ -66,3 +66,7 @@ Implementace těchto bodů potřebuje skutečnou dostupnou nasazovací cestu. Je
 - Nepouštěj stále znovu stejné kompletní kontroly bez změny. Čtení nezávislých údajů dávkuj. Opakování závislých mutací neparalelizuj.
 - Čekání na úlohu nesmí blokovat krátkou pravdivou informaci o práci. Neposílej prázdné sliby „už skoro“.
 - „Hotovo“ znamená konkrétní ověřenou funkci. Akustické rozpoznání hlasu, spuštění TV kanálu a fyzické výsledky nepředstírej pouze podle přijetí příkazu.
+
+## Aktuální postup od3.12.0
+
+Používej storage a backup_retention před údržbou, deployment_acquire/prepare/apply/read/release pro související změny, explicitní CAS rollback pro soubory a heating_settings pro běžné parametry bez restartu. Testovací simulace a kontejnerové smoke testy běží v GitHub Check Jarvis. Detailní kontrakt: docs/OPERATIONS-3.12.md.
