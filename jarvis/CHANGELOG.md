@@ -1,3 +1,9 @@
+# 3.9.0
+
+- Správa hlasových nastavení přes můstek: aktuální options, výběr asistenta/probouzecího slova/citlivosti a ukončení řeči, mikrofon, číselné nastavení, hlasitost a zastavení přehrávače. Každé zařízení i služba vyžadují explicitní allowlist; hodnoty se ověřují proti aktuálnímu stavu.
+- Hlasová diagnostika bez přepisů a zvukových dat; testy a dočasný místní záznam jen na explicitní požadavek. Záznam vyžaduje confirm_recording=true, nikdy se nezapíná čtením stavu.
+- Trvalá idempotence a ověření cílových hodnot pro hlasová nastavení; kompatibilní route jarvis_action service=jarvis.voice pro stávající konektory.
+
 # 3.8.0
 
 - Správa zdrojů lokálních doplňků a sdílených souborů/médií přes explicitní mounty addons/share/media. Čtení, zápis, přesun, smazání a obnova jednotlivého souboru s kontrolou revize, trvalým before-image a zachováním executable oprávnění zdrojů.

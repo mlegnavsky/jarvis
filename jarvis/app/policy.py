@@ -23,11 +23,28 @@ def validate_action(body, options):
         raise APIError(403, 'action_not_allowed')
     if service.split('.')[0] != entity.split('.')[0]:
         raise APIError(403, 'domain_mismatch')
-    no_data = {'light.toggle', 'light.turn_off', 'switch.turn_on', 'switch.turn_off', 'automation.turn_on', 'lock.lock'}
+    no_data = {'light.toggle', 'light.turn_off', 'switch.turn_on', 'switch.turn_off', 'automation.turn_on', 'lock.lock', 'media_player.media_stop'}
     if service in no_data:
         valid = not data
     elif service == 'light.turn_on':
         valid = set(data) <= {'brightness'} and ('brightness' not in data or type(data['brightness']) is int and 0 <= data['brightness'] <= 255)
+    elif service == 'select.select_option':
+        valid = set(data) == {'option'} and isinstance(data['option'], str) and 1 <= len(data['option']) <= 256
+    elif service in ('number.set_value', 'media_player.volume_set'):
+        field = 'value' if service == 'number.set_value' else 'volume_level'
+        value = data.get(field)
+        valid = set(data) == {field} and type(value) in (int, float) and math.isfinite(value)
+        if service == 'media_player.volume_set': valid = valid and 0 <= value <= .8
+    elif service == 'tts.speak':
+        valid = (set(data) == {'media_player_entity_id', 'message'}
+                 and isinstance(data['message'], str) and 1 <= len(data['message']) <= 200
+                 and isinstance(data['media_player_entity_id'], str)
+                 and data['media_player_entity_id'].startswith('media_player.')
+                 and data['media_player_entity_id'] in options.get('allowed_entities', []))
+    elif service == 'assist_satellite.announce':
+        valid = set(data) == {'message'} and isinstance(data['message'], str) and 1 <= len(data['message']) <= 200
+    elif service in ('jarvis_voice_diagnostics.arm_capture', 'jarvis_voice_diagnostics.run_self_test', 'jarvis_voice_diagnostics.run_companion_test'):
+        valid = entity == 'jarvis_voice_diagnostics.system' and (set(data) == {'confirm_recording'} and data['confirm_recording'] is True if service.endswith('.arm_capture') else not data)
     elif service == 'climate.set_temperature':
         temp = data.get('temperature')
         valid = set(data) == {'temperature'} and type(temp) in (int, float) and math.isfinite(temp)
@@ -51,3 +68,13 @@ def validate_current_state(service, data, state):
     if service == 'climate.set_hvac_mode' and data['hvac_mode'] not in attrs.get('hvac_modes', []):
         raise APIError(400, 'invalid_hvac_mode')
 
+
+    if service == 'select.select_option' and data['option'] not in attrs.get('options', []):
+        raise APIError(400, 'invalid_select_option')
+    if service == 'number.set_value':
+        value = data['value']; lower = attrs.get('min'); upper = attrs.get('max'); step = attrs.get('step')
+        if (type(lower) not in (int, float) or type(upper) not in (int, float)
+                or not math.isfinite(lower) or not math.isfinite(upper) or not lower <= value <= upper
+                or type(step) not in (int, float) or not math.isfinite(step) or step <= 0
+                or not math.isclose((value-lower)/step, round((value-lower)/step), abs_tol=1e-6)):
+            raise APIError(400, 'number_out_of_range_or_step')

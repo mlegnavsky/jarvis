@@ -68,6 +68,9 @@ class HomeFixture:
             target = next(s for s in self.states if s['entity_id'] == body['entity_id'])
             state = 'locked' if path == '/core/api/services/lock/lock' else 'off' if path.endswith('/turn_off') else 'on'
             updated = {'state': state}
+            if path.endswith('/select_option'): updated['state'] = body['option']
+            if path.endswith('/set_value'): updated['state'] = str(body['value'])
+            if path.endswith('/volume_set'): updated = {'state': target['state'], 'attributes': {**target['attributes'], 'volume_level': body['volume_level']}}
             if 'brightness' in body:
                 updated['state'] = 'on' if body['brightness'] else 'off'
                 updated['attributes'] = {**target['attributes'], 'brightness': body['brightness']}

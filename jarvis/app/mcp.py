@@ -7,6 +7,7 @@ from .policy import APIError
 from .ha import UpstreamError
 from .management import BRIDGE_SERVICES
 from .admin import FIELDS
+from .voice import VoiceBridge
 
 ADMIN_READS = ['overview', 'addons', 'addon', 'store', 'backups', 'files', 'file', 'jobs', 'job', 'config_check',
                'workspaces', 'workspace_files', 'workspace_file', 'source_project', 'upload', 'integrations', 'integration', 'integration_subentries', 'integration_options', 'voice_pipelines', 'device', 'diagnostics', 'permission_map', 'core_logs', 'supervisor_logs', 'addon_logs', 'repositories', 'store_addon']
@@ -41,6 +42,8 @@ def catalog(options):
                    ('request_id', 'entity_id', 'service', 'data')), 'jarvis:control', False))
     if options.get('maintenance_enabled') is True:
         tools.extend([
+            tool('jarvis_voice', 'Správa hlasu bez webového přihlášení. data action=status vrací aktuální povolené hlasové entity a options; diagnostics vrací časy bez přepisů či audia; pipelines vrací poskytovatele. action=change vyžaduje entity_id, service, data; platí allowlist zařízení/služeb. select.select_option, number.set_value, switch.turn_on/off, media_player.volume_set (0 až 0.8), media_player.media_stop, tts.speak (message a media_player_entity_id; oba cíle musí být povolené), assist_satellite.announce (krátký test terminálu). Diagnostika používá entity_id=jarvis_voice_diagnostics.system; arm_capture vyžaduje explicitní pokyn uživatele a data.confirm_recording=true, ukládá místně omezené promluvy nejvýše 15 minut. Nikdy nezapínej záznam pro pouhou diagnostiku. request_id zachovej; accepted není fyzický výsledek a replayed je historický stav. Stejné rozhraní dostupné přes jarvis_action service=jarvis.voice entity_id=jarvis.system.',
+                 schema({'data': {'type': 'object'}, 'request_id': text}, ('data','request_id')), 'jarvis:maintain', False),
             tool('jarvis_update_check', 'Obnov nabídku repozitářů a zjisti nabízenou verzi Jarvise. Neinstaluje aktualizaci.', schema(), 'jarvis:maintain', False),
             tool('jarvis_update', 'Na výslovný požadavek uživatele zálohuj a aktualizuj pouze Jarvise. Zachovej request_id; úspěch je až verified v úloze.',
                  schema({'request_id': text, 'version': text}, ('request_id', 'version')), 'jarvis:maintain', False),
@@ -94,7 +97,7 @@ def compact(item, kind):
         return {'domain': item.get('domain'), 'services': sorted(item.get('services', {}))[:200]}
     result = {key: value[:512] if isinstance(value, str) else value for key in fields[kind] if (value := item.get(key)) is not None}
     if kind == 'states':
-        allowed = ('friendly_name', 'unit_of_measurement', 'device_class', 'brightness', 'temperature', 'current_temperature', 'hvac_action', 'hvac_modes', 'min_temp', 'max_temp')
+        allowed = ('options', 'min', 'max', 'step', 'volume_level', 'is_volume_muted', 'supported_features', 'friendly_name', 'unit_of_measurement', 'device_class', 'brightness', 'temperature', 'current_temperature', 'hvac_action', 'hvac_modes', 'min_temp', 'max_temp')
         result['attributes'] = {}
         for key, value in (item.get('attributes') or {}).items():
             if key not in allowed:
@@ -110,6 +113,7 @@ def compact(item, kind):
 
 
 def install_mcp(app, options, directory, ha, actions, bridge, audit, management=None, admin=None):
+    voice = VoiceBridge(ha, options, actions, admin)
     oauth = OAuth(options, directory)
     app[MCP_OAUTH] = oauth
     oauth.install(app)
@@ -124,7 +128,7 @@ def install_mcp(app, options, directory, ha, actions, bridge, audit, management=
     async def invoke(name, args):
         if name == 'jarvis_status':
             return result({'version': VERSION, 'stream_connected': ha.stream_connected,
-                'capabilities_version': 4, 'tools': [t['name'] for t in catalog(options)],
+                'capabilities_version': 5, 'tools': [t['name'] for t in catalog(options)],
                 'writes_enabled': options.get('writes_enabled') is True,
                 'maintenance_enabled': options.get('maintenance_enabled') is True})
         if name == 'jarvis_inventory':
@@ -137,7 +141,12 @@ def install_mcp(app, options, directory, ha, actions, bridge, audit, management=
                 'partial': snapshot['partial'], 'errors': snapshot['errors'], 'offset': offset, 'total': len(items),
                 'next_offset': offset+limit if offset+limit < len(items) else None,
                 'items': [compact(item, kind) for item in items[offset:offset+limit]]}, failed)
+        if name == 'jarvis_voice':
+            return result(await voice.invoke(args['data'], args['request_id']))
         if name == 'jarvis_action':
+            if args['service'] == 'jarvis.voice':
+                if args['entity_id'] != 'jarvis.system': raise APIError(400, 'invalid_voice_target')
+                return result(await voice.invoke(args['data'], args['request_id']))
             if args['service'] == 'jarvis.gateway':
                 if args['entity_id'] != 'jarvis.system' or set(args['data']) != {'action'}:
                     raise APIError(400, 'invalid_gateway_action')
@@ -240,7 +249,7 @@ def install_mcp(app, options, directory, ha, actions, bridge, audit, management=
                             scope = definition['securitySchemes'][0]['scopes'][0]
                             try:
                                 oauth.verify(request.headers.get('Authorization'), scope)
-                                if definition['name'] == 'jarvis_action' and args.get('service', '').startswith('jarvis.'):
+                                if definition['name'] == 'jarvis_action' and args.get('service', '').startswith(('jarvis.', 'jarvis_voice_diagnostics.')):
                                     scope = 'jarvis:maintain'
                                     oauth.verify(request.headers.get('Authorization'), scope)
                                 value = await invoke(definition['name'], args)

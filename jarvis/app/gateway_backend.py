@@ -187,7 +187,7 @@ def install_backend(app, ha, options, directory, audit):
             raise APIError(400, 'invalid_gateway_arguments')
         scope = definition['securitySchemes'][0]['scopes'][0]
         required = {scope}
-        if body['name'] == 'jarvis_action' and args.get('service', '').startswith('jarvis.'):
+        if body['name'] == 'jarvis_action' and args.get('service', '').startswith(('jarvis.', 'jarvis_voice_diagnostics.')):
             required.add('jarvis:maintain')
         if not required <= set(body['scopes']) or not set(body['scopes']) <= oauth.scopes():
             raise APIError(403, 'insufficient_scope')

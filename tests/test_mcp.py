@@ -113,6 +113,16 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await response.read(), b'')
         self.assertEqual((await self.rpc('tools/list', Accept='application/json')).status, 406)
 
+    async def test_voice_route_requires_maintain_scope_and_survives_legacy_action(self):
+        # Catalog is configured at startup; use a second isolated application.
+        from app.mcp import catalog
+        definitions = catalog({**self.options, 'maintenance_enabled': True})
+        definition = next(t for t in definitions if t['name'] == 'jarvis_voice')
+        self.assertEqual(definition['securitySchemes'][0]['scopes'], ['jarvis:maintain'])
+        response = await self.rpc('tools/call', {'name':'jarvis_action','arguments':{
+            'request_id':'voice-read-denied','entity_id':'jarvis.system','service':'jarvis.voice','data':{'action':'status'}}})
+        self.assertTrue((await response.json())['result']['isError'])
+
     async def test_official_sdk_can_initialize_list_and_call(self):
         from mcp.client import ClientSession
         from mcp.client.streamable_http import streamable_http_client
@@ -206,3 +216,33 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
                                   {'operation': 'shell', 'arguments': {}, 'request_id': 'bad-admin'}}, token=token)
         self.assertEqual((await response.json())['error']['code'], -32602)
         self.assertEqual(self.fixture.effects, [])
+
+
+class VoiceMCPTests(unittest.IsolatedAsyncioTestCase):
+    params = MCPTests.params
+    authorize = MCPTests.authorize
+    exchange = MCPTests.exchange
+    rpc = MCPTests.rpc
+    asyncTearDown = MCPTests.asyncTearDown
+
+    async def asyncSetUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.fixture = HomeFixture()
+        self.fixture.states = [{'entity_id':'select.voice_end','state':'Default','attributes':{'options':['Default','Aggressive']}}]
+        self.ha = HAClient('supervisor-test', await self.fixture.start())
+        self.options = {**OPTIONS, 'api_token':'r'*40, 'writes_enabled':True, 'maintenance_enabled':True,
+                        'allowed_entities':['select.voice_end'], 'allowed_services':['select.select_option']}
+        self.http = TestClient(TestServer(create_app(self.ha,self.options,Path(self.tmp.name),watch=False)))
+        await self.http.start_server()
+        self.token = (await (await self.exchange(await self.authorize(scope='jarvis:read jarvis:control jarvis:maintain'))).json())['access_token']
+
+    async def test_voice_tool_and_legacy_bridge_share_journal(self):
+        data = {'action':'change','entity_id':'select.voice_end','service':'select.select_option','data':{'option':'Aggressive'}}
+        r = await self.rpc('tools/call', {'name':'jarvis_voice','arguments':{'request_id':'voice-both','data':data}})
+        result = (await r.json())['result']
+        self.assertFalse(result['isError']);self.assertTrue(result['structuredContent']['target_state_verified'])
+        r = await self.rpc('tools/call', {'name':'jarvis_action','arguments':{'request_id':'voice-both','service':'jarvis.voice','entity_id':'jarvis.system','data':data}})
+        self.assertTrue((await r.json())['result']['structuredContent']['replayed'])
+        self.assertEqual(len(self.fixture.effects),1)
+        r = await self.rpc('tools/call', {'name':'jarvis_voice','arguments':{'request_id':'read-current','data':{'action':'status'}}})
+        self.assertEqual((await r.json())['result']['structuredContent']['entities'][0]['state'],'Aggressive')
