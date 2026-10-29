@@ -56,6 +56,16 @@ class BackupDAVTests(unittest.TestCase):
         for method in ['GET', 'PROPFIND', 'PUT', 'OPTIONS', 'DELETE']:
             self.assertEqual(self.req(method, 'test.tar', b'private', auth=False)[0], 401)
         self.assertFalse((self.private / 'objects').exists())
+    def test_unauthorized_response_distinguishes_missing_credentials_without_echo(self):
+        status, headers, body = self.req(auth=False)
+        self.assertEqual(status, 401)
+        self.assertEqual(headers.get('X-Jarvis-Auth-Input'), 'missing')
+        self.password = 'synthetic-invalid-password'
+        status, headers, body = self.req()
+        self.assertEqual(status, 401)
+        self.assertEqual(headers.get('X-Jarvis-Auth-Input'), 'available')
+        self.assertNotIn(self.password.encode(), body)
+        self.assertNotIn(self.password, str(headers))
     def test_bad_password(self):
         self.password = 'incorrect'
         self.assertEqual(self.req()[0], 401)
