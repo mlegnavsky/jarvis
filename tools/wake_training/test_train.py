@@ -20,7 +20,7 @@ class TrainingInputTests(unittest.TestCase):
         self.assertEqual(target_phrases('odemkni'), ['odemkni'])
 
     def test_jarvis_includes_existing_czech_address(self):
-        self.assertEqual(target_phrases('jarvis'), ['Jarvis', 'Jarvisi'])
+        self.assertEqual(target_phrases('jarvis'), ['Džarvis', 'Džarvisi', 'Džárvis', 'Džárvisi', 'Jarvis', 'Jarvisi'])
 
     def test_unrecognized_input_cannot_become_a_path_or_shell_command(self):
         for value in ['../zhasni', 'zhasni;id', '', None]:
