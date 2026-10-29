@@ -30,7 +30,7 @@ class CatalogueTest(unittest.TestCase):
   env=jinja2.Environment();t=env.from_string(c['content'])
   rendered=t.render(states=lambda e:'unavailable' if e=='switch.inverter_access_point' else '100',state_attr=lambda e,a:None)
   self.assertEqual(rendered.count('můžeme změnit'),102)
-  self.assertIn('Nyní nelze potvrdit',rendered)
+  self.assertIn('nyní nelze měnit',rendered)
   self.assertNotIn('call-service',str(c))
   self.assertNotIn('perform-action',str(c))
 if __name__=='__main__':unittest.main()
