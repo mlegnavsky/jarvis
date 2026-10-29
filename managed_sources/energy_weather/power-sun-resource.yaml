@@ -1,6 +1,0 @@
-# Add as a Lovelace JavaScript module resource; replace only the 24h power
-# history-graph with type: custom:jarvis-power-sun. Battery graph stays native.
-url: /local/jarvis-power-sun.js?v=1.2.0
-type: module
-# Power uses left W axis; SunCalc elevation uses right degree axis.
-# History is from HA Recorder. No changes to sensors or energy control.

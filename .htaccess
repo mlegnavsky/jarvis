@@ -1,0 +1,3 @@
+<FilesMatch "^(check-host\.sh|README\.md)$">
+Require all denied
+</FilesMatch>

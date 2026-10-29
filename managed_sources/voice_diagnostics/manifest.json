@@ -1,1 +1,0 @@
-{"domain":"jarvis_voice_diagnostics","name":"Jarvis – diagnostika hlasu","version":"1.0.1","documentation":"https://github.com/mlegnavsky/jarvis","codeowners":[],"requirements":[],"dependencies":["assist_pipeline","stt","tts","ffmpeg"],"iot_class":"local_push"}

@@ -1,9 +1,0 @@
-{
-  "domain": "jarvis_firmware_bridge",
-  "name": "Jarvis Firmware Bridge",
-  "version": "1.0.0",
-  "documentation": "https://github.com/esphome/device-builder/blob/1.25.0/docs/API.md",
-  "dependencies": ["hassio"],
-  "codeowners": [],
-  "iot_class": "local_push"
-}

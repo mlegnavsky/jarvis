@@ -1,9 +1,0 @@
-__pycache__/
-*.pyc
-.venv/
-.superpowers/
-.env*
-options.json
-data/
-*.sqlite*
-*.log
