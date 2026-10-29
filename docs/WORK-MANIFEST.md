@@ -70,3 +70,7 @@ Stav implementace a konkrétní hranice popisuje docs/OPERATIONS-3.12.md. Nativn
 ## Aktuální postup od3.12.0
 
 Používej storage a backup_retention před údržbou, deployment_acquire/prepare/apply/read/release pro související změny, explicitní CAS rollback pro soubory a heating_settings pro běžné parametry bez restartu. Testovací simulace a kontejnerové smoke testy běží v GitHub Check Jarvis. Detailní kontrakt: docs/OPERATIONS-3.12.md.
+
+## Laboratoř a archiv vydání
+
+Aktuální provozní postup: docs/LAB-AND-RELEASES.md. Laboratoř laborator.odladeni.cz používá pouze větev lab/plesk-bootstrap-20261029; produkce feat/jarvis-addon. Publikace do Gitu, nasazení souborů a aktivní runtime jsou oddělené důkazy. Zálohy domácnosti nikdy nepatří do veřejného archivu. Chybějící privátní export záloh a Plesk webhook eviduj jako mezery, nikoli hotové schopnosti.

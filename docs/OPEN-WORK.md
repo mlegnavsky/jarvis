@@ -26,3 +26,7 @@
 ## Jarvis Lab na Odladění
 
 Zdroj portálu: managed_sources/staging_portal; cílová cesta https://plaginy.odladeni.cz/jarvis/. Veřejné bezpečné testovací podklady, snapshot výsledků, odkazy na Git a CI. Není to spuštěný HA runtime; tato mezera výše trvá. Žádné produkční údaje ani veřejná zapisovací operace.
+
+## Laboratorní pipeline
+
+Implementace: scripts/build_release_archive.py, scripts/publish_lab_snapshot.py, testing/lab-public a publikační job Check Jarvis. Přesný kontrakt a zbývající aktivace: docs/LAB-AND-RELEASES.md. GitHub secret PLESK_LAB_WEBHOOK není dostupnými nástroji potvrzený; při jeho absenci job jasně rozliší archiv v Gitu a neověřené nasazení. Soukromá kopie HA záloh mimo Green stále není zprovozněná. Žádné soukromé zálohy neposílat do public webroot ani public Git.
