@@ -15,6 +15,20 @@ jobs:
       - run: python scripts/check_manifest.py
       - run: python scripts/simulate_heating.py
       - run: PYTHONPATH=managed_sources/firmware_bridge python -m unittest discover -s managed_sources/firmware_bridge/tests -q
+  backup-dav:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require PHP runtime and verify private WebDAV over HTTP
+        run: |
+          python -m pip install aiowebdav2==0.6.2
+          php --version
+          php -l testing/backup-dav/index.php
+          php -l testing/backup-dav/setup.php
+          python -m unittest tests.test_backup_dav -v
   containers:
     runs-on: ubuntu-latest
     strategy:
@@ -38,7 +52,7 @@ jobs:
           tags: jarvis-smoke:local
       - run: python scripts/smoke_container.py ${{ matrix.app }}
   publish-laboratory:
-    needs: [tests, containers]
+    needs: [tests, containers, backup-dav]
     if: github.event_name == 'push' && github.ref == 'refs/heads/feat/jarvis-addon'
     runs-on: ubuntu-latest
     permissions:
@@ -81,7 +95,7 @@ jobs:
           cd public
           git config user.name 'Jarvis Laboratory'
           git config user.email 'jarvis-lab@users.noreply.github.com'
-          git add index.html portal.js catalog.json releases
+          git add index.html portal.js catalog.json releases backup-dav
           git diff --cached --quiet || git commit -m "lab: verified source $GITHUB_SHA"
           git push origin HEAD:lab/plesk-bootstrap-20261029
       - name: Notify Plesk when deployment hook is configured

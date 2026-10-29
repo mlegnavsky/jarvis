@@ -29,6 +29,8 @@ def main():
  shutil.copyfile(release/'release.json',dest/'release.json')
  (dest/'heating-report.json').write_text(json.dumps(report,indent=2)+'\n')
  for name in ('index.html','portal.js'):shutil.copyfile(source/'testing/lab-public'/name,public/name)
+ dav=public/'backup-dav';dav.mkdir(exist_ok=True)
+ for name in ('index.php','setup.php','.htaccess'):shutil.copyfile(source/'testing/backup-dav'/name,dav/name)
  path=public/'catalog.json';catalog=json.loads(path.read_text()) if path.exists() else {'format':'jarvis-lab-catalog-v1','releases':[]}
  entry={**manifest,'verified_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'workflow_run':a.run,'checks':'tests_and_container_builds_passed'}
  catalog['releases']=[entry]+[x for x in catalog['releases'] if x['source_commit']!=a.commit]
