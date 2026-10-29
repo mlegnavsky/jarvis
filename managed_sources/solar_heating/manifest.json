@@ -1,1 +1,1 @@
-{"domain":"jarvis_solar_heating","name":"Jarvis – solární topení","version":"1.0.0","documentation":"https://github.com/mlegnavsky/jarvis","codeowners":[],"iot_class":"local_push","dependencies":["automation"]}
+{"domain":"jarvis_solar_heating","name":"Jarvis – solární topení","version":"1.0.1","documentation":"https://github.com/mlegnavsky/jarvis","codeowners":[],"iot_class":"local_push","dependencies":["automation"]}

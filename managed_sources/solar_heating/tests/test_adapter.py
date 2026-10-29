@@ -40,7 +40,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   def register(domain,service,fn,**kw):self.registered[(domain,service)]=fn
   async def call(domain,service,data,**kw):
    self.calls.append((domain,service,data))
-   if domain=='switch':
+   if domain=='switch' and not getattr(self,'defer_switch',False):
     for cb in self.bus.get('call_service',[]):cb(NS(data={'domain':domain,'service':service,'service_data':data},context=kw['context']))
     set_state(data['entity_id'],'on' if service=='turn_on' else 'off',context=kw['context'])
   def task(coro):
@@ -76,3 +76,11 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
  async def test_disabling_visible_automation_stops_automatic_heat(self):
   self.set_state(self.g['AUTOMATION'],'off');await self.drain()
   self.assertEqual(self.states['switch.aqara_smart_plug_eu'].state,'off')
+
+ async def test_late_switch_confirmation_clears_previous_error(self):
+  self.defer_switch=True
+  self.set_state(self.g['SENSORS']['temp'],'23.5');await self.drain()
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Chyba ovládání')
+  self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Dosaženo 23,5 °C')
+  self.assertIsNone(self.states['sensor.jarvis_topeni_child'].attributes['last_error'])
