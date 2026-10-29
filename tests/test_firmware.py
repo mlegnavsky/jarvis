@@ -52,3 +52,8 @@ class StoreTests(unittest.TestCase):
   args=self.payload();args['manifest']['micro']['probability_cutoff']=.97
   second=self.store.install_model(args)
   self.assertNotEqual(first['manifest_path'],second['manifest_path'])
+ def test_generated_manifest_satisfies_v2_required_minimum_version(self):
+  import json
+  result=self.store.install_model(self.payload())
+  manifest=json.loads((self.root/'esphome'/result['manifest_path']).read_text())
+  self.assertEqual(manifest['micro']['minimum_esphome_version'],'2024.7.0')

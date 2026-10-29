@@ -1,3 +1,7 @@
+# 3.11.1
+
+- Include required ESPHome minimum version in private model manifests and their content address.
+
 # 3.11.0
 
 - Nativní integrace Home Assistantu pro explicitně delegovanou správu firmwaru vybraných terminálů. Můstek používá vlastní omezený příkaz HA, nikoli zakázanou větev Supervisor proxy. Přístup nepotřebuje browserovou relaci ani udržování přihlášení.

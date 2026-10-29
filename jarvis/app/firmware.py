@@ -62,9 +62,10 @@ class FirmwareStore(WorkspaceFiles):
   if micro['feature_step_size'] not in (10,20):raise APIError(400,'invalid_firmware_manifest')
   for field,low,high in [('sliding_window_size',1,20),('feature_step_size',10,20),('tensor_arena_size',16384,524288)]:
    if type(micro[field]) is not int or not low<=micro[field]<=high:raise APIError(400,'invalid_firmware_manifest')
-  stem='jarvis_models/'+args['model_id']+'-'+digest(binary+json.dumps(manifest,sort_keys=True).encode())[:16]
+  metadata={'type':'micro','version':2,'wake_word':word,'author':'Jarvis','trained_languages':['cs'],'micro':{**micro,'minimum_esphome_version':'2024.7.0'}}
+  stem='jarvis_models/'+args['model_id']+'-'+digest(binary+json.dumps(metadata,sort_keys=True).encode())[:16]
   manifest_path=stem+'.json';model_path=stem+'.tflite'
-  complete={'type':'micro','version':2,'wake_word':word,'author':'Jarvis','model':Path(model_path).name,'trained_languages':['cs'],'micro':micro}
+  complete={**metadata,'model':Path(model_path).name}
   for path,content in [(model_path,binary),(manifest_path,(json.dumps(complete,ensure_ascii=False,indent=2)+'\n').encode())]:
    path='esphome/'+path;old,_=self.raw(path)
    if old is not None and old!=content:raise APIError(409,'firmware_model_asset_conflict')
