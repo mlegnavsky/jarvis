@@ -26,3 +26,7 @@ To disable access remove/rename private access.json in Plesk; endpoint returns 5
 Until bootstrap and actual Green upload, status is `activation_pending`, not verified backup. Synthetic HTTP tests demonstrate protocol/auth/storage behavior, not disaster recovery. Port22 externally timed out before credentials were checked; local Plesk SSH uses127.0.0.1:22, and chroot has no /proc, no sftp binary. Do not repeat SFTP setup without new evidence.
 
 Lab recreated under isolated jarvis_lab subscription site91. Git source bdd0de8 was live with catalog and both ZIP SHA256 checks verified after automatic /httpdocs deployment was saved. TLS works. Do not change Cloudflare routes for jarvis.legnavsky.cz; outbound WebDAV uses the lab HTTPS endpoint.
+
+## Plesk authentication forwarding correction
+
+On29October2026 a live PROPFIND with deliberately invalid synthetic Basic credentials returned401 and `X-Jarvis-Auth-Input: missing`: credentials were stripped before PHP. Replacing the owner's pair cannot fix that. Enable Apache `CGIPassAuth On` only in the backup-dav directory. Acceptance: the same synthetic request must return401 with `available`, while no-credential requests remain401/missing and private-file URLs remain403/404. Actual owner credentials are never printed or fetched for diagnosis. The next native HA setup attempt must use the already generated pair; do not rotate again without evidence.

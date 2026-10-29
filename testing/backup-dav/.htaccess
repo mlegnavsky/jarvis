@@ -1,4 +1,6 @@
 Options -Indexes
+# Apache/FastCGI otherwise strips Authorization before PHP sees it.
+CGIPassAuth On
 <FilesMatch "^(?!index\.php$|setup\.php$)">
     Require all denied
 </FilesMatch>
