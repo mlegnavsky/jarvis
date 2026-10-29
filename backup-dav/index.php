@@ -34,6 +34,7 @@ if (preg_match('/^Basic\s+(.+)$/i', $authorization, $match)) {
     }
 }
 if (!hash_equals($config['username'], $user) || !password_verify($password, $config['password_hash'])) {
+    header('X-Jarvis-Auth-Input: ' . (($authorization !== '' || $user !== '') ? 'available' : 'missing'));
     header('WWW-Authenticate: Basic realm="Jarvis private backups", charset="UTF-8"');
     stop(401, 'Authentication required.');
 }
