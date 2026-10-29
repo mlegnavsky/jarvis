@@ -7,6 +7,20 @@ SILENT_URL='/api/jarvis_homepod_output/silence.wav'
 def url_terminal_supported(flags,voice_flag=1,speaker_flag=2):
  return bool(flags & voice_flag) and not bool(flags & speaker_flag)
 
+def raop_audio_takeover(entity):
+ from pyatv.const import Protocol
+ from pyatv.interface import Audio
+ return entity.atv.takeover(Protocol.RAOP,Audio)
+
+async def play_at_volume(entity,media_id,volume,*,takeover_audio=None):
+ # Idle devices can prefer a non-responsive Companion/MRP volume path.
+ # Prime the RAOP session volume through its own audio implementation, then
+ # release before stream_file acquires its own protocol takeover lifecycle.
+ release=(takeover_audio or raop_audio_takeover)(entity)
+ try:await entity.async_set_volume_level(volume)
+ finally:release()
+ await entity.async_play_media('music',media_id)
+
 class OutputError(Exception):
  def __init__(self,code,message):
   super().__init__(message);self.code=code

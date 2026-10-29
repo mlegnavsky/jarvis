@@ -109,3 +109,61 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
   try:await task
   except asyncio.CancelledError:pass
   self.assertEqual(played,[],'obsolete TTS must never start playback')
+
+class VolumeTests(unittest.IsolatedAsyncioTestCase):
+ async def test_speech_sets_volume_before_streaming(self):
+  import routing
+  calls=[]
+  class Player:
+   async def async_set_volume_level(self,level):calls.append(('volume',level))
+   async def async_play_media(self,kind,media):calls.append(('play',kind,media))
+  play=getattr(routing,'play_at_volume',None)
+  self.assertIsNotNone(play,'speech route must explicitly set its own volume')
+  await play(Player(),'speech',.45,takeover_audio=lambda e:lambda:None)
+  self.assertEqual(calls,[('volume',.45),('play','music','speech')])
+ async def test_volume_failure_does_not_play_at_unknown_level(self):
+  import routing
+  calls=[]
+  class Player:
+   async def async_set_volume_level(self,level):raise RuntimeError('unavailable')
+   async def async_play_media(self,*args):calls.append(args)
+  play=getattr(routing,'play_at_volume',None)
+  self.assertIsNotNone(play,'speech route must explicitly set its own volume')
+  with self.assertRaises(RuntimeError):await play(Player(),'speech',.45,takeover_audio=lambda e:lambda:None)
+  self.assertEqual(calls,[])
+
+class RaopVolumeTests(unittest.IsolatedAsyncioTestCase):
+ async def test_idle_companion_volume_timeout_is_avoided_by_raop_takeover(self):
+  import routing
+  from types import SimpleNamespace
+  from unittest.mock import patch
+  calls=[];active=False;protocol=object();interface=object()
+  def takeover(p,i):
+   nonlocal active
+   self.assertIs(p,protocol);self.assertIs(i,interface);active=True;calls.append('takeover')
+   def release():
+    nonlocal active
+    active=False;calls.append('release')
+   return release
+  class Player:
+   atv=SimpleNamespace(takeover=takeover)
+   async def async_set_volume_level(self,level):
+    if not active:raise TimeoutError('idle Companion volume path')
+    calls.append(('volume',level))
+   async def async_play_media(self,kind,media):
+    self_test.assertFalse(active,'RAOP stream owns its own takeover lifecycle')
+    calls.append(('play',media))
+  self_test=self
+  with patch.dict('sys.modules',{'pyatv.const':SimpleNamespace(Protocol=SimpleNamespace(RAOP=protocol)), 'pyatv.interface':SimpleNamespace(Audio=interface)}):
+   await routing.play_at_volume(Player(),'speech',.35)
+  self.assertEqual(calls,['takeover',('volume',.35),'release',('play','speech')])
+
+ async def test_failed_volume_releases_takeover_and_never_starts_audio(self):
+  import routing
+  released=[];played=[]
+  class Player:
+   async def async_set_volume_level(self,level):raise TimeoutError()
+   async def async_play_media(self,*args):played.append(args)
+  with self.assertRaises(TimeoutError):
+   await routing.play_at_volume(Player(),'speech',.35,takeover_audio=lambda e:lambda:released.append(True))
+  self.assertEqual(released,[True]);self.assertFalse(played)

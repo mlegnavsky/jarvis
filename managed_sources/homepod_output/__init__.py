@@ -14,10 +14,10 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED,__version__ as CORE_
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 from pyatv.const import FeatureName
-from .routing import Router,install,SILENT_URL,url_terminal_supported
+from .routing import Router,install,SILENT_URL,url_terminal_supported,play_at_volume
 
 DOMAIN='jarvis_homepod_output'
-CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_EXTRA)
+CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({vol.Optional('speech_volume',default=0.45):vol.All(vol.Coerce(float),vol.Range(min=0.05,max=0.8))})},extra=vol.ALLOW_EXTRA)
 SPEAKER='media_player.homepod_obyvak_homepod_obyvak'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
@@ -33,6 +33,7 @@ class SilenceView(HomeAssistantView):
  async def get(self,request):return web.Response(body=silence_wav(),content_type='audio/wav')
 
 async def async_setup(hass,config):
+ speech_volume=config[DOMAIN]['speech_volume']
  hass.http.register_view(SilenceView())
  def satellite_url_supported():
   component=hass.data.get(SATELLITE_COMPONENT)
@@ -52,13 +53,13 @@ async def async_setup(hass,config):
  async def play(media_id):
   # Calling the native async entity method awaits the entire RAOP stream,
   # avoiding any generic service-call timeout being mistaken for audio end.
-  await player().async_play_media('music',media_id)
+  await play_at_volume(player(),media_id,speech_volume)
  async def stop():await player().async_media_stop()
  router=Router(play,stop)
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun,TextToSpeechError
  adapter=install(hass,PipelineRun,router,CORE_VERSION,PIPELINE,SATELLITE,TextToSpeechError)
  report={'version':1,'started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
-         'microphone':SATELLITE,'terminal_spoken_output':False if adapter=='active' else 'native_uncontrolled','audible_test_performed':False,
+         'microphone':SATELLITE,'speech_volume':speech_volume,'terminal_spoken_output':False if adapter=='active' else 'native_uncontrolled','audible_test_performed':False,
          'arbitrary_speech_barge_in':False,'cancel_current_answer_hook':True,
          'wake_or_stop_word_physical_test':'deferred_until_user_home',
          'echo_reference_for_external_homepod':'not_available_on_stock_voice_pe',
@@ -71,7 +72,7 @@ async def async_setup(hass,config):
  async def update(_now=None):
   try:
    entity=player()
-   report.update(player_available=True,raop_stream_file=True,player_state=entity.state,satellite_media_player_url=True)
+   report.update(player_available=True,raop_stream_file=True,player_state=entity.state,satellite_media_player_url=True,observed_volume=entity.volume_level)
    report.pop('error',None);report.pop('reason',None)
    status='configured' if adapter=='active' else adapter
   except Exception as exc:
