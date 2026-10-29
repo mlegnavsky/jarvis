@@ -1,3 +1,7 @@
+# 3.10.1
+
+- Aktivace explicitního seznamu firmware_targets zachovává ochranu přihlašovacích a spojovacích údajů. Rozlišení fází nativního připojení bez výpisu tokenů nebo serverových odpovědí.
+
 # 3.10.0
 
 - Přímá správa ESPHome firmwaru přes existující můstek: nativní sestavení, OTA instalace, trvalé úlohy a ověření připojení i hashů. Přihlašování přes web není potřeba; používá se oprávněná relace Supervisor ingress, bez vypínání autentizace.

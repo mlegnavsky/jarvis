@@ -21,6 +21,7 @@ class FirmwareClient:
         if command not in self.COMMANDS or (args is not None and not isinstance(args, dict)):
             raise UpstreamError('firmware_unavailable')
         core = builder = None
+        phase = "core_session"
         try:
             async with asyncio.timeout(self.timeout):
                 core = await self.supervisor._websocket()
@@ -36,18 +37,22 @@ class FirmwareClient:
                 core = None
                 if not re.fullmatch(r'[a-z0-9_]{1,100}', self.slug):
                     raise UpstreamError('firmware_unavailable')
+                phase = 'addon_info'
                 info = await self.supervisor.request('GET', '/addons/' + self.slug + '/info')
                 match = re.fullmatch(r'/api/hassio_ingress/([A-Za-z0-9_-]{1,256})/?', info.get('ingress_url', ''))
                 if not match or info.get('state') != 'started':
                     raise UpstreamError('firmware_unavailable')
                 session = await self.supervisor._session()
+                phase = 'ingress_connect'
                 builder = await session.ws_connect(
                     self.supervisor.base + '/ingress/' + match[1] + '/ws',
                     headers={'Cookie': 'ingress_session=' + session_token},
                     heartbeat=20, max_msg_size=2 * 1024 * 1024)
+                phase = 'ingress_handshake'
                 hello = await builder.receive_json()
                 if not isinstance(hello, dict) or hello.get('requires_auth') is not False:
                     raise UpstreamError('firmware_unavailable')
+                phase = 'native_command'
                 message_id = uuid.uuid4().hex
                 await builder.send_json({'command': command, 'message_id': message_id, 'args': args or {}})
                 reply = await self._receive(builder, 'message_id', message_id)
@@ -56,6 +61,7 @@ class FirmwareClient:
                 return reply['result']
         except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, TypeError, AttributeError,
                 KeyError, IndexError, UpstreamError):
+            self.last_failure_stage = phase
             raise UpstreamError('firmware_unavailable') from None
         finally:
             for websocket in (builder, core):

@@ -396,7 +396,7 @@ class Admin:
                         desired = saved['options']
                     else:
                         desired = {**current, **args['changes']}
-                    if target == own and set(args.get('changes', {})) - {'allowed_entities', 'allowed_services'}:
+                    if target == own and set(args.get('changes', {})) - {'allowed_entities', 'allowed_services','firmware_targets'}:
                         raise APIError(403, 'self_credentials_and_connection_protected')
                     validation = await self.sup.request('POST', '/addons/'+target+'/options/validate', desired)
                     if validation.get('valid') is not True:

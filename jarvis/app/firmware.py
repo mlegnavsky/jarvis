@@ -81,6 +81,9 @@ class FirmwareBridge:
  def validate(self,operation,args):
   self.store().target(args['target'])
  async def read(self,query,target):
+  try:return await self._read(query,target)
+  except UpstreamError:return {'available':False,'error':'firmware_unavailable','stage':getattr(self.client,'last_failure_stage','native_response')}
+ async def _read(self,query,target):
   store=self.store()
   if query=='firmware_config':return store.metadata(target)
   if query=='firmware_job':

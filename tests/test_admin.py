@@ -312,3 +312,15 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         result = await self.complete('addon_uninstall', {'slug': 'core_editor', 'expected_version': '1.0'}, 'backup-fail')
         self.assertEqual(result['state'], 'unknown')
         self.assertFalse(any(p.endswith('/uninstall') for p, _ in self.sup.effects))
+
+    async def test_own_firmware_allowlist_can_change_without_connection_secrets(self):
+        original=self.sup.request
+        async def request(method,path,body=None):
+            if path=='/addons/self/info':return {'slug':'core_editor'}
+            return await original(method,path,body)
+        self.sup.request=request
+        before=await self.worker.read('addon','core_editor')
+        result=await self.complete('addon_options',{'slug':'core_editor','expected_revision':before['options_revision'],'changes':{'firmware_targets':['voice.yaml']}},'firmware-allowlist')
+        self.assertEqual(result['state'],'verified',result)
+        self.assertEqual(self.options['firmware_targets'],['voice.yaml'])
+        self.assertEqual(self.sup.installed['core_editor']['options']['password'],'private-value')
