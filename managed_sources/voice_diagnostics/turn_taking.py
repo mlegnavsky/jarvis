@@ -98,7 +98,7 @@ class Controller:
     def snapshot(self):
         return {'status': self.status, 'version': 2, 'boot_id': self.boot_id, 'pipeline_id': self.pipeline_id,
                 'satellite_id': self.satellite_id, 'statement_wait_s': 3,
-                'question_wait_s': 6, 'utterance_pause_s': 1.5,
+                'question_wait_s': 6, 'utterance_pause_s': 'native_finished_speaking_setting',
                 'utterance_ceiling_s': 120,
                 'arbitrary_speech_barge_in': 'not_implemented_device_support_required',
                 'custom_wake_words': 'not_installed_trained_model_required',
@@ -160,9 +160,9 @@ def install(hass, pipeline_class, error_class, core_version, pipeline_id,
                 async for chunk in native:
                     yield chunk
             return
-        # Fresh dataclass state is essential: changing .silence_seconds alone
-        # leaves the already initialized countdown at the old 0.7 seconds.
-        stt_vad = replace(stt_vad, silence_seconds=1.5, timeout_seconds=120)
+        # Preserve the terminal native default/relaxed/aggressive end detection.
+        # Only extend the utterance ceiling for deliberate long conversation.
+        stt_vad = replace(stt_vad, timeout_seconds=120)
         wait_s = getattr(run, '_jarvis_wait_s', None)
 
         async def gated_audio():

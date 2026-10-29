@@ -5,6 +5,18 @@ import unicodedata
 def normalized(text):
  return ' '.join(re.findall(r'\w+', ''.join(c for c in unicodedata.normalize('NFKD',text.casefold()) if not unicodedata.combining(c))))
 
+TIME_REQUESTS={'kolik je hodin','kolik je ted hodin','kolik je prave hodin','jaky je cas','rekni mi kolik je hodin'}
+
+def is_noise_transcript(text):
+ return not normalized(text) or text.strip().casefold() in {'context:', 'context', '[blank_audio]', '[silence]'}
+
+def local_time_answer(text,now):
+ if normalized(text) not in TIME_REQUESTS:return None
+ hour,minute=now.hour,now.minute
+ hours='hodina' if hour==1 else 'hodiny' if 2<=hour<=4 else 'hodin'
+ minutes='minuta' if minute==1 else 'minuty' if 2<=minute<=4 else 'minut'
+ return f'Je {hour} {hours}.' if minute==0 else f'Je {hour} {hours} a {minute} {minutes}.'
+
 def is_stop(text):
  return normalized(text) in {'konec','dekuji konec','diky konec','uz koncime','to je vse','to je vsechno','to je vsechno dekuji','ukonci rozhovor','prestan poslouchat','dobrou noc'}
 
@@ -21,7 +33,9 @@ def recent_session(sessions,device,now):
  return conversation if 0<=now-at<=900 else None
 
 def should_continue(text,response,turns,elapsed):
- if is_stop(text) or is_pause(text) or not normalized(text) or not response.strip():return False
+ if is_stop(text) or is_pause(text) or is_noise_transcript(text) or not response.strip():return False
+ if normalized(text) in TIME_REQUESTS:return False
+ if re.fullmatch(r'(rozsvit|zhasni)(?: (?:to|svetlo|svetla))?(?: (?:v|ve) [\w ]+)?',normalized(text)):return False
  if normalized(text)==normalized(response):return False
  return turns<32 and elapsed<1200
 

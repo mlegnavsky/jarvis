@@ -8,7 +8,7 @@ import logging
 import time
 from .runtime import CompanionRuntime
 from .room_commands import async_handle_room_command
-from .dialogue import COMPANION_INSTRUCTIONS, is_pause, is_stop, recent_session, should_continue
+from .dialogue import COMPANION_INSTRUCTIONS, is_pause, is_stop, recent_session, should_continue, is_noise_transcript, local_time_answer
 from typing import Any, Literal
 
 from openai._exceptions import OpenAIError
@@ -28,6 +28,7 @@ from homeassistant.components.conversation import (
 from homeassistant.components.homeassistant.exposed_entities import async_should_expose
 from homeassistant.config_entries import ConfigSubentry
 from homeassistant.const import ATTR_NAME, MATCH_ALL
+from homeassistant.util import dt as dt_util
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, TemplateError
 from homeassistant.helpers import (
@@ -141,6 +142,16 @@ class ExtendedOpenAIAgentEntity(
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         """Process a sentence."""
         device = user_input.device_id
+        # One-shot factual requests and known empty STT artifacts must never
+        # start model/enrollment flows or reopen TV/background conversations.
+        noise = is_noise_transcript(user_input.text)
+        brief = local_time_answer(user_input.text, dt_util.now())
+        if noise or brief is not None:
+            self._recent_devices.pop(device, None)
+            response = intent.IntentResponse(language=user_input.language)
+            response.async_set_speech("" if noise else brief)
+            return conversation.ConversationResult(response=response,
+                conversation_id=user_input.conversation_id, continue_conversation=False)
         previous = recent_session(self._recent_devices, device, time.monotonic())
         if not user_input.conversation_id and previous in self.history:
             user_input.conversation_id = previous

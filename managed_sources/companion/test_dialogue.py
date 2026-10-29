@@ -20,3 +20,19 @@ class DialogueTests(unittest.TestCase):
   self.assertIsNone(recent_session({'dev':('c',100)},'other',200))
   self.assertIsNone(recent_session({'dev':('c',100)},None,200))
   self.assertIsNone(recent_session({'dev':('c',100)},'dev',1001))
+
+class BriefRequestsTests(unittest.TestCase):
+ def test_noise_transcripts_are_not_a_new_conversation(self):
+  from dialogue import is_noise_transcript
+  for text in ['context:','Context:', '###', '  ']:self.assertTrue(is_noise_transcript(text))
+  for text in ['Co znamená kontext?', 'Řekni context anglicky', 'Kolik je hodin?']:self.assertFalse(is_noise_transcript(text))
+ def test_time_is_local_and_finishes_without_followup(self):
+  from dialogue import local_time_answer
+  from datetime import datetime
+  self.assertEqual(local_time_answer('Kolik je hodin?',datetime(2026,10,29,7,5)),'Je 7 hodin a 5 minut.')
+  self.assertEqual(local_time_answer('Kolik je právě hodin?',datetime(2026,10,29,1,1)),'Je 1 hodina a 1 minuta.')
+  self.assertIsNone(local_time_answer('Kolik hodin trvá cesta?',datetime.now()))
+  self.assertFalse(should_continue('Kolik je hodin?','Je 7 hodin a 5 minut.',1,1))
+ def test_short_light_command_closes_but_discussion_can_continue(self):
+  self.assertFalse(should_continue('Rozsviť v obýváku','Rozsvítil jsem.',1,1))
+  self.assertTrue(should_continue('Povídej mi o zahradě','Na podzim můžeš sázet.',1,1))

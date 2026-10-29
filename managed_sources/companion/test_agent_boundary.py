@@ -7,7 +7,7 @@ import time
 import asyncio
 import unittest
 from room_commands import async_handle_room_command
-from dialogue import is_stop, is_pause, recent_session, should_continue
+from dialogue import is_stop, is_pause, recent_session, should_continue, is_noise_transcript, local_time_answer
 class Speech:
  def __init__(self,**kw):pass
  def async_set_speech(self,text):self.text=text
@@ -18,7 +18,7 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
   fn=next(n for n in cls.body if isinstance(n,ast.AsyncFunctionDef) and n.name==name)
   fn.returns=None
   for arg in fn.args.args:arg.annotation=None
-  ns={'async_handle_room_command':async_handle_room_command,'time':time,'is_stop':is_stop,'is_pause':is_pause,'recent_session':recent_session,'should_continue':should_continue,
+  ns={'async_handle_room_command':async_handle_room_command,'is_noise_transcript':is_noise_transcript,'local_time_answer':local_time_answer,'dt_util':NS(now=lambda:__import__('datetime').datetime(2026,10,29,7,5)),'time':time,'is_stop':is_stop,'is_pause':is_pause,'recent_session':recent_session,'should_continue':should_continue,
       'conversation':NS(ConversationResult=lambda **kw:NS(**kw)), 'intent':NS(IntentResponse=Speech),
       'async_get_chat_session':lambda hass,c:nullcontext(NS()),'async_get_chat_log':lambda *args:nullcontext(NS()),
       'CONF_ATTACH_USERNAME':'attach','DEFAULT_ATTACH_USERNAME':False,'EVENT_CONVERSATION_FINISHED':'event',
@@ -28,7 +28,7 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
  async def test_explicit_conversation_id_is_preserved(self):
   async def handle(user,log):return user.conversation_id
   agent=NS(hass=NS(),_companion_lock=asyncio.Lock(),_recent_devices={'dev':('old',time.monotonic())},history={'old':[]},_async_handle_message=handle)
-  user=NS(text='Ahoj',device_id='dev',conversation_id='new')
+  user=NS(text='Ahoj',device_id='dev',conversation_id='new',language='cs')
   self.assertEqual(await self.method('async_process')(agent,user),'new')
  async def test_stop_never_calls_model(self):
   async def forbidden(*args):raise AssertionError('Model must not run')
@@ -79,3 +79,14 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
    await fn(agent,NS(text='Rozsviť',language='cs',device_id='mic'),NS(conversation_id=str(n)))
   self.assertLessEqual(len(agent._dialogue_turns),16)
   self.assertLessEqual(len(agent._dialogue_started),16)
+
+ async def test_time_answer_never_calls_model_and_closes(self):
+  async def forbidden(*args):raise AssertionError('Model must not run')
+  agent=NS(_recent_devices={},hass=NS(),_async_handle_message=forbidden)
+  result=await self.method('async_process')(agent,NS(text='Kolik je hodin?',device_id='dev',conversation_id=None,language='cs'))
+  self.assertEqual(result.response.text,'Je 7 hodin a 5 minut.');self.assertFalse(result.continue_conversation)
+ async def test_context_artifact_never_calls_model_or_speaks(self):
+  async def forbidden(*args):raise AssertionError('Model must not run')
+  agent=NS(_recent_devices={},hass=NS(),_async_handle_message=forbidden)
+  result=await self.method('async_process')(agent,NS(text='context:',device_id='dev',conversation_id=None,language='cs'))
+  self.assertEqual(result.response.text,'');self.assertFalse(result.continue_conversation)
