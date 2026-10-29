@@ -88,9 +88,4 @@ jobs:
         if: steps.current.outputs.latest == 'true'
         env:
           LAB_WEBHOOK: ${{ secrets.PLESK_LAB_WEBHOOK }}
-        run: |
-          if [ -z "$LAB_WEBHOOK" ]; then
-            echo '::warning::Plesk notification not configured. Git archive published; live deployment unverified.'
-            exit 0
-          fi
-          curl --fail --silent --show-error --max-time 30 --output /dev/null "$LAB_WEBHOOK"
+        run: python source/scripts/notify_plesk.py
