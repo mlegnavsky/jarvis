@@ -1,6 +1,6 @@
 import asyncio
 import unittest
-import test_admin as fixtures
+from tests import test_admin as fixtures
 from app.policy import APIError
 
 class OperationsTests(unittest.IsolatedAsyncioTestCase):
