@@ -104,6 +104,20 @@ if (!preg_match('/\A[0-9]+\z/D', (string) $length)) stop(411);
 $length = (int) $length;
 $limit = str_ends_with($name, '.metadata.json') ? 1048576 : 4294967296;
 if ($length < 1 || $length > $limit) stop(413);
+// Serialize uploads from this endpoint so concurrent PUTs cannot each spend the reserve.
+$lockPath = $private . '/uploads.lock';
+if (is_link($lockPath)) stop(503);
+$uploadLock = @fopen($lockPath, 'c');
+if ($uploadLock === false) stop(503);
+if (!flock($uploadLock, LOCK_EX | LOCK_NB)) {
+    fclose($uploadLock);
+    header('Retry-After: 30');
+    stop(423, 'Another backup upload is in progress.');
+}
+register_shutdown_function(static function () use ($uploadLock): void {
+    flock($uploadLock, LOCK_UN);
+    fclose($uploadLock);
+});
 $free = disk_free_space($root);
 if ($free === false || $free - $length < 1073741824) stop(507, 'Free space reserve reached.');
 @set_time_limit(3600);

@@ -9,7 +9,7 @@ Native Home Assistant WebDAV (available since 2025.3) replaces the blocked exter
 - Existing private sibling directory: `ha-backups`, owned by jarvis_lab (confirmed in Plesk shell, where it is `/ha-backups`).
 - Private credentials: `ha-backups/access.json` with `username` and `password_hash`, no plaintext password. chmod 600. No private files in Git or httpdocs.
 - Archives and metadata: `ha-backups/objects/` (created only after authentication). Temporary uploads use hidden unique names and publish with atomic no-overwrite link. SHA256 checks make identical retry safe. A conflicting existing backup is never overwritten.
-- Only flat names ending `.tar` or `.metadata.json`; no folders, traversal, arbitrary names, symlink access, MOVE/COPY, configuration writes or DELETE. Maximum archive 4 GiB, metadata 1 MiB; preserve 1 GiB free disk space. Host/PHP/nginx quotas may be lower and must be verified with an actual backup.
+- Only flat names ending `.tar` or `.metadata.json`; no folders, traversal, arbitrary names, symlink access, MOVE/COPY, configuration writes or DELETE. Maximum archive 4 GiB, metadata 1 MiB; preserve 1 GiB free disk space. A private upload lock serializes our PUTs; another upload receives423/Retry-After rather than overcommitting the reserve. Other host processes and subscription quotas remain external constraints. Host/PHP/nginx quotas may be lower and must be verified with an actual backup.
 
 ## Bootstrap in owner's browser
 

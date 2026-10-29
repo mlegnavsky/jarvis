@@ -121,6 +121,13 @@ class BackupDAVTests(unittest.TestCase):
             while conn.recv(4096): pass
         finally: conn.close()
         self.assertFalse((self.private / 'objects/partial.tar').exists())
+    def test_busy_upload_lock_rejects_before_body_publication(self):
+        import fcntl
+        with (self.private / 'uploads.lock').open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.assertEqual(self.req('PUT', 'busy.tar', b'one')[0], 423)
+            self.assertFalse((self.private / 'objects/busy.tar').exists())
+        self.assertEqual(self.req('PUT', 'busy.tar', b'one')[0], 201)
     def test_setup_only_generates_hash_configuration(self):
         c = http.client.HTTPConnection('127.0.0.1', self.port, timeout=5)
         before = self.config.read_bytes()
