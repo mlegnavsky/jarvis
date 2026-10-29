@@ -1,3 +1,9 @@
+# 3.10.0
+
+- Přímá správa ESPHome firmwaru přes existující můstek: nativní sestavení, OTA instalace, trvalé úlohy a ověření připojení i hashů. Přihlašování přes web není potřeba; používá se oprávněná relace Supervisor ingress, bez vypínání autentizace.
+- Výslovný seznam firmware_targets, kontrola revize před sestavením a instalací, sledování dokončení obou částí compile/upload. Nejasný výsledek se neopakuje pod novým klíčem.
+- Soukromé modely s kontrolou SHA256 a formátu, obsahově adresované soubory, výměna pouze existujícího ID modelu. Wi-Fi, šifrovací klíče a OTA konfigurace se zachovají beze změny; zdroj ani tokeny se nevracejí do odpovědí.
+
 # 3.9.0
 
 - Správa hlasových nastavení přes můstek: aktuální options, výběr asistenta/probouzecího slova/citlivosti a ukončení řeči, mikrofon, číselné nastavení, hlasitost a zastavení přehrávače. Každé zařízení i služba vyžadují explicitní allowlist; hodnoty se ověřují proti aktuálnímu stavu.

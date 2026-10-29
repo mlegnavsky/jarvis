@@ -1,5 +1,5 @@
 name: Jarvis
-version: "3.9.0"
+version: "3.10.0"
 slug: jarvis
 description: Current home inventory and authenticated controlled actions. Experimental.
 url: https://github.com/mlegnavsky/jarvis
@@ -40,6 +40,7 @@ options:
   writes_enabled: false
   maintenance_enabled: false
   maintenance_token: ""
+  firmware_targets: []
   allowed_entities: []
   allowed_services: []
 schema:
@@ -53,6 +54,8 @@ schema:
   writes_enabled: bool
   maintenance_enabled: bool
   maintenance_token: password
+  firmware_targets:
+    - str
   allowed_entities:
     - str
   allowed_services:

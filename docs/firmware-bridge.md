@@ -1,0 +1,15 @@
+# Firmware bridge — Jarvis 3.10.0
+
+Uses the existing authenticated `jarvis_action` route: service `jarvis.admin`, entity `jarvis.system`. Existing maintenance/write gates and maintain OAuth scope apply. No dashboard browser sign-in, no disabled authentication, no shell or arbitrary URL proxy.
+
+Enable explicit `firmware_targets` filenames in addon options. Only those configurations under the mounted ESPHome directory are managed. Secrets are neither returned nor changed by model operations.
+
+Reads: `{action:read,query:firmware_devices}` returns current online/config/deployed hashes; `firmware_config` target filename returns revision and model IDs without source/credentials; `firmware_jobs` target filename lists bounded native tasks; `firmware_job` target native task ID returns sanitized state.
+
+Changes use durable Admin request IDs. `firmware_compile` and `firmware_install` require target and expected_revision. Install performs a Supervisor backup, rejects offline targets, waits for both native compile and its dependent upload, then verifies online state and matching nonempty configuration hashes. A queued/running/unknown/unverified job is not success. Read the same Admin job after transport loss; never repeat under a new ID. Native task IDs are retained in the Admin job summary, and can be reconciled through firmware_jobs. Reconnection proves firmware state, not acoustic wake accuracy.
+
+`firmware_model_install` additionally requires model_id (already in target), model_base64, sha256 and manifest. Manifest contains only wake_word and micro {probability_cutoff,sliding_window_size,feature_step_size,tensor_arena_size}. Binary is bounded and checked for TFL3 and digest; the compiler validates model compatibility. Assets are content addressed and private. The single model source scalar changes; all other configuration bytes remain unchanged. Alias/anchor configurations are rejected for this edit. This saves configuration but does not compile or flash it.
+
+`firmware_config_restore` requires target, expected_revision and backup_id of the model install. It restores the local before-image without flashing. Model assets remain available for audit/reuse. Neither config restoration nor the Supervisor backup constitutes automatic bootloader rollback on devices that do not support it.
+
+The adapter targets Device Builder 1.25 native task API and HA Core 2026.6.4 authenticated Supervisor ingress session API. Unsupported upstream protocols fail closed with generic errors, never returning session tokens or raw output. Firmware source must not be edited simultaneously in another client during a build/install; revision checks detect drift, but an already-started native OTA is not automatically undone.

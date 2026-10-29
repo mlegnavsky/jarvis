@@ -10,11 +10,13 @@ from .config_files import ConfigFiles
 from .ha import now
 from . import diagnostics, integration_admin, workspace_admin
 from .workspace_files import WorkspaceFiles, Uploads
+from .firmware import FirmwareBridge, FIELDS as FIRMWARE_FIELDS
 from .ha import UpstreamError
 from .policy import APIError
 
 FIELDS = {
     **workspace_admin.FIELDS,
+    **FIRMWARE_FIELDS,
     'integration_subentry_options_start': {'entry_id', 'subentry_id', 'expected_revision'},
     'integration_reload': {'entry_id', 'expected_revision'},
     'integration_options_start': {'entry_id', 'expected_revision'},
@@ -77,6 +79,7 @@ class Admin:
         self.files = files or ConfigFiles()
         self.workspaces = {name: WorkspaceFiles(__import__('pathlib').Path('/'+name), name) for name in ('addons', 'share', 'media')}
         self.uploads = Uploads(directory/'uploads')
+        self.firmware = FirmwareBridge(self)
         self.path = directory / 'admin.sqlite'
         self.tasks = set()
         self.lock = asyncio.Lock()
@@ -122,6 +125,8 @@ class Admin:
         self.allowed()
         if not isinstance(query, str) or not isinstance(target, str) or len(target) > 400:
             raise APIError(400, 'invalid_admin_query')
+        if query in ('firmware_devices','firmware_config','firmware_job','firmware_jobs'):
+            return await self.firmware.read(query,target)
         if query == 'diagnostics':
             return await diagnostics.diagnose(self.sup)
         if query == 'workspaces':
@@ -247,6 +252,8 @@ class Admin:
                 self.files.parts(args['path'])
         if operation in workspace_admin.FIELDS:
             workspace_admin.validate(self, operation, args)
+        if operation in FIRMWARE_FIELDS:
+            self.firmware.validate(operation,args)
         if operation == 'file_write':
             self.files.validate(args['path'], args['content'])
         if operation == 'backup_restore' and args['target'] != 'homeassistant':
@@ -294,6 +301,8 @@ class Admin:
 
     async def perform(self, key, operation, args):
         self.allowed(write=True)
+        if operation in FIRMWARE_FIELDS:
+            return await self.firmware.perform(key,operation,args)
         if operation in workspace_admin.FIELDS:
             return await workspace_admin.perform(self, key, operation, args)
         if operation.startswith('integration_'):
