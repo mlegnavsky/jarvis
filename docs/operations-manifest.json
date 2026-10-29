@@ -1,0 +1,288 @@
+{
+  "schema_version": 1,
+  "scope": "implemented_source_contract_not_live_authorization",
+  "repository": "mlegnavsky/jarvis",
+  "deployment_branch": "feat/jarvis-addon",
+  "entrypoint": {
+    "service": "jarvis.admin",
+    "entity_id": "jarvis.system"
+  },
+  "completion_state": "verified",
+  "unknown_outcome": "reconcile_before_retry",
+  "operations": {
+    "addon_install": {
+      "arguments": [
+        "expected_version",
+        "slug"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "addon_options": {
+      "arguments": [
+        "changes",
+        "expected_revision",
+        "slug"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "addon_options_restore": {
+      "arguments": [
+        "backup_id",
+        "expected_revision",
+        "slug"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "addon_restart": {
+      "arguments": [
+        "expected_version",
+        "slug"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "addon_start": {
+      "arguments": [
+        "expected_version",
+        "slug"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "addon_stop": {
+      "arguments": [
+        "expected_version",
+        "slug"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "addon_uninstall": {
+      "arguments": [
+        "expected_version",
+        "slug"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "addon_update": {
+      "arguments": [
+        "expected_version",
+        "slug"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "automations_reload": {
+      "arguments": [
+        "expected_revision"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "backup_create": {
+      "arguments": [],
+      "source": "jarvis/app/admin.py"
+    },
+    "backup_restore": {
+      "arguments": [
+        "backup_slug",
+        "target"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "core_restart": {
+      "arguments": [],
+      "source": "jarvis/app/admin.py"
+    },
+    "core_update": {
+      "arguments": [
+        "version"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "device_metadata": {
+      "arguments": [
+        "area_id",
+        "device_id",
+        "expected_revision",
+        "name_by_user"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "file_delete": {
+      "arguments": [
+        "expected_revision",
+        "path"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "file_restore": {
+      "arguments": [
+        "backup_id",
+        "expected_revision"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "file_write": {
+      "arguments": [
+        "content",
+        "expected_revision",
+        "path"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "firmware_compile": {
+      "arguments": [
+        "expected_revision",
+        "target"
+      ],
+      "source": "jarvis/app/firmware.py"
+    },
+    "firmware_config_restore": {
+      "arguments": [
+        "backup_id",
+        "expected_revision",
+        "target"
+      ],
+      "source": "jarvis/app/firmware.py"
+    },
+    "firmware_install": {
+      "arguments": [
+        "expected_revision",
+        "target"
+      ],
+      "source": "jarvis/app/firmware.py"
+    },
+    "firmware_model_install": {
+      "arguments": [
+        "expected_revision",
+        "manifest",
+        "model_base64",
+        "model_id",
+        "sha256",
+        "target"
+      ],
+      "source": "jarvis/app/firmware.py"
+    },
+    "integration_options_start": {
+      "arguments": [
+        "entry_id",
+        "expected_revision"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "integration_options_submit": {
+      "arguments": [
+        "expected_revision",
+        "flow_id",
+        "user_input"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "integration_reload": {
+      "arguments": [
+        "entry_id",
+        "expected_revision"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "integration_subentry_options_start": {
+      "arguments": [
+        "entry_id",
+        "expected_revision",
+        "subentry_id"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "local_addon_rebuild": {
+      "arguments": [
+        "expected_revision",
+        "expected_version",
+        "project",
+        "slug"
+      ],
+      "source": "jarvis/app/workspace_admin.py"
+    },
+    "repository_add": {
+      "arguments": [
+        "repository_url"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
+    "upload_abort": {
+      "arguments": [
+        "upload_id"
+      ],
+      "source": "jarvis/app/workspace_admin.py"
+    },
+    "upload_begin": {
+      "arguments": [
+        "expected_revision",
+        "path",
+        "sha256",
+        "size",
+        "upload_id",
+        "workspace"
+      ],
+      "source": "jarvis/app/workspace_admin.py"
+    },
+    "upload_chunk": {
+      "arguments": [
+        "data_base64",
+        "offset",
+        "upload_id"
+      ],
+      "source": "jarvis/app/workspace_admin.py"
+    },
+    "upload_finish": {
+      "arguments": [
+        "upload_id"
+      ],
+      "source": "jarvis/app/workspace_admin.py"
+    },
+    "workspace_delete": {
+      "arguments": [
+        "expected_revision",
+        "path",
+        "workspace"
+      ],
+      "source": "jarvis/app/workspace_admin.py"
+    },
+    "workspace_move": {
+      "arguments": [
+        "destination",
+        "destination_revision",
+        "expected_revision",
+        "path",
+        "workspace"
+      ],
+      "source": "jarvis/app/workspace_admin.py"
+    },
+    "workspace_move_restore": {
+      "arguments": [
+        "backup_id",
+        "destination_revision",
+        "expected_revision"
+      ],
+      "source": "jarvis/app/workspace_admin.py"
+    },
+    "workspace_restore": {
+      "arguments": [
+        "backup_id",
+        "expected_revision"
+      ],
+      "source": "jarvis/app/workspace_admin.py"
+    },
+    "workspace_write": {
+      "arguments": [
+        "content",
+        "expected_revision",
+        "path",
+        "workspace"
+      ],
+      "source": "jarvis/app/workspace_admin.py"
+    }
+  },
+  "known_missing": [
+    "backup_delete",
+    "disk_space_read",
+    "backup_retention"
+  ],
+  "workflow": "docs/WORK-MANIFEST.md",
+  "open_work": "docs/OPEN-WORK.md"
+}
