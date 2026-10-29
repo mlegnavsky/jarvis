@@ -50,3 +50,13 @@ class HeatingTests(unittest.TestCase):
   c=Controller();c.samples=[[700,1100],[1000,1100]]
   self.assertTrue(self.run_at(c,pv=1100,child=True,load=1000)['child']['on'])
   self.assertFalse(self.run_at(c,pv=1100)['child']['on'])
+ def test_settings_change_without_restarting_controller(self):
+  c=self.make();c.configure({'temp_on':21,'temp_off':23})
+  self.assertFalse(self.run_at(c,temp=21.5)['child']['on'])
+  self.assertTrue(self.run_at(c,temp=20.5)['child']['on'])
+  self.assertFalse(self.run_at(c,temp=23,child=True)['child']['on'])
+  self.assertEqual(Controller(c.dump()).settings['temp_off'],23)
+ def test_invalid_settings_leave_previous_rules_intact(self):
+  c=self.make()
+  with self.assertRaises(ValueError):c.configure({'temp_on':24,'temp_off':23})
+  self.assertEqual(c.settings['temp_on'],22)

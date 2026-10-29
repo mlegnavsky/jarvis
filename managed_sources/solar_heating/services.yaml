@@ -22,3 +22,12 @@ set_mode:
             - auto
             - manual
             - 'off'
+
+configure:
+  name: Upravit pravidla bez restartu
+  description: Validované nastavení teplot, solárních hranic a prodlev; uloží se trvale.
+  fields:
+    settings:
+      required: true
+      selector:
+        object:

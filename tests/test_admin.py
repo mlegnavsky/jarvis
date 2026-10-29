@@ -22,6 +22,8 @@ class AdminSupervisor:
             return {'slug': 'abc_jarvis'}
         if path == '/addons':
             return {'addons': list(self.installed.values())}
+        if path == '/host/info':
+            return {'disk_free':8.0,'disk_used':20.0,'disk_total':28.0}
         if path == '/info':
             return {'version': 'test', 'healthy': True}
         if path == '/core/info':
@@ -169,6 +171,8 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         files.write('probe/Dockerfile', 'FROM scratch\n', 'missing')
         source = await self.worker.read('source_project', 'probe')
         async def request(method, path, body=None):
+            if path == '/host/info':
+                return {'disk_free':8.0,'disk_used':20.0,'disk_total':28.0}
             if path == '/addons/self/info':
                 return {'slug': 'abc_jarvis'}
             if path == '/addons/local_probe/info':
@@ -310,7 +314,7 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
     async def test_uninstall_backup_failure_never_uninstalls(self):
         self.sup.backup_fails = True
         result = await self.complete('addon_uninstall', {'slug': 'core_editor', 'expected_version': '1.0'}, 'backup-fail')
-        self.assertEqual(result['state'], 'unknown')
+        self.assertEqual(result['state'], 'failed')
         self.assertFalse(any(p.endswith('/uninstall') for p, _ in self.sup.effects))
 
     async def test_own_firmware_allowlist_can_change_without_connection_secrets(self):

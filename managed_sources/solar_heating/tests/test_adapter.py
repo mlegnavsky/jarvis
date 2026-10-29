@@ -1,5 +1,7 @@
 """Exercise production HA adapter against a minimal event/service host."""
 import ast
+import hashlib
+import json
 import asyncio
 from datetime import datetime,timezone
 import logging
@@ -29,7 +31,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   source=Path(__file__).parents[1].joinpath('__init__.py').read_text();tree=ast.parse(source)
   constants=[n for n in tree.body if isinstance(n,ast.Assign)]
   fn=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='async_setup')
-  g=dict(asyncio=asyncio,datetime=datetime,timezone=timezone,logging=logging,time=time,vol=Vol(),Context=Context,callback=lambda f:f,Store=Store,Controller=Controller,ROOMS=ROOMS,numeric=numeric,EVENT_HOMEASSISTANT_STARTED='start',EVENT_HOMEASSISTANT_STOP='stop')
+  g=dict(hashlib=hashlib,json=json,asyncio=asyncio,datetime=datetime,timezone=timezone,logging=logging,time=time,vol=Vol(),Context=Context,callback=lambda f:f,Store=Store,Controller=Controller,ROOMS=ROOMS,numeric=numeric,EVENT_HOMEASSISTANT_STARTED='start',EVENT_HOMEASSISTANT_STOP='stop')
   self.handlers=[];self.bus={};self.registered={};self.tasks=[];self.states={};self.calls=[]
   def set_state(entity,state,attrs=None,context=None):
    old=self.states.get(entity);ctx=context or Context()
@@ -84,3 +86,16 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Dosaženo 23,5 °C')
   self.assertIsNone(self.states['sensor.jarvis_topeni_child'].attributes['last_error'])
+ async def test_configure_cas_rejects_stale_change(self):
+  configure=self.registered[('jarvis_solar_heating','configure')]
+  c=self.hass.data['jarvis_solar_heating']['controller']
+  with self.assertRaises(ValueError):await configure(NS(data={'settings':{'temp_off':24},'expected_revision':'0'*64}))
+  self.assertEqual(c.settings['temp_off'],23.5)
+ async def test_failed_settings_save_does_not_change_live_rules(self):
+  from unittest.mock import patch
+  configure=self.registered[('jarvis_solar_heating','configure')]
+  c=self.hass.data['jarvis_solar_heating']['controller']
+  async def fail_save(*args):raise OSError('disk full')
+  with patch.object(Store,'async_save',fail_save):
+   with self.assertRaises(OSError):await configure(NS(data={'settings':{'temp_off':24}}))
+  self.assertEqual(c.settings['temp_off'],23.5)

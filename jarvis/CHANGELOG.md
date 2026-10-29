@@ -1,3 +1,10 @@
+# 3.12.0
+
+- Add guarded backup deletion, disk-space read and retention preview.
+- Add persistent deployment ownership, revision-bound bundles, activation readback and explicit file rollback.
+- Distinguish failed backup preparation from unknown outcomes of the requested change.
+- Add bounded heating settings updates without restart for compatible heating integration.
+
 # 3.11.1
 
 - Include required ESPHome minimum version in private model manifests and their content address.

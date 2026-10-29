@@ -34,6 +34,8 @@ class IntegrationAdminTests(unittest.IsolatedAsyncioTestCase):
                 return WS()
             async def request(s, method, path, body=None):
                 owner.calls.append((method, path, body))
+                if path == '/host/info':
+                    return {'disk_free':8.0,'disk_used':20.0,'disk_total':28.0}
                 if path == '/backups/new/partial':
                     return {'slug': 'safe-backup'}
                 if path.endswith('/reload'):
@@ -86,7 +88,8 @@ class IntegrationAdminTests(unittest.IsolatedAsyncioTestCase):
         count = len(self.calls)
         await self.worker.start('integration_options_submit', args, 'save')
         self.assertEqual(len(self.calls), count)
-        self.assertEqual(self.calls[0][1], '/backups/new/partial')
+        self.assertEqual(self.calls[0][1], '/host/info')
+        self.assertEqual(self.calls[1][1], '/backups/new/partial')
 
     async def test_foreign_flow_and_stale_entry_are_rejected_before_mutation(self):
         with self.assertRaises(APIError):

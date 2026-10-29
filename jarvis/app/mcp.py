@@ -9,7 +9,7 @@ from .management import BRIDGE_SERVICES
 from .admin import FIELDS
 from .voice import VoiceBridge
 
-ADMIN_READS = ['overview', 'addons', 'addon', 'store', 'backups', 'files', 'file', 'jobs', 'job', 'config_check',
+ADMIN_READS = ['heating_settings','deployment','backup','storage','backup_retention','deployment_status','overview', 'addons', 'addon', 'store', 'backups', 'files', 'file', 'jobs', 'job', 'config_check',
                'workspaces', 'workspace_files', 'workspace_file', 'source_project', 'upload', 'integrations', 'integration', 'integration_subentries', 'integration_options', 'voice_pipelines', 'device', 'diagnostics', 'permission_map', 'core_logs', 'supervisor_logs', 'addon_logs', 'repositories', 'store_addon','firmware_devices','firmware_config','firmware_job','firmware_jobs']
 GATEWAY_INVOKE = web.AppKey('gateway_invoke', object)
 MCP_OAUTH = web.AppKey('mcp_oauth', OAuth)

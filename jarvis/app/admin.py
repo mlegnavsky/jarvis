@@ -8,13 +8,15 @@ import re
 import sqlite3
 from .config_files import ConfigFiles
 from .ha import now
-from . import diagnostics, integration_admin, workspace_admin
+from . import diagnostics, integration_admin, workspace_admin, operations, deployments
 from .workspace_files import WorkspaceFiles, Uploads
 from .firmware import FirmwareBridge, FIELDS as FIRMWARE_FIELDS
 from .ha import UpstreamError
 from .policy import APIError
 
 FIELDS = {
+    **operations.FIELDS,
+    **deployments.FIELDS,
     **workspace_admin.FIELDS,
     **FIRMWARE_FIELDS,
     'integration_subentry_options_start': {'entry_id', 'subentry_id', 'expected_revision'},
@@ -93,6 +95,8 @@ class Admin:
             for name in ('created_at', 'started_at', 'finished_at', 'summary'):
                 if name not in columns:
                     db.execute('ALTER TABLE jobs ADD COLUMN '+name+' TEXT')
+        operations.setup(self)
+        deployments.setup(self)
         os.chmod(self.path, 0o600)
 
     @contextmanager
@@ -125,6 +129,10 @@ class Admin:
         self.allowed()
         if not isinstance(query, str) or not isinstance(target, str) or len(target) > 400:
             raise APIError(400, 'invalid_admin_query')
+        if query == 'deployment':
+            return deployments.public(deployments.get(self,target))
+        if query in operations.READS:
+            return await operations.read(self,query,target)
         if query in ('firmware_devices','firmware_config','firmware_job','firmware_jobs'):
             return await self.firmware.read(query,target)
         if query == 'diagnostics':
@@ -212,7 +220,9 @@ class Admin:
         raise APIError(400, 'invalid_admin_query')
 
     def validate(self, operation, args, key):
-        if not isinstance(operation, str) or operation not in FIELDS or not isinstance(args, dict) or set(args) != FIELDS[operation]:
+        if (not isinstance(operation, str) or operation not in FIELDS or not isinstance(args, dict)
+                or set(args)-{'deployment_token'} != FIELDS[operation]-{'deployment_token'}
+                or operation in ('deployment_release','deployment_acquire') and 'deployment_token' not in args):
             raise APIError(400, 'invalid_admin_operation')
         if not isinstance(key, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', key):
             raise APIError(400, 'idempotency_key_required')
@@ -254,6 +264,9 @@ class Admin:
             workspace_admin.validate(self, operation, args)
         if operation in FIRMWARE_FIELDS:
             self.firmware.validate(operation,args)
+        operations.validate(operation,args)
+        if operation in deployments.FIELDS:
+            deployments.validate(self,operation,args)
         if operation == 'file_write':
             self.files.validate(args['path'], args['content'])
         if operation == 'backup_restore' and args['target'] != 'homeassistant':
@@ -290,9 +303,17 @@ class Admin:
             db.execute('UPDATE jobs SET before_data=?,summary=? WHERE key=?', (encode(before), encode(summary), key))
 
     async def backup(self, key, addon=None):
-        info = await self.sup.request('POST', '/backups/new/partial', {
-            'name': 'Jarvis before remote administration', 'addons': [addon] if addon else [],
-            'homeassistant': addon is None, 'background': False})
+        try:
+            storage = await operations.read(self, 'storage', '')
+            if not storage['backup_ready']:
+                raise APIError(409, 'insufficient_backup_space_requested_change_not_started')
+            info = await self.sup.request('POST', '/backups/new/partial', {
+                'name': 'Jarvis before remote administration', 'addons': [addon] if addon else [],
+                'homeassistant': addon is None, 'background': False})
+        except UpstreamError:
+            # This preparation may have created a backup, but has not sent the
+            # requested restart/change. Reconcile backups before retrying.
+            raise APIError(502, 'backup_preparation_failed_requested_change_not_started') from None
         backup_slug = info.get('slug')
         if not isinstance(backup_slug, str) or not backup_slug:
             raise APIError(502, 'admin_backup_not_confirmed')
@@ -301,6 +322,11 @@ class Admin:
 
     async def perform(self, key, operation, args):
         self.allowed(write=True)
+        operations.guard(self,operation,args)
+        if operation in deployments.FIELDS:
+            return await deployments.perform(self,key,operation,args)
+        if operation in operations.FIELDS:
+            return await operations.perform(self,key,operation,args)
         if operation in FIRMWARE_FIELDS:
             return await self.firmware.perform(key,operation,args)
         if operation in workspace_admin.FIELDS:
@@ -434,6 +460,9 @@ class Admin:
                 verified = verified and after.get('state') == expected_state
             return {'verified': verified, 'addon': addon_summary(after)}
         if operation == 'backup_create':
+            storage = await operations.read(self, 'storage', '')
+            if not storage['backup_ready']:
+                raise APIError(409, 'insufficient_backup_space_requested_change_not_started')
             addons = await self.sup.request('GET', '/addons')
             info = await self.sup.request('POST', '/backups/new/partial', {'name': 'Jarvis remote system backup',
                 'addons': [a['slug'] for a in addons.get('addons', [])], 'homeassistant': True, 'background': False})

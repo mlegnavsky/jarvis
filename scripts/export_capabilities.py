@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCES = ['jarvis/app/admin.py', 'jarvis/app/workspace_admin.py', 'jarvis/app/firmware.py']
+SOURCES = ['jarvis/app/admin.py', 'jarvis/app/workspace_admin.py', 'jarvis/app/firmware.py', 'jarvis/app/operations.py','jarvis/app/deployments.py']
 
 def export():
     operations = {}
@@ -22,7 +22,7 @@ def export():
             'entrypoint': {'service': 'jarvis.admin', 'entity_id': 'jarvis.system'},
             'completion_state': 'verified', 'unknown_outcome': 'reconcile_before_retry',
             'operations': dict(sorted(operations.items())),
-            'known_missing': ['backup_delete', 'disk_space_read', 'backup_retention'],
+            'known_missing': ['hosted_container_runtime_access', 'verified_discovery_channel_link'],
             'workflow': 'docs/WORK-MANIFEST.md', 'open_work': 'docs/OPEN-WORK.md'}
 
 if __name__ == '__main__':

@@ -78,6 +78,13 @@
       "arguments": [],
       "source": "jarvis/app/admin.py"
     },
+    "backup_delete": {
+      "arguments": [
+        "backup_slug",
+        "expected_revision"
+      ],
+      "source": "jarvis/app/operations.py"
+    },
     "backup_restore": {
       "arguments": [
         "backup_slug",
@@ -94,6 +101,40 @@
         "version"
       ],
       "source": "jarvis/app/admin.py"
+    },
+    "deployment_acquire": {
+      "arguments": [
+        "deployment_token",
+        "owner",
+        "ttl_seconds"
+      ],
+      "source": "jarvis/app/operations.py"
+    },
+    "deployment_apply": {
+      "arguments": [
+        "expected_revision",
+        "plan_id"
+      ],
+      "source": "jarvis/app/deployments.py"
+    },
+    "deployment_prepare": {
+      "arguments": [
+        "bundle"
+      ],
+      "source": "jarvis/app/deployments.py"
+    },
+    "deployment_release": {
+      "arguments": [
+        "deployment_token"
+      ],
+      "source": "jarvis/app/operations.py"
+    },
+    "deployment_rollback": {
+      "arguments": [
+        "expected_revision",
+        "plan_id"
+      ],
+      "source": "jarvis/app/deployments.py"
     },
     "device_metadata": {
       "arguments": [
@@ -158,6 +199,13 @@
         "target"
       ],
       "source": "jarvis/app/firmware.py"
+    },
+    "heating_settings": {
+      "arguments": [
+        "changes",
+        "expected_revision"
+      ],
+      "source": "jarvis/app/operations.py"
     },
     "integration_options_start": {
       "arguments": [
@@ -279,9 +327,8 @@
     }
   },
   "known_missing": [
-    "backup_delete",
-    "disk_space_read",
-    "backup_retention"
+    "hosted_container_runtime_access",
+    "verified_discovery_channel_link"
   ],
   "workflow": "docs/WORK-MANIFEST.md",
   "open_work": "docs/OPEN-WORK.md"
