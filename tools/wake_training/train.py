@@ -15,7 +15,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 TARGETS = {'rozsvit': ['rozsviť'], 'zhasni': ['zhasni'], 'zamkni': ['zamkni'],
-           'odemkni': ['odemkni'], 'jarvis': ['Jarvis', 'Jarvisi']}
+           'odemkni': ['odemkni'], 'jarvis': ['Džarvis', 'Džarvisi', 'Džárvis', 'Džárvisi', 'Jarvis', 'Jarvisi']}
 DATASET_REVISION = '0da95f94302ca2f4aae3b18fc6560fa6d2bba3d1'
 VOICE_REVISION = '5041a7a49ae5b3a0f30e6837769eb03fdbb231bd'
 
