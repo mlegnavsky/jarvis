@@ -7,6 +7,7 @@ const c=new Card();
  card.shadowRoot={activeElement:{matches:s=>s==='input[type=date]'}};
  card.renderPeriod=()=>painted++;
  card.render();assert.equal(painted,0,'live refresh must not replace a focused calendar');
+ card.render(true);assert.equal(painted,1,'committed date must render even if native picker retains focus');painted=0;
  card.shadowRoot.activeElement=null;card.render();assert.equal(painted,1,'refresh resumes after date selection');
 }
 for(const [now,hours,start] of [['2026-10-30T12:00:00Z',24,'2026-10-29T23:00:00.000Z'],['2026-03-29T12:00:00Z',23,'2026-03-28T23:00:00.000Z'],['2026-10-25T12:00:00Z',25,'2026-10-24T22:00:00.000Z']]){
