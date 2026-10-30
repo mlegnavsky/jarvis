@@ -456,6 +456,7 @@ class JarvisPowerSun extends HTMLElement {
    const line=this.shadowRoot.querySelector('.cursor');line.setAttribute('x1',x(t));line.setAttribute('x2',x(t));line.setAttribute('visibility','visible');this.shadowRoot.querySelector('.scrub').value=(t-start)/60000;
   };
   this.bindPeriods();
+  const info=this.shadowRoot.querySelector('.solar-info');info.onpointerenter=e=>{if(e.pointerType==='mouse')info.open=true;};info.onpointerleave=e=>{if(e.pointerType==='mouse')info.open=false;};
   this.shadowRoot.querySelector('[data-day=prev]').onclick=()=>this.chooseDay(this.shiftDay(-1));
   this.shadowRoot.querySelector('[data-day=next]').onclick=()=>this.chooseDay(this.shiftDay(1));
   this.shadowRoot.querySelector('[data-day=today]').onclick=()=>this.chooseDay(this.dateKey());
