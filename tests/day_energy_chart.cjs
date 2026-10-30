@@ -62,3 +62,11 @@ assert.equal(card.weatherAt(Date.parse('2026-10-29T12:30:00Z')),null);assert.equ
  card.historyCache.set(yesterday.start,{rows:{},time:yesterday.end-60000});card.h={callApi:async()=>{calls++;return []}};
  await card.chooseDay(card.dateKey(yesterday.start+12*3600000));assert.equal(calls,1);console.log('Incomplete overnight cache refreshed');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
+{
+ const card=new Card();card.selectedDate='2026-10-30';card.period='week';let b=card.periodBounds();assert.equal(card.dateKey(b.start),'2026-10-26');assert.equal(card.dateKey(b.end),'2026-11-02');
+ card.period='month';b=card.periodBounds();assert.equal(card.dateKey(b.start),'2026-10-01');assert.equal(card.dateKey(b.end),'2026-11-01');
+ card.period='year';b=card.periodBounds();assert.equal(card.dateKey(b.start),'2026-01-01');assert.equal(card.dateKey(b.end),'2027-01-01');
+ assert(card.moonInfo(Date.parse('2026-10-30T00:00:00Z')).lit>=0);
+ card.selectedDate='2020-01-01';card.period='week';b=card.periodBounds();card.statsBounds=b;card.h={states:{}};card.stats=Object.fromEntries(card.energyIds().map(id=>[id,[{start:b.start,change:1},{start:b.start+86400000,change:2}]]));assert.equal(card.energyTotals()[0],3);card.stats={};assert.equal(card.energyTotals()[0],null);
+}

@@ -35,3 +35,9 @@
 - [x] Zjednodušit kreslené body, zachovat špičky a výpadky.
 - [x] Doplnit rozlišený odhad baterie a časově zarovnanou lištu počasí/venkovní předpovídané teploty.
 - [ ] Ověřit cílené regresní a Chromium testy, publikovat a nasadit přes CAS, změnit resource URL a ověřit živý graf.
+
+### Task4: Období a Měsíc
+- [x] Ověřit živé energetické čítače a důvod chybějících zítřejších cen.
+- [x] Doplnit kompaktní počasí/noční Měsíc a fázi/osvětlení.
+- [x] Přidat native recorder change statistiky, kWh bilance a období s kalendářními hranicemi.
+- [ ] Ověřit Chromium a živé statistiky, nasadit soubor i resource URL a zaznamenat skutečné hranice historie.
