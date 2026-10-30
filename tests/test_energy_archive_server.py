@@ -25,7 +25,7 @@ class EnergyArchiveServerTests(fixtures.BackupDAVTests):
   raw=json.dumps([{'kind':'sample','t':time.time(),'values':{'sensor.inverter_battery':{'value':None,'source_updated':None}}}]).encode();key=hashlib.sha256(raw).hexdigest()
   for _ in range(2):
    status,_,body=self.req('POST',data=raw,headers={'X-Batch-SHA256':key});self.assertEqual(status,200,body);self.assertEqual(json.loads(body)['ack'],key)
-  status,_,body=self.req();self.assertEqual(status,200,body);self.assertEqual(json.loads(body)['samples'],1)
+  status,_,body=self.req();self.assertEqual(status,200,body);self.assertEqual(json.loads(body)['samples'],1);self.assertGreater(json.loads(body)['compressed_bytes'],30)
   status,_,body=self.req(name='?op=day&start='+str(time.time()-60)+'&end='+str(time.time()+60));self.assertEqual(status,200,body);self.assertEqual(len(json.loads(body)['samples']),1)
   self.assertEqual(self.req('POST',data=raw,headers={'X-Batch-SHA256':'0'*64})[0],400)
   self.assertEqual(self.req(auth=False)[0],401);self.assertEqual(self.req('DELETE')[0],405)
