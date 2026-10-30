@@ -11,6 +11,14 @@ class EnergyArchiveServerTests(fixtures.BackupDAVTests):
   if auth:h['Authorization']='Basic '+base64.b64encode(('jarvis-backup:'+self.password).encode()).decode()
   h.update(headers or {});c=http.client.HTTPConnection('127.0.0.1',self.port,timeout=5)
   c.request(method,'/energy-archive/index.php'+name,body=data,headers=h);r=c.getresponse();result=r.status,dict(r.getheaders()),r.read();c.close();return result
+ def test_forecast_keeps_original_issuance(self):
+  import time,datetime
+  now=time.time();start=now-3*86400;end=start+86400
+  original=datetime.datetime.fromtimestamp(start-3600,datetime.timezone.utc).isoformat()
+  revised=datetime.datetime.fromtimestamp(start+7200,datetime.timezone.utc).isoformat()
+  raw=json.dumps([{'kind':'weather','t':now,'issued_at':original,'attributes':{'rows':[{'cloud_cover':20}]}},{'kind':'weather','t':now,'issued_at':revised,'attributes':{'rows':[{'cloud_cover':90}]}}]).encode()
+  status,_,body=self.req('POST',data=raw,headers={'X-Batch-SHA256':hashlib.sha256(raw).hexdigest()});self.assertEqual(status,200,body)
+  status,_,body=self.req(name='?op=day&start='+str(start)+'&end='+str(end));self.assertEqual(status,200,body);self.assertEqual(json.loads(body)['publications']['weather']['issued_at'],original)
  # Parent WebDAV tests are inapplicable to this separate API.
  def test_batch_retry_and_day(self):
   import time

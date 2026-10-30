@@ -122,3 +122,8 @@ assert.equal(card.weatherAt(Date.parse('2026-10-29T12:30:00Z')),null);assert.equ
  await card.chooseDay('2026-08-29');assert.equal(card.rows['sensor.inverter_pv_power'][0].v,1250);assert.equal(card.rows['sensor.inverter_battery'][0].v,null);assert.equal(card.weatherAt(t).temperature_2m,8);assert.equal(card.priceAt(t,[],Date.now()),2.5);
  console.log('Private archive rows, null gaps, historical weather and spot restored');
 })().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{
+ const card=new Card();card.render=()=>{};const t=Date.parse('2026-08-29T12:00Z');
+ card.h={states:{'sensor.jarvis_energy_archive':{state:'ready'}},callApi:async(method,path)=>{if(path.startsWith('jarvis_energy_archive/'))return {rows:{'sensor.inverter_pv_power':[{t,v:1234}]}};throw Error('recorder offline');}};
+ await card.chooseDay('2026-08-29');assert.equal(card.rows['sensor.inverter_pv_power']?.[0]?.v,1234,'private archive works independently of recorder');
+})().catch(e=>{console.error(e);process.exitCode=1});
