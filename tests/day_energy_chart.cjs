@@ -18,3 +18,25 @@ assert.equal(c.selectionTime(89999,100000),60000);
 assert.equal(c.selectionTime(90001,100000),100000);
 
 assert.equal(c.selectionTime(90001,90002),90002);
+c.selectedDate='2026-10-25';assert.equal((c.selectedBounds().end-c.selectedBounds().start)/3600000,25);
+assert.equal(c.shiftDay(1),'2026-10-26');assert.equal(c.shiftDay(-1),'2026-10-24');
+c.h={states:{'sensor.jarvis_spot_ote':{attributes:{rows:[{time:'2026-10-30T12:00:00Z',price:-1.25}]}}}};
+assert.equal(c.priceAt(Date.parse('2026-10-30T12:14:00Z'),[],0),-1.25);
+assert.equal(c.priceAt(Date.parse('2026-10-30T12:15:00Z'),[],0),null);
+assert.equal(c.priceAt(100,[{t:50,v:5}],200),5);
+console.log('Expanded chart: day navigation, negative spot price, interval expiry passed');
+
+(async()=>{
+ const card=new Card(),requests=[];card.render=()=>{};card.h={callApi:()=>new Promise(resolve=>requests.push(resolve))};
+ const first=card.chooseDay('2020-01-01'),second=card.chooseDay('2020-01-02');
+ requests[1]([{entity_id:'unused'}].slice(0,0));await second;const wanted=card.historyDay;
+ requests[0]([]);await first;assert.equal(card.historyDay,wanted);assert.equal(card.selectedDate,'2020-01-02');
+ console.log('Out-of-order history response ignored');
+})().catch(e=>{console.error(e);process.exitCode=1});
+
+{
+const card=new Card(),start=Date.parse('2026-10-30T12:00:00Z');
+card.h={states:{'sensor.jarvis_spot_ote':{attributes:{rows:[{time:new Date(start).toISOString(),price:5},{time:new Date(start+900000).toISOString(),price:null}]}}}};
+const seg=card.priceSegments(start,start+1800000,[{t:start,v:3}],start+1800000);
+assert.equal(seg[0].v,5);assert.equal(seg[1].v,null);assert.equal(seg.length,2);
+}

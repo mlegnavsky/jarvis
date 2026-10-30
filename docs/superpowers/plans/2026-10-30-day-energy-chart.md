@@ -22,3 +22,9 @@
 - [x] Upravit kartu, laboratorní ukázku a allowlist publisheru.
 - [x] Ověřit Node testy, Python publikaci a vykreslení/interakci v prohlížeči.
 - [ ] Publikovat přes Git CAS, ověřit CI a skutečné HTTP soubory.
+
+### Task 2: Baterie, ceny a datum
+- [ ] Přidat historii baterie/spotu a přesné intervaly již publikovaných cen, výběr dne s ochranou pořadí požadavků.
+- [ ] Přidat samostatné stupnice, přepínače, kalendář a šipky do stejné SVG karty.
+- [ ] Ověřit datum/DST/záporné ceny/chybějící data a prohlížeč, publikovat do laboratoře.
+- [ ] Nasadit přes CAS a změnit nativní Lovelace resource URL; ověřit skutečný graf na Greenu.
