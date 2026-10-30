@@ -28,3 +28,10 @@
 - [ ] Přidat samostatné stupnice, přepínače, kalendář a šipky do stejné SVG karty.
 - [ ] Ověřit datum/DST/záporné ceny/chybějící data a prohlížeč, publikovat do laboratoře.
 - [ ] Nasadit přes CAS a změnit nativní Lovelace resource URL; ověřit skutečný graf na Greenu.
+
+
+### Task 3: Rychlost a počasí
+- [x] Omezit překreslení na související entity, přidat cache a binární čtení kurzoru.
+- [x] Zjednodušit kreslené body, zachovat špičky a výpadky.
+- [x] Doplnit rozlišený odhad baterie a časově zarovnanou lištu počasí/venkovní předpovídané teploty.
+- [ ] Ověřit cílené regresní a Chromium testy, publikovat a nasadit přes CAS, změnit resource URL a ověřit živý graf.

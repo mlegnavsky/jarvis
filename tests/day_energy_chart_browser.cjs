@@ -18,6 +18,8 @@ const fs=require('fs'),os=require('os'),path=require('path');
   if(!await slider.evaluate(e=>e===e.getRootNode().activeElement))throw Error('slider focus after HA update');
   await c.locator('[data-line="1"]').focus();await p.keyboard.press('Enter');
   if(!await c.locator('[data-line="1"]').evaluate(e=>e===e.getRootNode().activeElement))throw Error('toggle focus');
+  if(await c.locator('.weather-cell').count()<3)throw Error('weather strip missing');
+  if(!(await c.locator('.weather-strip').textContent()).includes('°'))throw Error('weather temperatures missing');
   if(await c.locator('[data-line]').count()!==6)throw Error('six curves');
   if(!(await c.locator('[data-value="3"]').textContent()).includes('%'))throw Error('battery unit');
   if(!(await c.locator('[data-value="4"]').textContent()).includes('Kč/kWh'))throw Error('spot unit');

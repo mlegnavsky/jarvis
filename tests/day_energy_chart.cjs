@@ -40,3 +40,25 @@ card.h={states:{'sensor.jarvis_spot_ote':{attributes:{rows:[{time:new Date(start
 const seg=card.priceSegments(start,start+1800000,[{t:start,v:3}],start+1800000);
 assert.equal(seg[0].v,5);assert.equal(seg[1].v,null);assert.equal(seg.length,2);
 }
+
+{
+const card=new Card(),points=[{t:0,v:50},{t:10,v:null},{t:20,v:70}];
+assert.equal(card.batteryAt(points,15,100).value,65);assert.equal(card.batteryAt(points,15,100).estimated,true);
+assert.equal(card.batteryAt(points,5,100).value,55);assert.equal(card.batteryAt(points,0,100).estimated,false);
+assert.equal(card.batteryAt(points,30,25).value,null);assert.equal(card.batteryAt(points.slice(0,2),15,100).value,null);
+const dense=Array.from({length:1000},(_,i)=>({t:i*10,v:i===500?null:i===400?99999:i}));
+const compact=card.plotPoints(dense);assert(compact.length<20);assert(compact.some(p=>p.v===99999));assert(compact.some(p=>p.v===null));
+card.h={states:{'sensor.jarvis_pocasi_zitenice':{state:'ready',attributes:{rows:[{time:'2026-10-30T12:00:00Z',temperature_2m:5,weather_code:61}]}}}};
+assert.equal(card.weatherAt(Date.parse('2026-10-30T12:30:00Z')).temperature_2m,5);
+assert.equal(card.weatherAt(Date.parse('2026-10-29T12:30:00Z')),null);assert.equal(card.weatherInfo({weather_code:71}).label,'Sněžení');
+}
+(async()=>{
+ const card=new Card();card.render=()=>{};card.historyCache=new Map();let calls=0;card.h={callApi:async()=>{calls++;return []}};
+ await card.chooseDay('2020-02-01');await card.chooseDay('2020-02-02');await card.chooseDay('2020-02-01');assert.equal(calls,2);console.log('History cache reuses visited days');
+})().catch(e=>{console.error(e);process.exitCode=1});
+
+(async()=>{
+ const card=new Card();card.render=()=>{};card.historyCache=new Map();const today=card.dayBounds(),yesterday=card.dayBounds(today.start-3600000);let calls=0;
+ card.historyCache.set(yesterday.start,{rows:{},time:yesterday.end-60000});card.h={callApi:async()=>{calls++;return []}};
+ await card.chooseDay(card.dateKey(yesterday.start+12*3600000));assert.equal(calls,1);console.log('Incomplete overnight cache refreshed');
+})().catch(e=>{console.error(e);process.exitCode=1});
