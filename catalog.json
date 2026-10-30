@@ -3,6 +3,33 @@
   "releases": [
     {
       "format": "jarvis-release-v1",
+      "source_commit": "3b2c1e8f7c765ef033600e8ae9e58b9911f2045a",
+      "packages": [
+        {
+          "app": "jarvis",
+          "version": "3.12.0",
+          "source_commit": "3b2c1e8f7c765ef033600e8ae9e58b9911f2045a",
+          "file": "jarvis-3.12.0-3b2c1e8f7c765ef033600e8ae9e58b9911f2045a.zip",
+          "sha256": "990c749d64be3daa5b9bea2532cee748c897043aa7bae6e77113c9fee122daa1",
+          "bytes": 64676,
+          "kind": "source_package_not_built_image"
+        },
+        {
+          "app": "jarvis_updater",
+          "version": "1.0.0",
+          "source_commit": "3b2c1e8f7c765ef033600e8ae9e58b9911f2045a",
+          "file": "jarvis_updater-1.0.0-3b2c1e8f7c765ef033600e8ae9e58b9911f2045a.zip",
+          "sha256": "f2438acebbf3428bb78c1296f4ed4ad2abf8dbaf8d97b610cec37d4e4edaae16",
+          "bytes": 19378,
+          "kind": "source_package_not_built_image"
+        }
+      ],
+      "verified_at": "2026-10-30T11:49:35.759776+00:00",
+      "workflow_run": "41050673874",
+      "checks": "tests_and_container_builds_passed"
+    },
+    {
+      "format": "jarvis-release-v1",
       "source_commit": "77c87df31ad051cd23fd7b08d335028cf6051aab",
       "packages": [
         {
