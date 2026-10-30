@@ -1,5 +1,17 @@
 """Pure, persisted two-radiator policy; watts positive for battery discharge."""
 import math
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+def next_midnight(now):
+ d=datetime.fromtimestamp(now,ZoneInfo('Europe/Prague'));return (d.replace(hour=0,minute=0,second=0,microsecond=0)+timedelta(days=1)).timestamp()
+
+def energy_source(pv,discharge,load):
+ if not all(numeric(v) for v in (pv,discharge,load)):return 'Zdroj neurčen'
+ if discharge>50:return 'Solár + baterie' if pv>50 else 'Z baterie'
+ if pv>50 and pv>=load-100:return 'Ze soláru'
+ if pv>50:return 'Solár / síť'
+ return 'Ze sítě' if load>50 else 'Zdroj neurčen'
 
 ROOMS=('child','living')
 DEFAULTS=dict(temp_on=22,temp_off=23.5,child_on_w=1200,child_off_w=1000,living_on_w=3500,living_off_w=3100,battery_on=90,battery_off=85,manual_stop_soc=50,min_off_s=300,living_delay_s=120,discharge_w=300,living_shed_s=120,child_shed_s=240)
@@ -21,6 +33,7 @@ class Controller:
  def __init__(self,saved=None):
   s=saved or {};self.settings=dict(DEFAULTS);self.configure(s.get('settings',{}));self.samples=s.get('samples',[])
   self.manual={r:bool(s.get('manual',{}).get(r,False)) for r in ROOMS}
+  self.manual_off_until={r:float(s.get('manual_off_until',{}).get(r,0)) for r in ROOMS}
   self.off_until={r:float(s.get('off_until',{}).get(r,0)) for r in ROOMS}
   self.on_since={r:float(s.get('on_since',{}).get(r,0)) for r in ROOMS}
   self.full=bool(s.get('full',False));self.demand=bool(s.get('demand',False));self.discharge_since=s.get('discharge_since')
@@ -34,11 +47,11 @@ class Controller:
   if not all(60<=new[k]<=3600 for k in ('min_off_s','living_delay_s','living_shed_s','child_shed_s')) or new['child_shed_s']<=new['living_shed_s'] or not 50<=new['discharge_w']<=3000:raise ValueError('invalid_timing_settings')
   self.settings=new
  def dump(self):
-  return {k:getattr(self,k) for k in ('settings','samples','manual','off_until','on_since','full','demand','discharge_since')}
+  return {k:getattr(self,k) for k in ('settings','samples','manual','manual_off_until','off_until','on_since','full','demand','discharge_since')}
  def external(self,room,on,now):
   self.manual[room]=on
-  if not on:self.off_until[room]=now+self.settings['min_off_s'];self.on_since[room]=0
-  else:self.on_since[room]=now
+  if not on:self.manual_off_until[room]=next_midnight(now);self.off_until[room]=now+self.settings['min_off_s'];self.on_since[room]=0
+  else:self.manual_off_until[room]=0;self.on_since[room]=now
  def evaluate(self,now,*,temp,pv,soc,discharge,load,child,living):
   cfg=self.settings
   actual={'child':child,'living':living}
@@ -66,7 +79,9 @@ class Controller:
   out={}
   for room,on_threshold,off_threshold,watts in [('child',cfg['child_on_w'],cfg['child_off_w'],950),('living',cfg['living_on_w'],cfg['living_off_w'],2200)]:
    on=actual[room];desired=on;reason='Čeká na slunce'
-   if not temp_ok:
+   if now<self.manual_off_until[room]:
+    desired=False;reason='Ručně vypnuto do půlnoci';self.manual[room]=False
+   elif not temp_ok:
     desired=False;reason='Chybí teplota';self.manual[room]=False
    elif temp>=cfg['temp_off']:
     desired=False;reason='Dosaženo '+str(cfg['temp_off']).replace('.',',')+' °C';self.manual[room]=False
@@ -83,14 +98,14 @@ class Controller:
      desired=False;reason='Ochrana baterie'
     elif not self.full and (average is None or average<off_threshold):
      desired=False;reason='Málo slunce'
-    else:desired=True;reason='Z baterie' if self.full else 'Ze soláru'
+    else:desired=True;reason=energy_source(pv,discharge,load)
    elif now<self.off_until[room]:desired=False;reason='Pauza po vypnutí'
    elif not self.full and (average is None or average<=on_threshold):desired=False
    elif room=='living' and (not child or now-self.on_since['child']<cfg['living_delay_s']):
     desired=False;reason='Přednost dětského pokoje'
    elif not self.full and (discharge>cfg['discharge_w'] or pv-load<watts):
     desired=False;reason='Čeká na volný výkon'
-   else:desired=True;reason='Z baterie' if self.full else 'Ze soláru'
+   else:desired=True;reason=energy_source(pv,discharge,load)
    if on and not desired:
     self.off_until[room]=now+self.settings['min_off_s'];self.on_since[room]=0
    elif desired and not on:

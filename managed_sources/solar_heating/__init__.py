@@ -13,7 +13,7 @@ from homeassistant.helpers.storage import Store
 from .engine import Controller, ROOMS, numeric
 
 DOMAIN='jarvis_solar_heating'
-VERSION='1.1.0'
+VERSION='1.2.0'
 AUTOMATION='automation.jarvis_solarni_topeni'
 SWITCHES={'child':'switch.aqara_smart_plug_eu','living':'switch.aqara_smart_plug_eu_2'}
 SENSORS={'temp':'sensor.aqara_temp_humidity_sensor_t1_teplota','pv':'sensor.inverter_pv_power','soc':'sensor.inverter_battery','discharge':'sensor.inverter_battery_power','load':'sensor.inverter_load_power'}
@@ -24,7 +24,7 @@ CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_E
 async def async_setup(hass,config):
  store=Store(hass,1,DOMAIN+'.state');saved=await store.async_load() or {}
  controller=Controller(saved)
- lock=asyncio.Lock();own_contexts=set();ready=False
+ lock=asyncio.Lock();own_contexts=set();pending_commands={};ready=False
  last_error={r:None for r in ROOMS}
  hass.data[DOMAIN]={'controller':controller,'version':VERSION}
  def value(key):
@@ -57,6 +57,7 @@ async def async_setup(hass,config):
      context=Context();own_contexts.add(context.id)
      if len(own_contexts)>256:own_contexts.clear();own_contexts.add(context.id)
      try:
+      pending_commands[room]={'on':decision['on']}
       await hass.services.async_call('switch','turn_on' if decision['on'] else 'turn_off',{'entity_id':SWITCHES[room]},blocking=True,context=context)
       last_error[room]=None
      except Exception:
@@ -73,11 +74,11 @@ async def async_setup(hass,config):
     elif not on and decision['on']:label='Čeká na zapnutí'
     hass.states.async_set('sensor.jarvis_topeni_'+room,label,{
      'friendly_name':'Topení – '+NAMES[room], 'icon':'mdi:radiator',
-     'mode':'manual' if controller.manual[room] else 'auto','switch':SWITCHES[room],
+     'mode':'manual_off' if now<controller.manual_off_until[room] else 'manual' if controller.manual[room] else 'auto','switch':SWITCHES[room],
      'actual_state':actual.state if actual else 'unavailable','requested_on':decision['on'],
      'temperature':inputs['temp'],'battery_soc':inputs['soc'],'pv_mean_5m_w':result['average'],
      'full_battery_exception':result['full_battery'],'off_until':controller.off_until[room],
-     'last_error':last_error[room],'settings':dict(controller.settings),'version':VERSION,'updated_at':datetime.now(timezone.utc).isoformat()})
+     'manual_off_until':controller.manual_off_until[room],'last_error':last_error[room],'settings':dict(controller.settings),'version':VERSION,'updated_at':datetime.now(timezone.utc).isoformat()})
    hass.states.async_set('sensor.jarvis_topeni_solar_prumer',result['average'] if result['average'] is not None else 'unavailable',{
     'friendly_name':'Topení – solár průměr 5 minut','unit_of_measurement':'W','device_class':'power',
     'state_class':'measurement','coverage_seconds':result['coverage_seconds'],'window_seconds':300})
@@ -89,10 +90,14 @@ async def async_setup(hass,config):
   if entity in SWITCHES.values() and new and new.state in ('on','off'):
    room=next(r for r,e in SWITCHES.items() if e==entity)
    if old and old.state in ('on','off') and old.state!=new.state:
-    if new.context.id in own_contexts:
+    pending=pending_commands.get(room)
+    if new.context.id in own_contexts or pending and pending['on']==(new.state=='on'):
+     pending_commands.pop(room,None)
      if new.state=='on':controller.on_since[room]=time.time()
      else:controller.off_until[room]=time.time()+controller.settings['min_off_s'];controller.on_since[room]=0
-    else:controller.external(room,new.state=='on',time.time())
+    else:
+     pending_commands.pop(room,None)
+     controller.external(room,new.state=='on',time.time())
     persist()
   hass.async_create_task(evaluate())
  @callback
@@ -105,10 +110,11 @@ async def async_setup(hass,config):
   for room,entity in SWITCHES.items():
    if entity in selected:
     on=data['service']=='turn_on' or (data['service']=='toggle' and not is_on(room))
+    pending_commands.pop(room,None)
     controller.external(room,on,time.time());persist()
  async def mode_service(call):
   room=call.data['room'];mode=call.data['mode']
-  if mode=='auto':controller.manual[room]=False
+  if mode=='auto':controller.manual[room]=False;controller.manual_off_until[room]=0
   elif mode=='manual':controller.external(room,True,time.time())
   elif mode=='off':
    controller.external(room,False,time.time())

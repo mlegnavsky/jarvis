@@ -69,7 +69,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Ze soláru')
  async def test_physical_off_returns_auto_and_holds_cooldown(self):
   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
-  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Pauza po vypnutí')
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Ručně vypnuto do půlnoci')
  async def test_manual_on_then_temperature_safety(self):
   self.set_state('switch.aqara_smart_plug_eu_2','on');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_living'].state,'Ručně')
@@ -99,3 +99,19 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   with patch.object(Store,'async_save',fail_save):
    with self.assertRaises(OSError):await configure(NS(data={'settings':{'temp_off':24}}))
   self.assertEqual(c.settings['temp_off'],23.5)
+
+ async def test_confirmation_after_60_seconds_is_not_manual_off(self):
+  from unittest.mock import patch
+  self.defer_switch=True
+  now=time.time()
+  self.set_state(self.g['SENSORS']['temp'],'23.5');await self.drain()
+  with patch.object(time,'time',return_value=now+60):
+   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
+  c=self.hass.data['jarvis_solar_heating']['controller']
+  self.assertEqual(c.manual_off_until['child'],0)
+ async def test_explicit_off_while_command_pending_still_locks(self):
+  self.defer_switch=True
+  self.set_state(self.g['SENSORS']['temp'],'23.5');await self.drain()
+  for cb in self.bus['call_service']:cb(NS(data={'domain':'switch','service':'turn_off','service_data':{'entity_id':'switch.aqara_smart_plug_eu'}},context=Context()))
+  self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].attributes['mode'],'manual_off')

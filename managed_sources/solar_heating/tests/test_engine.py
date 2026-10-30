@@ -27,7 +27,8 @@ class HeatingTests(unittest.TestCase):
  def test_off_cooldown(self):
   c=self.make();c.external('child',False,1000)
   self.assertFalse(self.run_at(c,1299)['child']['on'])
-  self.assertTrue(self.run_at(c,1300)['child']['on'])
+  self.assertFalse(self.run_at(c,1300)['child']['on'])
+  self.assertEqual(self.run_at(c,1300)['child']['reason'],'Ručně vypnuto do půlnoci')
  def test_battery_exception_hysteresis(self):
   c=Controller();self.assertTrue(self.run_at(c,soc=90,pv=0)['child']['on'])
   self.assertTrue(self.run_at(c,soc=86,pv=0,child=True)['child']['on'])
@@ -60,3 +61,22 @@ class HeatingTests(unittest.TestCase):
   c=self.make()
   with self.assertRaises(ValueError):c.configure({'temp_on':24,'temp_off':23})
   self.assertEqual(c.settings['temp_on'],22)
+
+ def test_manual_off_until_prague_midnight_and_persisted(self):
+  from datetime import datetime
+  from engine import next_midnight
+  now=datetime.fromisoformat('2026-10-30T18:00:00+01:00').timestamp();c=self.make();c.external('child',False,now)
+  restored=Controller(c.dump());self.assertEqual(restored.manual_off_until['child'],next_midnight(now));self.assertFalse(self.run_at(restored,now+3600,soc=98)['child']['on'])
+  self.assertTrue(self.run_at(restored,next_midnight(now),soc=98)['child']['on'])
+ def test_manual_on_clears_off_hold(self):
+  c=self.make();c.external('child',False,1000);c.external('child',True,1010);self.assertEqual(c.manual_off_until['child'],0);self.assertTrue(self.run_at(c,1010)['child']['on'])
+ def test_source_is_not_battery_exception(self):
+  c=self.make();a=self.run_at(c,soc=98,pv=4000,load=1500,discharge=-2400);self.assertEqual(a['child']['reason'],'Ze soláru')
+  a=self.run_at(c,soc=98,pv=0,load=1500,discharge=1500,child=True);self.assertEqual(a['child']['reason'],'Z baterie')
+
+ def test_mixed_source_applies_to_both_heaters(self):
+  from engine import energy_source
+  self.assertEqual(energy_source(1605,1886,3217),'Solár + baterie')
+  c=self.make();a=self.run_at(c,soc=98,pv=1605,load=3217,discharge=1886,child=True,living=True)
+  self.assertEqual(a['child']['reason'],'Solár + baterie')
+  self.assertEqual(a['living']['reason'],'Solár + baterie')

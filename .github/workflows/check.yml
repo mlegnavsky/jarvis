@@ -12,6 +12,7 @@ jobs:
           python-version: '3.12'
       - run: pip install -r jarvis/requirements.txt -r requirements-test.txt
       - run: PYTHONPATH=jarvis:jarvis_updater python -m unittest discover -s tests -t . -v
+      - run: node managed_sources/home_status/tests/card.test.cjs
       - run: node tests/day_energy_chart.cjs
       - run: python scripts/check_manifest.py
       - run: python scripts/simulate_heating.py
