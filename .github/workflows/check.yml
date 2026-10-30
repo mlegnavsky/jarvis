@@ -14,6 +14,7 @@ jobs:
       - run: PYTHONPATH=jarvis:jarvis_updater python -m unittest discover -s tests -t . -v
       - run: node managed_sources/home_status/tests/card.test.cjs
       - run: node tests/day_energy_chart.cjs
+      - run: PYTHONPATH=managed_sources/energy_weather python -m unittest discover -s managed_sources/energy_weather -p test_data.py -q
       - run: python scripts/check_manifest.py
       - run: python scripts/simulate_heating.py
       - run: PYTHONPATH=managed_sources/firmware_bridge python -m unittest discover -s managed_sources/firmware_bridge/tests -q

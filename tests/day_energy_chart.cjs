@@ -70,3 +70,27 @@ assert.equal(card.weatherAt(Date.parse('2026-10-29T12:30:00Z')),null);assert.equ
  assert(card.moonInfo(Date.parse('2026-10-30T00:00:00Z')).lit>=0);
  card.selectedDate='2020-01-01';card.period='week';b=card.periodBounds();card.statsBounds=b;card.h={states:{}};card.stats=Object.fromEntries(card.energyIds().map(id=>[id,[{start:b.start,change:1},{start:b.start+86400000,change:2}]]));assert.equal(card.energyTotals()[0],3);card.stats={};assert.equal(card.energyTotals()[0],null);
 }
+
+{
+ const card=new Card();card.selectedDate='2026-10-30';card.period='week';card.h={states:{}};
+ const entries=card.periodEntries();assert.equal(entries.length,7);assert.equal(entries[0][0],'2026-10-26');assert.equal(entries[6][0],'2026-11-01');
+ assert(card.periodDateLabel('2026-10-28',true).includes('28. 10.'));assert(!card.periodDateLabel('2026-10-28',true).includes('10-28'));
+ card.period='year';assert(card.periodDateLabel('2026-09').includes('zář'));
+}
+(async()=>{
+ const card=new Card();card.render=()=>{};card.period='month';card.selectedDate='2026-09-01';card.h={states:{},callWS:async()=>{calls++;return {}}};let calls=0;
+ await card.fetchStats();card.selectedDate='2026-08-01';await card.fetchStats();card.selectedDate='2026-09-01';await card.fetchStats();assert.equal(calls,2);console.log('Period cache reuses completed months');
+})().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{
+ const card=new Card();card.render=()=>{};const date='2026-09-01',start=card.dayBounds(Date.parse(date+'T12:00Z')).start;
+ card.h={states:{},callApi:async()=>[],callWS:async q=>q.types[0]==='mean'?{'sensor.inverter_pv_power':[{start,mean:1250}], 'sensor.inverter_battery':[{start,mean:65}]}:{}};
+ await card.chooseDay(date);assert.equal(card.rows['sensor.inverter_pv_power'][0].v,1250);assert.equal(card.historyResolution,'hour');assert.equal(card.historyDay,start);console.log('Purged detailed history falls back to recorded hourly means');
+})().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{
+ const card=new Card();card.render=()=>{};const day=card.dayBounds(Date.parse('2026-09-02T12:00Z')),id=card.ids()[0],spot=card.ids()[4];
+ card.h={states:{},callApi:async()=>[[{entity_id:spot,last_changed:new Date(day.start).toISOString(),state:'3'}]],callWS:async q=>q.types[0]==='mean'?{[id]:[{start:day.start,end:day.start+3600000,mean:1250},{start:day.start+7200000,end:day.start+10800000,mean:2500}]}:{}};
+ await card.chooseDay('2026-09-02');assert.equal(card.rows[id][0].v,1250);assert.equal(card.reading(card.rows[id],day.start+5400000,Date.now()),null);assert.equal(card.reading(card.rows[id],day.start+14400000,Date.now()),null);assert.equal(card.rows[spot][0].v,3);console.log('Per-entity history fallback preserves gaps and retained spot prices');
+})().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{
+ const card=new Card();card.render=()=>{};card.period='month';card.selectedDate='2020-01-01';const b=card.periodBounds(),key=`month:${b.start}`;card.statsCache=new Map([[key,{data:{},time:b.end-60000}]]);let calls=0;card.h={states:{},callWS:async()=>{calls++;return {}}};await card.fetchStats();assert.equal(calls,1);console.log('Incomplete period cached before midnight is refreshed');
+})().catch(e=>{console.error(e);process.exitCode=1});

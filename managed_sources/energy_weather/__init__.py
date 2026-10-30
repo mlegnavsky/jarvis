@@ -8,8 +8,9 @@ from astral import Observer
 from astral.sun import elevation
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval, async_track_time_change
-from .data import parse_ote
+from .data import parse_ote, ote_url
 DOMAIN='jarvis_energy_weather'
+VERSION='1.0.1'
 CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_EXTRA)
 TZ=ZoneInfo('Europe/Prague')
 async def async_setup(hass, config):
@@ -32,14 +33,14 @@ async def async_setup(hass, config):
    for delta in (0,1):
     day=(now.date()+timedelta(days=delta)).isoformat()
     try:
-     raw=await fetch('https://www.ote-cr.cz/pw-data/chart-data/01?time_resolution=PT15M&date='+day+'&language=cs')
+     raw=await fetch(ote_url(day))
      rows.extend(parse_ote(raw,day,rate))
     except Exception as exc:
      if not delta: raise
      tomorrow_error=str(exc)
    current=next((r for r in rows if datetime.fromisoformat(r['time'])<=now<datetime.fromisoformat(r['time'])+timedelta(minutes=15)),None)
    if current is None: raise ValueError('Chybí aktuální interval')
-   hass.states.async_set('sensor.jarvis_spot_ote',current['price'],{'friendly_name':'Spot OTE · bez DPH','unit_of_measurement':'Kč/kWh','rows':rows,'fetched_at':stamp,'source':'OTE denní trh; kurz ČNB','rate':rate,'rate_date':rate_day,'tomorrow_status':tomorrow_error or 'published','contract_price_configured':False,'notice':'Tržní cena bez DPH, před poplatky obchodníka. Kurz ČNB pro zítřek je orientační.'})
+   hass.states.async_set('sensor.jarvis_spot_ote',current['price'],{'friendly_name':'Spot OTE · bez DPH','unit_of_measurement':'Kč/kWh','rows':rows,'fetched_at':stamp,'version':VERSION,'source':'OTE denní trh; kurz ČNB','rate':rate,'rate_date':rate_day,'tomorrow_status':tomorrow_error or 'published','contract_price_configured':False,'notice':'Tržní cena bez DPH, před poplatky obchodníka. Kurz ČNB pro zítřek je orientační.'})
   except Exception as exc:
    hass.states.async_set('sensor.jarvis_spot_ote','unavailable',{'friendly_name':'Spot OTE','error':str(exc),'attempted_at':stamp})
   try:
@@ -58,7 +59,7 @@ async def async_setup(hass, config):
    while start<end:
     sun.append({'time':start.astimezone(TZ).isoformat(),'elevation':round(elevation(observer,start),2)})
     start+=timedelta(minutes=15)
-   hass.states.async_set('sensor.jarvis_pocasi_zitenice','ready',{'friendly_name':'Žitenice · předpověď','rows':rows,'daily':daily,'sun':sun,'fetched_at':stamp,'source':'Open-Meteo Best Match; poloha Slunce Astral','latitude':lat,'longitude':lon,'units':raw.get('hourly_units',{})})
+   hass.states.async_set('sensor.jarvis_pocasi_zitenice','ready',{'friendly_name':'Žitenice · předpověď','rows':rows,'daily':daily,'sun':sun,'fetched_at':stamp,'version':VERSION,'source':'Open-Meteo Best Match; poloha Slunce Astral','latitude':lat,'longitude':lon,'units':raw.get('hourly_units',{})})
   except Exception as exc:
    hass.states.async_set('sensor.jarvis_pocasi_zitenice','unavailable',{'friendly_name':'Žitenice · předpověď','error':str(exc),'attempted_at':stamp})
  hass.async_create_task(update())

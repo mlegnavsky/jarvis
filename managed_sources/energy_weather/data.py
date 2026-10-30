@@ -1,6 +1,10 @@
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 TZ = ZoneInfo('Europe/Prague')
+def ote_url(day):
+ datetime.fromisoformat(day)
+ return 'https://www.ote-cr.cz/pw-data/chart-data/01?time_resolution=PT15M&report_date='+day+'&language=cs'
+
 def parse_ote(raw, day, rate):
  expected=datetime.fromisoformat(day).strftime('%d.%m.%Y')
  if expected not in raw.get('graph',{}).get('title',''):
