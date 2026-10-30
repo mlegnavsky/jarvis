@@ -116,3 +116,9 @@ assert.equal(card.weatherAt(Date.parse('2026-10-29T12:30:00Z')),null);assert.equ
  for(const date of ['2026-03-29','2026-10-25']){const d=card.dayBounds(Date.parse(date+'T12:00Z')),p=card.panelPeak(d);assert(p.t>d.start&&p.t<d.end);assert(p.altitude>0);}
  console.log('Forecast planning uses published hour-mean radiation; DST peak dates valid');
 }
+(async()=>{
+ const card=new Card();card.render=()=>{};const day=card.dayBounds(Date.parse('2026-08-29T12:00Z')),t=day.start+3600000;
+ card.h={states:{'sensor.jarvis_energy_archive':{state:'ready'}},callApi:async(method,path)=>path.startsWith('jarvis_energy_archive/')?{rows:{'sensor.inverter_pv_power':[{t,v:'1250'}],'sensor.inverter_battery':[{t,v:null}]},weather:[{time:new Date(t).toISOString(),temperature_2m:8}],spot:[{time:new Date(t).toISOString(),price:2.5}]}:[]};
+ await card.chooseDay('2026-08-29');assert.equal(card.rows['sensor.inverter_pv_power'][0].v,1250);assert.equal(card.rows['sensor.inverter_battery'][0].v,null);assert.equal(card.weatherAt(t).temperature_2m,8);assert.equal(card.priceAt(t,[],Date.now()),2.5);
+ console.log('Private archive rows, null gaps, historical weather and spot restored');
+})().catch(e=>{console.error(e);process.exitCode=1});

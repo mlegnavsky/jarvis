@@ -13,6 +13,7 @@ jobs:
       - run: pip install -r jarvis/requirements.txt -r requirements-test.txt
       - run: PYTHONPATH=jarvis:jarvis_updater python -m unittest discover -s tests -t . -v
       - run: node managed_sources/home_status/tests/card.test.cjs
+      - run: python -m unittest discover -s managed_sources/energy_archive -p 'test_*.py'
       - run: node tests/day_energy_chart.cjs
       - run: PYTHONPATH=managed_sources/energy_weather python -m unittest discover -s managed_sources/energy_weather -p test_data.py -q
       - run: python scripts/check_manifest.py
@@ -42,7 +43,8 @@ jobs:
           php --version
           php -l testing/backup-dav/index.php
           php -l testing/backup-dav/setup.php
-          python -m unittest tests.test_backup_dav -v
+          php -l testing/energy-archive/index.php
+          python -m unittest tests.test_backup_dav tests.test_energy_archive_server -v
   containers:
     runs-on: ubuntu-latest
     strategy:
@@ -109,7 +111,7 @@ jobs:
           cd public
           git config user.name 'Jarvis Laboratory'
           git config user.email 'jarvis-lab@users.noreply.github.com'
-          git add index.html portal.js catalog.json releases backup-dav energy
+          git add index.html portal.js catalog.json releases backup-dav energy energy-archive
           git diff --cached --quiet || git commit -m "lab: verified source $GITHUB_SHA"
           git push origin HEAD:lab/plesk-bootstrap-20261029
       - name: Notify Plesk when deployment hook is configured

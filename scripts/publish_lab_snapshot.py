@@ -34,6 +34,8 @@ def main():
  shutil.copyfile(source/'managed_sources/energy_weather/power-sun.js',energy/'power-sun.js')
  dav=public/'backup-dav';dav.mkdir(exist_ok=True)
  for name in ('index.php','setup.php','.htaccess'):shutil.copyfile(source/'testing/backup-dav'/name,dav/name)
+ archive=public/'energy-archive';archive.mkdir(exist_ok=True)
+ for name in ('index.php','.htaccess'):shutil.copyfile(source/'testing/energy-archive'/name,archive/name)
  path=public/'catalog.json';catalog=json.loads(path.read_text()) if path.exists() else {'format':'jarvis-lab-catalog-v1','releases':[]}
  entry={**manifest,'verified_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'workflow_run':a.run,'checks':'tests_and_container_builds_passed'}
  catalog['releases']=[entry]+[x for x in catalog['releases'] if x['source_commit']!=a.commit]

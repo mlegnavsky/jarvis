@@ -1,0 +1,1 @@
+{"domain":"jarvis_energy_archive","name":"Jarvis – trvalý energetický archiv","version":"1.0.0","documentation":"https://github.com/mlegnavsky/jarvis","codeowners":[],"requirements":[],"dependencies":["http","webdav"],"iot_class":"cloud_push"}
