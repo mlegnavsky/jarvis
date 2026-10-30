@@ -37,8 +37,8 @@ const fs=require('fs'),os=require('os'),path=require('path');
   if(!(await c.locator('h2').textContent()).includes('Týden'))throw Error('week view');
   const periodHit=await c.locator('.period-hit').boundingBox();await p.mouse.move(periodHit.x+periodHit.width*.4,periodHit.y+40);
   if(!(await c.locator('.period-readout').textContent()).includes('.'))throw Error('Czech hover date missing');
-  if(!(await c.locator('[data-energy-value=0]').textContent()).includes('kWh'))throw Error('instant hover values');
-  await c.locator('[data-energy=0]').click();if(await c.locator('[data-energy=0]').getAttribute('aria-pressed')!=='false')throw Error('period series toggle');
+  if(!(await c.locator('[data-energy-value="0"]').textContent()).includes('kWh'))throw Error('instant hover values');
+  await c.locator('[data-energy="0"]').click();if(await c.locator('[data-energy="0"]').getAttribute('aria-pressed')!=='false')throw Error('period series toggle');
   await c.locator('.period-scrub').focus();await p.keyboard.press('ArrowRight');
   await c.locator('[data-period=month]').click();await p.setViewportSize({width:390,height:844});if(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('monthly mobile overflow');
   await p.setViewportSize({width:1100,height:800});
@@ -50,3 +50,4 @@ const fs=require('fs'),os=require('os'),path=require('path');
   if(errors.length)throw Error(errors.join('\n'));console.log('Browser passed: hover, toggle, future, keyboard focus, mobile');
  }finally{await b.close();fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exit(1)});
+
