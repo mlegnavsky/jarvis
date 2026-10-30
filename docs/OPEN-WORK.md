@@ -61,3 +61,8 @@ IMPORTANT: owner has now confirmed22 panels, southeast orientation,45-degree til
 ## Denní energetický graf — 30.10.2026
 
 Upraven managed_sources/energy_weather/power-sun.js: pražský kalendářní den 00:00–24:00 včetně DST, přepínače nahoře, hodnoty pod kurzorem a časový jezdec s klávesnicí. Veřejná laboratorní ukázka /energy/ používá tentýž zdroj a pouze označená syntetická data. Green není v tomto kroku změněný. Node testy hranic dne, DST a nedostupných hodnot a Chromium interakční test jsou povinné před publikací. Předchozí source caa9627 nepublikován kvůli testu kurzoru; browser opravy 0c8e11d prošly. Poslední oprava zachovává přesné now při výchozím výběru, aby zaokrouhlení nevytvořilo budoucí čtení. Nasazení ověřit podle aktuálního CI a HTTP obsahu /energy/.
+
+
+### Green deployment receipt — 30.10.2026 12:07 CET
+
+Source ae64421be01c7db5d8cda1edc13097d7a996b208 (CI push41045240503 all jobs success, laboratory HTTP exact match). Native bundle daychart-plan-20261030 prepared and daychart-apply-20261030 verified/file_written; activation none, no Core restart. Green www/jarvis-power-sun.js read back byte-for-byte equal to tested source, SHA256 1b84013f71f9dcde44c08052a6fe00bcad72379ffe880a97eb76bf8abbbe7fbc. Existing dashboard references custom:jarvis-power-sun and is unchanged. Before-image retained in prepared plan for explicit rollback. Browser reload required to replace already-loaded custom element. User browser/runtime rendering on Green not independently observed; unauthenticated external HTTP attempt received403 and is not proof of frontend failure.
