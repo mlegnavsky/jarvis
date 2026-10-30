@@ -67,7 +67,7 @@ if($method==='POST'){
  if($q->rowCount())foreach($rows as $r){
   $data=json_encode($r,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
   if($r['kind']==='sample'){$q=$db->prepare('INSERT OR IGNORE INTO samples VALUES(?,?)');$q->execute([$r['t'],$data]);}
-  else{$q=$db->prepare('INSERT OR IGNORE INTO publications VALUES(?,?,?)');$q->execute([$r['kind'],$r['t'],$data]);}
+  else{$q=$db->prepare('INSERT OR IGNORE INTO publications VALUES(?,?,?)');$issued=strtotime($r['issued_at']??'');if($issued===false)throw new RuntimeException('Invalid issuance');$q->execute([$r['kind'],$issued,$data]);}
  }
  $db->commit();echo json_encode(['ack'=>$hash,'records'=>count($rows)]);exit;
 }
@@ -82,6 +82,6 @@ $start=filter_var($_GET['start']??null,FILTER_VALIDATE_FLOAT);$end=filter_var($_
 if($start===false||$end===false||$start===null||$end===null||$end<=$start||$end-$start>90000)stop(400);
 $q=$db->prepare('SELECT data FROM samples WHERE t>=? AND t<? ORDER BY t LIMIT 10000');$q->execute([$start,$end]);
 $rows=[];while($r=$q->fetchColumn())$rows[]=json_decode($r,true);
-$pub=[];foreach(['weather','spot'] as $kind){$q=$db->prepare('SELECT data FROM publications WHERE kind=? AND issued<=? ORDER BY issued DESC LIMIT 1');$q->execute([$kind,min($end,time())]);$r=$q->fetchColumn();if($r)$pub[$kind]=json_decode($r,true);}
+$pub=[];foreach(['weather','spot'] as $kind){$cutoff=$kind==='weather'&&$end<time()?$start:min($end,time());$q=$db->prepare('SELECT data FROM publications WHERE kind=? AND issued<=? ORDER BY issued DESC LIMIT 1');$q->execute([$kind,$cutoff]);$r=$q->fetchColumn();if(!$r){$q=$db->prepare('SELECT data FROM publications WHERE kind=? AND issued<? ORDER BY issued ASC LIMIT 1');$q->execute([$kind,min($end,time())]);$r=$q->fetchColumn();}if($r)$pub[$kind]=json_decode($r,true);}
 echo json_encode(['samples'=>$rows,'publications'=>$pub]);
 } catch(Throwable $e){if(isset($db)&&$db->inTransaction())$db->rollBack();stop(503,'Private archive storage error');}
