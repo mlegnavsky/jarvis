@@ -8,6 +8,12 @@ const fs=require('fs'),os=require('os'),path=require('path');
  p.on('pageerror',e=>errors.push(e.message));
  try{
   await p.goto('file://'+path.join(root,'index.html'));const c=p.locator('jarvis-power-sun');await c.locator('.scrub').waitFor();
+  const calendar=c.locator('input[type=date]');await calendar.focus();
+  await calendar.evaluate(e=>e.dataset.calendarIdentity='original');
+  await p.evaluate(()=>document.querySelector('jarvis-power-sun').render());
+  if(await calendar.getAttribute('data-calendar-identity')!=='original')throw Error('calendar replaced during live render');
+  await calendar.evaluate(e=>e.blur());await p.waitForTimeout(20);
+  if(await calendar.getAttribute('data-calendar-identity')!==null)throw Error('deferred refresh did not resume');
   await c.locator('[data-line="0"]').click();if(await c.locator('[data-line="0"]').getAttribute('aria-pressed')!=='false')throw Error('toggle');
   await c.locator('[data-line="0"]').click();await c.locator('.hit').scrollIntoViewIfNeeded();const hit=await c.locator('.hit').boundingBox();await p.mouse.move(hit.x+hit.width*.5,hit.y+50);
   if(!(await c.locator('.readout').textContent()).includes('12:00'))throw Error('midday hover: '+await c.locator('.readout').textContent());
@@ -53,4 +59,3 @@ const fs=require('fs'),os=require('os'),path=require('path');
   if(errors.length)throw Error(errors.join('\n'));console.log('Browser passed: hover, toggle, future, keyboard focus, mobile');
  }finally{await b.close();fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exit(1)});
-
