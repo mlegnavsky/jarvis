@@ -12,6 +12,8 @@ class VoiceSettingsTests(unittest.IsolatedAsyncioTestCase):
   async def ws(sup,command,args=None):
    calls.append((command,args))
    if command.endswith('/list'):return {'pipelines':[dict(pipeline)]}
+   required={'name','language','tts_engine','conversation_engine'}
+   if not required <= args.keys():raise ValueError('native_required_pipeline_fields_missing')
    pipeline.update({k:v for k,v in args.items() if k!='pipeline_id'})
    return dict(pipeline)
   admin=SimpleNamespace(sup=None,remember=lambda *args:None)
@@ -19,7 +21,7 @@ class VoiceSettingsTests(unittest.IsolatedAsyncioTestCase):
    result=await voice_settings.change(admin,'key',{'pipeline_id':'p1','tts_voice':'ash','expected_revision':revision(pipeline)})
   self.assertTrue(result['verified']);self.assertEqual(pipeline['tts_voice'],'ash')
   self.assertEqual(pipeline['conversation_engine'],'conversation.extended_openai_conversation')
-  self.assertEqual(calls[1],('assist_pipeline/pipeline/update',{'pipeline_id':'p1','tts_voice':'ash'}))
+  self.assertEqual(calls[1],('assist_pipeline/pipeline/update',{'pipeline_id':'p1',**{k:v for k,v in pipeline.items() if k!='id'}}))
  async def test_stale_config_never_writes(self):
   calls=[]
   async def ws(*args):calls.append(args);return {'pipelines':[{'id':'p1','tts_voice':'onyx','tts_engine':'tts.openai_tts'}]}

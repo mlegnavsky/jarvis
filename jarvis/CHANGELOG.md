@@ -1,3 +1,7 @@
+# 3.12.2
+
+- Send the complete unchanged native pipeline fields required by Core when changing its TTS voice.
+
 # 3.12.1
 
 - Tune existing private wake models with revision checks and rollback, preserving weights and credentials.

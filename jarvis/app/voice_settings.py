@@ -24,7 +24,7 @@ async def _change(admin,key,args):
  if before['revision']!=args['expected_revision']:raise APIError(409,'voice_pipeline_changed')
  if before['pipeline'].get('tts_engine')!='tts.openai_tts':raise APIError(409,'unsupported_voice_provider')
  admin.remember(key,before)
- await websocket_query(admin.sup,'assist_pipeline/pipeline/update',{'pipeline_id':args['pipeline_id'],'tts_voice':args['tts_voice']})
+ await websocket_query(admin.sup,'assist_pipeline/pipeline/update',{**{k:v for k,v in before['pipeline'].items() if k!='id'},'pipeline_id':args['pipeline_id'],'tts_voice':args['tts_voice']})
  after=await read(admin,args['pipeline_id'])
  expected={**before['pipeline'],'tts_voice':args['tts_voice']}
  return {**after,'verified':after['pipeline']==expected,'restart_required':False}
