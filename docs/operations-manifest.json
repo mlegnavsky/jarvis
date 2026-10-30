@@ -200,6 +200,15 @@
       ],
       "source": "jarvis/app/firmware.py"
     },
+    "firmware_model_settings": {
+      "arguments": [
+        "expected_revision",
+        "model_id",
+        "probability_cutoff",
+        "target"
+      ],
+      "source": "jarvis/app/firmware.py"
+    },
     "heating_settings": {
       "arguments": [
         "changes",
@@ -282,6 +291,14 @@
         "upload_id"
       ],
       "source": "jarvis/app/workspace_admin.py"
+    },
+    "voice_pipeline_settings": {
+      "arguments": [
+        "expected_revision",
+        "pipeline_id",
+        "tts_voice"
+      ],
+      "source": "jarvis/app/admin.py"
     },
     "workspace_delete": {
       "arguments": [

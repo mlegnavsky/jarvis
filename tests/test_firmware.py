@@ -57,3 +57,28 @@ class StoreTests(unittest.TestCase):
   result=self.store.install_model(self.payload())
   manifest=json.loads((self.root/'esphome'/result['manifest_path']).read_text())
   self.assertEqual(manifest['micro']['minimum_esphome_version'],'2024.7.0')
+
+ def test_tune_existing_private_model_preserves_weights_and_other_config(self):
+  import json
+  first=self.store.install_model(self.payload())
+  original=(self.root/'esphome'/first['model_path']).read_bytes()
+  result=self.store.tune_model({'target':TARGET,'model_id':'jarvis_cz','probability_cutoff':.8,'expected_revision':self.store.metadata(TARGET)['revision']})
+  self.assertEqual((self.root/'esphome'/result['model_path']).read_bytes(),original)
+  metadata=self.store.metadata(TARGET)['models'][0]
+  self.assertEqual(metadata['probability_cutoff'],.8)
+  self.assertEqual(metadata['model_sha256'],hashlib.sha256(original).hexdigest())
+  content=(self.root/'esphome'/TARGET).read_text()
+  self.assertIn('key: !secret device_key',content)
+  self.assertIn('# keep comment',content)
+ def test_tune_rejects_remote_model_and_stale_revision(self):
+  args={'target':TARGET,'model_id':'jarvis_cz','probability_cutoff':.8,'expected_revision':self.store.metadata(TARGET)['revision']}
+  with self.assertRaises(APIError):self.store.tune_model(args)
+  self.store.install_model(self.payload())
+  with self.assertRaises(APIError):self.store.tune_model(args)
+
+ def test_invalid_tuning_values_do_not_mutate_configuration(self):
+  self.store.install_model(self.payload())
+  before=(self.root/'esphome'/TARGET).read_text()
+  for value in [0,1,-1,float('nan'),float('inf'),'0.8',True]:
+   with self.assertRaises(APIError):self.store.tune_model({'target':TARGET,'model_id':'jarvis_cz','probability_cutoff':value,'expected_revision':self.store.metadata(TARGET)['revision']})
+   self.assertEqual((self.root/'esphome'/TARGET).read_text(),before)

@@ -9,7 +9,7 @@ from .policy import APIError
 from .ha import UpstreamError
 
 ADDON='5c53de3b_esphome'
-FIELDS={'firmware_compile':{'target','expected_revision'},'firmware_install':{'target','expected_revision'},
+FIELDS={'firmware_model_settings':{'target','model_id','probability_cutoff','expected_revision'},'firmware_compile':{'target','expected_revision'},'firmware_install':{'target','expected_revision'},
         'firmware_config_restore':{'target','backup_id','expected_revision'},
         'firmware_model_install':{'target','model_id','model_base64','sha256','manifest','expected_revision'}}
 
@@ -41,7 +41,35 @@ class FirmwareStore(WorkspaceFiles):
   return data,entries
  def metadata(self,target):
   data,entries=self.config(target)
-  return {'target':target,'revision':data['revision'],'models':[{'id':i,'source':'remote' if re.match(r'https?:|github:',n.value) else 'local'} for i,n in entries],'credentials_exposed':False}
+  return {'target':target,'revision':data['revision'],'models':[self.model_metadata(i,n) for i,n in entries],'credentials_exposed':False}
+ def local_model(self,node):
+  manifest_path='esphome/'+node.value
+  raw,_=self.raw(manifest_path)
+  if raw is None:raise APIError(404,'firmware_model_missing')
+  try:
+   manifest=json.loads(raw)
+   binary_path=str(Path(manifest_path).parent/manifest['model'])
+   binary,_=self.raw(binary_path)
+   if binary is None:raise ValueError()
+  except (ValueError,KeyError,TypeError):raise APIError(400,'invalid_firmware_local_model') from None
+  return manifest,binary
+ def model_metadata(self,identity,node):
+  item={'id':identity,'source':'remote' if re.match(r'https?:|github:',node.value) else 'local'}
+  if item['source']=='local':
+   try:
+    manifest,binary=self.local_model(node)
+    item.update(probability_cutoff=manifest['micro']['probability_cutoff'],model_sha256=digest(binary))
+   except (APIError,KeyError,TypeError):pass
+  return item
+ def tune_model(self,args):
+  data,entries=self.config(args['target'])
+  if data['revision']!=args['expected_revision']:raise APIError(409,'firmware_revision_conflict')
+  nodes=[n for i,n in entries if i==args['model_id']]
+  if len(nodes)!=1:raise APIError(400,'firmware_model_id_not_found')
+  manifest,binary=self.local_model(nodes[0])
+  micro={k:manifest['micro'][k] for k in ('probability_cutoff','sliding_window_size','feature_step_size','tensor_arena_size')}
+  micro['probability_cutoff']=args['probability_cutoff']
+  return self.install_model({k:args[k] for k in ('target','model_id','expected_revision')}|{'model_base64':base64.b64encode(binary).decode(),'sha256':digest(binary),'manifest':{'wake_word':manifest['wake_word'],'micro':micro}})
  def install_model(self,args):
   data,entries=self.config(args['target'])
   if data['revision']!=args['expected_revision']:raise APIError(409,'firmware_revision_conflict')
@@ -110,13 +138,13 @@ class FirmwareBridge:
     row=db.execute('SELECT operation,before_data FROM jobs WHERE key=?',(args['backup_id'],)).fetchone()
    saved=json.loads(row[1]) if row and row[1] else {}
    before=saved.get('firmware_config',{})
-   if not row or row[0]!='firmware_model_install' or before.get('path')!=store.target(args['target']) or not isinstance(before.get('content'),str):raise APIError(404,'firmware_backup_not_found')
+   if not row or row[0] not in ('firmware_model_install','firmware_model_settings') or before.get('path')!=store.target(args['target']) or not isinstance(before.get('content'),str):raise APIError(404,'firmware_backup_not_found')
    self.admin.remember(key,{'firmware_config':ConfigFiles.read(store,store.target(args['target']))})
    result=store.write_raw(before['path'],before['content'].encode(),args['expected_revision'],0o600)
    return {**result,'activation_performed':False}
-  if operation=='firmware_model_install':
+  if operation in ('firmware_model_install','firmware_model_settings'):
    self.admin.remember(key,{'firmware_config':ConfigFiles.read(store,store.target(args['target']))})
-   return store.install_model(args)
+   return store.tune_model(args) if operation=='firmware_model_settings' else store.install_model(args)
   if operation=='firmware_install':
    configured=unwrap(await self.client.call('devices/list'),'devices')
    device=next((d for d in configured if d.get('configuration')==args['target']),{})

@@ -8,13 +8,14 @@ import re
 import sqlite3
 from .config_files import ConfigFiles
 from .ha import now
-from . import diagnostics, integration_admin, workspace_admin, operations, deployments
+from . import diagnostics, integration_admin, workspace_admin, operations, deployments, voice_settings
 from .workspace_files import WorkspaceFiles, Uploads
 from .firmware import FirmwareBridge, FIELDS as FIRMWARE_FIELDS
 from .ha import UpstreamError
 from .policy import APIError
 
 FIELDS = {
+    'voice_pipeline_settings': {'pipeline_id','tts_voice','expected_revision'},
     **operations.FIELDS,
     **deployments.FIELDS,
     **workspace_admin.FIELDS,
@@ -159,6 +160,8 @@ class Admin:
             return await integration_admin.subentries(self, target)
         if query == 'integration_options':
             return integration_admin.public_form(await integration_admin.get_form(self, target))
+        if query == 'voice_pipeline':
+            return await voice_settings.read(self,target)
         if query == 'voice_pipelines':
             value = await diagnostics.websocket_query(self.sup, 'assist_pipeline/pipeline/list')
             return redact(value)
@@ -331,6 +334,8 @@ class Admin:
             return await self.firmware.perform(key,operation,args)
         if operation in workspace_admin.FIELDS:
             return await workspace_admin.perform(self, key, operation, args)
+        if operation == 'voice_pipeline_settings':
+            return await voice_settings.change(self,key,args)
         if operation.startswith('integration_'):
             return await integration_admin.change(self, key, operation, args)
         if operation == 'automations_reload':

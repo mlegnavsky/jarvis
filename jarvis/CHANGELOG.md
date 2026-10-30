@@ -1,3 +1,9 @@
+# 3.12.1
+
+- Tune existing private wake models with revision checks and rollback, preserving weights and credentials.
+- Add a bounded native TTS voice update with full pipeline readback.
+- Make the Czech companion delivery energetic and dryly playful while retaining joke and privacy boundaries.
+
 # 3.12.0
 
 - Add guarded backup deletion, disk-space read and retention preview.
