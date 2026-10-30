@@ -352,7 +352,7 @@ class JarvisPowerSun extends HTMLElement {
  n(v){return Number.isFinite(v)?v.toLocaleString('cs-CZ',{maximumFractionDigits:1}):'—';}
  time(t){return new Date(t).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Prague'});}
  altitude(t){return JarvisSolarMath.getPosition(new Date(t),50.555,14.156).altitude*180/Math.PI;}
- selectionTime(t,now){return t===now?now:Math.round(t/60000)*60000;}
+ selectionTime(t,now){return t===now?now:Math.min(Math.round(t/60000)*60000,t<now?now:Infinity);}
  reading(points,t,now){if(t>now)return null;let result=null;for(const p of points){if(p.t>t)break;result=p.v;}return result;}
  render(){if(!this.shadowRoot||!this.h)return;
   const active=this.shadowRoot.activeElement,focus=active?.matches('.scrub')?'.scrub':active?.dataset.line!==undefined?`[data-line="${Number(active.dataset.line)}"]`:null;

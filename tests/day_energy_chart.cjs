@@ -15,4 +15,6 @@ assert.equal(c.reading([{t:0,v:50},{t:20,v:0}],25,100),0);
 
 assert.equal(c.selectionTime(90001,90001),90001);
 assert.equal(c.selectionTime(89999,100000),60000);
-assert.equal(c.selectionTime(90001,100000),120000);
+assert.equal(c.selectionTime(90001,100000),100000);
+
+assert.equal(c.selectionTime(90001,90002),90002);
