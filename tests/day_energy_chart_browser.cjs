@@ -18,6 +18,8 @@ const fs=require('fs'),os=require('os'),path=require('path');
   if(!await slider.evaluate(e=>e===e.getRootNode().activeElement))throw Error('slider focus after HA update');
   await c.locator('[data-line="1"]').focus();await p.keyboard.press('Enter');
   if(!await c.locator('[data-line="1"]').evaluate(e=>e===e.getRootNode().activeElement))throw Error('toggle focus');
+  if(await c.locator('.solar-peak').count()!==1)throw Error('geometric peak dot missing');
+  if(!(await c.locator('.weather-location').textContent()).includes('Žitenice'))throw Error('weather locality missing');
   if(await c.locator('.weather-cell').count()<3)throw Error('weather strip missing');
   if(!(await c.locator('.weather-strip').textContent()).includes('°'))throw Error('weather temperatures missing');
   if(await c.locator('[data-line]').count()!==6)throw Error('six curves');
@@ -35,6 +37,7 @@ const fs=require('fs'),os=require('os'),path=require('path');
   await c.locator('[data-day=today]').click();
   await c.locator('[data-period=week]').click();await c.locator('.energy-summary').waitFor();
   if(!(await c.locator('h2').textContent()).includes('Týden'))throw Error('week view');
+  if(await c.locator('.period-solar-peak').count()!==7)throw Error('one solar planning dot per day missing');
   const periodHit=await c.locator('.period-hit').boundingBox();await p.mouse.move(periodHit.x+periodHit.width*.4,periodHit.y+40);
   if(!(await c.locator('.period-readout').textContent()).includes('.'))throw Error('Czech hover date missing');
   if(!(await c.locator('[data-energy-value="0"]').textContent()).includes('kWh'))throw Error('instant hover values');
@@ -50,4 +53,3 @@ const fs=require('fs'),os=require('os'),path=require('path');
   if(errors.length)throw Error(errors.join('\n'));console.log('Browser passed: hover, toggle, future, keyboard focus, mobile');
  }finally{await b.close();fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exit(1)});
-

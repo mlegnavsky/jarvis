@@ -94,3 +94,17 @@ assert.equal(card.weatherAt(Date.parse('2026-10-29T12:30:00Z')),null);assert.equ
 (async()=>{
  const card=new Card();card.render=()=>{};card.period='month';card.selectedDate='2020-01-01';const b=card.periodBounds(),key=`month:${b.start}`;card.statsCache=new Map([[key,{data:{},time:b.end-60000}]]);let calls=0;card.h={states:{},callWS:async()=>{calls++;return {}}};await card.fetchStats();assert.equal(calls,1);console.log('Incomplete period cached before midnight is refreshed');
 })().catch(e=>{console.error(e);process.exitCode=1});
+{
+ const card=new Card(),day=card.dayBounds(Date.parse('2026-10-30T12:00Z')),peak=card.panelPeak(day);
+ assert(peak.t>day.start&&peak.t<day.end);assert(peak.altitude>0);assert(peak.projection>0);assert(peak.t<Date.parse('2026-10-30T11:00Z'));assert.equal(card.panelProjection(Date.parse('2026-10-30T00:00Z')),0);
+ assert(card.panelProjection(peak.t)>=card.panelProjection(peak.t-60000));assert(card.panelProjection(peak.t)>=card.panelProjection(peak.t+60000));
+ const rows=card.hourlyPoints([{start:0,end:3600000,mean:10},{start:3600000,end:7200000,mean:20},{start:10800000,end:14400000,mean:30}],14400000);
+ assert.equal(rows.filter(p=>p.t===3600000&&p.v===null).length,0);assert.equal(card.reading(rows,9000000,15000000),null);assert.equal(card.reading(rows,4000000,15000000),20);
+ console.log('Panel incidence maximum and continuous adjacent hourly steps checked');
+}
+{
+ const card=new Card(),day=card.dayBounds(Date.parse('2026-10-30T12:00Z'));card.h={states:{'sensor.jarvis_pocasi_zitenice':{state:'ready',attributes:{rows:[{time:new Date(day.start+3600000).toISOString(),shortwave_radiation:0,cloud_cover:90},{time:new Date(day.start+12*3600000).toISOString(),shortwave_radiation:250,cloud_cover:60},{time:new Date(day.start+13*3600000).toISOString(),shortwave_radiation:400,cloud_cover:20}]}}}};
+ const best=card.forecastWindow(day);assert.equal(best.end,day.start+13*3600000);assert.equal(best.cloud,20);assert.equal(best.radiation,400);assert.equal(card.forecastWindow(card.dayBounds(day.start-3600000)),null);
+ for(const date of ['2026-03-29','2026-10-25']){const d=card.dayBounds(Date.parse(date+'T12:00Z')),p=card.panelPeak(d);assert(p.t>d.start&&p.t<d.end);assert(p.altitude>0);}
+ console.log('Forecast planning uses published hour-mean radiation; DST peak dates valid');
+}
