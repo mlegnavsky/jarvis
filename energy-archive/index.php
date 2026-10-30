@@ -74,7 +74,7 @@ if($method==='POST'){
 if($method!=='GET')stop(405);
 if(($_GET['op']??'status')==='status'){
  $q=$db->query('SELECT count(*),min(t),max(t),coalesce(sum(length(data)),0) FROM samples')->fetch(PDO::FETCH_NUM);
- $b=$db->query('SELECT count(*),coalesce(sum(length(data)),0) FROM batches')->fetch(PDO::FETCH_NUM);
+ $b=$db->query('SELECT count(*),coalesce(sum(length(CAST(data AS BLOB))),0) FROM batches')->fetch(PDO::FETCH_NUM);
  echo json_encode(['samples'=>(int)$q[0],'first'=>$q[1],'last'=>$q[2],'sample_bytes'=>(int)$q[3],'batches'=>(int)$b[0],'compressed_bytes'=>(int)$b[1],'database_bytes'=>filesize($dbpath),'free_bytes'=>disk_free_space($dir),'retention'=>'permanent']);exit;
 }
 if(($_GET['op']??'')!=='day')stop(400);
