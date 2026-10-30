@@ -12,3 +12,7 @@ console.log('Daily chart: Prague/DST and missing readings passed');
 assert.equal(c.reading([{t:0,v:50},{t:10,v:null},{t:20,v:0}],15,100),null);
 assert.equal(c.reading([{t:0,v:50}],101,100),null);
 assert.equal(c.reading([{t:0,v:50},{t:20,v:0}],25,100),0);
+
+assert.equal(c.selectionTime(90001,90001),90001);
+assert.equal(c.selectionTime(89999,100000),60000);
+assert.equal(c.selectionTime(90001,100000),120000);

@@ -18,7 +18,7 @@
 - Publisher musí přenést přesně aktuální kartu.
 
 ### Task 1: Karta a laboratorní publikace
-- [ ] Regresní Node test pro pražské hranice dne a neplatné hodnoty, nejprve red.
-- [ ] Upravit kartu, laboratorní ukázku a allowlist publisheru.
-- [ ] Ověřit Node testy, Python publikaci a vykreslení/interakci v prohlížeči.
+- [x] Regresní Node test pro pražské hranice dne a neplatné hodnoty, nejprve red.
+- [x] Upravit kartu, laboratorní ukázku a allowlist publisheru.
+- [x] Ověřit Node testy, Python publikaci a vykreslení/interakci v prohlížeči.
 - [ ] Publikovat přes Git CAS, ověřit CI a skutečné HTTP soubory.
