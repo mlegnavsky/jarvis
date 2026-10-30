@@ -1,0 +1,11 @@
+{
+  "format": "jarvis-simulation-v1",
+  "production_connected": false,
+  "source_sha256": {
+    "managed_sources/solar_heating/engine.py": "cb0aa4e595da9069aa88a0b8ee821600d7cb0480f94745224cb40fb98f6afd28",
+    "managed_sources/solar_heating/__init__.py": "862e4af7d57700494ce41ac9e5245fe874009e6a00217d1aa60e300c33a83320",
+    "managed_sources/solar_heating/prepare_dashboard.py": "1ff0262b556e24d9489e3416cebfda4c7b92fd69972850b8e8f6aedc69c550f3"
+  },
+  "verified": true,
+  "output": "----------------------------------------------------------------------\nRan 27 tests in 0.105s\n\nOK\n"
+}
