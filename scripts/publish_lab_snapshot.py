@@ -29,6 +29,9 @@ def main():
  shutil.copyfile(release/'release.json',dest/'release.json')
  (dest/'heating-report.json').write_text(json.dumps(report,indent=2)+'\n')
  for name in ('index.html','portal.js'):shutil.copyfile(source/'testing/lab-public'/name,public/name)
+ energy=public/'energy';energy.mkdir(exist_ok=True)
+ for name in ('index.html','demo.js'):shutil.copyfile(source/'testing/lab-public/energy'/name,energy/name)
+ shutil.copyfile(source/'managed_sources/energy_weather/power-sun.js',energy/'power-sun.js')
  dav=public/'backup-dav';dav.mkdir(exist_ok=True)
  for name in ('index.php','setup.php','.htaccess'):shutil.copyfile(source/'testing/backup-dav'/name,dav/name)
  path=public/'catalog.json';catalog=json.loads(path.read_text()) if path.exists() else {'format':'jarvis-lab-catalog-v1','releases':[]}

@@ -12,9 +12,21 @@ jobs:
           python-version: '3.12'
       - run: pip install -r jarvis/requirements.txt -r requirements-test.txt
       - run: PYTHONPATH=jarvis:jarvis_updater python -m unittest discover -s tests -t . -v
+      - run: node tests/day_energy_chart.cjs
       - run: python scripts/check_manifest.py
       - run: python scripts/simulate_heating.py
       - run: PYTHONPATH=managed_sources/firmware_bridge python -m unittest discover -s managed_sources/firmware_bridge/tests -q
+  energy-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tests/day_energy_chart.cjs
+      - run: npm install --prefix /tmp/jarvis-chart-test playwright@1.58.2
+      - run: node /tmp/jarvis-chart-test/node_modules/playwright/cli.js install --with-deps chromium
+      - run: NODE_PATH=/tmp/jarvis-chart-test/node_modules node tests/day_energy_chart_browser.cjs
   backup-dav:
     runs-on: ubuntu-latest
     steps:
@@ -52,7 +64,7 @@ jobs:
           tags: jarvis-smoke:local
       - run: python scripts/smoke_container.py ${{ matrix.app }}
   publish-laboratory:
-    needs: [tests, containers, backup-dav]
+    needs: [tests, containers, backup-dav, energy-chart]
     if: github.event_name == 'push' && github.ref == 'refs/heads/feat/jarvis-addon'
     runs-on: ubuntu-latest
     permissions:
@@ -95,7 +107,7 @@ jobs:
           cd public
           git config user.name 'Jarvis Laboratory'
           git config user.email 'jarvis-lab@users.noreply.github.com'
-          git add index.html portal.js catalog.json releases backup-dav
+          git add index.html portal.js catalog.json releases backup-dav energy
           git diff --cached --quiet || git commit -m "lab: verified source $GITHUB_SHA"
           git push origin HEAD:lab/plesk-bootstrap-20261029
       - name: Notify Plesk when deployment hook is configured
