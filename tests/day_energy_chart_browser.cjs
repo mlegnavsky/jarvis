@@ -9,7 +9,7 @@ const fs=require('fs'),os=require('os'),path=require('path');
  try{
   await p.goto('file://'+path.join(root,'index.html'));const c=p.locator('jarvis-power-sun');await c.locator('.scrub').waitFor();
   await c.locator('[data-line="0"]').click();if(await c.locator('[data-line="0"]').getAttribute('aria-pressed')!=='false')throw Error('toggle');
-  await c.locator('[data-line="0"]').click();const hit=await c.locator('.hit').boundingBox();await p.mouse.move(hit.x+hit.width*.5,hit.y+50);
+  await c.locator('[data-line="0"]').click();await c.locator('.hit').scrollIntoViewIfNeeded();const hit=await c.locator('.hit').boundingBox();await p.mouse.move(hit.x+hit.width*.5,hit.y+50);
   if(!(await c.locator('.readout').textContent()).includes('12:00'))throw Error('midday hover: '+await c.locator('.readout').textContent());
   const slider=c.locator('.scrub');await slider.evaluate(e=>{e.value=e.max;e.dispatchEvent(new Event('input',{bubbles:true}));});
   if(!(await c.locator('.readout').textContent()).includes('24:00'))throw Error('end time');
@@ -38,7 +38,7 @@ const fs=require('fs'),os=require('os'),path=require('path');
   await c.locator('[data-period=week]').click();await c.locator('.energy-summary').waitFor();
   if(!(await c.locator('h2').textContent()).includes('Týden'))throw Error('week view');
   if(await c.locator('.period-solar-peak').count()!==7)throw Error('one solar planning dot per day missing');
-  const periodHit=await c.locator('.period-hit').boundingBox();await p.mouse.move(periodHit.x+periodHit.width*.4,periodHit.y+40);
+  await c.locator('.period-hit').scrollIntoViewIfNeeded();const periodHit=await c.locator('.period-hit').boundingBox();await p.mouse.move(periodHit.x+periodHit.width*.4,periodHit.y+40);
   if(!(await c.locator('.period-readout').textContent()).includes('.'))throw Error('Czech hover date missing');
   if(!(await c.locator('[data-energy-value="0"]').textContent()).includes('kWh'))throw Error('instant hover values');
   await c.locator('[data-energy="0"]').click();if(await c.locator('[data-energy="0"]').getAttribute('aria-pressed')!=='false')throw Error('period series toggle');
@@ -53,3 +53,4 @@ const fs=require('fs'),os=require('os'),path=require('path');
   if(errors.length)throw Error(errors.join('\n'));console.log('Browser passed: hover, toggle, future, keyboard focus, mobile');
  }finally{await b.close();fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exit(1)});
+
