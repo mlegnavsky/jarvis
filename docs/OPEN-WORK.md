@@ -229,3 +229,20 @@ required before activation. Independent review no findings. Does not implement
 arbitrary acoustic speech detection or the Aničko model. Temporary live settings
 verified: primary wake Jarvis→no_wake_word, second already none; sensitivity
 Very→Slightly. Physical button begins dialogue. Publication is not deployment.
+
+
+### Conversation stability live —31.10.2026 17:12 UTC
+
+Sourceab3728f2df6963ca46b59401ca20b40bd22d9f95 applied by
+anicka-flow-apply-20261031 verified/active_verified17:12:33.243143Z;
+backupaee76900,10/10 live+recovery readbacks exact. Running speaker reportv3
+ready, trigger_requires_embedding=false, native model probe passes, profiles0
+and pending0. Running output reportv2 configured/native_abort_resume=active;
+resumed0/failed0: physical abort/resume has NOT yet been tested. Firmware wake
+slots both no_wake_word, sensitivity Slightly; unmuted microphone. Owner uses
+physical button to begin. No Aničko acoustic model or arbitrary speech barge-in
+is implemented. CI41222892528 all jobs success, including complete test suite
+with missing local migration dependency installed. Independent review clean.
+Next: single named enrollment command must create pending session0/3; then each
+5–8s sample checked in report. No household embedding/profile was fabricated.
+Per-turn uncertain identity/context clearing remains separate open work.
