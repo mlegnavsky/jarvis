@@ -14,18 +14,18 @@ class SpeakerTests(IdentityHelper, unittest.TestCase):
 
     def test_wake_only_selected_phrase(self):
         self.assertFalse(self.ctrl.wake("zhasni"))
-        self.assertTrue(self.ctrl.wake("Jarvisi"))
+        self.assertTrue(self.ctrl.wake("Aničko"))
         self.assertEqual(self.ctrl.mode, Mode.LISTENING)
 
     def test_barge_in(self):
-        self.ctrl.wake("jarvisi")
+        self.ctrl.wake("aničko")
         self.ctrl.response_started()
         self.assertTrue(self.ctrl.speech_started())
         self.assertTrue(self.ctrl.interrupt_tts)
         self.assertEqual(self.ctrl.mode, Mode.CAPTURING)
 
     def test_followup_timeout(self):
-        self.ctrl.wake("jarvisi")
+        self.ctrl.wake("aničko")
         self.ctrl.response_started()
         self.ctrl.response_finished(playback_id=self.ctrl.playback_id)
         self.now += 3.1
@@ -33,7 +33,7 @@ class SpeakerTests(IdentityHelper, unittest.TestCase):
         self.assertEqual(self.ctrl.mode, Mode.IDLE)
 
     def test_unknown_speaker(self):
-        self.ctrl.wake("jarvisi")
+        self.ctrl.wake("aničko")
         self.identify("Martin", 0.4)
         self.assertIsNone(self.ctrl.speaker_id)
         self.identify("Martin", 0.9)
@@ -45,7 +45,7 @@ class PolicyTests(IdentityHelper, unittest.TestCase):
         self.ctrl = SpeakerController(
             SpeakerConfig(approved_speakers=frozenset({'Martin'})),
             clock=lambda: self.now)
-        self.ctrl.wake('Jarvisi')
+        self.ctrl.wake('Aničko')
 
     def test_only_approved_profile_can_consume_one_command(self):
         self.identify('Guest', .99)
@@ -61,8 +61,8 @@ class PolicyTests(IdentityHelper, unittest.TestCase):
 
     def test_playback_cannot_wake_or_interrupt(self):
         self.ctrl.end_session()
-        self.assertFalse(self.ctrl.wake('Jarvisi', source='playback'))
-        self.ctrl.wake('Jarvisi')
+        self.assertFalse(self.ctrl.wake('Aničko', source='playback'))
+        self.ctrl.wake('Aničko')
         self.ctrl.response_started()
         self.assertFalse(self.ctrl.speech_started(source='echo'))
         self.assertEqual(self.ctrl.mode, Mode.SPEAKING)
@@ -95,7 +95,7 @@ class PolicyTests(IdentityHelper, unittest.TestCase):
         self.ctrl.end_session()
         self.ctrl.response_finished(playback_id=0, session_id=session)
         self.assertEqual(self.ctrl.mode, Mode.IDLE)
-        self.ctrl.wake('Jarvisi')
+        self.ctrl.wake('Aničko')
         self.ctrl.response_started()
         self.ctrl.response_finished(playback_id=0, session_id=session)
         self.assertEqual(self.ctrl.mode, Mode.SPEAKING)
@@ -108,7 +108,7 @@ class PolicyTests(IdentityHelper, unittest.TestCase):
     def test_duplicate_wake_does_not_reset_verified_turn(self):
         session = self.ctrl.session_id
         self.identify('Martin', .99)
-        self.assertFalse(self.ctrl.wake('Jarvisi'))
+        self.assertFalse(self.ctrl.wake('Aničko'))
         self.assertEqual(self.ctrl.session_id, session)
         self.assertTrue(self.ctrl.authorize_command(utterance_id=self.ctrl.utterance_id))
 
@@ -117,7 +117,7 @@ class CallbackTests(IdentityHelper, unittest.TestCase):
     def setUp(self):
         self.now = 0.0
         self.ctrl = SpeakerController(SpeakerConfig(approved_speakers=frozenset({'Martin'})), clock=lambda: self.now)
-        self.ctrl.wake('Jarvisi')
+        self.ctrl.wake('Aničko')
 
     def test_stale_identity_cannot_authorize_new_utterance(self):
         old = self.ctrl.utterance_id
@@ -152,3 +152,4 @@ class CallbackTests(IdentityHelper, unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

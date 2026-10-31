@@ -71,3 +71,4 @@ class VolumeTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.guard.begin()
         self.assertEqual(self.guard.pending, {'tv': .7})
+

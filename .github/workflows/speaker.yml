@@ -14,3 +14,6 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest discover -s lab/jarvis_speaker -v
+
+      - run: python lab/jarvis_speaker/simulation.py --demo
+      - run: python lab/jarvis_speaker/simulation.py --persona

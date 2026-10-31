@@ -21,7 +21,7 @@ class Mode(str, Enum):
 
 @dataclass(frozen=True)
 class SpeakerConfig:
-    wake_phrases: tuple[str, ...] = ('jarvisi',)
+    wake_phrases: tuple[str, ...] = ('aničko',)
     followup_seconds: float = 3.0
     max_utterance_seconds: float = 30.0
     min_speaker_confidence: float = 0.80
@@ -39,7 +39,7 @@ class SpeakerConfig:
 
 class SpeakerController:
     unknown_speaker_prompt = 'Neznám váš hlas, jak se jmenujete?'
-    spoken_name = 'Jarvis'  # Czech J is an acoustic acceptance requirement.
+    spoken_name = 'Anička'
 
     def __init__(self, config: Optional[SpeakerConfig] = None, clock=monotonic):
         self.config = config or SpeakerConfig()
@@ -99,6 +99,7 @@ class SpeakerController:
         return allowed
 
     def speech_started(self, *, source: str = 'human') -> bool:
+        self.tick()
         if source != 'human' or self.mode == Mode.IDLE:
             return False
         self._clear_identity()
@@ -138,3 +139,4 @@ class SpeakerController:
     def tick(self) -> None:
         if self.mode in (Mode.LISTENING, Mode.CAPTURING) and self.clock() >= self.followup_deadline:
             self.end_session()
+
