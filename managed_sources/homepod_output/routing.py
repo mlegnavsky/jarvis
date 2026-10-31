@@ -1,6 +1,7 @@
 """Hold satellite completion until the explicitly selected HomePod has finished."""
 import asyncio
 from dataclasses import replace
+from math import isfinite
 
 SILENT_URL='/api/jarvis_homepod_output/silence.wav'
 
@@ -20,6 +21,21 @@ async def play_at_volume(entity,media_id,volume,*,takeover_audio=None):
  try:await entity.async_set_volume_level(volume)
  finally:release()
  await entity.async_play_media('music',media_id)
+
+async def play_at_current_volume(entity,media_id,*,takeover_audio=None):
+ """Snapshot the device setting at answer start; never restore a fixed default.
+
+ Reapplying that same level through RAOP primes its stream without switching
+ to another protocol's stale default. A muted/zero-level device stays silent.
+ """
+ level=entity.volume_level
+ if isinstance(level,bool) or not isinstance(level,(int,float)) or not isfinite(level) or not 0<=level<=1:
+  raise ValueError('homepod_volume_unavailable')
+ muted=getattr(entity,'is_volume_muted',False) is True
+ if muted or level==0:
+  return {'volume':level,'muted':muted,'played':False,'reason':'muted' if muted else 'zero_volume'}
+ await play_at_volume(entity,media_id,level,takeover_audio=takeover_audio)
+ return {'volume':level,'muted':False,'played':True,'reason':'follow_homepod'}
 
 class OutputError(Exception):
  def __init__(self,code,message):
@@ -111,4 +127,5 @@ def install(hass,pipeline_class,router,core_version,pipeline_id,satellite_id,err
  pipeline_class.text_to_speech=text_to_speech
  pipeline_class._jarvis_homepod_output=router
  return 'active'
+
 

@@ -246,3 +246,10 @@ with missing local migration dependency installed. Independent review clean.
 Next: single named enrollment command must create pending session0/3; then each
 5–8s sample checked in report. No household embedding/profile was fabricated.
 Per-turn uncertain identity/context clearing remains separate open work.
+
+
+## Current HomePod volume and comprehensive audit —31.10.2026
+
+Volume source now snapshots actual HomePod level for every answer instead of forcing legacy speech_volume. Zero/mute skips audio; unknown/invalid level fails without raising volume. Native RAOP priming retained; no end-of-answer setting restore. Output reportv3 exposes follow_homepod policy, observed mute/volume and latest decision.35 local tests pass; migration dependency Jinja2 absent locally, full CI required. Independent review no blockers. Publication is not activation.
+
+Actual model text continuity/name/stop probe passed. Synthetic Piper phrases tested against three STT engines: OpenAI0.577–1.135s with two exact phrases and one Slovak semantic equivalent; local Whisper5.526–6.772s, speech-to-phrase failed to transcribe two of three. This small synthetic probe is not household acoustic accuracy. Self-test call returned unknown gateway outcome, subsequent report proved completed; not replayed. Native speaker model probes pass but household profiles remain0. No microphone turn since17:12 restart; physical abort/resume and voice enrollment unverified. Aničko model/arbitrary-speech barge-in unavailable; anonymous per-turn context restriction remains. Host detailed resources stage unavailable; Core healthy,29 integrations loaded, automatic-backup historical repair warning,3.5GiB free before deployment. No backups deleted, provider switched or recording enabled.
