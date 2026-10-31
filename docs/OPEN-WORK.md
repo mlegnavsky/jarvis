@@ -201,3 +201,17 @@ unchanged. Report version2 includes pending counts/deadlines and last decision,
 without names/vectors.23 regression/policy tests pass; independent review found
 no Critical/Important issue. Diagnostic snapshot iteration uses copied slots.
 Source publication is not deployment; runtime verification follows below.
+
+
+### Enrollment fix live —31.10.2026 16:47 UTC
+
+Source22ab75d119160496721f323b4959e869fe3e3fa3; applyenrollfix-apply-20261031
+verified/active_verified16:47:04.437165Z, backup1f1a5cc3. All6 live+recovery files
+read back exact. Running report version2/enrollment_policy
+reject_sample_keep_progress_v2, backend/native probe ready; profiles0, pending0
+following restart. Local23 tests and full CI41220950606 all jobs success.
+No household voiceprint was created by tests. Owner must start enrollment once
+again after restart in quiet room,5–8s samples; physical acceptance remains
+pending. A rejected outlier now preserves accepted progress, not an accuracy
+claim for the household model. Full-duplex/wake model/short-turn context issues
+remain separate open work; this fix does not resolve them.
