@@ -170,3 +170,23 @@ actual live identity answer and prompt hash before confirming persona activation
 No new acoustic wake model or arbitrary speech barge-in is implemented. Use
 physical satellite button for preview if existing wake model is unreliable.
 Native pipeline label Jarvis remains a technical backend label.
+
+
+### Anička preview — live reconciliation 31.10.2026 16:20 UTC
+
+Source c90c482c289cfd6eee61d0529eea513cee5fc123 deployed to Green; backup3791071e.
+The apply job anicka-preview-apply-20261031 remains failed/runtime_check_failed
+and plan activation_failed: one-shot startup check ended16:19:20.434585Z;
+HomePod sensor reached configured16:19:21.765894Z. No blind retry/restart.
+Independent post-start verification:8/8 source+recovery readbacks match; loaded
+persona hash matches; actual model answer `Jsem Anička. Jak ti mohu dnes pomoci?`;
+recall/follow-up/stop test passes. Pipeline voice nova verified after restart;
+pipeline technical label remains Jarvis. CI41218705751 all jobs success.
+
+This is a live persona/voice preview using existing adapters, NOT deployment of
+the new simulation controller. Physical audio/microphone behavior and voice
+preference are unverified; use satellite button for first test. Aničko acoustic
+model and arbitrary speech barge-in are NOT installed. New approved voiceprint
+authorization from simulation is not active; existing permissions unchanged.
+Full receipt: docs/evidence/2026-10-31-anicka-preview.json and private local copy
+jarvis_workspace/anicka-preview-20261031.json. No recording enabled.

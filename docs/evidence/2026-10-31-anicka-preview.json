@@ -1,0 +1,47 @@
+{
+  "source_commit": "c90c482c289cfd6eee61d0529eea513cee5fc123",
+  "addon_version": "3.12.2",
+  "core_version": "2026.6.4",
+  "deployment_job": "anicka-preview-apply-20261031",
+  "deployment_job_state": "failed",
+  "deployment_job_error": "runtime_check_failed",
+  "deployment_phase": "activation_failed",
+  "backup_slug": "3791071e",
+  "reconciliation": {
+    "verified": true,
+    "reason": "HomePod sensor became configured at 16:19:21.765894Z, after one-shot job check failed at 16:19:20.434585Z; no second restart or apply was issued.",
+    "files_readback": "8/8 exact bytes including recovery copies",
+    "prompt_sha256": "6cbda5c7b888c2463d5684a90606b64e4d005c3e6b93239ff8d83c8fa3f78a9b",
+    "observed_prompt_sha256": "6cbda5c7b888c2463d5684a90606b64e4d005c3e6b93239ff8d83c8fa3f78a9b"
+  },
+  "identity": {
+    "status": "complete",
+    "response": "Jsem Anička. Jak ti mohu dnes pomoci?",
+    "tts_input": "Jsem Anička. Jak ti mohu dnes pomoci?",
+    "expected_name": "Anička",
+    "passed": true
+  },
+  "conversation_recall_stop_passed": true,
+  "pipeline": {
+    "id": "01kw4sat65taw1y72xzrv2xyj4",
+    "name": "Jarvis",
+    "assistant_persona": "Anička",
+    "tts_voice": "nova",
+    "revision": "de501de9a172a7d9349307920dc52d2d7ebbe588b513b7b3000ca14f875685e6"
+  },
+  "verification": {
+    "local_companion_tests": 43,
+    "local_diagnostic_tests": 20,
+    "ci_run": 41218705751,
+    "ci_conclusion": "success",
+    "review": "no Critical or Important finding; minor name probe substring heuristic, actual live answer and prompt hash inspected"
+  },
+  "physical_audio_verified": false,
+  "recording_enabled": false,
+  "remaining": [
+    "Anicko acoustic wake model not installed; use satellite button for live preview",
+    "Arbitrary human-speech barge-in and new simulator controller are not wired into production",
+    "New approved voiceprint authorization from simulator is not deployed; existing backend permissions unchanged",
+    "Subjective voice and microphone/HomePod end-to-end behavior require owner test"
+  ]
+}
