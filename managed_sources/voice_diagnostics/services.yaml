@@ -1,0 +1,9 @@
+run_self_test:
+  name: Otestovat přepis řeči
+  description: Otestuje tři poskytovatele STT na syntetických českých větách. Neovládá zařízení a nepřehrává zvuk.
+arm_capture:
+  name: Zapnout dočasnou diagnostiku mikrofonu
+  description: Na nejvýše 15 minut povolí omezené místní diagnostické nahrávky aktivních promluv. Ukládá nejvýše pět souborů o celkové velikosti 10 MiB.
+run_companion_test:
+  name: Otestovat rozhovor
+  description: Na výslovné vyvolání provede textové regresní testy přes nakonfigurovaného poskytovatele AI. Nemění nastavení hlasové pipeline, nepřehrává zvuk a neovládá domácnost.

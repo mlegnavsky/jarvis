@@ -1,0 +1,33 @@
+# Návrhový profil pro nasazení. NENÍ konfigurace, kterou lze vložit do HA.
+# Skutečné entity a poskytovatele při prvním nasazení vybereme v HA UI.
+schema_version: 1
+name: Jarvis
+language: cs-CZ
+deployment_verified: false
+hardware:
+  selected_type: Home Assistant Voice Preview Edition
+  actual_device_confirmed: false
+  satellite_entity: null
+wake_word:
+  selected: Hey Jarvis
+  detection: on_device_microWakeWord
+  speaker_identification: false
+pipeline:
+  conversation_provider: OpenAI
+  stt_provider: OpenAI
+  tts_provider: Piper
+  local_stt_fallback: Whisper
+  general_conversation: true
+  api_credentials_configured: false
+  control_home_assistant: false
+  exposed_entities: []
+television:
+  ducking_enabled: false
+  media_player_entity: null
+  quiet_volume: 0.15
+  maximum_wait_seconds: 120
+  restore_debounce_seconds: 2
+memory:
+  shared_with_chatgpt: false
+  automatic_long_term_memory: false
+  reviewed_notes_only: true

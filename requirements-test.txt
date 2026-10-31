@@ -1,0 +1,8 @@
+# Test-only interoperability client; never installed in the Green images.
+mcp==2.3.0
+PyYAML==6.0.3
+
+Jinja2==3.1.6
+
+# Exact WebDAV client bundled with Home Assistant Core 2026.6.4
+aiowebdav2==0.6.2

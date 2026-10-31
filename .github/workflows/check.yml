@@ -1,0 +1,121 @@
+name: Check Jarvis
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r jarvis/requirements.txt -r requirements-test.txt
+      - run: PYTHONPATH=jarvis:jarvis_updater python -m unittest discover -s tests -t . -v
+      - run: node managed_sources/home_status/tests/card.test.cjs
+      - run: python -m unittest discover -s managed_sources/energy_archive -p 'test_*.py'
+      - run: node tests/day_energy_chart.cjs
+      - run: PYTHONPATH=managed_sources/energy_weather python -m unittest discover -s managed_sources/energy_weather -p test_data.py -q
+      - run: python scripts/check_manifest.py
+      - run: python scripts/simulate_heating.py
+      - run: PYTHONPATH=managed_sources/firmware_bridge python -m unittest discover -s managed_sources/firmware_bridge/tests -q
+  energy-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tests/day_energy_chart.cjs
+      - run: npm install --prefix /tmp/jarvis-chart-test playwright@1.58.2
+      - run: node /tmp/jarvis-chart-test/node_modules/playwright/cli.js install --with-deps chromium
+      - run: NODE_PATH=/tmp/jarvis-chart-test/node_modules node tests/day_energy_chart_browser.cjs
+  backup-dav:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require PHP runtime and verify private WebDAV over HTTP
+        run: |
+          python -m pip install aiowebdav2==0.6.2
+          php --version
+          php -l testing/backup-dav/index.php
+          php -l testing/backup-dav/setup.php
+          php -l testing/energy-archive/index.php
+          python -m unittest tests.test_backup_dav tests.test_energy_archive_server -v
+  containers:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [jarvis, jarvis_updater]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.app }}
+          platforms: linux/arm64,linux/amd64
+          push: false
+      - name: Load amd64 image for startup check
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.app }}
+          platforms: linux/amd64
+          load: true
+          tags: jarvis-smoke:local
+      - run: python scripts/smoke_container.py ${{ matrix.app }}
+  publish-laboratory:
+    needs: [tests, containers, backup-dav, energy-chart]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/jarvis-addon'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: jarvis-laboratory-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: source
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build versioned source archive
+        run: python source/scripts/build_release_archive.py --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/release"
+      - name: Reproduce policy evidence
+        run: |
+          python -m pip install -r source/requirements-test.txt
+          cd source
+          python scripts/simulate_heating.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-source-${{ github.sha }}
+          path: ${{ runner.temp }}/release/
+          retention-days: 90
+      - uses: actions/checkout@v4
+        with:
+          ref: lab/plesk-bootstrap-20261029
+          path: public
+      - name: Check source is still current
+        id: current
+        run: |
+          remote=$(git -C source ls-remote origin refs/heads/feat/jarvis-addon | cut -f1)
+          if [ "$remote" = "$GITHUB_SHA" ]; then echo 'latest=true' >> "$GITHUB_OUTPUT"; else echo 'latest=false' >> "$GITHUB_OUTPUT"; fi
+      - name: Publish immutable packages and catalog
+        if: steps.current.outputs.latest == 'true'
+        run: |
+          python source/scripts/publish_lab_snapshot.py --source source --public public --release "$RUNNER_TEMP/release" --commit "$GITHUB_SHA" --run "$GITHUB_RUN_ID"
+          cd public
+          git config user.name 'Jarvis Laboratory'
+          git config user.email 'jarvis-lab@users.noreply.github.com'
+          git add index.html portal.js catalog.json releases backup-dav energy energy-archive
+          git diff --cached --quiet || git commit -m "lab: verified source $GITHUB_SHA"
+          git push origin HEAD:lab/plesk-bootstrap-20261029
+      - name: Notify Plesk when deployment hook is configured
+        if: steps.current.outputs.latest == 'true'
+        env:
+          LAB_WEBHOOK: ${{ secrets.PLESK_LAB_WEBHOOK }}
+        run: python source/scripts/notify_plesk.py
