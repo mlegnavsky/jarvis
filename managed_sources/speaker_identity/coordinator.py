@@ -50,6 +50,15 @@ class Coordinator:
    for window in data.get('windows',[]):
     match=self.profiles.identify(window)
     if match.get('profile')!=identity['profile']:identity={'status':'uncertain_windows'};break
+  if value in {'uz mas otisk meho hlasu','uz odtisk meho hlasu','uz znas muj hlas','poznavas muj hlas','mas ulozeny muj hlas'}:
+   if device in self.profiles.pending:
+    slot=self.profiles.pending[device]
+    if 0<=self.profiles.clock()-slot['at']<=300:
+     count=len(slot['samples'])
+     return {'status':'enrolling','samples':count,'local_reply':f'Učení běží. Mám {count} ze tří ukázek. Profil ještě není uložený.'}
+   if self.profiles.count()==0:
+    return {'status':'not_enrolled','local_reply':'Zatím nemám uložený žádný hlasový profil. Učení ještě není dokončené.'}
+   return {**identity,'local_reply':'Tvůj hlas odpovídá uloženému profilu.' if identity.get('status')=='recognized' else 'Tvůj hlas teď nedokážu jistě přiřadit k uloženému profilu.'}
   if value in {'zrus uceni hlasu','zrus uceni meho hlasu','zrus registraci hlasu'}:
    self.profiles.cancel(device);return {'status':'cancelled','local_reply':'Učení hlasu jsem zrušil.'}
   if value=='smaz muj hlasovy profil':
@@ -61,14 +70,15 @@ class Coordinator:
    improved=bool(vector and identity.get('profile') and self.profiles.improve(identity['profile'],vector,item['voiced']))
    return {**identity,'local_reply':'Přidal jsem potvrzenou ukázku do tvého hlasového profilu.' if improved else 'Pro vylepšení potřebuji delší ukázku a jistější shodu hlasu.'}
   enrollment=re.fullmatch(r'(?:nauc se|zapamatuj si) muj hlas (?:jsem|jmenuji se) (.+)',value)
+  if value in {'nauc se muj hlas','zapamatuj si muj hlas'}:
+   return {'status':'name_required','local_reply':'Řekni prosím celý povel se svým jménem, například: Nauč se můj hlas. Jsem Martin.'}
   if enrollment:
-   if not vector:return {'status':data.get('status','unknown'),'local_reply':'Nemám teď dost kvalitní zvuk pro učení. Řekni prosím znovu delší větu se svým jménem.'}
    names={'martin':'Martin','sarlota':'Šarlota','iris':'Iris','petr':'Petr','dana':'Dana'}
    name=names.get(enrollment[1],enrollment[1].title())
    result=self.profiles.begin(device,name)
    if result['status']=='exists':return {'status':'exists','local_reply':'Profil tohoto jména už existuje. Bez jeho rozpoznání ho nepřepíšu.'}
    if result['status']!='enrolling':return {'status':result['status'],'local_reply':'Tento hlasový profil se mi nepodařilo založit.'}
-   return {'status':'enrolling','local_reply':'Dobře, vytvořím místní hlasový profil pro oslovení a tvoji konverzační paměť. Potřebuji tři delší ukázky. Řekni třeba: Dnes jsem doma a učím Džárvise poznat můj hlas. Můžeš začít?'}
+   return {'status':'enrolling','samples':0,'local_reply':'Začínáme. Potřebuji tři ukázky tvého hlasu, každou pět až osm sekund dlouhou. Zatím nemám žádnou. Řekni první větu.'}
   if device in self.profiles.pending:
    slot=self.profiles.pending[device]
    if not 0<=self.profiles.clock()-slot['at']<=300:self.profiles.cancel(device)
@@ -90,4 +100,5 @@ class Coordinator:
   if ask:self.asked[conversation]=True
   while len(self.asked)>32:self.asked.pop(next(iter(self.asked)))
   return {**identity,'request_introduction':ask}
+
 

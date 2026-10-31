@@ -215,3 +215,17 @@ again after restart in quiet room,5–8s samples; physical acceptance remains
 pending. A rejected outlier now preserves accepted progress, not an accuracy
 claim for the household model. Full-duplex/wake model/short-turn context issues
 remain separate open work; this fix does not resolve them.
+
+
+## Conversation/enrollment stability source —31.10.2026
+
+Named enrollment no longer requires a usable initiating embedding; initial
+command counts0 and still needs3 consistent long samples. Local partial-name
+and voice-status responses prevent invented LLM enrollment success.26 policy
+regressions pass. HomePod native abort hook preserves conversation and resumes
+once after confirmed stop, with owner/session/mute/shutdown guards;32 local tests
+pass, untouched migration test unavailable locally due missing Jinja2. Full CI
+required before activation. Independent review no findings. Does not implement
+arbitrary acoustic speech detection or the Aničko model. Temporary live settings
+verified: primary wake Jarvis→no_wake_word, second already none; sensitivity
+Very→Slightly. Physical button begins dialogue. Publication is not deployment.

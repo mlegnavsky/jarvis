@@ -23,6 +23,24 @@ class CoordinatorTests(unittest.IsolatedAsyncioTestCase):
   known=await self.say('Jak se máš dnes odpoledne?')
   self.assertEqual(known['profile'],'martin')
   self.assertNotIn('vector',known)
+ async def test_short_enrollment_command_starts_session_without_counting_as_sample(self):
+  await self.c.complete('device',bytes(64000),1.5,'Nauč se můj hlas. Jsem Martin.')
+  result=await self.c.turn(NS(text='Nauč se můj hlas. Jsem Martin.',device_id='device'),'c')
+  self.assertEqual(result['status'],'enrolling')
+  self.assertEqual(result['samples'],0)
+  self.assertEqual(self.c.profiles.count(),0)
+  for n in range(3):result=await self.say('Delší zkušební věta číslo '+str(n))
+  self.assertEqual(result['status'],'enrolled')
+ async def test_enrollment_without_name_returns_local_instruction_not_model_chat(self):
+  result=await self.say('Nauč se můj hlas.')
+  self.assertEqual(result['status'],'name_required')
+  self.assertIn('Nauč se můj hlas. Jsem Martin.',result['local_reply'])
+  self.assertEqual(self.c.profiles.count(),0)
+  self.assertEqual(self.c.enrollment_state(),[])
+ async def test_voice_status_query_reports_missing_profile_without_model(self):
+  result=await self.say('Už máš otisk mého hlasu?')
+  self.assertEqual(result['status'],'not_enrolled')
+  self.assertEqual(result['local_reply'],'Zatím nemám uložený žádný hlasový profil. Učení ještě není dokončené.')
  async def test_result_is_one_shot_and_transcript_scoped(self):
   await self.c.complete('device',bytes(128000),4,'První věta')
   result=await self.c.turn(NS(text='Jiná věta',device_id='device'),'c')
@@ -65,4 +83,5 @@ class CoordinatorTests(unittest.IsolatedAsyncioTestCase):
   self.c.hass.auth=NS(async_get_user=user)
   await admin_forget(self.c.hass,'owner','Martin',self.c,lambda key:cleared.append(key))
   self.assertEqual(cleared,[memory_id]);self.assertEqual(self.c.profiles.count(),0)
+
 

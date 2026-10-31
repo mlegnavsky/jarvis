@@ -10,7 +10,7 @@ from aiohttp import web
 from aioesphomeapi import VoiceAssistantFeature
 import voluptuous as vol
 from homeassistant.components.http import HomeAssistantView
-from homeassistant.components.media_player import DATA_COMPONENT
+from homeassistant.components.media_player import DATA_COMPONENT,async_process_play_media_url
 from homeassistant.components.assist_satellite.const import DATA_COMPONENT as SATELLITE_COMPONENT
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED,__version__ as CORE_VERSION
 from homeassistant.helpers.event import async_track_time_interval,async_track_state_change_event
@@ -19,6 +19,7 @@ from pyatv.const import FeatureName
 from .routing import Router,install,SILENT_URL,url_terminal_supported,play_at_volume
 
 from .tv_session import TVSession
+from .interrupt import install_abort_resume
 
 DOMAIN='jarvis_homepod_output'
 CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({vol.Optional('speech_volume',default=0.45):vol.All(vol.Coerce(float),vol.Range(min=0.05,max=0.8))})},extra=vol.ALLOW_EXTRA)
@@ -72,6 +73,30 @@ async def async_setup(hass,config):
  router=Router(play,stop)
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun,TextToSpeechError
  adapter=install(hass,PipelineRun,router,CORE_VERSION,PIPELINE,SATELLITE,TextToSpeechError)
+ from homeassistant.components.esphome.assist_satellite import EsphomeAssistSatellite
+ from homeassistant.components.assist_satellite.entity import AssistSatelliteAnnouncement
+ def can_resume(entity):
+  mute=hass.states.get('switch.home_assistant_voice_0a8bde_mute')
+  return bool(hass.is_running and entity.available and mute and mute.state=='off')
+ def current_pending():
+  controller=PipelineRun.__dict__.get('_jarvis_turn_adapter')
+  return controller.pending if controller else None
+ async def resume_dialogue(entity,pending):
+  controller=PipelineRun.__dict__.get('_jarvis_turn_adapter')
+  if controller is None:raise RuntimeError('conversation_controller_unavailable')
+  # Direct native announcement preserves the current conversation ID. The HA
+  # start_conversation service intentionally creates a new one, so do not use it.
+  if controller.pending is not None:raise RuntimeError('newer_dialogue_pending')
+  controller.pending=dict(pending)
+  try:
+   await entity.async_start_conversation(AssistSatelliteAnnouncement(
+    message='',media_id=async_process_play_media_url(hass,SILENT_URL),original_media_id=SILENT_URL,
+    tts_token=None,media_id_source='url',preannounce_media_id=None))
+  except BaseException:
+   if controller.pending==pending:controller.pending=None
+   raise
+ abort_resume=install_abort_resume(hass,EsphomeAssistSatellite,router,CORE_VERSION,
+                                  SATELLITE,can_resume,resume_dialogue,current_pending) if adapter=='active' else None
  native_event=PipelineRun.process_event
  async def restore_tv(owner):
   if tv_prepare is not None:await asyncio.shield(tv_prepare)
@@ -107,7 +132,8 @@ async def async_setup(hass,config):
    await restore_tv(active_run)
  async_track_state_change_event(hass,[TELEVISION],television_state)
  async_track_state_change_event(hass,[SATELLITE],satellite_state)
- report={'version':1,'started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
+ report={'version':2,'started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
+         'native_abort_resume':'active' if abort_resume else 'unavailable',
          'microphone':SATELLITE,'speech_volume':speech_volume,'terminal_spoken_output':False if adapter=='active' else 'native_uncontrolled','audible_test_performed':False,
          'arbitrary_speech_barge_in':False,'cancel_current_answer_hook':True,
          'wake_or_stop_word_physical_test':'deferred_until_user_home',
@@ -129,6 +155,7 @@ async def async_setup(hass,config):
   if lease_started is not None and television.snapshot()['owned'] and not active_pipeline and router.active is None and time.monotonic()-lease_started>120:
    await television.release()
   report.update(status=status,updated_at=dt_util.utcnow().isoformat(),playback=router.snapshot(),television=television.snapshot(),television_entity=TELEVISION)
+  report['interrupt_resume']=abort_resume.snapshot() if abort_resume else None
   await hass.async_add_executor_job(save,dict(report))
   hass.states.async_set('sensor.jarvis_hlasovy_vystup',status,
     {'friendly_name':'Jarvis · hlasový výstup','speaker':SPEAKER,'adapter':adapter,
@@ -139,3 +166,4 @@ async def async_setup(hass,config):
  async_track_time_interval(hass,update,timedelta(seconds=10))
  hass.data[DOMAIN]=router
  return True
+

@@ -27,12 +27,13 @@ class OutputError(Exception):
 
 class Router:
  def __init__(self,play,stop):
-  self.play=play;self.stop=stop;self.lock=asyncio.Lock();self.active=None;self.tasks={};self.latest=None
+  self.play=play;self.stop=stop;self.lock=asyncio.Lock();self.active=None;self.tasks={};self.runs={};self.latest=None
   self.started=0;self.completed=0;self.cancelled=0;self.failed=0;self.last_error=None
  async def answer(self,run,output):
   async with self.lock:
    if self.latest is not None and self.latest!=str(run.id):raise asyncio.CancelledError()
    self.active=str(run.id);self.started+=1
+   run._jarvis_homepod_stop_confirmed=False
    try:
     async with asyncio.timeout(180):await self.play(output['media_id'])
     self.completed+=1
@@ -40,6 +41,7 @@ class Router:
     self.cancelled+=1
     try:
      async with asyncio.timeout(3):await self.stop()
+     run._jarvis_homepod_stop_confirmed=True
     except Exception as exc:self.last_error='stop_'+type(exc).__name__
     raise
    except Exception as exc:
@@ -58,9 +60,11 @@ class Router:
   if self.latest is None:self.latest=owner
   if owner!=self.latest:raise asyncio.CancelledError()
   self.tasks[owner]=asyncio.current_task()
+  self.runs[owner]=run
  def end(self,run):
   owner=str(run.id)
-  if self.tasks.get(owner) is asyncio.current_task():self.tasks.pop(owner,None)
+  if self.tasks.get(owner) is asyncio.current_task():
+   self.tasks.pop(owner,None);self.runs.pop(owner,None)
  def snapshot(self):
   return {'started':self.started,'completed':self.completed,'cancelled':self.cancelled,
           'failed':self.failed,'active':self.active is not None,'last_error':self.last_error}
@@ -107,3 +111,4 @@ def install(hass,pipeline_class,router,core_version,pipeline_id,satellite_id,err
  pipeline_class.text_to_speech=text_to_speech
  pipeline_class._jarvis_homepod_output=router
  return 'active'
+
