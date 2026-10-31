@@ -190,3 +190,14 @@ model and arbitrary speech barge-in are NOT installed. New approved voiceprint
 authorization from simulation is not active; existing permissions unchanged.
 Full receipt: docs/evidence/2026-10-31-anicka-preview.json and private local copy
 jarvis_workspace/anicka-preview-20261031.json. No recording enabled.
+
+
+## Enrollment outlier fix —31.10.2026
+
+Owner reports registration cancelled at second sample; policy deleted pending
+progress on a single inconsistent embedding. New source rejects that sample and
+retains prior accepted samples; thresholds/three-sample requirement/expiry
+unchanged. Report version2 includes pending counts/deadlines and last decision,
+without names/vectors.23 regression/policy tests pass; independent review found
+no Critical/Important issue. Diagnostic snapshot iteration uses copied slots.
+Source publication is not deployment; runtime verification follows below.

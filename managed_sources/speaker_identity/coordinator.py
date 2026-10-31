@@ -19,6 +19,11 @@ class Coordinator:
  def cancel_for(self,user):
   device=getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
   self.results.pop(device,None);self.profiles.cancel(device)
+ def enrollment_state(self):
+  now=self.profiles.clock()
+  return [{'samples':len(slot['samples']),'required_samples':3,
+           'expires_in_s':max(0,round(300-(now-slot['at'])))}
+          for slot in list(self.profiles.pending.values()) if 0<=now-slot['at']<=300]
  async def complete(self,device,pcm,voiced,text):
   self.capture_count+=1;start=self.clock()
   result={'status':'too_short'}
@@ -33,7 +38,9 @@ class Coordinator:
   device=getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
   item=self.results.pop(device,None)
   if not item or not 0<=self.clock()-item['at']<=15 or norm(user.text)!=item['text']:return None
-  return await self.hass.async_add_executor_job(self._turn_sync,device,str(conversation),user.text,item)
+  decision=await self.hass.async_add_executor_job(self._turn_sync,device,str(conversation),user.text,item)
+  self.last.update(decision_status=decision.get('status'),accepted_samples=decision.get('samples'))
+  return decision
  def _turn_sync(self,device,conversation,text,item):
   data=item['result'];value=norm(text)
   good=data.get('status')=='ok' and data.get('model')==MODEL_ID
@@ -70,7 +77,7 @@ class Coordinator:
     status=result['status']
     if status=='enrolled':return {**result,'local_reply':'Hotovo, hlasový profil '+result['name']+' je uložený. Příště ho porovnám s tvým hlasem; při nejistotě se raději zeptám.'}
     if status=='enrolling':return {**result,'local_reply':f"Mám {result['samples']} ze tří ukázek. Řekni prosím jinou větu alespoň tři sekundy dlouhou. Co jsi dnes dělal?"}
-    if status=='inconsistent':return {'status':status,'local_reply':'Ukázky se liší příliš, učení jsem zrušil, abych nespojil dva lidi. Zkusíme to znovu v klidnější místnosti.'}
+    if status=='inconsistent':return {**result,'local_reply':f"Tahle ukázka se od předchozích příliš liší, proto ji nepřidám. Přijaté ukázky jsem zachovala, mám {result['samples']} ze tří. Ztiš prosím okolní zvuk a řekni jinou větu, pět až osm sekund dlouhou."}
     return {'status':status,'local_reply':'Tuhle ukázku nepřidám. Potřebuji delší čistou větu bez dalšího mluvčího. Zkusíš ještě jednu?'}
   introduction=re.fullmatch(r'(?:jsem|tady je|jmenuji se) (.+)',value)
   if introduction and identity.get('profile') and norm(introduction[1])!=identity['profile']:
@@ -83,3 +90,4 @@ class Coordinator:
   if ask:self.asked[conversation]=True
   while len(self.asked)>32:self.asked.pop(next(iter(self.asked)))
   return {**identity,'request_introduction':ask}
+

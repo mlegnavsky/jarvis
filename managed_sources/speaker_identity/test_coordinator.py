@@ -28,6 +28,18 @@ class CoordinatorTests(unittest.IsolatedAsyncioTestCase):
   result=await self.c.turn(NS(text='Jiná věta',device_id='device'),'c')
   self.assertIsNone(result)
   self.assertIsNone(await self.c.turn(NS(text='První věta',device_id='device'),'c'))
+ async def test_inconsistent_sample_retains_progress_and_reports_decision(self):
+  await self.say('Nauč se můj hlas. Jsem Martin.')
+  await self.say('První dost dlouhá zkušební věta.')
+  async def other(pcm):return {'status':'ok','vector':[0.,1.],'model':'campplus-aa3cfc16-v1'}
+  self.c.infer=other
+  result=await self.say('Jiný hlas v televizi.')
+  self.assertEqual(result['status'],'inconsistent')
+  self.assertIn('zachovala',result['local_reply'])
+  self.assertEqual(self.c.last['decision_status'],'inconsistent')
+  self.assertEqual(self.c.enrollment_state()[0]['samples'],1)
+  self.assertNotIn('Martin',str(self.c.enrollment_state()))
+  self.assertNotIn('vector',str(self.c.enrollment_state()))
  async def test_late_audio_result_not_reused(self):
   await self.c.complete('device',bytes(128000),4,'Ahoj')
   self.time+=16
@@ -53,3 +65,4 @@ class CoordinatorTests(unittest.IsolatedAsyncioTestCase):
   self.c.hass.auth=NS(async_get_user=user)
   await admin_forget(self.c.hass,'owner','Martin',self.c,lambda key:cleared.append(key))
   self.assertEqual(cleared,[memory_id]);self.assertEqual(self.c.profiles.count(),0)
+

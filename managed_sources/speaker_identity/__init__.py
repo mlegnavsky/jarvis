@@ -53,7 +53,8 @@ async def async_setup(hass,config):
  from homeassistant.const import __version__ as core_version
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun
  adapter=install(hass,PipelineRun,coordinator,core_version,PIPELINE,SATELLITE)
- report={'version':1,'started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+ report={'version':2,'started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+         'enrollment_policy':'reject_sample_keep_progress_v2',
          'raw_audio_saved':False,'voice_is_authentication':False,'household_accuracy_verified':False,
          'minimum_enrollment_samples':3,'match_threshold':.75,'match_margin':.12,
          'automatic_profile_adaptation':False,'backend_host_port_published':False}
@@ -77,7 +78,7 @@ async def async_setup(hass,config):
    count=None;coordinator.status='profile_store_error';report['profile_error']=type(exc).__name__
   report.update(updated_at=dt_util.utcnow().isoformat(),status=coordinator.status,
                 captured_turns=coordinator.capture_count,last_turn=coordinator.last,
-                profile_count=count)
+                profile_count=count,enrollment=coordinator.enrollment_state())
   await hass.async_add_executor_job(save,dict(report))
   hass.states.async_set('sensor.jarvis_rozpoznavani_hlasu',coordinator.status,
     {'friendly_name':'Jarvis · rozpoznávání mluvčího','profiles':report['profile_count'],
@@ -117,3 +118,4 @@ async def async_setup(hass,config):
  else:hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED,start)
  async_track_time_interval(hass,update,timedelta(seconds=60))
  return True
+

@@ -55,7 +55,9 @@ class VoiceProfiles:
   v=unit(vector)
   if seconds<3:return {'status':'too_short','samples':len(slot['samples'])}
   if slot['samples'] and min(similarity(v,x) for x in slot['samples'])<.65:
-   self.cancel(device);return {'status':'inconsistent'}
+   # Reject only this sample. Keep the accepted anchor so repeated unrelated
+   # voices can neither replace it nor silently become a new profile.
+   return {'status':'inconsistent','samples':len(slot['samples'])}
   slot['samples'].append(v)
   if len(slot['samples'])<3:return {'status':'enrolling','samples':len(slot['samples']),'name':slot['label']}
   with self._db() as db:
@@ -93,3 +95,4 @@ class VoiceProfiles:
   for device,slot in list(self.pending.items()):
    if slot['name']==key:self.cancel(device)
   return row[0] if row else None
+
