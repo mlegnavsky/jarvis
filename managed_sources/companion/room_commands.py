@@ -76,8 +76,8 @@ async def execute(hass, request, context):
     verified = all((state := hass.states.get(entity)) is not None and state.state == desired
                    for entity in request['entity_ids'])
     if verified:
-        return ('Rozsvítil' if desired == 'on' else 'Zhasnul') + ' jsem světla. Místnost: ' + request['area_name'] + '.'
-    return 'Povel pro světla jsem odeslal. Místnost: ' + request['area_name'] + '. Změnu stavu zatím nemám potvrzenou.'
+        return ('Rozsvítila' if desired == 'on' else 'Zhasla') + ' jsem světla. Místnost: ' + request['area_name'] + '.'
+    return 'Povel pro světla jsem odeslala. Místnost: ' + request['area_name'] + '. Změnu stavu zatím nemám potvrzenou.'
 
 
 def resolve_input(hass, user, exposed):
@@ -129,4 +129,5 @@ def native_resolution_probe(hass):
     return {'status': 'passed' if all(c.get('entity_ids') and not c.get('error') for c in cases) else 'needs_configuration',
             'scope': 'real exposed entities and area registries; resolution only; no service calls',
             'wake_phrase': 'Hey Jarvis', 'new_acoustic_wake_models_installed': False, 'cases': cases}
+
 

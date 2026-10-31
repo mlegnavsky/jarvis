@@ -95,13 +95,13 @@ class CompanionRuntime:
    scope,text=command
    if scope=='household' and turn.verified:
     self.store.note('household',text)
-    turn.local_reply='Poznamenal jsem si to jako společnou informaci domácnosti.'
+    turn.local_reply='Poznamenala jsem si to jako společnou informaci domácnosti.'
    else:
     turn.store.note(turn.principal,text)
-    turn.local_reply='Uložil jsem si tvoji poznámku.' if turn.verified else 'Uložil jsem poznámku k tvému hlasovému profilu.' if turn.voice_profile else 'Budu si to pamatovat v tomto rozhovoru. Pro příští rozhovory zatím nemám ověřené, komu poznámka patří.'
+    turn.local_reply='Uložila jsem si tvoji poznámku.' if turn.verified else 'Uložila jsem poznámku k tvému hlasovému profilu.' if turn.voice_profile else 'Budu si to pamatovat v tomto rozhovoru. Pro příští rozhovory zatím nemám ověřené, komu poznámka patří.'
   if normalize(turn.text)=='zapomen moje poznamky':
    turn.store.forget(turn.principal);turn.reset_history=True
-   turn.local_reply='Smazal jsem tvoje poznámky a témata ze své paměti.' if turn.verified or turn.voice_profile else 'Vymazal jsem poznámky tohoto rozhovoru ze své paměti.'
+   turn.local_reply='Smazala jsem tvoje poznámky a témata ze své paměti.' if turn.verified or turn.voice_profile else 'Vymazala jsem poznámky tohoto rozhovoru ze své paměti.'
   own=turn.store.context(turn.principal)
   shared=self.store.context('household')['notes']
   turn.allow_humor=own['humor_allowed'] and not serious_topic(turn.text)
@@ -122,3 +122,4 @@ class CompanionRuntime:
   except Exception as exc:
    self.last_error=type(exc).__name__
    return re.sub(r'⟦vtip⟧.*?⟦/vtip⟧','',response,flags=re.S).replace('⟦vtip⟧','').replace('⟦/vtip⟧','').strip()
+

@@ -50,7 +50,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   request=self.resolve_request()
   reply=await handler(hass,request,context)
   self.assertEqual(called,[('light','turn_on',{'entity_id':['light.living']},{'blocking':True,'context':context})])
-  self.assertIn('odeslal',reply);self.assertNotIn('Rozsvítil',reply)
+  self.assertIn('odeslala',reply);self.assertNotIn('Rozsvítil',reply)
  def resolve_request(self):return commands.resolve('rozsviť','living',AREAS,LIGHTS)
  async def test_error_never_calls_any_service(self):
   handler=getattr(commands,'execute',None);self.assertIsNotNone(handler)
@@ -79,3 +79,4 @@ class ActualRoomNamesTests(unittest.TestCase):
   value=commands.resolve('Zhasni v chodbičce','living',[
    {'id':'hall','name':'Vstupní chodba','aliases':[]}],LIGHTS)
   self.assertEqual(value['entity_ids'],['light.hall'])
+

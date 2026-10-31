@@ -157,3 +157,16 @@ Outbox64MiB cap pauses capture rather than discarding unacknowledged rows; fullq
 ## Voice wake and delivery repair — 30.10.2026
 
 Released3.12.2 source0c377ba8fd88adefb7bd53d5a703baea35591fe5. Native required pipeline fields corrected after3.12.1 failed before mutation; prior unknown voice job was reconciled against unchanged pipeline before a new implementation was used. Final native voice change verified with full readback. Existing private wake weights preserved, sensitivity manifest tuned and OTA compile/upload/reconnect/config-hash match verified. Energetic dryly playful companion source and its recovery copy activated with native runtime verification; terminal idle, unmuted, explicit Jarvis pipeline and default end detection retained. Actual model-backed text recall/continuation/stop test passed.239 addon tests (20 skipped),42 companion tests, manifests and full CI/container builds passed. Local operational receipt is retained on Green. Acoustic wake acceptance and subjective voice/humour acceptance remain owner-side; arbitrary speech barge-in and full duplex remain unavailable. Uncertain voice identity still deliberately limits personal conversational context.
+
+
+## Anička live preview — 31.10.2026
+
+Owner approved deployment/testing. Feminine Czech persona Anička, feminine fixed
+memory/light replies; existing Jarvis backend preserved. Source publication is
+not deployment. Pipeline TTS ash→nova and revision-bound activation planned.
+43 companion and20 diagnostics tests pass; independent review found no Critical
+or Important issue. Minor deferred: name probe is a substring heuristic; inspect
+actual live identity answer and prompt hash before confirming persona activation.
+No new acoustic wake model or arbitrary speech barge-in is implemented. Use
+physical satellite button for preview if existing wake model is unreliable.
+Native pipeline label Jarvis remains a technical backend label.

@@ -268,10 +268,10 @@ async def async_setup(hass, config):
                 identity=await conversation.async_converse(hass,'Jak se jmenuješ?',None,Context(),language='cs',agent_id='conversation.extended_openai_conversation')
             answer=identity.response.as_dict().get('speech',{}).get('plain',{}).get('speech','')
             report['identity_test']={'status':'complete','response':answer,
-                'tts_input':spoken_name(answer),'passed':'jarvis' in normalized(answer) and 'Džárvis' in spoken_name(answer)}
+                'tts_input':spoken_name(answer),'expected_name':'Anička','passed':'anicka' in normalized(answer)}
         except Exception as exc:
             result_report.update(status='error',error=type(exc).__name__,passed=False)
-        report['status']='companion_ready' if result_report.get('passed') and report.get('personality_memory_test',{}).get('passed') and report.get('device_awareness_test',{}).get('passed') else 'companion_test_failed'
+        report['status']='companion_ready' if result_report.get('passed') and report.get('personality_memory_test',{}).get('passed') and report.get('device_awareness_test',{}).get('passed') and report.get('identity_test',{}).get('passed') else 'companion_test_failed'
         await save()
 
     async def arm(_call=None):
@@ -303,3 +303,4 @@ async def async_setup(hass, config):
     else:hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED,start)
     await save()
     return True
+

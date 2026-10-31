@@ -23,6 +23,12 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
   turn=await self.runtime.prepare(self.user('Zapamatuj si pro domácnost: Testovací klíč je zelený.'),'guest')
   self.assertFalse(self.runtime.store.context('household')['notes'])
   self.assertIn('rozhovoru',turn.local_reply)
+ async def test_anicka_confirms_saved_and_deleted_notes_in_feminine_form(self):
+  saved=await self.runtime.prepare(self.user('Zapamatuj si: Zkušební poznámka.',None,'a'),'c')
+  self.assertEqual(saved.local_reply,'Uložila jsem si tvoji poznámku.')
+  removed=await self.runtime.prepare(self.user('Zapomeň moje poznámky',None,'a'),'c')
+  self.assertEqual(removed.local_reply,'Smazala jsem tvoje poznámky a témata ze své paměti.')
+  self.assertFalse(removed.store.context(removed.principal)['notes'])
  async def test_authenticated_note_survives_restart_and_is_scoped(self):
   await self.runtime.prepare(self.user('Zapamatuj si: Modrý drak Róza.',None,'a'),'c')
   other=CompanionRuntime(self.hass,'test-agent')
@@ -114,3 +120,4 @@ class PolicyTests(unittest.TestCase):
   a=ConversationAwareness()
   self.assertFalse(a.context('c',[],'Co nového?')['optional_observation_allowed'])
   self.assertFalse(a.context('c',[],'Zhasni světlo')['optional_observation_allowed'])
+
