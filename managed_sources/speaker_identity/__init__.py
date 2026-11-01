@@ -60,12 +60,12 @@ async def async_setup(hass,config):
  from homeassistant.const import __version__ as core_version
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun
  adapter=install(hass,PipelineRun,coordinator,core_version,PIPELINE,SATELLITE)
- report={'version':9,'runtime_version':'1.1.5','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+ report={'version':10,'runtime_version':'1.1.6','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
          'native_intent_guard':bool(PipelineRun.__dict__.get('_jarvis_voice_intent_guard')),
          'enrollment_trigger_requires_embedding':False,
          'enrollment_policy':'reject_sample_keep_progress_v2',
          'raw_audio_saved':False,'voice_is_authentication':False,'household_accuracy_verified':False,
-         'minimum_enrollment_samples':3,'match_threshold':.75,'match_margin':.12,
+         'minimum_enrollment_samples':3,'match_threshold':.75,'calibrated_match_threshold':.65,'strict_lock_threshold':.75,'match_margin':.12,
          'automatic_profile_adaptation':'quarantined_candidates','voice_control_requires_authorized_profile':True,
          'replay_detection':'not_installed','backend_host_port_published':False}
  def save(snapshot):

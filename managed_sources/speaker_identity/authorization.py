@@ -45,7 +45,7 @@ class VoiceGate:
  def confirm(self,device,text,authorized):
   slot=self.waiting.get(device)
   if not slot:return None
-  if not authorized or not 0<=self.clock()-slot['at']<=10:
+  if not authorized or not 0<=self.clock()-slot['at']<=60:
    self.waiting.pop(device,None);return None
   value=re.sub(r'^anicko\s+','',norm(text))
   expected={('lock','unlock'):'potvrzuji odemknuti hlavniho vchodu',

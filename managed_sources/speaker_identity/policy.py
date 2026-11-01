@@ -25,11 +25,17 @@ def profile_score(vector,vectors,policy='centroid'):
  v=unit(vector);refs=[unit(x) for x in vectors]
  if not refs or any(len(x)!=len(v) for x in refs):raise ValueError('embedding_dimensions')
  if policy=='centroid':return similarity(v,centroid(refs))
- if policy!='top_two_mean_v1':raise ValueError('invalid_matching_policy')
+ if policy not in ('top_two_mean_v1','top_two_mean_calibrated_v1'):raise ValueError('invalid_matching_policy')
  refs=list({tuple(round(x,12) for x in ref):ref for ref in refs}.values())
  if len(refs)<2:raise ValueError('independent_references_required')
  scores=sorted((similarity(v,x) for x in refs),reverse=True)
+ if policy=='top_two_mean_calibrated_v1' and scores[1]<.6:return scores[1]
  return sum(scores[:2])/2
+
+def profile_threshold(policy):
+ if policy=='top_two_mean_calibrated_v1':return .65
+ if policy in ('centroid','top_two_mean_v1'):return .75
+ raise ValueError('invalid_matching_policy')
 
 class VoiceProfiles:
  def __init__(self,path,clock=time.time):
@@ -110,23 +116,23 @@ class VoiceProfiles:
   v=unit(vector);scores=[]
   with self._db() as db:
    for samples,policy in db.execute("SELECT v.samples,COALESCE(p.policy,'centroid') FROM voices v LEFT JOIN voice_matching_policies p ON p.voice_id=v.voice_id WHERE v.model=?",(MODEL_ID,)):
-    scores.append(profile_score(v,json.loads(samples),policy))
+    scores.append((profile_score(v,json.loads(samples),policy),profile_threshold(policy)))
   scores.sort(reverse=True)
-  margin=scores[0]-scores[1] if len(scores)>1 else None
-  return {'best_score':round(scores[0],4) if scores else None,
+  margin=scores[0][0]-scores[1][0] if len(scores)>1 else None
+  return {'best_score':round(scores[0][0],4) if scores else None,
           'margin':round(margin,4) if margin is not None else None,
-          'threshold':.75,'required_margin':.12}
+          'threshold':scores[0][1] if scores else .75,'required_margin':.12}
  def identify(self,vector):
   v=unit(vector);scores=[]
   with self._db() as db:
    for name,label,samples,voice_id,policy in db.execute("SELECT v.name,v.label,v.samples,v.voice_id,COALESCE(p.policy,'centroid') FROM voices v LEFT JOIN voice_matching_policies p ON p.voice_id=v.voice_id WHERE v.model=?",(MODEL_ID,)):
     vectors=json.loads(samples)
-    scores.append((profile_score(v,vectors,policy),name,label,voice_id))
+    scores.append((profile_score(v,vectors,policy),name,label,voice_id,profile_threshold(policy)))
   scores.sort(reverse=True)
-  if not scores or scores[0][0]<.75:return {'status':'unknown'}
+  if not scores or scores[0][0]<scores[0][4]:return {'status':'unknown'}
   if len(scores)>1 and scores[0][0]-scores[1][0]<.12:return {'status':'ambiguous'}
-  score,name,label,voice_id=scores[0]
-  return {'status':'recognized','profile':name,'name':label,'memory_id':voice_id,'score':round(score,4)}
+  score,name,label,voice_id,threshold=scores[0]
+  return {'status':'recognized','profile':name,'name':label,'memory_id':voice_id,'score':score}
  def improve(self,name,vector,seconds):
   # Explicit improvement now goes through staged adaptation, never live mutation.
   return False

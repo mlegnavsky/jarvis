@@ -1,9 +1,9 @@
 """Read-only, supervised calibration review. Never changes identity or permission."""
 import hashlib,json,re,sqlite3
 if __package__:
- from .policy import MODEL_ID,norm,unit,centroid,similarity,profile_score
+ from .policy import MODEL_ID,norm,unit,centroid,similarity,profile_score,profile_threshold
 else:
- from policy import MODEL_ID,norm,unit,centroid,similarity,profile_score
+ from policy import MODEL_ID,norm,unit,centroid,similarity,profile_score,profile_threshold
 
 ROLES=('owner_provided_calibration_unreviewed','other_speaker_comparison_unreviewed','owner_validation_unreviewed')
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True).encode()).hexdigest()
@@ -14,7 +14,7 @@ def evidence_snapshot(db,plan):
  anchors=db.execute('SELECT voice_id,samples FROM voice_anchors ORDER BY voice_id').fetchall()
  sessions=db.execute('SELECT id,voice_id,device,status FROM owner_calibration_sessions WHERE id IN (?,?,?) ORDER BY id',ids).fetchall()
  samples=db.execute('SELECT session,utterance,vector FROM owner_calibration_samples WHERE session IN (?,?,?) ORDER BY session,utterance',ids).fetchall()
- return [plan,voices,anchors,sessions,samples]
+ return [{'candidate_policy':'top_two_mean_calibrated_v1','threshold':.65,'required_margin':.12,'second_reference_floor':.6,'required_gap':.2},plan,voices,anchors,sessions,samples]
 
 class CalibrationReview:
  def __init__(self,profiles,path,satellite):self.profiles=profiles;self.path=path;self.satellite=satellite;self.proposal=None
@@ -59,22 +59,23 @@ class CalibrationReview:
     dimension=len(live[0])
     if any(len(v)!=dimension for vs in all_groups for v in vs):raise ValueError('embedding_dimensions')
     pool=anchors+groups[ROLES[0]]
-    def score(v):return profile_score(v,pool,'top_two_mean_v1')
+    def score(v):return profile_score(v,pool,'top_two_mean_calibrated_v1')
     def accepted(v):
      value=score(v)
      other=[profile_score(v,vs,x[2]) for vs,x in zip(other_vectors,other_rows)]
-     return value>=.75 and (not other or value-max(other)>=.12)
+     return value>=.65 and (not other or value-max(other)>=.12)
     validation=groups[ROLES[2]];negative=groups[ROLES[1]]
     baseline=[profile_score(v,live,row[2]) for v in validation]
-    old_count=sum(v>=.75 and (not other_rows or v-max(profile_score(w,vs,x[2]) for vs,x in zip(other_vectors,other_rows))>=.12) for v,w in zip(baseline,validation))
-    new_count=sum(accepted(v) for v in validation);false_accepts=sum(score(v)>=.75 for v in negative)
+    old_count=sum(v>=profile_threshold(row[2]) and (not other_rows or v-max(profile_score(w,vs,x[2]) for vs,x in zip(other_vectors,other_rows))>=.12) for v,w in zip(baseline,validation))
+    new_count=sum(accepted(v) for v in validation);false_accepts=sum(score(v)>=.65 for v in negative)
     snapshot=evidence_snapshot(db,plan);revision=digest(snapshot)
-    active=row[2]=='top_two_mean_v1' and len(live)==len(pool) and all(similarity(a,b)>1-1e-10 for a,b in zip(live,pool))
-    eligible=new_count==5 and new_count>old_count and false_accepts==0
-    if eligible:self.proposal={'voice_id':row[0],'samples':pool,'policy':'top_two_mean_v1','plan':plan,'snapshot':snapshot,'revision':revision}
+    active=row[2]=='top_two_mean_calibrated_v1' and len(live)==len(pool) and all(similarity(a,b)>1-1e-10 for a,b in zip(live,pool))
+    separation=min(score(v) for v in validation)-max(score(v) for v in negative)
+    eligible=new_count==5 and new_count>old_count and false_accepts==0 and separation>=.2
+    if eligible:self.proposal={'voice_id':row[0],'samples':pool,'policy':'top_two_mean_calibrated_v1','plan':plan,'snapshot':snapshot,'revision':revision}
     return {'status':('active_supervised_profile' if new_count==5 and false_accepts==0 else 'active_profile_validation_failed') if active else 'eligible_for_controlled_activation' if eligible else 'rejected',
             'revision':revision,'current_profile_revision':model_revision(json.loads(row[1]),row[2]),'active_policy':row[2],
-            'candidate_policy':'top_two_mean_v1','threshold':.75,'required_margin':.12,
+            'candidate_policy':'top_two_mean_calibrated_v1','required_second_reference_score':.6,'positive_negative_gap':round(separation,4),'required_gap':.2,'threshold_calibrated_on_household_samples':True,'threshold':.65,'strict_lock_threshold':.75,'required_margin':.12,
             'training_samples':5,'owner_validation_samples':5,'other_validation_samples':5,
             'baseline_owner_accepts':old_count,'candidate_owner_accepts':new_count,'candidate_other_accepts':false_accepts,
             'baseline_owner_scores':[round(v,4) for v in baseline],'candidate_owner_scores':[round(score(v),4) for v in validation],

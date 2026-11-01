@@ -40,7 +40,7 @@ class MatchingControl:
    proposal=None
    if body['action']=='activate':
     report=self.review.evaluate();proposal=self.review.proposal
-    if report.get('status')!='eligible_for_controlled_activation' or report.get('revision')!=expected or proposal is None:raise ValueError('independent_validation_or_revision_failed')
+    if report.get('status')!='eligible_for_controlled_activation' or report.get('revision')!=expected or proposal is None:raise ValueError('supervised_validation_or_revision_failed')
     if norm(proposal['plan']['reference_profile'])!=norm(body['profile']):raise ValueError('reference_mismatch')
    with self.db() as db:
     db.execute('BEGIN IMMEDIATE')

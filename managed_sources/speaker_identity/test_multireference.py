@@ -22,3 +22,10 @@ class MultiReferenceTests(unittest.TestCase):
     db.execute('INSERT INTO voice_matching_policies VALUES (?,?)',(before['memory_id'],'top_two_mean_v1'))
    self.assertEqual(p.identify([1.,0.])['memory_id'],before['memory_id'])
    self.assertGreater(p.match_diagnostics([1.,0.])['best_score'],.75)
+ def test_calibrated_policy_has_explicit_threshold_not_a_probability(self):
+  from policy import profile_threshold
+  self.assertEqual(profile_threshold('centroid'),.75)
+  self.assertEqual(profile_threshold('top_two_mean_v1'),.75)
+  self.assertEqual(profile_threshold('top_two_mean_calibrated_v1'),.65)
+ def test_calibrated_policy_requires_second_reference_support(self):
+  self.assertLess(profile_score([1.,0.],[[1.,0.],[.4,.916515139]],'top_two_mean_calibrated_v1'),.65)

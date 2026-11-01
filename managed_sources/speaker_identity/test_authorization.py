@@ -34,8 +34,12 @@ class GateTests(unittest.TestCase):
   self.assertIsNone(self.gate.confirm('mic','Potvrzuji zamknutí hlavního vchodu',True))
   self.assertEqual(self.gate.confirm('mic','Aničko potvrzuji odemknutí hlavního vchodu',True),'odemkni')
  def test_confirmation_expires_and_unknown_voice_clears_it(self):
-  self.gate.pending('mic','Odemkni');self.now+=11
+  self.gate.pending('mic','Odemkni');self.now+=61
   self.assertIsNone(self.gate.confirm('mic','Potvrzuji odemknutí hlavního vchodu',True))
   self.gate.pending('mic','Odemkni')
   self.assertIsNone(self.gate.confirm('mic','Potvrzuji odemknutí hlavního vchodu',False))
   self.assertIsNone(self.gate.confirm('mic','Potvrzuji odemknutí hlavního vchodu',True))
+
+ def test_confirmation_window_includes_spoken_prompt_and_model_latency(self):
+  self.gate.pending('mic','Zhasni');self.now+=25
+  self.assertEqual(self.gate.confirm('mic','Potvrzuji zhasnutí světel v této místnosti',True),'zhasni')

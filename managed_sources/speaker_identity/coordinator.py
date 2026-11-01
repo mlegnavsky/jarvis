@@ -74,16 +74,18 @@ class Coordinator:
   good=data.get('status')=='ok' and data.get('model')==MODEL_ID
   vector=data.get('vector') if good else None
   identity=self.profiles.identify(vector) if vector else {'status':data.get('status','unknown')}
-  diagnostic={'whole':{'status':identity['status']},'windows':[]}
+  diagnostic={'whole':{'status':identity['status']},'windows':[]};window_scores=[]
   if vector:diagnostic['whole'].update(self.profiles.match_diagnostics(vector))
   if identity.get('status')=='recognized':
    inconsistent=False
    for window in data.get('windows',[]):
-    match=self.profiles.identify(window)
+    match=self.profiles.identify(window);window_scores.append(match.get('score',-1))
     diagnostic['windows'].append({'status':match['status'],**self.profiles.match_diagnostics(window)})
     if match.get('profile')!=identity['profile']:inconsistent=True
    if inconsistent:identity={'status':'uncertain_windows'}
   self.last['matching']=diagnostic
+  strong=identity.get('status')=='recognized' and identity.get('score',0)>=.75 and all(x>=.75 for x in window_scores)
+  if value=='smaz muj hlasovy profil' and not strong:identity={'status':'strict_identity_required'}
   authorized=bool(identity.get('status')=='recognized' and self.profiles.is_authorized(identity.get('memory_id')))
   if authorized:self.failures.pop(device,None)
   if self.enforce and not authorized:
@@ -95,7 +97,7 @@ class Coordinator:
     challenge=self.gate.pending(device,text)
     phrases={'zhasni':'Potvrzuji zhasnutí světel v této místnosti.', 'rozsvit':'Potvrzuji rozsvícení světel v této místnosti.',
              'zamkni':'Potvrzuji zamknutí hlavního vchodu.', 'odemkni':'Potvrzuji odemknutí hlavního vchodu.'}
-    reply='Krátké slovo nestačí k ověření hlasu. Řekni do deseti sekund: '+phrases[norm(text)].rstrip('.')+(' '+challenge if challenge else '')+'.'
+    reply='Krátké slovo nestačí k ověření hlasu. Po této odpovědi řekni: '+phrases[norm(text)].rstrip('.')+(' '+challenge if challenge else '')+'.'
    else:
     self.gate.cancel(device)
     reasons={'uncertain_windows':'Celá věta odpovídá profilu, ale její části nepotvrdily stejný hlas. Ztiš prosím okolní zvuk.',
@@ -183,6 +185,10 @@ class Coordinator:
   if introduction and identity.get('profile') and norm(introduction[1])!=identity['profile']:
    return {'status':'identity_conflict','request_introduction':False}
   if identity.get('status')=='recognized':
+   action=command(identity.get('effective_text',text))
+   if action and action[0]=='lock' and not strong:
+    self.gate.cancel(device)
+    return {'status':'strict_lock_identity_required','authorized':False,'retry_recommended':False,'local_reply':'Pro ovládání zámku potřebuji silnější ověření hlasu. Tento povel teď neprovedu.'}
    self.last.update(status='recognized',profile=identity['profile'],score=identity['score'])
    return identity
   direct=bool(re.match(r'(kolik|zapni|vypni|zhasni|nastav|odemkni|zamkni)\b',value))

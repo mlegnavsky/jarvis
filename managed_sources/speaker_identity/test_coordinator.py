@@ -165,3 +165,35 @@ class OwnerCalibrationCoordinatorTests(unittest.IsolatedAsyncioTestCase):
   result=await self.say('Zhasni světla v této místnosti.')
   self.assertEqual(result['status'],'owner_calibration');self.assertEqual(result['samples'],1)
   self.assertFalse(result['authorized']);self.assertNotIn('control_token',result)
+
+class CalibratedStrictActionsTests(unittest.IsolatedAsyncioTestCase):
+ asyncSetUp=CoordinatorTests.asyncSetUp
+ asyncTearDown=CoordinatorTests.asyncTearDown
+ say=CoordinatorTests.say
+ async def prepare(self):
+  import json
+  await self.say('Nauč se můj hlas. Jsem Martin.')
+  for n in range(3):await self.say('Ukázková věta číslo '+str(n))
+  self.c.profiles.bootstrap_authorization('Martin');self.c.enforce=True
+  identity=self.c.profiles.identify([1.,0.]);self.identity=identity
+  with self.c.profiles._db() as db:
+   db.execute('UPDATE voices SET samples=?',(json.dumps([[1.,0.],[.999,.04]]),))
+   db.execute('INSERT INTO voice_matching_policies VALUES (?,?)',(identity['memory_id'],'top_two_mean_calibrated_v1'))
+  async def low(pcm):return {'status':'ok','model':'campplus-aa3cfc16-v1','vector':[.7,.7141428],'windows':[]}
+  self.c.infer=low
+ async def test_calibrated_light_grant_does_not_lower_lock_floor(self):
+  await self.prepare()
+  self.assertIn('control_token',await self.say('Zhasni'))
+  lock=await self.say('Odemkni');self.assertFalse(lock['authorized']);self.assertNotIn('control_token',lock)
+ async def test_low_confidence_cannot_delete_voice_profile(self):
+  await self.prepare();result=await self.say('Smaž můj hlasový profil')
+  self.assertFalse(result['authorized']);self.assertEqual(self.c.profiles.count(),1)
+ async def test_alias_to_unlock_cannot_bypass_strict_floor(self):
+  await self.prepare();pid=self.identity['memory_id']
+  self.c.pronunciation.propose(pid,'otevri','odemkni');self.c.pronunciation.confirm(pid,'otevri','odemkni')
+  result=await self.say('Otevři');self.assertFalse(result['authorized']);self.assertNotIn('control_token',result)
+ async def test_strong_whole_but_weaker_window_cannot_unlock(self):
+  await self.prepare()
+  async def mixed(pcm):return {'status':'ok','model':'campplus-aa3cfc16-v1','vector':[1.,0.],'windows':[[.7,.7141428]]}
+  self.c.infer=mixed;result=await self.say('Odemkni')
+  self.assertFalse(result['authorized']);self.assertNotIn('control_token',result)
