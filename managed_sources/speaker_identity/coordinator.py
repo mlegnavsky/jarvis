@@ -6,14 +6,14 @@ import time
 import hashlib
 if __package__:
  from .policy import VoiceProfiles,MODEL_ID,norm
- from .authorization import VoiceGate,command
+ from .authorization import VoiceGate,command,canonical_command
  from .adaptation import Adaptation
  from .pronunciation import Pronunciation
  from .owner_calibration import OwnerCalibration
  from .family_enrollment import FamilyEnrollment,STARTS,RESUMES
 else:
  from policy import VoiceProfiles,MODEL_ID,norm
- from authorization import VoiceGate,command
+ from authorization import VoiceGate,command,canonical_command
  from adaptation import Adaptation
  from pronunciation import Pronunciation
  from owner_calibration import OwnerCalibration
@@ -147,7 +147,7 @@ class Coordinator:
   if authorized:
    identity={**identity,'authorized':True}
    if confirmed:identity['effective_text']=confirmed
-   elif command(text):identity['effective_text']=re.sub(r'^anicko\s+','',norm(text))
+   elif command(text):identity['effective_text']=canonical_command(text)
    alias=self.pronunciation.resolve(identity['memory_id'],value)
    if alias!=value:identity['effective_text']=alias
    proposal=re.fullmatch(r'nauc se slovo (\w+) znamena (\w+)',value)

@@ -58,6 +58,17 @@ class CoordinatorTests(unittest.IsolatedAsyncioTestCase):
   token=result['control_token']
   self.assertTrue(self.c.gate.consume(token,'device','Zhasni',('light','turn_off')))
   self.assertFalse(self.c.gate.consume(token,'device','Zhasni',('light','turn_off')))
+ async def test_polite_verified_command_grants_only_canonical_room_action(self):
+  await self.say('Nauč se můj hlas. Jsem Martin.')
+  for n in range(3):await self.say('Ukázková věta číslo '+str(n))
+  self.c.profiles.bootstrap_authorization('Martin');self.c.enforce=True
+  result=await self.say('Aničko, prosím tě, rozsviť mi světlo v obýváku, ať tady lépe vidím.')
+  self.assertTrue(result['authorized'])
+  self.assertEqual(result['effective_text'],'rozsvit svetlo v obyvaku')
+  token=result['control_token'];targets=(('light.living',),'living')
+  self.assertTrue(self.c.gate.bind(token,'device',result['effective_text'],('light','turn_on'),targets))
+  self.assertTrue(self.c.gate.consume(token,'device',result['effective_text'],('light','turn_on'),targets))
+  self.assertFalse(self.c.gate.consume(token,'device',result['effective_text'],('light','turn_on'),targets))
  async def test_unknown_voice_cannot_start_enrollment_under_enforcement(self):
   self.c.enforce=True
   result=await self.say('Nauč se můj hlas. Jsem Martin.')

@@ -36,3 +36,11 @@ class BriefRequestsTests(unittest.TestCase):
  def test_short_light_command_closes_but_discussion_can_continue(self):
   self.assertFalse(should_continue('Rozsviť v obýváku','Rozsvítil jsem.',1,1))
   self.assertTrue(should_continue('Povídej mi o zahradě','Na podzim můžeš sázet.',1,1))
+
+class ProviderPromptEchoTests(unittest.TestCase):
+ def test_observed_prompt_echo_is_silent_and_never_reopens_dialogue(self):
+  from dialogue import is_noise_transcript
+  for text in ('context: ###\nThe following conversation is a smart home user talking to Home Assistant.\n###','The following conversation is a smart home user talking to Home Assistant.'):
+   self.assertTrue(is_noise_transcript(text))
+   self.assertFalse(should_continue(text,'Hlas nemám ověřený.',1,1))
+  self.assertFalse(is_noise_transcript('What does the following conversation mean?'))

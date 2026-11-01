@@ -8,7 +8,9 @@ def normalized(text):
 TIME_REQUESTS={'kolik je hodin','kolik je ted hodin','kolik je prave hodin','jaky je cas','rekni mi kolik je hodin'}
 
 def is_noise_transcript(text):
- return not normalized(text) or text.strip().casefold() in {'context:', 'context', '[blank_audio]', '[silence]'}
+ value=normalized(text)
+ echo='the following conversation is a smart home user talking to home assistant'
+ return not value or text.strip().casefold() in {'context:', 'context', '[blank_audio]', '[silence]'} or value in {echo,'context '+echo}
 
 def local_time_answer(text,now):
  if normalized(text) not in TIME_REQUESTS:return None

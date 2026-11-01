@@ -81,3 +81,12 @@ class ActualRoomNamesTests(unittest.TestCase):
    {'id':'hall','name':'Vstupní chodba','aliases':[]}],LIGHTS)
   self.assertEqual(value['entity_ids'],['light.hall'])
 
+
+class SilentSuccessTests(unittest.IsolatedAsyncioTestCase):
+ async def test_verified_light_success_is_silent_and_still_executes(self):
+  called=[]
+  async def call(*args,**kwargs):called.append(args)
+  hass=NS(services=NS(async_call=call),states=NS(get=lambda entity:NS(state='on')))
+  reply=await commands.execute(hass,commands.resolve('rozsviť','living',AREAS,LIGHTS),None)
+  self.assertEqual(len(called),1)
+  self.assertEqual(reply,'')

@@ -74,10 +74,11 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
    _recent_devices={},_dialogue_started={},_dialogue_turns={},hass=NS(),query=forbidden,
    _generate_system_message=lambda *a:(_ for _ in ()).throw(AssertionError('local command must not prepare model prompt')))
   fn=self.method('_async_handle_message')
-  async def local(*a):return 'Rozsvítil jsem světla. Místnost: Obývák.'
+  async def local(*a):return ''
   fn.__globals__['async_handle_room_command']=local
   result=await fn(agent,NS(text='Rozsviť',language='cs',device_id='mic'),NS(conversation_id='c'))
-  self.assertIn('Obývák',result.response.text)
+  self.assertEqual(result.response.text,'')
+  self.assertFalse(result.continue_conversation)
  async def test_local_commands_do_not_leak_unbounded_session_counters(self):
   class Companion:
    async def prepare(self,*a):return NS(reset_history=False,principal='p',local_reply='Místní odpověď.')

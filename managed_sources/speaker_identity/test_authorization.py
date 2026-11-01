@@ -43,3 +43,13 @@ class GateTests(unittest.TestCase):
  def test_confirmation_window_includes_spoken_prompt_and_model_latency(self):
   self.gate.pending('mic','Zhasni');self.now+=25
   self.assertEqual(self.gate.confirm('mic','Potvrzuji zhasnutí světel v této místnosti',True),'zhasni')
+
+class PoliteCommandTests(unittest.TestCase):
+ def test_observed_polite_light_commands_are_local(self):
+  from authorization import canonical_command
+  for text in ('Aničko, prosím tě, rozsviť mě světla v obýváku, ať tady lépe vidím.', 'Prosím tě, rozsviť mi světlo v obýváku, ať tady lépe vidím.', 'Rozsviť v obýváku, prosím.'):
+   self.assertEqual(command(text),('light','turn_on'))
+   self.assertEqual(canonical_command(text),'rozsvit svetla v obyvaku' if 'světla' in text else 'rozsvit svetlo v obyvaku' if 'světlo' in text else 'rozsvit v obyvaku')
+ def test_negation_multi_action_and_quotes_are_not_canonicalized(self):
+  for text in ('Prosím nerozsviť v obýváku','Řekl jsem rozsviť','Prosím rozsviť a odemkni','Rozsviť v obýváku a pak zhasni','Rozsviť v obýváku pokud tam někdo je'):
+   self.assertIsNone(command(text),text)

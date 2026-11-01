@@ -8,14 +8,25 @@ else:
  from policy import norm
 
 LOCK='lock.vstup_zamek_vchod'
-def command(text):
+def canonical_command(text):
  value=norm(text)
  value=re.sub(r'^anicko\s+','',value)
- if value in ('zamkni','zamkni hlavni vchod'):return ('lock','lock')
- if value in ('odemkni','odemkni hlavni vchod'):return ('lock','unlock')
- match=re.fullmatch(r'(rozsvit|zhasni)(?: (?:to|svetlo|svetla))?(?: (?:v|ve) (?!.*\b(?:a|pak|potom|za|kdyz)\b)[\w ]+)?',value)
- if match:return ('light','turn_on' if match[1]=='rozsvit' else 'turn_off')
+ value=re.sub(r'^prosim(?: te)?\s+','',value)
+ value=re.sub(r'\s+prosim(?: te)?$','',value)
+ # Only finite courtesy wrappers, never arbitrary trailing clauses/actions.
+ value=re.sub(r' at tady lepe vidim$','',value)
+ value=re.sub(r'^(rozsvit|zhasni) (?:mi|me) ',r'\1 ',value)
+ if value in ('zamkni','zamkni hlavni vchod','odemkni','odemkni hlavni vchod'):return value
+ match=re.fullmatch(r'(rozsvit|zhasni)(?: (?:to|svetlo|svetla))?(?: (?:v|ve) (?!.*\b(?:a|pak|potom|na|za|ale|az|kdyz|pokud|jestli|nebo)\b)[\w ]+)?',value)
+ if match:return value
  return None
+
+def command(text):
+ value=canonical_command(text)
+ if value is None:return None
+ if value.startswith('zamkni'):return ('lock','lock')
+ if value.startswith('odemkni'):return ('lock','unlock')
+ return ('light','turn_on' if value.startswith('rozsvit') else 'turn_off')
 
 class VoiceGate:
  def __init__(self,clock=time.monotonic,challenge_words=()):

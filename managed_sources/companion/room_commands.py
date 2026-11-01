@@ -99,8 +99,7 @@ async def execute(hass, request, context, *, user=None, token=None):
     verified = all((state := hass.states.get(entity)) is not None and state.state == desired
                    for entity in request['entity_ids'])
     if verified:
-        if domain=='lock':return 'Hlavní vchod jsem '+('zamkla.' if desired=='locked' else 'odemkla.')
-        return ('Rozsvítila' if desired == 'on' else 'Zhasla') + ' jsem světla. Místnost: ' + request['area_name'] + '.'
+        return ''
     return 'Povel jsem odeslala. Místo: ' + request['area_name'] + '. Změnu stavu zatím nemám potvrzenou.'
 
 
