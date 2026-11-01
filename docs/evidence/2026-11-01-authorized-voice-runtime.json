@@ -28,17 +28,30 @@
     "raw_audio_saved": false
   },
   "remaining": [
-    "Anicko and lock word acoustic candidates still training; not flashed",
+    "Anicko candidate trained, not installed or household-tested; two lock word candidates still training",
     "standalone command wake remains blocked pending verified wake audio capture",
     "replay detector not installed",
-    "household genuine, impostor and replay calibration still required",
-    "HomePod reports volume zero; not altered by this deployment"
+    "household genuine, impostor and replay calibration still required"
   ],
   "training": {
     "branch": "training/anicko-20261101",
     "run_id": 41266343920,
     "state": "in_progress",
-    "automatic_flash": false
+    "automatic_flash": false,
+    "targets": {
+      "anicko": "completed_success",
+      "zamkni": "in_progress",
+      "odemkni": "queued"
+    },
+    "artifacts": [
+      {
+        "id": 13068066743,
+        "name": "experimental-czech-anicko",
+        "digest": "sha256:77ffbf1d7129ed716763a87b19e58ef92ca7e295b5ffeef93d4ef6832282de61",
+        "expires_at": "2026-11-08T03:07:04Z",
+        "scope": "experimental_synthetic_candidate_not_firmware_activation"
+      }
+    ]
   },
   "verification": {
     "speaker_tests": 53,
@@ -193,5 +206,10 @@
       "revision": "13fca416bf22832b16a1e9583579fc7c7d07bd89368be6ee988cbd3af1607f8d"
     }
   ],
-  "runtime_manifest": "jarvis_workspace/voice-system-manifest.json"
+  "runtime_manifest": "jarvis_workspace/voice-system-manifest.json",
+  "output": {
+    "observed_volume": 0.35,
+    "status": "configured",
+    "audible_test_performed": false
+  }
 }
