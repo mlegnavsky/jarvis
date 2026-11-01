@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "source_commit": "74f16f81cd077e446d2e6b3607edf3810a58cebe",
+  "deployment_job": {
+    "id": "cleanup4-apply-20261101",
+    "operation": "deployment_apply",
+    "state": "unknown",
+    "result": {
+      "error": "admin_upstream_outcome_unknown",
+      "retry_with_new_key": false
+    },
+    "backup_slug": "5deec9b6",
+    "request_id": "cleanup4-apply-20261101",
+    "created_at": "2026-11-01T11:51:22.793979+00:00",
+    "started_at": "2026-11-01T11:51:22.808723+00:00",
+    "finished_at": "2026-11-01T11:55:25.187903+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "readback": [
+    {
+      "path": "custom_components/jarvis_homepod_output/interrupt.py",
+      "match": true,
+      "revision": "f53615e0aff9c197ef1d92b249294292f6cd48cd0aed2a8afeed7cecbd837cfa"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/interrupt.py",
+      "match": true,
+      "revision": "f53615e0aff9c197ef1d92b249294292f6cd48cd0aed2a8afeed7cecbd837cfa"
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/__init__.py",
+      "match": true,
+      "revision": "41c48d63face40616a664a8745ed5ccd79bccf35120b9c28252bb1a7eb31a456"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/__init__.py",
+      "match": true,
+      "revision": "41c48d63face40616a664a8745ed5ccd79bccf35120b9c28252bb1a7eb31a456"
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/manifest.json",
+      "match": true,
+      "revision": "5f0eef8e676309105e24af370345423d9bccd6b3c62b2cb3e6f3a43b63c6d671"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/manifest.json",
+      "match": true,
+      "revision": "5f0eef8e676309105e24af370345423d9bccd6b3c62b2cb3e6f3a43b63c6d671"
+    }
+  ],
+  "runtime": {
+    "version": 6,
+    "runtime_version": "1.0.4",
+    "started_at": "2026-11-01T11:55:16.062198+00:00",
+    "adapter": "active",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "volume_policy": "startup_45_then_follow_homepod_raop",
+    "legacy_fixed_volume_ignored": 0.35,
+    "native_abort_resume": "active",
+    "microphone": "assist_satellite.home_assistant_voice_0a8bde_assist_satellite",
+    "speech_volume": 0.45,
+    "terminal_spoken_output": false,
+    "audible_test_performed": false,
+    "arbitrary_speech_barge_in": false,
+    "cancel_current_answer_hook": true,
+    "wake_or_stop_word_physical_test": "deferred_until_user_home",
+    "echo_reference_for_external_homepod": "not_available_on_stock_voice_pe",
+    "followup_gate": "native_RAOP_completion_then_silent_satellite_completion",
+    "player_available": true,
+    "raop_stream_file": true,
+    "player_state": "off",
+    "satellite_media_player_url": true,
+    "observed_volume": 0.45,
+    "observed_muted": null,
+    "status": "configured",
+    "updated_at": "2026-11-01T11:55:46.098753+00:00",
+    "playback": {
+      "started": 0,
+      "completed": 0,
+      "cancelled": 0,
+      "failed": 0,
+      "active": false,
+      "last_error": null,
+      "last_playback": {}
+    },
+    "television": {
+      "owned": false,
+      "paused": 0,
+      "resumed": 0,
+      "resume_requested": 0,
+      "discarded": 0,
+      "failed": 0,
+      "last_error": null
+    },
+    "television_entity": "media_player.obyvaci_pokoj_obyvaci_pokoj",
+    "interrupt_resume": {
+      "cleaned": 0,
+      "native_aborts": 0,
+      "resumed": 0,
+      "blocked": 0,
+      "failed": 0,
+      "pending": false,
+      "last_reason": null
+    },
+    "last_volume_decision": {},
+    "startup_volume": {
+      "status": "applied",
+      "target": 0.45,
+      "observed_volume": 0.45
+    }
+  },
+  "known_failure": {
+    "unprompted_native_abort_owner_confirmed_silent": true,
+    "acoustic_trigger": "not_proven",
+    "voice_recognition_fixed": false,
+    "last_owner_score": 0.6304,
+    "threshold": 0.65
+  },
+  "tests": {
+    "homepod": 49,
+    "ci": "success",
+    "review": "no remaining Critical or Important findings"
+  },
+  "terminal_probe": {
+    "request_id": "cleanup4-terminal-probe-20261101",
+    "status": "rejected_action_not_allowed",
+    "audio_played": false
+  },
+  "physical_cancel_recovery": "pending"
+}
