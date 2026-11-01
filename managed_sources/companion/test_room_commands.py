@@ -84,6 +84,11 @@ class RegistryTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(called[0][2]['entity_id'],['light.moved'])
 
 class ActualRoomNamesTests(unittest.TestCase):
+ def test_observed_child_room_diminutive_keeps_registered_scope(self):
+  for text in ('Zhasni v dětském pokojíku.','Rozsviť v dětském pokojíčku'):
+   request=commands.resolve(text,'living',[{'id':'child','name':'Dětský pokoj','aliases':[]}],
+     [{'entity_id':'light.child','area_id':'child'}])
+   self.assertEqual(request['entity_ids'],['light.child'])
  def test_chodbicka_resolves_registered_vstupni_chodba(self):
   value=commands.resolve('Zhasni v chodbičce','living',[
    {'id':'hall','name':'Vstupní chodba','aliases':[]}],LIGHTS)

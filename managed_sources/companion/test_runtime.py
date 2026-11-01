@@ -136,6 +136,12 @@ class PublicRuntimeTests(unittest.IsolatedAsyncioTestCase):
  asyncSetUp=RuntimeTests.asyncSetUp
  asyncTearDown=RuntimeTests.asyncTearDown
  user=RuntimeTests.user
+ async def test_duplex_interruption_note_does_not_assume_answer_was_heard(self):
+  user=self.user('Pokračuj prosím',None,'a')
+  user.extra_system_prompt='jarvis_local_duplex:previous_answer_interrupted'
+  turn=await self.runtime.prepare(user,'c')
+  self.assertIn('přerušena',turn.prompt)
+  self.assertIn('neslyšel',turn.prompt)
  async def test_public_unknown_can_converse_without_private_profile(self):
   class Speaker:
    enforce=True;public_controls=True

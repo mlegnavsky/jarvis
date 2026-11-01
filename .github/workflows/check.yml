@@ -17,6 +17,7 @@ jobs:
       - run: python -m unittest discover -s managed_sources/companion -q
       - run: python -m unittest discover -s managed_sources/homepod_output -q
       - run: python -m unittest discover -s managed_sources/voice_diagnostics -q
+      - run: python -m unittest discover -s managed_sources/local_duplex -q
       - run: python scripts/export_capabilities.py && git diff --exit-code docs/operations-manifest.json
       - run: node managed_sources/home_status/tests/card.test.cjs
       - run: python -m unittest discover -s managed_sources/energy_archive -p 'test_*.py'

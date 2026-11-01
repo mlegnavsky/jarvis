@@ -96,5 +96,9 @@ int main(int argc, char** argv){
   if(event=="run-end")device.event(api::enums::VOICE_ASSISTANT_RUN_END);
  }
  for(int i=0;i<3;i++)device.loop();
+ if(argc>2 && std::string(argv[2])=="microphone"){
+  std::cout<<(device.state_==State::STREAMING_MICROPHONE?"STREAMING_MICROPHONE":device.state_==State::IDLE?"IDLE":"AWAITING_RESPONSE")<<" "<<device.mic.is_running()<<"\n";
+  return 0;
+ }
  std::cout<<(device.state_==State::IDLE?"IDLE":device.state_==State::AWAITING_RESPONSE?"AWAITING_RESPONSE":"OTHER")<<"\n";
 }

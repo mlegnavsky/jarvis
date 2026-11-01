@@ -18,7 +18,7 @@ FORMS = {
     'koupelna': {'koupelne'}, 'chodba': {'chodbe'},
     'vstupni chodba': {'vstupni chodbe', 'chodbicka', 'chodbicce', 'chodba', 'chodbe'}, 'chodbicka': {'chodbicce'},
     'kuchyne': {'kuchyni'}, 'loznice': {'loznici'},
-    'detsky pokoj': {'detskem pokoji'}, 'jidelna': {'jidelne'},
+    'detsky pokoj': {'detskem pokoji','detskem pokojiku','detskem pokojicku'}, 'jidelna': {'jidelne'},
     'technicka mistnost': {'technicke mistnosti'}, 'sklep': {'sklepe'},
     'terasa': {'terase'}, 'zahrada': {'zahrade'}, 'zachod': {'zachode'},
     'toaleta': {'toalete'},
