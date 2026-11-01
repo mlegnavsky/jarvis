@@ -4,6 +4,7 @@ from dataclasses import asdict, replace
 from datetime import timedelta
 import hashlib
 import json
+import logging
 from pathlib import Path
 import time
 from types import SimpleNamespace
@@ -33,9 +34,10 @@ from .control import read_control
 from .ha_io import (LocalOutput, decode_reference, is_output_change, pcm_signal,
     prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native, stop_announcement)
 from .session import Session
+from .native_audit import AudioFacts, audit_native
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.0.2'
+VERSION='1.0.3'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -263,13 +265,55 @@ class LocalDialogue:
                 self.probing=False
                 await self.save()
 
+    async def audio_audit(self):
+        if self.active or self.probing:
+            self.report['audio_audit']={'status':'busy','microphone_opened':False};return
+        self.probing=True;facts=AudioFacts()
+        self.report['audio_audit']={'status':'running','microphone_opened':False}
+        output=LocalOutput(self.player,lambda text:self.synthesize(text,async_get_pipeline(self.hass,PIPELINE)),
+            self.start_output,self.stop_output)
+        def service_called(event):
+            if self.output_changed(event):output.disown()
+        unsubscribe=self.hass.bus.async_listen(EVENT_CALL_SERVICE,service_called)
+        try:
+            from aioesphomeapi import LogLevel
+            from homeassistant.components.esphome.const import CONF_SUBSCRIBE_LOGS
+            from homeassistant.components.esphome.manager import LOGGER_TO_LOG_LEVEL
+            player=self.player()
+            if player is None:raise ValueError('local_speaker_unavailable')
+            entry=self.hass.config_entries.async_get_entry(player._entry_data.entry_id)
+            if entry is None or entry.runtime_data is not player._entry_data:
+                raise ValueError('native_connection_mismatch')
+            def restore_level():
+                if not entry.options.get(CONF_SUBSCRIBE_LOGS):return LogLevel.LOG_LEVEL_NONE
+                return LOGGER_TO_LOG_LEVEL.get(logging.getLogger('homeassistant.components.esphome.manager').getEffectiveLevel(),
+                    LogLevel.LOG_LEVEL_VERY_VERBOSE)
+            async def playback():
+                await output.play('Zkouška místního hlasu.')
+                return output.snapshot()
+            async with self.lock:
+                result=await audit_native(player,playback,restore_level,facts=facts,
+                    ha_logging=lambda:bool(entry.options.get(CONF_SUBSCRIBE_LOGS)))
+            self.report['audio_audit']={'status':'completed',**result,'audibility_confirmed':False}
+        except asyncio.CancelledError:
+            self.report['audio_audit']={'status':'cancelled',**facts.snapshot()};raise
+        except Exception as exc:
+            self.report['audio_audit']={'status':'failed','error':type(exc).__name__,**facts.snapshot()}
+        finally:
+            unsubscribe()
+            try:await output.stop()
+            finally:
+                self.probing=False
+                await self.save()
+
     async def save(self,_now=None):
         request=await self.hass.async_add_executor_job(read_control,self.root,
             self.report.get('last_control_nonce'),time.time())
         if request and not self.probing:
             self.report['last_control_nonce']=request['nonce']
             handler={'probe':self.probe,'output_test':self.output_test,
-                'audio_recover':self.audio_recover,'voice_agent_probe':self.voice_agent_probe}[request['action']]
+                'audio_recover':self.audio_recover,'voice_agent_probe':self.voice_agent_probe,
+                'audio_audit':self.audio_audit}[request['action']]
             self.hass.async_create_task(handler())
         report=dict(self.report)
         report.update(updated_at=dt_util.utcnow().isoformat(),adapter=getattr(self,'adapter','starting'),
