@@ -1,5 +1,5 @@
 {
-  "status": "native_audit_completed_file_route_comparison_pending",
+  "status": "conversation_and_complete_resource_repair_ready",
   "runtime": "1.0.3",
   "source_commit": "5e494c4a938c7427f79df63189caf5f09fd9eec5",
   "native_audit": {
@@ -26,10 +26,42 @@
     "size": 35244,
     "kind": "synthetic_two_tones_not_a_recording",
     "method": "Temporary one-shot automation after automation_reloaded; self-disable without stopping its own actions; play local media file to HomePod, then local Voice PE announcement. Remove after evidence. HomePod resolves local media to a filesystem path rather than InternetSource.",
-    "core_restart": false
+    "core_restart": false,
+    "first_run": "skipped_active_dialogue_owner_heard_nothing",
+    "second_run": {
+      "begin": "2026-11-01T23:21:24.352+00:00",
+      "precondition": "activeFalse_satelliteidle",
+      "homepod_completed": "2026-11-01T23:21:27.872+00:00",
+      "native_completed": "2026-11-01T23:21:34.890+00:00",
+      "new_decoder_error": false,
+      "acoustic_outcome": "not_confirmed"
+    },
+    "temporary_automation_removed": true
   },
   "microphone_opened": false,
   "firmware_changed": false,
   "volume_changed": false,
-  "confirmed_root_cause": null
+  "confirmed_root_cause": "response_starvation_and_followup_lifecycle",
+  "confirmed_defects": [
+    "Raw VAD onset cancels STT/LLM/TTS preparation before actual playback; real run29interruptions and0completed turns",
+    "Spoken providerFalse response closes followup immediately",
+    "Truncated candidate could cancel current output before being rejected"
+  ],
+  "repairs": {
+    "runtime": "1.0.4",
+    "actual_playback_barge_in": true,
+    "preparation_input_queue": "latest_only_max5s",
+    "spoken_followup_seconds": 8,
+    "silent_light_actions": "close_without_audio",
+    "speech_source": "canonical_complete_local_media_WAV",
+    "generated_speech_files": "max4_600s_stale_0600_0700_release_on_success_failure_cancel",
+    "firmware_or_wake_threshold_changed": false
+  },
+  "tests": {
+    "duplex": 86,
+    "companion": 63,
+    "homepod": 62,
+    "manifest": "pass",
+    "fresh_review": "2Important_fixed_RED_GREEN_0Critical_0Minor"
+  }
 }

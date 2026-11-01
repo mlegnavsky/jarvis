@@ -35,9 +35,10 @@ from .ha_io import (LocalOutput, decode_reference, is_output_change, pcm_signal,
     prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native, stop_announcement)
 from .session import Session
 from .native_audit import AudioFacts, audit_native
+from .speech_file import SpeechFiles, create_owned_file, release_prepared
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.0.3'
+VERSION='1.0.4'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -57,6 +58,7 @@ class LocalDialogue:
         self.root=Path(hass.config.path('jarvis_workspace','local_duplex'))
         self.lock=asyncio.Lock();self.save_lock=asyncio.Lock();self.probing=False
         self.source_revision=None
+        self.speech_files=None
         self.report={'runtime_version':VERSION,'core_version':CORE_VERSION,'mode':'local_speaker_continuous_capture',
             'speaker':PLAYER,'microphone':SATELLITE,'cloud_audio':'completed_utterances_only',
             'raw_microphone_saved':False,'acoustic_acceptance_verified':False,
@@ -82,7 +84,13 @@ class LocalDialogue:
         signal=await self.hass.async_add_executor_job(pcm_signal,pcm)
         self.report['last_tts_signal']=signal
         if signal['silent']:raise ValueError('tts_reference_is_silent')
-        return SimpleNamespace(media_id=media_id,pcm=pcm,signal=signal)
+        if self.speech_files is None:
+            media_root=self.hass.config.media_dirs.get('local')
+            if not media_root:raise ValueError('local_media_directory_required')
+            self.speech_files=SpeechFiles(media_root)
+        prepared=await create_owned_file(self.hass.async_add_executor_job,self.speech_files,pcm)
+        prepared.pcm=pcm;prepared.signal=signal
+        return prepared
 
     async def start_output(self,player,media_id):
         await player.async_play_media('music',media_id,announce=True)
@@ -129,7 +137,8 @@ class LocalDialogue:
             agent_id=AGENT,language=pipeline.stt_language or run.language,
             extra_system_prompt=value.conversation_extra_system_prompt,playback_overlap=overlap)
         session=Session(transcribe=bridge.transcribe,respond=bridge.respond,play=output.play,stop=output.stop,
-            gate=output.gate,silence_seconds=run.audio_settings.silence_seconds,on_interrupt=bridge.interrupted)
+            gate=output.gate,silence_seconds=run.audio_settings.silence_seconds,on_interrupt=bridge.interrupted,
+            playback_active=lambda:output.owned and output.started_at is not None)
         self.active=session;self.output=output;self.active_run=str(run.id);self.report['sessions']+=1
         def read_tv():
             state=hass.states.get(TELEVISION)
@@ -178,6 +187,7 @@ class LocalDialogue:
     async def probe(self):
         if self.probing:return
         self.probing=True
+        prepared=None
         self.report['self_test']={'status':'running','scope':'native_VAD_and_TTS_reference_no_playback'}
         try:
             enhancer=MicroVadSpeexEnhancer(0,0,True)
@@ -193,8 +203,11 @@ class LocalDialogue:
             self.report['self_test']={'status':'failed','error':type(exc).__name__,
                 'microphone_opened':False,'audible_playback':False}
         finally:
-            self.probing=False
-            await self.save()
+            try:
+                if prepared is not None:await release_prepared(prepared)
+            finally:
+                self.probing=False
+                await self.save()
 
     async def audio_recover(self):
         if self.probing:return

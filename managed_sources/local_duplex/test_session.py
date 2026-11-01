@@ -18,7 +18,113 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         return module.Session(transcribe=overrides.get('transcribe',transcribe),respond=overrides.get('respond',respond),
             play=overrides.get('play',play),stop=overrides.get('stop',stop),idle_seconds=5,
             on_interrupt=overrides.get('on_interrupt'),
+            playback_active=overrides.get('playback_active'),
             input_timeout_seconds=overrides.get('input_timeout_seconds',5))
+
+    async def test_spoken_question_keeps_followup_even_without_provider_flag(self):
+        async def respond(text):return NS(speech='Chceš pokračovat?',continuing=False)
+        async def play(text):self.calls.append(('play',text))
+        session=self.session(respond=respond,play=play)
+        await session.submit(b'first',1,False);await session.task
+        self.assertFalse(session.done)
+        await session.submit(b'reply',1,False);await session.task
+        self.assertEqual(session.completed_turns,2)
+        await session.close()
+
+    async def test_truncated_input_does_not_cancel_current_output(self):
+        session=self.session()
+        await session.submit(b'first',1,False);await self.playing.wait()
+        original=session.task
+        await session.submit(b'truncated',30,True)
+        self.assertIs(session.task,original)
+        self.assertFalse(original.done())
+        self.assertEqual(session.interruptions,0)
+        await session.close()
+
+    async def test_speech_during_thinking_queues_latest_without_starving_answer(self):
+        thinking=asyncio.Event();release=asyncio.Event();cancelled=[]
+        async def respond(text):
+            thinking.set()
+            try:await release.wait()
+            except asyncio.CancelledError:cancelled.append(True);raise
+            return NS(speech='answer',continuing=True)
+        async def play(text):self.calls.append(('play',text))
+        session=self.session(respond=respond,play=play,playback_active=lambda:False)
+        await session.submit(b'first',1,False);await thinking.wait()
+        queue=asyncio.Queue()
+        async def frames():
+            while (frame:=await queue.get()) is not None:yield frame
+        running=asyncio.create_task(session.run(frames()))
+        for value in (1,2):
+            for _ in range(20):await queue.put(NS(audio=bytes([value,0])*160,speech_probability=.99))
+            for _ in range(75):await queue.put(NS(audio=bytes(320),speech_probability=0))
+        async with asyncio.timeout(1):
+            while session.frames<190:await asyncio.sleep(0)
+        self.assertEqual(cancelled,[])
+        self.assertEqual(session.interruptions,0)
+        self.assertEqual(len([c for c in self.calls if c[0]=='stt']),1)
+        release.set()
+        async with asyncio.timeout(1):
+            while not any(c[0]=='play' for c in self.calls):await asyncio.sleep(0)
+        await queue.put(NS(audio=bytes(320),speech_probability=0))
+        async with asyncio.timeout(1):
+            while session.completed_turns<2:await asyncio.sleep(0)
+        self.assertEqual(len([c for c in self.calls if c[0]=='stt']),2)
+        session.request_close('test');await running
+
+    async def test_synthesis_stage_is_not_actual_playback_for_barge_in(self):
+        preparing=asyncio.Event();cancelled=[]
+        async def play(text):
+            preparing.set()
+            try:await asyncio.Event().wait()
+            except asyncio.CancelledError:cancelled.append(True);raise
+        session=self.session(play=play,playback_active=lambda:False)
+        await session.submit(b'first',1,False);await preparing.wait()
+        queue=asyncio.Queue()
+        async def frames():
+            while (frame:=await queue.get()) is not None:yield frame
+        running=asyncio.create_task(session.run(frames()))
+        for _ in range(20):await queue.put(NS(audio=bytes(320),speech_probability=.99))
+        async with asyncio.timeout(1):
+            while session.frames<20:await asyncio.sleep(0)
+        for _ in range(5):await asyncio.sleep(0)
+        self.assertEqual(session.interruptions,0)
+        self.assertEqual(cancelled,[])
+        session.request_close('test');await running
+
+    async def test_deferred_utterance_expires_instead_of_executing_late(self):
+        release=asyncio.Event();thinking=asyncio.Event();clock=[0.]
+        async def respond(text):
+            thinking.set();await release.wait();return NS(speech='answer',continuing=True)
+        async def play(text):return None
+        session=self.session(respond=respond,play=play,playback_active=lambda:False)
+        session.clock=lambda:clock[0]
+        await session.submit(b'first',1,False);await thinking.wait()
+        await session.submit(b'stale-action',1,False)
+        clock[0]=6.;release.set();await session.task
+        async def frames():
+            yield NS(audio=bytes(320),speech_probability=0)
+            await asyncio.sleep(0)
+            yield NS(audio=bytes(320),speech_probability=0)
+        await session.run(frames())
+        self.assertEqual([c for c in self.calls if c[0]=='stt'],[('stt',b'first')])
+
+    async def test_new_direct_correction_discards_older_queued_control(self):
+        thinking=asyncio.Event();release=asyncio.Event()
+        async def respond(text):
+            thinking.set();await release.wait();return NS(speech='answer',continuing=True)
+        async def play(text):return None
+        session=self.session(respond=respond,play=play,playback_active=lambda:False)
+        await session.submit(b'first',1,False);await thinking.wait()
+        await session.submit(b'old-control',1,False)
+        release.set();await session.task
+        await session.submit(b'new-correction',1,False);await session.task
+        async def frames():
+            yield NS(audio=bytes(320),speech_probability=0)
+            await asyncio.sleep(0)
+            yield NS(audio=bytes(320),speech_probability=0)
+        await session.run(frames())
+        self.assertEqual([c for c in self.calls if c[0]=='stt'],[('stt',b'first'),('stt',b'new-correction')])
 
     async def test_failed_stop_still_drains_cancelled_response(self):
         drained=asyncio.Event()

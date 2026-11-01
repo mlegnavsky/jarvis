@@ -8,8 +8,10 @@ import wave
 
 if __package__:
     from .segmenter import EchoReference, samples
+    from .speech_file import release_prepared
 else:
     from segmenter import EchoReference, samples
+    from speech_file import release_prepared
 
 
 def pcm_signal(pcm):
@@ -160,6 +162,10 @@ class LocalOutput:
         self.generation+=1;owner=self.generation
         if self.available_player() is None:return
         prepared=await self.tts(text)
+        try:await self.play_prepared(prepared,owner)
+        finally:await release_prepared(prepared)
+
+    async def play_prepared(self,prepared,owner):
         if owner!=self.generation or asyncio.current_task().cancelling():raise asyncio.CancelledError()
         player=self.available_player()
         if player is None:return

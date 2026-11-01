@@ -12,10 +12,11 @@ else:
 class Session:
     def __init__(self, *, transcribe, respond, play, stop, idle_seconds=8,
                  clock=time.monotonic, gate=None, silence_seconds=.7,
-                 max_seconds=240, max_turns=24,on_interrupt=None,input_timeout_seconds=5):
+                 max_seconds=240, max_turns=24,on_interrupt=None,input_timeout_seconds=5,playback_active=None):
         self.transcribe=transcribe;self.respond=respond;self.play=play;self.stop=stop
         self.clock=clock;self.gate=gate;self.idle_seconds=idle_seconds
         self.on_interrupt=on_interrupt
+        self.playback_active=playback_active or (lambda:self.stage=='speaking')
         self.max_seconds=max_seconds;self.max_turns=max_turns
         self.input_timeout_seconds=input_timeout_seconds
         self.segmenter=Segmenter(silence_seconds=silence_seconds)
@@ -25,17 +26,20 @@ class Session:
         self.idle_at=clock();self.frames=0;self.frames_during_output=0
         self.completed_turns=0;self.interruptions=0;self.failures=0;self.last_error=None
         self.truncated=0;self.reason=None
+        self._pending=None;self.deferred_turns=0;self.deferred_replaced=0;self.deferred_expired=0
 
     def snapshot(self):
         return {key:getattr(self,key) for key in ('stage','frames','frames_during_output',
-            'completed_turns','interruptions','failures','last_error','truncated','reason')}
+            'completed_turns','interruptions','failures','last_error','truncated','reason',
+            'deferred_turns','deferred_replaced','deferred_expired')}
 
     def request_close(self, reason):
-        self.reason=reason;self.done=True;self.finished.set()
+        self.reason=reason;self.done=True;self._pending=None;self.finished.set()
 
     async def interrupt(self):
         async with self.switch:
             self.generation+=1
+            self._pending=None
             old,self.task=self.task,None
             if old is not None and not old.done():
                 self.interruptions+=1
@@ -50,11 +54,19 @@ class Session:
 
     async def submit(self, audio, voiced, truncated):
         if self.closed or self.done:return
-        if self.interrupt_task is not None:
-            await self.interrupt_task;self.interrupt_task=None
-        if self.task is not None and not self.task.done():await self.interrupt()
         if truncated:
             self.truncated+=1;self.idle_at=self.clock();return
+        if self.interrupt_task is not None:
+            await self.interrupt_task;self.interrupt_task=None
+        if self.task is not None and not self.task.done():
+            if self.playback_active():await self.interrupt()
+            else:
+                self.deferred_turns+=1
+                if self._pending is not None:self.deferred_replaced+=1
+                self._pending=(audio,voiced,False,self.clock())
+                return
+        if self._pending is not None:
+            self._pending=None;self.deferred_replaced+=1
         self.generation+=1;generation=self.generation
         self.task=asyncio.create_task(self._turn(generation,audio,voiced))
 
@@ -71,8 +83,9 @@ class Session:
                 async with asyncio.timeout(100):await self.play(result.speech)
             if generation!=self.generation or self.closed:return
             self.completed_turns+=1
-            if not result.continuing or self.completed_turns>=self.max_turns:
-                self.request_close('conversation_finished' if not result.continuing else 'turn_limit')
+            if self.completed_turns>=self.max_turns:self.request_close('turn_limit')
+            elif not result.continuing and not result.speech and self._pending is None:
+                self.request_close('conversation_finished')
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -94,16 +107,21 @@ class Session:
                         self.request_close('audio_source_stalled');return
                     if self.done:return
                     self.frames+=1
-                    if self.stage=='speaking':self.frames_during_output+=1
+                    if self.playback_active():self.frames_during_output+=1
                     qualified=self.gate(frame,self) if self.gate else [(frame.audio,frame.speech_probability)]
                     for audio,probability in qualified:
                         for event in self.segmenter.feed(audio,probability or 0):
                             if event.kind=='onset':
-                                if self.task is not None and not self.task.done():
+                                if self.task is not None and not self.task.done() and self.playback_active():
                                     self.interrupt_task=asyncio.create_task(self.interrupt())
                             else:
                                 await self.submit(event.audio,event.voiced_s,event.truncated)
                     busy=self.task is not None and not self.task.done()
+                    if not busy and self._pending is not None and not self.done:
+                        pending,self._pending=self._pending,None
+                        if 0<=self.clock()-pending[3]<=5:await self.submit(*pending[:3])
+                        else:self.deferred_expired+=1
+                        busy=self.task is not None and not self.task.done()
                     if not busy and not self.segmenter.active and self.clock()-self.idle_at>=self.idle_seconds:
                         self.request_close('silence_timeout');return
                     if self.clock()-started>=self.max_seconds:
@@ -122,7 +140,7 @@ class Session:
 
     async def close(self):
         if self.closed:return
-        self.closed=True;self.generation+=1;self.finished.set()
+        self.closed=True;self.generation+=1;self._pending=None;self.finished.set()
         pending=[t for t in (self.interrupt_task,self.task) if t and not t.done()]
         for task in pending:task.cancel()
         try:
