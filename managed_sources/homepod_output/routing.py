@@ -1,5 +1,6 @@
 """Hold satellite completion until the explicitly selected HomePod has finished."""
 import asyncio
+import time
 from dataclasses import replace
 from math import isfinite
 
@@ -68,17 +69,20 @@ class OutputError(Exception):
 class Router:
  def __init__(self,play,stop):
   self.play=play;self.stop=stop;self.lock=asyncio.Lock();self.active=None;self.tasks={};self.runs={};self.latest=None
-  self.started=0;self.completed=0;self.cancelled=0;self.failed=0;self.last_error=None
+  self.started=0;self.completed=0;self.cancelled=0;self.failed=0;self.last_error=None;self.last_playback={}
  async def answer(self,run,output):
   async with self.lock:
    if self.latest is not None and self.latest!=str(run.id):raise asyncio.CancelledError()
-   self.active=str(run.id);self.started+=1
+   self.active=str(run.id);self.started+=1;started=time.monotonic()
+   self.last_playback={'outcome':'playing'}
    run._jarvis_homepod_stop_confirmed=False
    try:
     async with asyncio.timeout(180):await self.play(output['media_id'])
-    self.completed+=1
+    self.completed+=1;self.last_playback={'outcome':'completed'}
    except asyncio.CancelledError:
     self.cancelled+=1
+    self.last_playback={'outcome':'cancelled','reason':getattr(run,'_jarvis_homepod_cancel_reason','unattributed_cancellation'),
+                        'task_cancel_requests':asyncio.current_task().cancelling()}
     try:
      async with asyncio.timeout(3):await self.stop()
      run._jarvis_homepod_stop_confirmed=True
@@ -86,15 +90,21 @@ class Router:
     raise
    except Exception as exc:
     self.failed+=1;self.last_error=type(exc).__name__
+    self.last_playback={'outcome':'failed','reason':type(exc).__name__}
     try:
      async with asyncio.timeout(3):await self.stop()
     except Exception:pass
     raise
-   finally:self.active=None
+   finally:
+    self.last_playback['elapsed_s']=round(time.monotonic()-started,3)
+    self.active=None
  def activate(self,run_id):
   self.latest=str(run_id)
   for owner,task in list(self.tasks.items()):
-   if owner!=self.latest and not task.done():task.cancel()
+   if owner!=self.latest and not task.done():
+    run=self.runs.get(owner)
+    if run is not None:run._jarvis_homepod_cancel_reason='superseded_by_new_run'
+    task.cancel()
  def begin(self,run):
   owner=str(run.id)
   if self.latest is None:self.latest=owner
@@ -107,7 +117,8 @@ class Router:
    self.tasks.pop(owner,None);self.runs.pop(owner,None)
  def snapshot(self):
   return {'started':self.started,'completed':self.completed,'cancelled':self.cancelled,
-          'failed':self.failed,'active':self.active is not None,'last_error':self.last_error}
+          'failed':self.failed,'active':self.active is not None,'last_error':self.last_error,
+          'last_playback':dict(self.last_playback)}
 
 def install(hass,pipeline_class,router,core_version,pipeline_id,satellite_id,error_class=OutputError):
  if core_version!='2026.6.4':return 'unsupported_core'

@@ -7,7 +7,7 @@ from interrupt import install_abort_resume
 
 class InterruptTests(unittest.IsolatedAsyncioTestCase):
  async def exercise(self, *, continuation=True, stop_fails=False, replace=False,
-                    allowed=True, abort=True, change_conversation=False):
+                    allowed=True, abort=True, change_conversation=False, prebound=False):
   began=asyncio.Event();resumed=[];stopped=[]
   async def play(media):began.set();await asyncio.Event().wait()
   async def stop():
@@ -20,9 +20,11 @@ class InterruptTests(unittest.IsolatedAsyncioTestCase):
   terminal=NS()
   class Terminal:
    async def handle_pipeline_stop(self,abort):
-    if abort:self._pipeline_task.cancel()
+    if abort:self._abort_pipeline()
+   def _abort_pipeline(self):self._pipeline_task.cancel()
   terminal=Terminal();terminal.hass=hass;terminal.entity_id='satellite'
   terminal._conversation_id='conversation';terminal._is_announcing=False
+  subscribed_stop=terminal.handle_pipeline_stop if prebound else None
   async def resume(entity,pending):resumed.append((entity._conversation_id,pending['conversation_id']))
   pending={'run_id':'run','conversation_id':'conversation','seconds':3}
   controller=NS(pending=pending)
@@ -34,7 +36,7 @@ class InterruptTests(unittest.IsolatedAsyncioTestCase):
    finally:router.end(run)
   task=asyncio.create_task(output());terminal._pipeline_task=task
   await began.wait()
-  await terminal.handle_pipeline_stop(abort)
+  await (subscribed_stop or terminal.handle_pipeline_stop)(abort)
   if replace:router.activate('replacement')
   if change_conversation:terminal._conversation_id='new-conversation'
   if not abort:task.cancel()
@@ -45,6 +47,10 @@ class InterruptTests(unittest.IsolatedAsyncioTestCase):
   if gate.jobs:await asyncio.gather(*list(gate.jobs.values()),return_exceptions=True)
   return resumed,stopped,gate
 
+ async def test_stop_callback_bound_before_install_still_resumes(self):
+  resumed,stopped,gate=await self.exercise(prebound=True)
+  self.assertEqual(stopped,[True])
+  self.assertEqual(resumed,[('conversation','conversation')])
  async def test_device_abort_stops_audio_then_resumes_same_conversation_once(self):
   resumed,stopped,gate=await self.exercise()
   self.assertEqual(stopped,[True]);self.assertEqual(resumed,[('conversation','conversation')])

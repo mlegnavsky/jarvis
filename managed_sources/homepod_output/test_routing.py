@@ -46,6 +46,9 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
   task=asyncio.create_task(run.text_to_speech('Odpověď'));await began.wait();task.cancel()
   with self.assertRaises(asyncio.CancelledError):await task
   self.assertEqual(stopped,[True]);self.assertEqual([e.type for e in calls],['tts-start'])
+  self.assertEqual(router.snapshot()['last_playback']['outcome'],'cancelled')
+  self.assertEqual(router.snapshot()['last_playback']['reason'],'unattributed_cancellation')
+  self.assertGreaterEqual(router.snapshot()['last_playback']['elapsed_s'],0)
  async def test_unrelated_pipeline_and_synthetic_probe_never_route(self):
   played=[]
   async def play(media):played.append(media)

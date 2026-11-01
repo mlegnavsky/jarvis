@@ -10,10 +10,10 @@ import asyncio
 class AbortResume:
  def __init__(self,router,allowed,resume,pending):
   self.router=router;self.allowed=allowed;self.resume=resume;self.pending=pending
-  self.jobs={};self.resumed=0;self.blocked=0;self.failed=0;self.last_reason=None
+  self.jobs={};self.native_aborts=0;self.resumed=0;self.blocked=0;self.failed=0;self.last_reason=None
 
  def snapshot(self):
-  return {'resumed':self.resumed,'blocked':self.blocked,'failed':self.failed,
+  return {'native_aborts':self.native_aborts,'resumed':self.resumed,'blocked':self.blocked,'failed':self.failed,
           'pending':bool(self.jobs),'last_reason':self.last_reason}
 
  def capture(self,entity):
@@ -64,16 +64,22 @@ class AbortResume:
 
 def install_abort_resume(hass,satellite_class,router,core_version,satellite_id,
                          allowed,resume,pending):
- if core_version!='2026.6.4' or not hasattr(satellite_class,'handle_pipeline_stop'):
+ if core_version!='2026.6.4' or not hasattr(satellite_class,'_abort_pipeline'):
   return None
  if '_jarvis_homepod_abort_resume' in satellite_class.__dict__:return None
- original=satellite_class.handle_pipeline_stop
+ original=satellite_class._abort_pipeline
  gate=AbortResume(router,allowed,resume,pending)
- async def stop(entity,abort):
+ def abort(entity):
   matches=entity.hass is hass and entity.entity_id==satellite_id
-  captured=gate.capture(entity) if matches and abort else None
-  await original(entity,abort)
+  captured=gate.capture(entity) if matches else None
+  if matches:
+   gate.native_aborts+=1
+   run=router.runs.get(router.active)
+   if run is not None:run._jarvis_homepod_cancel_reason='native_satellite_abort'
+  # Native subscribed handle_pipeline_stop may already be a bound method.
+  # Its dynamic _abort_pipeline call reaches this hook regardless of setup order.
+  original(entity)
   gate.schedule(entity,captured)
- satellite_class.handle_pipeline_stop=stop
+ satellite_class._abort_pipeline=abort
  satellite_class._jarvis_homepod_abort_resume=gate
  return gate

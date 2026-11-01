@@ -308,3 +308,8 @@ Uncalibrated centroid0.75 accepted0/5 owner heldouts, fixed anchor blend3/5, mea
 ## Voice diagnostic retention1.1.7
 
 Live owner identity question at10:26UTC was correctly transcribed but rejected. A subsequent0.2s follow-up replaced last_turn before60s report refresh, destroying numeric evidence; exact match failure remains unknown. Coordinator now retains the last16 completed decisions with numeric match/window scores, capture sequence, UTC timestamp and authorization result, without transcript, vector, voice_id or token. Regression reproduces original loss and tests follow-up isolation/bounded privacy. Recognition policy and thresholds unchanged. New live utterance required after deployment; do not claim acoustic recognition fixed from recorded holdouts.
+
+
+## Native abort callback1.0.3 and live recognition failure
+
+Owner physical identity utterance11:18UTC was fully transcribed;6.31s audio/5.47s voiced, whole match0.628<0.65 rejected. No threshold or profile change. HomePod started1/completed0/cancelled1; original cancellation source was not recorded, so do not claim cause of cut word proven. Found independent real setup-order bug: esphome subscribes a bound handle_pipeline_stop before late companion hook installation; replacing class method misses that saved callback. Regression reproduces absent resume with prebound callback. Hook now targets synchronous dynamic _abort_pipeline, still target-scoped, stopping before single same-conversation continuation with fresh session checks. Adds native abort count, last playback outcome/elapsed/task cancel count and known native-abort/new-run attribution; no media URL/token/audio. Other cancellations still never restart microphone. Physical post-deploy check required.

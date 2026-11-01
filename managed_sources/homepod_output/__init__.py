@@ -135,7 +135,7 @@ async def async_setup(hass,config):
    await restore_tv(active_run)
  async_track_state_change_event(hass,[TELEVISION],television_state)
  async_track_state_change_event(hass,[SATELLITE],satellite_state)
- report={'version':4,'runtime_version':'1.0.2','started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
+ report={'version':5,'runtime_version':'1.0.3','started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
          'volume_policy':'startup_45_then_follow_homepod_raop','legacy_fixed_volume_ignored':speech_volume,
          'native_abort_resume':'active' if abort_resume else 'unavailable',
          'microphone':SATELLITE,'speech_volume':None,'terminal_spoken_output':False if adapter=='active' else 'native_uncontrolled','audible_test_performed':False,
