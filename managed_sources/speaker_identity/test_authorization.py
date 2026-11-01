@@ -53,3 +53,9 @@ class PoliteCommandTests(unittest.TestCase):
  def test_negation_multi_action_and_quotes_are_not_canonicalized(self):
   for text in ('Prosím nerozsviť v obýváku','Řekl jsem rozsviť','Prosím rozsviť a odemkni','Rozsviť v obýváku a pak zhasni','Rozsviť v obýváku pokud tam někdo je'):
    self.assertIsNone(command(text),text)
+
+class QuotedConfirmationTests(unittest.TestCase):
+ def test_quoted_lock_confirmation_is_not_an_action(self):
+  gate=VoiceGate();gate.pending('mic','odemkni')
+  self.assertIsNone(gate.confirm('mic','„Potvrzuji odemknutí hlavního vchodu“',True))
+  self.assertEqual(gate.confirm('mic','Potvrzuji odemknutí hlavního vchodu',True),'odemkni')

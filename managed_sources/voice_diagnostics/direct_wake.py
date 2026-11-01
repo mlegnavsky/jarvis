@@ -1,4 +1,4 @@
-"""Reject unverified direct light wake detections; preserve deliberate Assist input.
+"""Keep unselected direct light models out of the ordinary wake-word flow.
 
 The acoustic command models can fire on television audio even when the ordinary
 wake-word slots are disabled. A detected command is not speaker authorization.
@@ -11,7 +11,7 @@ COMMANDS = frozenset(('rozsviť', 'zhasni'))
 
 def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, *, last_wakeups=None, cooldown=2., clock=time.monotonic, end_event=None):
     report = {'status': 'unsupported_core', 'commands': 0, 'blocked': 0,
-              'scope': 'reject_unverified_direct_light_wakes'}
+              'scope': 'selected_wake_then_spoken_command_only'}
     if core_version != '2026.6.4':
         return report
     if '_jarvis_direct_wake' in input_class.__dict__:
@@ -38,13 +38,13 @@ def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, 
                 run.tts_stream.delete()
                 run.tts_stream = None
             run.process_event(PipelineEvent(PipelineEventType.ERROR, {
-                'code': 'unverified-direct-wake',
-                'message': 'Direct light wake requires verified speaker; use the button.',
+                'code': 'direct-command-wake-disabled',
+                'message': 'Direct acoustic light commands are disabled; say Jarvis then the command.',
             }))
         finally:
             await run.end()
 
     input_class.execute = execute
-    report['status'] = 'blocked_unverified'
+    report['status'] = 'explicit_wake_required'
     input_class._jarvis_direct_wake = report
     return report

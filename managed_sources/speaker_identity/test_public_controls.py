@@ -49,3 +49,35 @@ class PublicControlTests(unittest.IsolatedAsyncioTestCase):
   self.assertNotEqual(r['status'],'recognized')
   self.assertFalse(r['authorized'])
   self.assertNotIn('memory_id',r);self.assertNotIn('profile',r)
+ async def test_one_contract_runs_real_all_house_grant_and_room_execution(self):
+  import importlib.util
+  from pathlib import Path
+  path=Path(__file__).parents[1]/'companion'/'room_commands.py'
+  spec=importlib.util.spec_from_file_location('contract_room',path)
+  room=importlib.util.module_from_spec(spec);spec.loader.exec_module(room)
+  self.c.public_controls=True;self.c.enforce=True
+  areas=[{'id':'living','name':'Obývák'}]
+  exposed=[{'entity_id':'light.living','area_id':'living'},{'entity_id':'light.child','area_id':'child'},{'entity_id':'switch.heater','area_id':'living'}]
+  for text in ('Zhasni všude','Jarvisi, prosím vypni všechna světla'):
+   calls=[]
+   async def call(*args,**kwargs):calls.append(args)
+   hass=NS(data={'jarvis_speaker_identity':self.c},services=NS(async_call=call),states=NS(get=lambda entity:NS(state='off')))
+   await self.c.complete('device',bytes(16000),.5,text)
+   result=await self.c.turn(NS(text=text,device_id='device'),'c')
+   user=NS(text=result['effective_text'],device_id='device')
+   request=room.resolve(user.text,'living',areas,exposed)
+   targets=(tuple(request['entity_ids']),request['area_id']);action=('light','turn_off')
+   self.assertTrue(self.c.gate.bind(result['control_token'],'device',user.text,action,targets))
+   reply=await room.execute(hass,request,None,user=user,token=result['control_token'])
+   self.assertEqual(reply,'');self.assertEqual(calls[0][2]['entity_id'],['light.child','light.living'])
+   self.assertNotIn('switch.heater',str(calls))
+   self.assertFalse(self.c.gate.consume(result['control_token'],'device',user.text,action,targets))
+ async def test_quoted_profile_command_cannot_mutate_even_recognized_owner(self):
+  self.c.profiles.begin('device','Martin')
+  for _ in range(3):self.c.profiles.sample('device',[1.,0.],4)
+  self.c.profiles.bootstrap_authorization('Martin');self.c.public_controls=True;self.c.enforce=True
+  text='„Smaž můj hlasový profil“'
+  await self.c.complete('device',bytes(128000),4,text)
+  r=await self.c.turn(NS(text=text,device_id='device'),'c')
+  self.assertEqual(self.c.profiles.count(),1)
+  self.assertNotIn('control_token',r)

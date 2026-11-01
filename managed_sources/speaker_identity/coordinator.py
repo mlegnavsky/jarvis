@@ -4,23 +4,24 @@ import copy
 from datetime import datetime,timezone
 import time
 import hashlib
-import asyncio
 if __package__:
  from .policy import VoiceProfiles,MODEL_ID,norm
- from .authorization import VoiceGate,command,canonical_command
+ from .authorization import VoiceGate,command,canonical_command,strip_address,contains_quotes
  from .adaptation import Adaptation
  from .pronunciation import Pronunciation
  from .owner_calibration import OwnerCalibration
  from .family_enrollment import FamilyEnrollment,STARTS,RESUMES
  from .familiar import FamiliarVoices
+ from .background_learning import BackgroundLearning
 else:
  from policy import VoiceProfiles,MODEL_ID,norm
- from authorization import VoiceGate,command,canonical_command
+ from authorization import VoiceGate,command,canonical_command,strip_address,contains_quotes
  from adaptation import Adaptation
  from pronunciation import Pronunciation
  from owner_calibration import OwnerCalibration
  from family_enrollment import FamilyEnrollment,STARTS,RESUMES
  from familiar import FamiliarVoices
+ from background_learning import BackgroundLearning
 
 async def admin_forget(hass,user_id,name,coordinator,clear_memory):
  account=await hass.auth.async_get_user(user_id) if user_id else None
@@ -36,7 +37,8 @@ class Coordinator:
   self.enforce=enforce;self.public_controls=public_controls;self.gate=VoiceGate(clock=clock,challenge_words=('javor','kolo','most','reka','hora','okno','zahrada','strom'));self.adaptation=Adaptation(self.profiles)
   self.pronunciation=Pronunciation(self.profiles);self.calibration={};self.failures={}
   self.family=FamilyEnrollment(self.profiles)
-  self.familiar=FamiliarVoices(self.profiles);self.learning_tasks=set();self.address_ticks={}
+  self.familiar=FamiliarVoices(self.profiles);self.address_ticks={}
+  self.learning=BackgroundLearning(lambda pcm:self.infer(pcm),hass.async_add_executor_job,self.collect_familiar)
   self.owner_calibration=OwnerCalibration(self.profiles,calibration_satellite) if calibration_satellite else None
  def device(self,user):return getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
  def cancel_for(self,user):
@@ -53,7 +55,7 @@ class Coordinator:
   self.capture_count+=1;capture_number=self.capture_count;start=self.clock()
   result={'status':'too_short'}
   public_light=self.public_controls and (command(text) or (None,))[0]=='light'
-  training=self.family.summary()['status']!='idle' or bool(self.owner_calibration and self.owner_calibration.summary().get('status')=='collecting')
+  training=await self.hass.async_add_executor_job(self.training_active) if public_light else False
   deferred=public_light and not training
   if deferred:result={'status':'identity_optional_deferred'}
   elif voiced>=2.5:
@@ -67,19 +69,14 @@ class Coordinator:
   self.results[device]['summary']=summary
   if deferred and voiced>=3 and playback is False:self.results[device]['learning_pcm']=pcm
   if capture_number>=self.last.get('capture_number',0):self.last=dict(summary)
- async def learn_later(self,item,conversation):
-  pcm=item.pop('learning_pcm',None)
-  if not pcm:return
-  try:
-   result=await self.infer(pcm)
-   # Known protected profiles remain immutable; only anonymous familiarity is learned.
-   def collect():
-    if result.get('status')!='ok' or result.get('model')!=MODEL_ID:return
-    if self.profiles.identify(result.get('vector'))['status']=='recognized':return
-    self.familiar.observe({**item,'result':result},conversation)
-   await self.hass.async_add_executor_job(collect)
-  except asyncio.CancelledError:raise
-  except Exception:pass
+ @property
+ def learning_tasks(self):return self.learning.tasks
+ def training_active(self):
+  return self.family.summary()['status']!='idle' or bool(self.owner_calibration and self.owner_calibration.summary().get('status')=='collecting')
+ def collect_familiar(self,result,item,conversation):
+  if result.get('status')!='ok' or result.get('model')!=MODEL_ID:return
+  if self.profiles.identify(result.get('vector'))['status']=='recognized':return
+  return self.familiar.observe({**item,'result':result},conversation)
  async def turn(self,user,conversation):
   device=getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
   item=self.results.pop(device,None)
@@ -104,12 +101,12 @@ class Coordinator:
   if self.last.get('capture_number')==item['capture_number']:
    self.last.update(decision_status=decision.get('status'),accepted_samples=decision.get('samples'))
    if 'matching' in item:self.last['matching']=copy.deepcopy(item['matching'])
-  if decision.get('status')=='public_command' and 'learning_pcm' in item and len(self.learning_tasks)<2:
-   task=asyncio.create_task(self.learn_later(item,str(conversation)))
-   self.learning_tasks.add(task);task.add_done_callback(self.learning_tasks.discard)
+  if decision.get('status')=='public_command':self.learning.submit(item,str(conversation))
   return decision
  def _turn_sync(self,device,conversation,text,item):
-  family_value=re.sub(r'^anicko\s+','',norm(text))
+  if contains_quotes(text):
+   return {'status':'quoted_input','authorized':False,'request_introduction':False}
+  family_value=strip_address(text)
   family=self.family.collect(device,text,item)
   if family is not None:
    self.gate.cancel(device);return family

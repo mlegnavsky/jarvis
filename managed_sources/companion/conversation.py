@@ -204,6 +204,10 @@ class ExtendedOpenAIAgentEntity(
             turns = self._dialogue_turns.get(conversation_id, 0) + 1
             self._dialogue_turns[conversation_id] = turns
             continuing = getattr(companion_turn, 'continue_listening', True) and should_continue(user_input.text, local_reply, turns, time.monotonic()-started)
+            if not continuing:
+                self._recent_devices.pop(user_input.device_id, None)
+                self._dialogue_started.pop(conversation_id, None)
+                self._dialogue_turns.pop(conversation_id, None)
             while len(self._dialogue_started) > 16:
                 oldest = next(iter(self._dialogue_started))
                 self._dialogue_started.pop(oldest, None)

@@ -1,16 +1,11 @@
 """Bounded Czech follow-up policy, independent of HA/OpenAI."""
-import re
-import unicodedata
 
-def normalized(text):
- return ' '.join(re.findall(r'\w+', ''.join(c for c in unicodedata.normalize('NFKD',text.casefold()) if not unicodedata.combining(c))))
+if __package__:
+ from custom_components.jarvis_voice_common import normalized,is_noise_transcript,parse_command
+else:
+ from managed_sources.voice_common import normalized,is_noise_transcript,parse_command
 
 TIME_REQUESTS={'kolik je hodin','kolik je ted hodin','kolik je prave hodin','jaky je cas','rekni mi kolik je hodin'}
-
-def is_noise_transcript(text):
- value=normalized(text)
- echo='the following conversation is a smart home user talking to home assistant'
- return not value or text.strip().casefold() in {'context:', 'context', '[blank_audio]', '[silence]'} or value in {echo,'context '+echo}
 
 def local_time_answer(text,now):
  if normalized(text) not in TIME_REQUESTS:return None
@@ -37,7 +32,8 @@ def recent_session(sessions,device,now):
 def should_continue(text,response,turns,elapsed):
  if is_stop(text) or is_pause(text) or is_noise_transcript(text) or not response.strip():return False
  if normalized(text) in TIME_REQUESTS:return False
- if re.fullmatch(r'(rozsvit|zhasni)(?: (?:to|svetlo|svetla))?(?: (?:v|ve) [\w ]+)?',normalized(text)):return False
+ parsed=parse_command(text)
+ if parsed is not None and parsed.domain=='light':return False
  if normalized(text)==normalized(response):return False
  return turns<32 and elapsed<1200
 

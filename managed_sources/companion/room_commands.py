@@ -3,13 +3,12 @@
 This is an intent handler after activation, never a wake-word model. A missing
 or unknown room never falls back to another room or the entire household.
 """
-import re
-import unicodedata
 
 
-def normalized(text):
-    return ' '.join(''.join(c for c in unicodedata.normalize('NFKD', str(text).casefold())
-                            if not unicodedata.combining(c)).split()).strip(' .!?')
+if __package__:
+    from custom_components.jarvis_voice_common import normalized,parse_command
+else:
+    from managed_sources.voice_common import normalized,parse_command
 
 # Known Czech locative forms, applied only to exact registered room names/aliases.
 FORMS = {
@@ -25,22 +24,20 @@ FORMS = {
 
 
 def resolve(text, source_area, areas, exposed):
-    lock_match=re.fullmatch(r'(zamkni|odemkni)(?: hlavni vchod)?',normalized(text))
-    if lock_match:
+    parsed=parse_command(text)
+    if parsed is None:return None
+    if parsed.domain=='lock':
         target='lock.vstup_zamek_vchod'
-        return {'domain':'lock','service':'lock' if lock_match[1]=='zamkni' else 'unlock',
+        return {'domain':'lock','service':parsed.service,
                 'entity_ids':[target] if any(e['entity_id']==target for e in exposed) else [],
                 'area_id':'vstup','area_name':'Hlavní vchod',
                 'error':None if any(e['entity_id']==target for e in exposed) else 'lock_not_exposed'}
-    match = re.fullmatch(r'(rozsvit|zhasni)(?: (?:to|svetlo|svetla))?(?: (?:v|ve) (.+))?', normalized(text))
-    if not match:
-        return None
-    verb, explicit = match.groups()
-    # Multi-action or parameterized requests belong to the normal agent.
-    if explicit and re.search(r'\b(a|pak|potom|na|za|ale|az|kdyz)\b|[,;]', explicit):
-        return None
-    result = {'service': 'turn_on' if verb == 'rozsvit' else 'turn_off',
-              'entity_ids': [], 'area_id': None, 'area_name': None, 'error': None}
+    explicit=parsed.room
+    result={'service':parsed.service,'entity_ids':[],'area_id':None,'area_name':None,'error':None}
+    if parsed.scope=='all':
+        result.update(area_id='all',area_name='Celý dům',entity_ids=sorted({e['entity_id'] for e in exposed if e['entity_id'].startswith('light.')}))
+        if not result['entity_ids']:result['error']='no_exposed_lights'
+        return result
     if explicit:
         candidates = []
         for area in areas:
@@ -105,7 +102,7 @@ async def execute(hass, request, context, *, user=None, token=None):
 
 def resolve_input(hass, user, exposed):
     # Avoid registry access at all for unrelated conversation turns.
-    if not re.match(r'^(rozsvit|zhasni|zamkni|odemkni)(?:\s|$)', normalized(user.text)):
+    if parse_command(user.text) is None:
         return None
     from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
     areas_registry, devices, entities = ar.async_get(hass), dr.async_get(hass), er.async_get(hass)

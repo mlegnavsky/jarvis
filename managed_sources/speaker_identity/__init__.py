@@ -22,6 +22,8 @@ from .manifest import refresh_manifest
 from .review import CalibrationReview
 from .matching_control import MatchingControl
 
+from custom_components.jarvis_voice_common import VERSION as COMMAND_CONTRACT_VERSION
+
 DOMAIN='jarvis_speaker_identity'
 CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({vol.Optional('authorize_existing_profile'):str})},extra=vol.ALLOW_EXTRA)
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
@@ -41,9 +43,7 @@ async def async_setup(hass,config):
    return data
  coordinator=Coordinator(hass,root/'profiles.sqlite',infer,enforce=True,calibration_satellite=SATELLITE,public_controls=True)
  async def stop_learning(_event):
-  tasks=list(coordinator.learning_tasks)
-  for task in tasks:task.cancel()
-  if tasks:await asyncio.gather(*tasks,return_exceptions=True)
+  await coordinator.learning.shutdown()
  hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP,stop_learning)
  review=CalibrationReview(coordinator.profiles,root/'review-plan.json',SATELLITE)
  matching_control=MatchingControl(coordinator.profiles,review,root/'review-control.json')
@@ -65,8 +65,8 @@ async def async_setup(hass,config):
  from homeassistant.const import __version__ as core_version
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun
  adapter=install(hass,PipelineRun,coordinator,core_version,PIPELINE,SATELLITE)
- report={'version':15,'runtime_version':'1.3.1','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
-         'command_policy':'public_local_lights_silent_v1','public_controls':['light'],
+ report={'version':16,'runtime_version':'1.4.0','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+         'command_policy':'public_local_lights_silent_v2','public_controls':['light'],'shared_command_contract':COMMAND_CONTRACT_VERSION,
          'native_intent_guard':bool(PipelineRun.__dict__.get('_jarvis_voice_intent_guard')),
          'enrollment_trigger_requires_embedding':False,
          'enrollment_policy':'reject_sample_keep_progress_v2',
@@ -104,6 +104,7 @@ async def async_setup(hass,config):
                 profile_count=count,enrollment=coordinator.enrollment_state())
   report['authorization']=await hass.async_add_executor_job(coordinator.profiles.authorization_summary)
   report['adaptation']=await hass.async_add_executor_job(coordinator.adaptation.summary)
+  report['optional_learning']=coordinator.learning.snapshot()
   report['familiar_voices']=await hass.async_add_executor_job(coordinator.familiar.summary)
   await hass.async_add_executor_job(save,dict(report))
   slots={}
@@ -111,7 +112,7 @@ async def async_setup(hass,config):
    state=hass.states.get(entity_id)
    slots[entity_id]=state.state if state else 'missing'
   await hass.async_add_executor_job(refresh_manifest,root.parent/'voice-system-manifest.json',dict(report),
-    [Path(__file__).parent,Path(hass.config.path('custom_components','extended_openai_conversation'))],report['updated_at'],slots)
+    [Path(__file__).parent,Path(hass.config.path('custom_components','extended_openai_conversation')),Path(hass.config.path('custom_components','jarvis_voice_common'))],report['updated_at'],slots)
   hass.states.async_set('sensor.jarvis_rozpoznavani_hlasu',coordinator.status,
     {'friendly_name':'Jarvis · rozpoznávání mluvčího','profiles':report['profile_count'],
      'adapter':adapter,'captured_turns':coordinator.capture_count,'last_status':coordinator.last.get('status'),

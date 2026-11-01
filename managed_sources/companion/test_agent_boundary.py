@@ -79,6 +79,8 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
   result=await fn(agent,NS(text='Rozsviť',language='cs',device_id='mic'),NS(conversation_id='c'))
   self.assertEqual(result.response.text,'')
   self.assertFalse(result.continue_conversation)
+  self.assertNotIn('c',agent._dialogue_turns)
+  self.assertNotIn('c',agent._dialogue_started)
  async def test_local_commands_do_not_leak_unbounded_session_counters(self):
   class Companion:
    async def prepare(self,*a):return NS(reset_history=False,principal='p',local_reply='Místní odpověď.')

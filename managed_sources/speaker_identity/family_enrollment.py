@@ -4,9 +4,11 @@ from uuid import uuid4
 if __package__:
  from .policy import MODEL_ID,COHORT_POLICY,unit,norm,similarity,cohort_evidence,profile_evidence
  from .family_questions import QUESTIONS
+ from custom_components.jarvis_voice_common import strip_address
 else:
  from policy import MODEL_ID,COHORT_POLICY,unit,norm,similarity,cohort_evidence,profile_evidence
  from family_questions import QUESTIONS
+ from managed_sources.voice_common import strip_address
 
 STARTS={'nauc se noveho clena rodiny','pridej noveho clena rodiny','prosim nauc se noveho clena rodiny a proved ho zaucenim'}
 RESUMES={'pokracuj v zauceni clena rodiny','pokracuj v zauceni'}
@@ -79,7 +81,7 @@ class FamilyEnrollment:
   else:from family_control import validate_holdout
   return validate_holdout(db,sample,bank)
  def collect(self,device,text,item):
-  value=re.sub(r'^anicko\s+','',norm(text))
+  value=strip_address(text)
   if value in STARTS|RESUMES:return None
   try:
    with self.db() as db:

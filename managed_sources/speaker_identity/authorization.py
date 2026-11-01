@@ -1,5 +1,4 @@
 """One-use active-utterance grants; matching a voice is not HA authentication."""
-import re
 import secrets
 import time
 if __package__:
@@ -7,26 +6,12 @@ if __package__:
 else:
  from policy import norm
 
-LOCK='lock.vstup_zamek_vchod'
-def canonical_command(text):
- value=norm(text)
- value=re.sub(r'^anicko\s+','',value)
- value=re.sub(r'^prosim(?: te)?\s+','',value)
- value=re.sub(r'\s+prosim(?: te)?$','',value)
- # Only finite courtesy wrappers, never arbitrary trailing clauses/actions.
- value=re.sub(r' at tady lepe vidim$','',value)
- value=re.sub(r'^(rozsvit|zhasni) (?:mi|me) ',r'\1 ',value)
- if value in ('zamkni','zamkni hlavni vchod','odemkni','odemkni hlavni vchod'):return value
- match=re.fullmatch(r'(rozsvit|zhasni)(?: (?:to|svetlo|svetla))?(?: (?:v|ve) (?!.*\b(?:a|pak|potom|na|za|ale|az|kdyz|pokud|jestli|nebo)\b)[\w ]+)?',value)
- if match:return value
- return None
+if __package__:
+ from custom_components.jarvis_voice_common import canonical_command,command_action as command,strip_address,contains_quotes
+else:
+ from managed_sources.voice_common import canonical_command,command_action as command,strip_address,contains_quotes
 
-def command(text):
- value=canonical_command(text)
- if value is None:return None
- if value.startswith('zamkni'):return ('lock','lock')
- if value.startswith('odemkni'):return ('lock','unlock')
- return ('light','turn_on' if value.startswith('rozsvit') else 'turn_off')
+LOCK='lock.vstup_zamek_vchod'
 
 class VoiceGate:
  def __init__(self,clock=time.monotonic,challenge_words=()):
@@ -54,11 +39,12 @@ class VoiceGate:
   while len(self.waiting)>16:self.waiting.pop(next(iter(self.waiting)))
   return challenge
  def confirm(self,device,text,authorized):
+  if contains_quotes(text):return None
   slot=self.waiting.get(device)
   if not slot:return None
   if not authorized or not 0<=self.clock()-slot['at']<=60:
    self.waiting.pop(device,None);return None
-  value=re.sub(r'^anicko\s+','',norm(text))
+  value=strip_address(text)
   expected={('lock','unlock'):'potvrzuji odemknuti hlavniho vchodu',
             ('lock','lock'):'potvrzuji zamknuti hlavniho vchodu',
             ('light','turn_on'):'potvrzuji rozsviceni svetel v teto mistnosti',
