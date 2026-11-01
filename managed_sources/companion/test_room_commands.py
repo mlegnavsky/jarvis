@@ -58,7 +58,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   request=self.resolve_request()
   reply=await handler(hass,request,context)
   self.assertEqual(called,[('light','turn_on',{'entity_id':['light.living']},{'blocking':True,'context':context})])
-  self.assertIn('odeslala',reply);self.assertNotIn('Rozsvítil',reply)
+  self.assertEqual(reply,'')
  def resolve_request(self):return commands.resolve('rozsviť','living',AREAS,LIGHTS)
  async def test_error_never_calls_any_service(self):
   handler=getattr(commands,'execute',None);self.assertIsNotNone(handler)

@@ -111,7 +111,7 @@ async def async_setup(hass,config):
   await television.release(if_current=lambda:active_run==owner and not active_pipeline and router.active is None)
  def session_event(run,event):
   nonlocal tv_prepare,active_run,lease_started,active_pipeline,pending_followup
-  if run.hass is hass and run.pipeline.id==PIPELINE and run._satellite_id==SATELLITE and not str(run.id).startswith('synthetic-'):
+  if run.hass is hass and run.pipeline.id==PIPELINE and run._satellite_id==SATELLITE and not str(run.id).startswith('synthetic-') and not getattr(run,'_jarvis_suppressed_activation',False):
    kind=str(event.type)
    if kind!='run-start' and active_run!=str(run.id):return native_event(run,event)
    if kind=='run-start':
@@ -140,7 +140,7 @@ async def async_setup(hass,config):
    await restore_tv(active_run)
  async_track_state_change_event(hass,[TELEVISION],television_state)
  async_track_state_change_event(hass,[SATELLITE],satellite_state)
- report={'version':7,'runtime_version':'1.1.0','started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
+ report={'version':7,'runtime_version':'1.1.1','started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
          'volume_policy':'startup_45_then_follow_homepod_raop','legacy_fixed_volume_ignored':speech_volume,
          'native_abort_resume':'active' if abort_resume else 'unavailable',
          'microphone':SATELLITE,'speech_volume':None,'terminal_spoken_output':False,'terminal_tts_start_policy':'withheld_for_external_output','interruption_policy':'physical_button_preserved_external_acoustic_stop_not_armed' if adapter=='active' else 'native_uncontrolled','audible_test_performed':False,

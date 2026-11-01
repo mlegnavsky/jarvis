@@ -4,6 +4,8 @@ This is an intent handler after activation, never a wake-word model. A missing
 or unknown room never falls back to another room or the entire household.
 """
 
+import time
+
 
 if __package__:
     from custom_components.jarvis_voice_common import normalized,parse_command
@@ -95,6 +97,17 @@ async def execute(hass, request, context, *, user=None, token=None):
     desired = ('locked' if request['service']=='lock' else 'unlocked') if domain=='lock' else ('on' if request['service'] == 'turn_on' else 'off')
     verified = all((state := hass.states.get(entity)) is not None and state.state == desired
                    for entity in request['entity_ids'])
+    if domain=='light':
+        # Device reports commonly arrive after the service response. Acceptance
+        # is silent; the observation is never promoted to a spoken success claim.
+        data=getattr(hass,'data',None)
+        if isinstance(data,dict):
+            observations=data.setdefault('jarvis_light_command_observations',[])
+            observations.append({'at':time.monotonic(),'area_id':request['area_id'],
+                'entity_ids':list(request['entity_ids']),'desired':desired,
+                'status':'confirmed' if verified else 'accepted_pending_state'})
+            del observations[:-20]
+        return ''
     if verified:
         return ''
     return 'Povel jsem odeslala. Místo: ' + request['area_name'] + '. Změnu stavu zatím nemám potvrzenou.'
@@ -148,7 +161,7 @@ def native_resolution_probe(hass):
                for state in hass.states.async_all()
                if state.entity_id.startswith('light.') and async_should_expose(hass, 'conversation', state.entity_id)]
     cases = []
-    for text in ('Rozsviť', 'Zhasni', 'Rozsvítit světlo v obýváku.', 'Zhasnout světlo', 'Rozsviť v koupelně', 'Zhasni v chodbičce'):
+    for text in ('Rozsviť', 'Zhasni', 'Rozsvítit světlo v obýváku.', 'Zhasnout světlo', 'Zhasni v dětském pokoji', 'Můžeš prosím zhasnout v dětském pokoji?', 'Rozsviť v koupelně', 'Zhasni v chodbičce'):
         user = SimpleNamespace(text=text, device_id=None,
             satellite_id='assist_satellite.home_assistant_voice_0a8bde_assist_satellite')
         request = resolve_input(hass, user, exposed)

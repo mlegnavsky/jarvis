@@ -64,14 +64,18 @@ class Controller:
             self.events.append(clean)
 
     def observe(self, run, event):
+        if getattr(run,'_jarvis_suppressed_activation',False):return
         kind, data = str(event.type), event.data or {}
         if kind == 'run-start':
             pending, self.pending = self.pending, None
-            run._jarvis_wait_s = None
+            command_wait=getattr(run,'_jarvis_command_wait_s',None)
+            run._jarvis_wait_s = command_wait
             # The preceding answer may take arbitrarily long to finish. The
             # native conversation ID, not time since intent generation, scopes
             # this one-shot handoff; consume it only in the next matching run.
-            if pending and data.get('conversation_id') == pending['conversation_id']:
+            if command_wait is not None:
+                self.record(run,'command_continuation_open',wait_s=command_wait)
+            elif pending and data.get('conversation_id') == pending['conversation_id']:
                 run._jarvis_wait_s = pending['seconds']
                 self.record(run, 'followup_open', wait_s=pending['seconds'],
                             previous_run_id=pending['run_id'])
@@ -181,6 +185,7 @@ def install(hass, pipeline_class, error_class, core_version, pipeline_id,
                         grace = .35 if candidate_at is not None else 0
                         budget = wait_s + grace - max(elapsed, clock() - started)
                         if budget <= 1e-6:
+                            run._jarvis_initial_silence_expired=elapsed>=wait_s
                             controller.pending = None
                             controller.record(run, 'followup_silence', wait_s=wait_s)
                             raise InitialSilenceExpired()
@@ -193,6 +198,7 @@ def install(hass, pipeline_class, error_class, core_version, pipeline_id,
                             raise InitialSilenceExpired() from None
                         return
                     except TimeoutError as exc:
+                        run._jarvis_initial_silence_expired=elapsed>=wait_s
                         controller.pending = None
                         controller.record(run, 'followup_silence', wait_s=wait_s)
                         raise InitialSilenceExpired() from exc
@@ -234,7 +240,7 @@ async def native_probe(hass, pipeline_class, segmenter_class):
     if control is None or control.status != 'active':
         return {'status': 'not_run', 'reason': 'adapter_not_active'}
     results = []
-    for wait, speech_at in ((3, None), (6, None), (3, 2.8), (6, 5.8)):
+    for wait, speech_at in ((.75, None), (.75, .6), (3, None), (6, None), (3, 2.8), (6, 5.8)):
         run = object.__new__(pipeline_class)
         run.hass = hass
         run.pipeline = SimpleNamespace(id=control.pipeline_id)
