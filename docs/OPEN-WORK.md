@@ -263,3 +263,7 @@ Source e95c9e90cf0d6c5b35fdb85ade7d7917511aef31; vol-apply-20261031 verified/act
 ## Authorized voice 1.1.0 — 1.11.2026
 Zdrojová implementace oprávnění podle stabilního hlasového ID, jednorázových povelů, oddělených kandidátů, chráněných kotev a automatického provozního manifestu. Nasazení je doloženo samostatnou účtenkou až po ověření běžícího reportu.
 Otevřeno: skutečné domácí testy shody; nezávislé negativní/replay vzorky; detekce přehrávky; hotové a fyzicky ověřené akustické modely Aničko/zamkni/odemkni; ověření kapacity firmwaru a zachycení krátkého slova pro identifikaci. Nesmí se hlásit plné probouzení nebo perfektní hlasový otisk. Modely se trénují ve větvi training/anicko-20261101.
+
+
+### Hlas 1.1.0 — ověřené nasazení 1.11.2026
+Čti také jarvis_workspace/voice-deployment-receipt.json. Původní job voice11-apply-20261101 skončil runtime_check_failed při startu, ale následné čerstvé ověření potvrdilo 28/28 souborů, report runtime1.1.0/ready, native_intent_guard=true, jeden autorizovaný profil a zachované kotvy. Žádný zápis nebyl opakován. Neopakovat apply pod novým klíčem. Manifest jarvis_workspace/voice-system-manifest.json se sám obnovuje; jeho hashe popisují soubory na disku, nikoli nezávislý důkaz aktivace. Skutečná domácí přesnost a wake modely zůstávají neověřené; detailní meze a výcvikový běh jsou v účtence.

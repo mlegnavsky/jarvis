@@ -87,3 +87,7 @@ Učení: delší kvalitní rozpoznané úseky mohou vytvořit pouze oddělené k
 Výslovnost: Nauč se slovo X znamená Y vyžádá druhé výslovné Potvrzuji slovo X znamená Y; pouze pro autorizovaný stabilní profil a čtyři povolené kanonické povely. Slovník nikdy nemění oprávnění.
 
 Výcvik kandidátů Aničko/zamkni/odemkni: training/anicko-20261101. Modely nejsou automaticky nahrány do firmwaru. Krátké přímé detekce zůstávají blokované, dokud nemáme ověřený zvukový úsek pro identitu; neodstraňovat ochranu jen kvůli funkčnímu akustickému modelu.
+
+
+### Hlas 1.1.0 — ověřené nasazení 1.11.2026
+Čti také jarvis_workspace/voice-deployment-receipt.json. Původní job voice11-apply-20261101 skončil runtime_check_failed při startu, ale následné čerstvé ověření potvrdilo 28/28 souborů, report runtime1.1.0/ready, native_intent_guard=true, jeden autorizovaný profil a zachované kotvy. Žádný zápis nebyl opakován. Neopakovat apply pod novým klíčem. Manifest jarvis_workspace/voice-system-manifest.json se sám obnovuje; jeho hashe popisují soubory na disku, nikoli nezávislý důkaz aktivace. Skutečná domácí přesnost a wake modely zůstávají neověřené; detailní meze a výcvikový běh jsou v účtence.
