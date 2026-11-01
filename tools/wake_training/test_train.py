@@ -5,6 +5,8 @@ from tempfile import TemporaryDirectory
 
 
 class TrainingInputTests(unittest.TestCase):
+    def test_anicko_is_exact_czech_address(self):
+        self.assertEqual(target_phrases('anicko'), ['Aničko'])
     def test_upstream_training_directory_is_not_the_existing_artifact_directory(self):
         with TemporaryDirectory() as temporary:
             artifact = Path(temporary) / 'candidate'

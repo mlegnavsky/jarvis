@@ -3,7 +3,7 @@ name: Experimental Czech wake model training
 # Jarvis pronunciation retraining; other targets remain paused.
 on:
   push:
-    branches: [training/czech-wake-candidates-20261028]
+    branches: [training/czech-wake-candidates-20261028, training/anicko-20261101]
     paths:
       - tools/wake_training/**
       - .github/workflows/czech-wake-training.yml
@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        target: [jarvis]
+        target: [anicko, zamkni, odemkni]
     env:
       OMP_NUM_THREADS: '2'
       TF_NUM_INTRAOP_THREADS: '2'
