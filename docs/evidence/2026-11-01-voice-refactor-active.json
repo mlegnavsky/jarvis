@@ -1,0 +1,272 @@
+{
+  "source_commit": "5943f9f17d2739ba39fa09ef1b95a744200296cb",
+  "verified_at": "2026-11-01T16:53:17.950095+00:00",
+  "runtime": {
+    "version": "1.4.0",
+    "status": "ready",
+    "shared_command_contract": "1.0.0",
+    "policy": "public_local_lights_silent_v2",
+    "public_controls": [
+      "light"
+    ],
+    "optional_learning": {
+      "mode": "optional_background",
+      "pending": 0,
+      "limit": 2,
+      "accepted": 0,
+      "completed": 0,
+      "dropped": 0,
+      "failed": 0,
+      "cancelled": 0,
+      "last_error": null,
+      "closed": false,
+      "drained": true,
+      "inference_timeout_s": 8,
+      "collector_lifecycle": "drained_before_release",
+      "raw_audio_saved": false
+    },
+    "familiar": {
+      "mode": "personalization_only",
+      "clusters": 1,
+      "named": 0,
+      "samples": 1,
+      "raw_audio_saved": false,
+      "grants_permissions": false
+    },
+    "authorization": {
+      "authorized_profiles": 1,
+      "anchor_profiles": 1
+    },
+    "owner_bank": "c18052f5d63d3d9e825e23ab5448442813fe73cdb0d50b3b4763e6b4729a82d4",
+    "homepod": {
+      "version": "1.1.0",
+      "status": "configured"
+    },
+    "direct_wake": {
+      "status": "explicit_wake_required",
+      "commands": 0,
+      "blocked": 0,
+      "scope": "selected_wake_then_spoken_command_only"
+    },
+    "voice": {
+      "captured_at": "2026-11-01T16:53:17.950095+00:00",
+      "entities": [
+        {
+          "entity_id": "select.home_assistant_voice_0a8bde_asistent",
+          "state": "Jarvis"
+        },
+        {
+          "entity_id": "select.home_assistant_voice_0a8bde_asistent_2",
+          "state": "Jarvis"
+        },
+        {
+          "entity_id": "select.home_assistant_voice_0a8bde_probouzeci_slovo",
+          "state": "Jarvis"
+        },
+        {
+          "entity_id": "select.home_assistant_voice_0a8bde_probouzeci_slovo_2",
+          "state": "Hey Jarvis"
+        },
+        {
+          "entity_id": "switch.home_assistant_voice_0a8bde_mute",
+          "state": "off"
+        },
+        {
+          "entity_id": "assist_satellite.home_assistant_voice_0a8bde_assist_satellite",
+          "state": "idle"
+        }
+      ]
+    }
+  },
+  "changes": [
+    "Single pure command contract shared by authorization, local resolution and turn policy",
+    "Explicit all-house exposed lights; safe courtesy/address/light synonyms",
+    "Quoted examples rejected before commands, lock confirmations and profile management",
+    "Silent successful local actions close session state; STT scaffolding/hesitations end without another model turn",
+    "Optional bounded learning owns actual HA executor Future and drains it before shutdown returns",
+    "Native HomePod await-completion and physical cancellation unchanged"
+  ],
+  "checks": {
+    "speaker": {
+      "run": 151,
+      "passed": 151
+    },
+    "companion": {
+      "run": 54,
+      "passed": 54
+    },
+    "homepod": {
+      "run": 51,
+      "passed": 51
+    },
+    "diagnostics": {
+      "run": 15,
+      "passed": 15
+    },
+    "addon": {
+      "run": 244,
+      "passed": 224,
+      "skipped": 20
+    },
+    "manifest": "passed",
+    "independent_review": "No remaining Important/Critical findings after red/green fixes;27 targeted reviewer tests passed",
+    "pr_ci": 41327946519,
+    "push_ci": 41327942512,
+    "ci": "success",
+    "laboratory": {
+      "format": "jarvis-release-v1",
+      "source_commit": "5943f9f17d2739ba39fa09ef1b95a744200296cb",
+      "packages": [
+        {
+          "app": "jarvis",
+          "version": "3.12.2",
+          "source_commit": "5943f9f17d2739ba39fa09ef1b95a744200296cb",
+          "file": "jarvis-3.12.2-5943f9f17d2739ba39fa09ef1b95a744200296cb.zip",
+          "sha256": "afc0a4dceeadc888ce50fc6ec957382d9940f187f09196918e425f626a3ff026",
+          "bytes": 66120,
+          "kind": "source_package_not_built_image"
+        },
+        {
+          "app": "jarvis_updater",
+          "version": "1.0.0",
+          "source_commit": "5943f9f17d2739ba39fa09ef1b95a744200296cb",
+          "file": "jarvis_updater-1.0.0-5943f9f17d2739ba39fa09ef1b95a744200296cb.zip",
+          "sha256": "f2438acebbf3428bb78c1296f4ed4ad2abf8dbaf8d97b610cec37d4e4edaae16",
+          "bytes": 19378,
+          "kind": "source_package_not_built_image"
+        }
+      ],
+      "verified_at": "2026-11-01T16:47:05.646404+00:00",
+      "workflow_run": "41327942512",
+      "checks": "tests_and_container_builds_passed"
+    },
+    "postboot_readback": [
+      {
+        "path": "custom_components/extended_openai_conversation/conversation.py",
+        "exact": true,
+        "revision": "8a81a74049d0c098c202ee996751d4bb1cf572828f68d22cd8f4eed93002cc89"
+      },
+      {
+        "path": "custom_components/extended_openai_conversation/dialogue.py",
+        "exact": true,
+        "revision": "82b785ec432be34649cfa602dd2c6b96b565320d74f355df06ac16da2285dc21"
+      },
+      {
+        "path": "custom_components/extended_openai_conversation/room_commands.py",
+        "exact": true,
+        "revision": "57a3aaac374eb928350199710ba4ecc19f02e6d8b5fd681a64331a551aebe386"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/__init__.py",
+        "exact": true,
+        "revision": "bfbcc8bf1cd859c276445242d3eecbabcfd6a1a203dc5bd788c815f289e9cbf3"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/authorization.py",
+        "exact": true,
+        "revision": "d2114f93278e65fc00f3a0988e82ca1b2a27b2c538652119e92c31201f751f2a"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/coordinator.py",
+        "exact": true,
+        "revision": "cb262de4a803b648d992a3716548927d1140b34468edfbb91dc68ff79ddc44e6"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/family_enrollment.py",
+        "exact": true,
+        "revision": "2897adcc0c8f20b49d173323b7b2c3f926c96b03e28c0f15c67e23942c985893"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.json",
+        "exact": true,
+        "revision": "bf7e458fc8eb3a91e814ebcd7080d2ff78ba13373dd5d4af4e3584b10ab440b4"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/direct_wake.py",
+        "exact": true,
+        "revision": "f37bb829a04b857e134499f1c612ad50abfdb1a5fd6ef4cc37d4d1a529c163bd"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/manifest.json",
+        "exact": true,
+        "revision": "52660949db59ce1e44215eb70a443075cbdf15fb34a0e216543cf3ba9b6ec421"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/background_learning.py",
+        "exact": true,
+        "revision": "325eb87b496e5d3d5187197730d38ecada5a0691922928fdf561931b6147eb97"
+      },
+      {
+        "path": "custom_components/jarvis_voice_common/__init__.py",
+        "exact": true,
+        "revision": "270b8572b798f1bf8196dc7ec39fceb34e1103522f0ac7fddba21e7708be1dde"
+      },
+      {
+        "path": "custom_components/jarvis_voice_common/manifest.json",
+        "exact": true,
+        "revision": "e3af592866adee4dcdd9ab39fe6db51aa12c7c7b8fefb0a85e71e7c3e958cfb2"
+      }
+    ],
+    "native_text_conversation": {
+      "status": "complete",
+      "passed": true,
+      "continuation": [
+        true,
+        true,
+        false
+      ],
+      "pipeline_changed": false,
+      "scope": "actual HA conversation agent, synthetic fictional text; no device actions/audio"
+    },
+    "native_turn_probe": "passed",
+    "private_memory_test": {
+      "passed": true,
+      "scope": "temporary fictional profiles; no household notes changed",
+      "checks": {
+        "profile_isolation": true,
+        "restart_persistence": true,
+        "dated_source_topic": true,
+        "first_joke_allowed": true,
+        "duplicate_removed": true,
+        "substantive_remainder_preserved": true,
+        "forget_verified": true
+      },
+      "prompt_sha256": "74782c0fc7b1a5a1de0418a63cc8b8c05085103ee6b0082a595274d8c6d5b51f"
+    }
+  },
+  "deployment": {
+    "job": {
+      "id": "refactor140-apply-20261101",
+      "operation": "deployment_apply",
+      "state": "unknown",
+      "result": {
+        "error": "admin_upstream_outcome_unknown",
+        "retry_with_new_key": false
+      },
+      "backup_slug": "15a42412",
+      "request_id": "refactor140-apply-20261101",
+      "created_at": "2026-11-01T16:46:16.818262+00:00",
+      "started_at": "2026-11-01T16:46:16.833043+00:00",
+      "finished_at": "2026-11-01T16:51:11.377023+00:00",
+      "summary": {
+        "changed_fields": [],
+        "expected_version": null,
+        "operation": "deployment_apply",
+        "restore_from": null,
+        "target": null
+      }
+    },
+    "interpretation": "Unknown upstream outcome after Core restart. No replay; independent ready1.4.0/shared1.0.0/native checks and13exact postboot files confirm final activation.",
+    "lease_released": true,
+    "old_backup_deleted": "1ce5f3f0",
+    "latest_three_and_protected_preserved": true
+  },
+  "limits": {
+    "physical_post_refactor_audio_command_test": "pending ordinary use",
+    "native_homepod_abort_source": "not established",
+    "arbitrary_speech_barge_in": false,
+    "replay_detection": false,
+    "biometric_certainty_claimed": false,
+    "no_additional_owner_calibration": true
+  }
+}

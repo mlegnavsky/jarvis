@@ -28,6 +28,6 @@ Public exposed lights only; locks/profile/private permissions unchanged. No extr
 - [x] Clear local command session state; truthful direct-wake blocked reason; preserve audio completion behavior.
 
 ## Task3 — Verify and deploy once
-- [ ] Relevant/full suites and review passed; remote CI pending publication.
-- [ ] Publish, preflight storage, CAS bundle/restart, reconcile same job, postboot readback/runtime/wake state, release lease.
-- [ ] Persist evidence and physical limitations.
+- [x] Relevant/full suites, independent review and remote CI passed.
+- [x] Publish, preflight storage, CAS bundle/restart, reconcile same job, postboot readback/runtime/wake state, release lease.
+- [x] Persist evidence and physical limitations.
