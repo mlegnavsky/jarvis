@@ -158,7 +158,7 @@ class Coordinator:
    try:
     if identity.get('status')!='recognized':
      match=self.familiar.observe(item,conversation)
-     personalization=self.familiar.dialog(device,text,match,allow_ask=not bool(action))
+     personalization=self.familiar.dialog(device,text,match,allow_ask=not bool(action),conversation=conversation)
    except Exception:pass
    return {**identity,'authorized':False,'request_introduction':False,**personalization}
   if self.enforce and identity.get('status')=='recognized' and not authorized:

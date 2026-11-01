@@ -60,15 +60,31 @@ class FamiliarVoices:
    db.execute('INSERT OR REPLACE INTO familiar_voices VALUES (?,?,?,?,?,?)',
               (key,name,json.dumps(samples),self.profiles.clock(),asked,ticks))
    return {'id':key,'name':name,'ready':ready}
- def dialog(self,device,text,match,*,allow_ask):
+ def dialog(self,device,text,match,*,allow_ask,conversation=None):
   now=self.profiles.clock();self.pending={k:v for k,v in self.pending.items() if 0<=now-v['at']<=120}
-  if not allow_ask or not match or not match.get('ready'):return {}
-  key=match['id'];slot=self.pending.get(device)
+  if not allow_ask:return {}
+  slot=self.pending.get(device)
+  if slot and slot.get('conversation')!=conversation:return {}
+  if slot and match and match.get('id')!=slot['id']:
+   self.pending.pop(device,None);slot=None
   introduction=re.fullmatch(r'(?:jsem|jmenuji se) ([^\W\d_]{2,20}(?: [^\W\d_]{2,20})?)',text.strip().rstrip('.!?'),flags=re.I)
+  if not match or not match.get('ready'):
+   bare=re.fullmatch(r'[^\W\d_]{2,20}',text.strip().rstrip('.!?'),flags=re.I)
+   name=introduction[1] if introduction else bare[0] if bare else None
+   if slot and not match and name and norm(name) not in {'ano','ne','dekuji','diky','ahoj','dobre','stop','konec','pockej'}:
+    # A short self-report is a provisional conversation label, not proof
+    # of who spoke the name. A later matching cluster is required to save it.
+    slot['proposed']=name
+    return {'local_reply':'Děkuji. Oslovení si ještě potvrdím při dalším rozhovoru.'}
+   return {}
+  key=match['id']
   with self.db() as db:
    row=db.execute('SELECT name,asked,ticks FROM familiar_voices WHERE id=?',(key,)).fetchone()
    if row is None:return {}
    name,asked,ticks=row
+   if slot and slot.get('proposed') and not name:
+    name=slot['proposed'];db.execute('UPDATE familiar_voices SET name=? WHERE id=?',(name,key));self.pending.pop(device,None)
+    return {'familiar_address':name}
    if slot and slot['id']==key and introduction and not name:
     name=introduction[1];db.execute('UPDATE familiar_voices SET name=? WHERE id=?',(name,key));self.pending.pop(device,None)
     return {'local_reply':'Děkuji, uložila jsem si oslovení '+name+'.'}
@@ -77,7 +93,7 @@ class FamiliarVoices:
     return {'familiar_address':name} if ticks%6==0 else {}
    if now-asked>=86400 or asked==0:
     db.execute('UPDATE familiar_voices SET asked=? WHERE id=?',(now,key))
-    self.pending[device]={'id':key,'at':now}
+    self.pending[device]={'id':key,'at':now,'conversation':conversation}
     while len(self.pending)>4:self.pending.pop(next(iter(self.pending)))
     return {'ask_name':True}
   return {}

@@ -60,3 +60,16 @@ class FamiliarTests(unittest.TestCase):
    item=self.item(n);item['text']='Stejná věta znovu.'
    self.f.observe(item,'session'+str(n))
   self.assertEqual(self.f.summary()['samples'],1)
+ def test_short_name_is_provisional_until_same_voice_returns(self):
+  ready=self.collect();self.f.dialog('mic','Ahoj',ready,allow_ask=True,conversation='c')
+  reply=self.f.dialog('mic','Šarlota',{},allow_ask=True,conversation='c')
+  self.assertIn('local_reply',reply)
+  self.assertEqual(self.f.summary()['named'],0)
+  matched=self.f.observe(self.item(10),'c')
+  result=self.f.dialog('mic','Jaké je dnes počasí?',matched,allow_ask=True,conversation='c')
+  self.assertEqual(result['familiar_address'],'Šarlota')
+  self.assertEqual(self.f.summary()['named'],1)
+ def test_short_name_from_another_conversation_is_not_attached(self):
+  ready=self.collect();self.f.dialog('mic','Ahoj',ready,allow_ask=True,conversation='c')
+  self.assertEqual(self.f.dialog('mic','Šarlota',{},allow_ask=True,conversation='other'),{})
+  self.assertEqual(self.f.summary()['named'],0)
