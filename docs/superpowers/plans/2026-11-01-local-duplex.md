@@ -49,5 +49,6 @@ Files: managed_sources/local_duplex/{__init__,adapter,ha_io}.py, manifest.json, 
 
 ### Task4: Authorized deployment and physical evidence
 
-- [ ] Publish source with expected remote HEAD; inspect live revisions, storage, lease and private configuration. Add domain and recovery copies with CAS, backup/restart and runtime checks.
-- [ ] Poll same job, read back active hashes/version, mute, source and output. Run bounded native probe. Observe actual microphone frames during playback and speech interruption; distinguish software verification from audible/noisy-room acceptance. Update OPEN-WORK/evidence and release lease.
+- [x] Publish source with expected remote HEAD; inspect live revisions, storage, lease and private configuration. Add domain and recovery copies with CAS, backup/restart and runtime checks.
+- [x] Poll same job, read back active hashes/version, mute, source and output. Run bounded native probe. Update OPEN-WORK/evidence and release lease.
+- [ ] Owner physical acceptance: actual microphone frames during playback, speech interruption and short answer; noisy-room activation separately. No acoustic success claim until this evidence exists. See docs/evidence/2026-11-01-local-duplex-active.json.
