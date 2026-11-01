@@ -1,0 +1,35 @@
+{
+  "status": "native_audit_completed_file_route_comparison_pending",
+  "runtime": "1.0.3",
+  "source_commit": "5e494c4a938c7427f79df63189caf5f09fd9eec5",
+  "native_audit": {
+    "messages": 133,
+    "audio_messages": 26,
+    "audio_errors": 0,
+    "logging_restored": true,
+    "local_playback_started": 1,
+    "local_playback_completed": 1,
+    "signal_silent": false,
+    "audibility_confirmed": false
+  },
+  "homepod_tts_test": {
+    "request_id": "homepod-independent-voice-output-20261102",
+    "outcome": "upstream_unavailable_no_retry",
+    "core_error": "miniaudio.DecodeError failed to init decoder",
+    "path": "pyatv InternetSource.open",
+    "speech_heard": false
+  },
+  "hypothesis": "Failure fetching/decoding a speech URL must be separated from actual audio output. Valid in-memory PCM is insufficient evidence of a valid playback resource.",
+  "comparison": {
+    "file": "media:jarvis_repair/audio-probe.wav",
+    "sha256": "6a607fedaad63a992ae2cd952105be94cf88af874ce213e3731cb93a0f3f4dee",
+    "size": 35244,
+    "kind": "synthetic_two_tones_not_a_recording",
+    "method": "Temporary one-shot automation after automation_reloaded; self-disable without stopping its own actions; play local media file to HomePod, then local Voice PE announcement. Remove after evidence. HomePod resolves local media to a filesystem path rather than InternetSource.",
+    "core_restart": false
+  },
+  "microphone_opened": false,
+  "firmware_changed": false,
+  "volume_changed": false,
+  "confirmed_root_cause": null
+}
