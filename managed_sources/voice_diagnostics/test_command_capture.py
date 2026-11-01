@@ -1,4 +1,5 @@
-import asyncio,sys,types,unittest
+import asyncio,sys,types,unittest,shutil,subprocess,tempfile
+from pathlib import Path
 from types import SimpleNamespace as NS
 from unittest.mock import patch
 from direct_wake import install
@@ -10,6 +11,31 @@ native=types.ModuleType('homeassistant.components.assist_pipeline.pipeline')
 native.PipelineEvent=Event;native.PipelineEventType=EventType
 
 class Tests(unittest.IsolatedAsyncioTestCase):
+ @classmethod
+ def setUpClass(cls):
+  compiler=shutil.which('g++')
+  if compiler:
+   cls._native_dir=tempfile.TemporaryDirectory()
+   cls.addClassCleanup(cls._native_dir.cleanup)
+   cls._native_binary=Path(cls._native_dir.name)/'terminal'
+   subprocess.run([compiler,'-std=c++17',str(Path(__file__).parent/'test_data/esphome_terminal_2026_10_1.cpp'),'-o',str(cls._native_binary)],check=True,capture_output=True)
+  else:cls._native_binary=None
+ async def test_suppressed_batch_releases_real_terminal_state(self):
+  if self._native_binary is None:self.skipTest('g++ needed for pinned device protocol probe')
+  for initial in ('START_PIPELINE','STARTING_PIPELINE','STREAMING_MICROPHONE'):
+   state=self.setup(tv='on');await self.execute(state)
+   result=subprocess.run([str(self._native_binary),initial],input='\n'.join(state.events)+'\n',text=True,capture_output=True,check=True)
+   self.assertEqual(result.stdout.strip(),'IDLE',initial)
+ async def test_suppression_does_not_advertise_an_unused_tts_stream(self):
+  state=self.setup(tv='on');deleted=[];advertised=[]
+  state.value.run.tts_stream=NS(delete=lambda:deleted.append(True))
+  original=state.value.run.start
+  def start(**kwargs):
+   advertised.append(state.value.run.tts_stream is not None)
+   original(**kwargs)
+  state.value.run.start=start
+  await self.execute(state)
+  self.assertEqual(deleted,[True]);self.assertEqual(advertised,[False])
  def setup(self,phrase='zhasni',tv='off',sat='sat',pipe='pipe'):
   events=[];intents=[];entered=asyncio.Event();release=asyncio.Event()
   class Speaker:

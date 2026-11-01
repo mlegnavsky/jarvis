@@ -1,7 +1,6 @@
 """Acoustic verbs activate complete utterance capture, never immediate actions."""
 import asyncio
 import time
-from types import SimpleNamespace
 
 COMMANDS = frozenset(('rozsviť', 'zhasni'))
 MEDIA=('media_player.obyvak_televize_obyvak','media_player.obyvaci_pokoj_obyvaci_pokoj',
@@ -14,8 +13,8 @@ def media_active(hass):
                ('on','playing','buffering','unknown','unavailable') for entity in MEDIA)
 
 
-def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, *, last_wakeups=None, cooldown=2., clock=time.monotonic, end_event=None):
-    report = {'status': 'unsupported_core', 'version': 3, 'commands': 0, 'blocked': 0,
+def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, *, last_wakeups=None, cooldown=2., clock=time.monotonic):
+    report = {'status': 'unsupported_core', 'version': 4, 'commands': 0, 'blocked': 0,
               'scope': 'whole_light_utterance_after_acoustic_hint',
               'continuation_wait_s':.75,'television_policy':'explicit_Jarvis_required_while_media_active',
               'identity_inference': False, 'speech_to_text': True,
@@ -28,7 +27,6 @@ def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, 
     # Native STT owns its shared cooldown; do not reserve that same dictionary
     # here or Core would reject this very run as a duplicate.
     last_hints = {}
-    end_event = end_event or (lambda: SimpleNamespace(type=SimpleNamespace(value="stt-vad-end")))
 
     async def blocked(value, code):
         run = value.run
@@ -36,12 +34,16 @@ def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, 
         report['last_blocked_reason'] = code
         run._jarvis_suppressed_activation=True
         try:
-            run.start(conversation_id=value.session.conversation_id,
-                      device_id=value.device_id, satellite_id=value.satellite_id)
-            run.process_event(end_event())
+            # No TTS is going to follow: do not advertise a deleted stream URL.
             if run.tts_stream:
                 run.tts_stream.delete()
                 run.tts_stream = None
+            run.start(conversation_id=value.session.conversation_id,
+                      device_id=value.device_id, satellite_id=value.satellite_id)
+            # Native RUN_END stops the microphone and targets IDLE. Sending
+            # STT_VAD_END just before it races ESPHome's stop loop: RUN_END
+            # does not clear the pending AWAITING_RESPONSE target while the
+            # device is in STOP_MICROPHONE, so it remains busy indefinitely.
         finally:
             await run.end()
             del run._jarvis_suppressed_activation

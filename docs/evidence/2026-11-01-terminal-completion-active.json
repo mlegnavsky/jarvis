@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "source_commit": "fe6e4f8c5d676ddcf99fb2fb3e01029f713ad084",
+  "source_publication": "blocked_pending_explicit_user_approval_for_public_GitHub_publication",
+  "repository": "mlegnavsky/jarvis",
+  "branch": "feat/jarvis-addon",
+  "scope": "silent suppressed activation terminal cleanup",
+  "observed": {
+    "owner_completed_requested_two_sample_test": true,
+    "owner_report": "speaker keeps blinking",
+    "report_before_recovery": "2026-11-01T20:05:49.586175+00:00",
+    "audio_files_observed": 0,
+    "new_pipeline_runs_observed": 0,
+    "television_audio_route": "Apple TV to HomePod, owner-confirmed"
+  },
+  "root_cause": {
+    "protocol_source": "https://github.com/esphome/esphome/blob/2026.10.1/esphome/components/voice_assistant/voice_assistant.cpp",
+    "events_before": "run-start, stt-vad-end, run-end in one batch",
+    "native_before_result": "AWAITING_RESPONSE",
+    "events_after": "run-start, run-end, with unused TTS deleted before start",
+    "native_after_result": "IDLE",
+    "test_start_states": [
+      "START_PIPELINE",
+      "STARTING_PIPELINE",
+      "STREAMING_MICROPHONE"
+    ]
+  },
+  "tests": {
+    "red_tests": 2,
+    "diagnostics": 20,
+    "homepod": 53,
+    "identity": 154,
+    "addon": {
+      "total": 244,
+      "passed": 224,
+      "skipped": 20
+    },
+    "manifest": "passed",
+    "diff": "passed",
+    "independent_review": "no P1/P2",
+    "pinned_native_core_composition": "five cases passed",
+    "limits": "narrow pinned protocol fixture uses exact event, stop-loop and set-state C++ bodies; hardware and callbacks stubbed; not a full firmware build or acoustic test",
+    "initial_addon_command": "An initial invocation without the documented PYTHONPATH produced app-import setup errors; rerunning the documented PYTHONPATH=jarvis:jarvis_updater command passed244 (20skipped)."
+  },
+  "source_files": [
+    {
+      "path": "managed_sources/voice_diagnostics/__init__.py",
+      "sha256": "d39bd9102f0ec05ff934f6cab91a3f11a177517a22cd9425ce0246bd4eecf559"
+    },
+    {
+      "path": "managed_sources/voice_diagnostics/direct_wake.py",
+      "sha256": "5e7e5234c4e73afe3175f485ecbaf713ab26558903f7414df15269fa0ca6ba26"
+    },
+    {
+      "path": "managed_sources/voice_diagnostics/manifest.json",
+      "sha256": "a00416a28a9057582b9c3b037c366bdeee42155c0f320f4904ac74421b8e7ce5"
+    }
+  ],
+  "deployment": {
+    "plan": "terminal-protocol-prepare",
+    "apply": "terminal-protocol-apply",
+    "state": "verified",
+    "publication_before_apply_exception": "Automatic review rejected GitHub disclosure; no bypass attempted after destination/ownership verification was also rejected. Authorized local repair applied directly to owner's connected Home Assistant, with local Git commit and exact source/recovery hashes.",
+    "phase": "active_verified",
+    "finished_at": "2026-11-01T20:15:30.388549+00:00",
+    "backup_slug": "a7af12c8",
+    "plan_revision": "4498c7bede49e718eafc399000190e525b2e2579f2c98c6bc6b9ad5e16bf5ebf",
+    "core_version": "2026.6.4",
+    "all_seven_file_hashes_verified": true,
+    "runtime_adapter_version": 4,
+    "started_at": "2026-11-01T20:14:59.236295+00:00",
+    "native_turn_probe": "passed",
+    "files": [
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/__init__.py",
+        "sha256": "d39bd9102f0ec05ff934f6cab91a3f11a177517a22cd9425ce0246bd4eecf559"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_diagnostics/__init__.py",
+        "sha256": "d39bd9102f0ec05ff934f6cab91a3f11a177517a22cd9425ce0246bd4eecf559"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/direct_wake.py",
+        "sha256": "5e7e5234c4e73afe3175f485ecbaf713ab26558903f7414df15269fa0ca6ba26"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_diagnostics/direct_wake.py",
+        "sha256": "5e7e5234c4e73afe3175f485ecbaf713ab26558903f7414df15269fa0ca6ba26"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/manifest.json",
+        "sha256": "a00416a28a9057582b9c3b037c366bdeee42155c0f320f4904ac74421b8e7ce5"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_diagnostics/manifest.json",
+        "sha256": "a00416a28a9057582b9c3b037c366bdeee42155c0f320f4904ac74421b8e7ce5"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/release.json",
+        "sha256": "c8304d91bde380fb0172859a339835cca0fefceafdeef7f1db334f6a63c0f29e"
+      }
+    ]
+  },
+  "maintenance": {
+    "primary_pipeline_restored": "Jarvis",
+    "primary_wake": "Jarvis",
+    "secondary_wake": "no_wake_word",
+    "microphone_restored": "off",
+    "microphone_unmute_verified": true,
+    "satellite_state": "idle",
+    "led_ring_state": "off",
+    "capture_expires_at": null,
+    "recording_active": false,
+    "homepod_output_status": "configured",
+    "no_new_acoustic_recordings": true,
+    "lease_release": "verified",
+    "lease_release_job": "terminal-protocol-lease-release",
+    "lease_released_at": "2026-11-01T20:16:26.933839+00:00"
+  },
+  "remaining": [
+    "Actual noisy-room Jarvis/Jarvisi accuracy not measured because test produced no samples",
+    "Owner confirmation of physical LED behavior and next voice activation",
+    "Explicit owner authorization before publishing reviewed patch to public GitHub"
+  ],
+  "verification_limits": [
+    "Actual physical LED behavior and post-fix noisy-room activation await owner confirmation",
+    "No usable acoustic samples were produced by the earlier test while the terminal was stuck",
+    "The C++ characterization covers suppression batches; it does not claim all possible silent-run races or general noise/replay separation"
+  ]
+}
