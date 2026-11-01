@@ -60,7 +60,7 @@ async def async_setup(hass,config):
  from homeassistant.const import __version__ as core_version
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun
  adapter=install(hass,PipelineRun,coordinator,core_version,PIPELINE,SATELLITE)
- report={'version':10,'runtime_version':'1.1.6','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+ report={'version':11,'runtime_version':'1.1.7','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
          'native_intent_guard':bool(PipelineRun.__dict__.get('_jarvis_voice_intent_guard')),
          'enrollment_trigger_requires_embedding':False,
          'enrollment_policy':'reject_sample_keep_progress_v2',
@@ -92,6 +92,7 @@ async def async_setup(hass,config):
    count=None;coordinator.status='profile_store_error';report['profile_error']=type(exc).__name__
   report.update(updated_at=dt_util.utcnow().isoformat(),status=coordinator.status,
                 captured_turns=coordinator.capture_count,last_turn=coordinator.last,
+                recent_turns=list(coordinator.recent_turns),
                 profile_count=count,enrollment=coordinator.enrollment_state())
   report['authorization']=await hass.async_add_executor_job(coordinator.profiles.authorization_summary)
   report['adaptation']=await hass.async_add_executor_job(coordinator.adaptation.summary)

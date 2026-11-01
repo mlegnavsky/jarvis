@@ -1,5 +1,7 @@
 """One-shot active-turn audio results and explicit enrollment conversation."""
 import re
+import copy
+from datetime import datetime,timezone
 import time
 import hashlib
 if __package__:
@@ -24,7 +26,7 @@ async def admin_forget(hass,user_id,name,coordinator,clear_memory):
 class Coordinator:
  def __init__(self,hass,path,infer,clock=time.monotonic,*,enforce=False,calibration_satellite=None):
   self.hass=hass;self.profiles=VoiceProfiles(path);self.infer=infer;self.clock=clock
-  self.results={};self.aliases={};self.asked={};self.last={};self.capture_count=0;self.status='starting'
+  self.results={};self.aliases={};self.asked={};self.last={};self.capture_count=0;self.recent_turns=[];self.status='starting'
   self.enforce=enforce;self.gate=VoiceGate(clock=clock,challenge_words=('javor','kolo','most','reka','hora','okno','zahrada','strom'));self.adaptation=Adaptation(self.profiles)
   self.pronunciation=Pronunciation(self.profiles);self.calibration={};self.failures={}
   self.owner_calibration=OwnerCalibration(self.profiles,calibration_satellite) if calibration_satellite else None
@@ -39,16 +41,18 @@ class Coordinator:
            'expires_in_s':max(0,round(300-(now-slot['at'])))}
           for slot in list(self.profiles.pending.values()) if 0<=now-slot['at']<=300]
  async def complete(self,device,pcm,voiced,text,*,playback=False,context_id=None):
-  self.capture_count+=1;start=self.clock()
+  self.capture_count+=1;capture_number=self.capture_count;start=self.clock()
   result={'status':'too_short'}
   if voiced>=2.5:
    try:result=await self.infer(pcm)
    except Exception as exc:result={'status':'unavailable','error':type(exc).__name__}
   self.results[device]={'at':self.clock(),'text':norm(text),'voiced':voiced,'result':result,'playback':playback,
-                        'utterance':hashlib.sha256(pcm).hexdigest(),'context_id':context_id}
+                        'utterance':hashlib.sha256(pcm).hexdigest(),'context_id':context_id,'capture_number':capture_number}
   while len(self.results)>4:self.results.pop(next(iter(self.results)))
-  self.last={'status':result.get('status','unavailable'),'audio_seconds':round(len(pcm)/32000,2),
-             'voiced_seconds':round(voiced,2),'inference_ms':round((self.clock()-start)*1000,1)}
+  summary={'status':result.get('status','unavailable'),'audio_seconds':round(len(pcm)/32000,2),
+           'voiced_seconds':round(voiced,2),'inference_ms':round((self.clock()-start)*1000,1),'capture_number':capture_number}
+  self.results[device]['summary']=summary
+  if capture_number>=self.last.get('capture_number',0):self.last=dict(summary)
  async def turn(self,user,conversation):
   device=getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
   item=self.results.pop(device,None)
@@ -56,13 +60,23 @@ class Coordinator:
   if item.get('context_id') is not None and item['context_id']!=getattr(getattr(user,'context',None),'id',None):return None
   decision=await self.hass.async_add_executor_job(self._turn_sync,device,str(conversation),user.text,item)
   authorized=decision.get('authorized',False)
+  # Keep bounded numeric evidence before follow-up capture replaces last.
+  # Never retain transcript, waveform, embedding, identity or execution token.
+  evidence=dict(item['summary'])
+  if 'matching' in item:evidence['matching']=copy.deepcopy(item['matching'])
+  evidence.update(capture_number=item['capture_number'],completed_at=datetime.now(timezone.utc).isoformat(),
+                  decision_status=decision.get('status'),authorized=authorized)
+  self.recent_turns.append(evidence)
+  del self.recent_turns[:-16]
   if authorized and not decision.get('calibration'):
    effective=decision.get('effective_text',user.text)
    decision['control_token']=self.gate.issue(device,effective,decision.get('memory_id'),True)
    self.last['adaptation']=await self.hass.async_add_executor_job(self.adaptation.offer,decision['memory_id'],
     {'vector':item['result'].get('vector'),'windows':item['result'].get('windows',[]),'quality':item['result'].get('quality'),
      'seconds':item['voiced'],'playback':item['playback'],'conversation':str(conversation),'utterance':item['utterance'],'replay_live':False})
-  self.last.update(decision_status=decision.get('status'),accepted_samples=decision.get('samples'))
+  if self.last.get('capture_number')==item['capture_number']:
+   self.last.update(decision_status=decision.get('status'),accepted_samples=decision.get('samples'))
+   if 'matching' in item:self.last['matching']=copy.deepcopy(item['matching'])
   return decision
  def _turn_sync(self,device,conversation,text,item):
   if self.owner_calibration:
@@ -83,7 +97,7 @@ class Coordinator:
     diagnostic['windows'].append({'status':match['status'],**self.profiles.match_diagnostics(window)})
     if match.get('profile')!=identity['profile']:inconsistent=True
    if inconsistent:identity={'status':'uncertain_windows'}
-  self.last['matching']=diagnostic
+  item['matching']=diagnostic
   strong=identity.get('status')=='recognized' and identity.get('score',0)>=.75 and all(x>=.75 for x in window_scores)
   if value=='smaz muj hlasovy profil' and not strong:identity={'status':'strict_identity_required'}
   authorized=bool(identity.get('status')=='recognized' and self.profiles.is_authorized(identity.get('memory_id')))

@@ -6,6 +6,42 @@ import unittest
 from coordinator import Coordinator,admin_forget
 
 class CoordinatorTests(unittest.IsolatedAsyncioTestCase):
+ async def test_interleaved_followup_cannot_replace_prior_turn_evidence(self):
+  self.c.enforce=True
+  await self.c.complete('device',bytes(128000),4,'První dlouhá věta')
+  entered=asyncio.Event();release=asyncio.Event()
+  async def paused_executor(fn,*args):
+   entered.set();await release.wait()
+   return fn(*args)
+  self.c.hass.async_add_executor_job=paused_executor
+  first=asyncio.create_task(self.c.turn(NS(text='První dlouhá věta',device_id='device'),'c'))
+  await entered.wait()
+  await self.c.complete('device',bytes(32000),.2,'context:')
+  release.set();await first
+  prior=self.c.recent_turns[0]
+  self.assertEqual(prior['capture_number'],1)
+  self.assertEqual(prior['voiced_seconds'],4)
+  self.assertEqual(prior['status'],'ok')
+  self.assertEqual(self.c.last['capture_number'],2)
+  self.assertEqual(self.c.last['status'],'too_short')
+  self.assertNotIn('matching',self.c.last)
+ async def test_matching_evidence_survives_short_followup_without_private_data(self):
+  self.c.enforce=True
+  await self.say('Delší soukromá otázka o mém hlasu')
+  original=self.c.recent_turns[0]
+  self.assertIn('matching',original)
+  self.assertFalse(original['authorized'])
+  await self.c.complete('device',bytes(32000),.2,'context:')
+  await self.c.turn(NS(text='context:',device_id='device'),'c')
+  self.assertEqual(self.c.recent_turns[0],original)
+  self.assertEqual(self.c.recent_turns[-1]['status'],'too_short')
+  self.assertEqual(self.c.recent_turns[-1]['capture_number'],2)
+  self.assertEqual(self.c.recent_turns[-1]['matching']['whole'],{'status':'too_short'})
+  for i in range(20):await self.say('Soukromá věta '+str(i))
+  self.assertEqual(len(self.c.recent_turns),16)
+  evidence=str(self.c.recent_turns)
+  for secret in ('Soukromá','device','vector','control_token','memory_id','context:'):
+   self.assertNotIn(secret,evidence)
  async def test_enforced_voice_requires_authorization_even_when_name_is_recognized(self):
   await self.say('Nauč se můj hlas. Jsem Martin.')
   for n in range(3):await self.say('Ukázková věta číslo '+str(n))
