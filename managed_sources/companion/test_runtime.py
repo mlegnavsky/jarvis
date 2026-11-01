@@ -131,3 +131,33 @@ class PolicyTests(unittest.TestCase):
   self.assertFalse(a.context('c',[],'Co nového?')['optional_observation_allowed'])
   self.assertFalse(a.context('c',[],'Zhasni světlo')['optional_observation_allowed'])
 
+
+class PublicRuntimeTests(unittest.IsolatedAsyncioTestCase):
+ asyncSetUp=RuntimeTests.asyncSetUp
+ asyncTearDown=RuntimeTests.asyncTearDown
+ user=RuntimeTests.user
+ async def test_public_unknown_can_converse_without_private_profile(self):
+  class Speaker:
+   enforce=True;public_controls=True
+   async def turn(self,*args):return {'status':'too_short','authorized':False}
+  self.hass.data={'jarvis_speaker_identity':Speaker()}
+  turn=await self.runtime.prepare(self.user('Jak se máš?'),'c')
+  self.assertIsNone(turn.local_reply);self.assertFalse(turn.voice_profile)
+ async def test_familiar_name_is_only_address_not_private_memory(self):
+  class Speaker:
+   enforce=True;public_controls=True
+   async def turn(self,*args):return {'status':'unknown','authorized':False,'familiar_address':'Martin'}
+  self.runtime.store.note('voice:martin','Tajný hlasový záznam.')
+  self.hass.data={'jarvis_speaker_identity':Speaker()}
+  turn=await self.runtime.prepare(self.user('Co o mně víš?'),'c')
+  self.assertEqual(turn.address,'Martine');self.assertEqual(turn.principal,'guest:c')
+  self.assertFalse(turn.voice_profile);self.assertFalse(turn.verified)
+  self.assertNotIn('Tajný hlasový',turn.prompt)
+ async def test_public_light_permission_does_not_identify_person(self):
+  class Speaker:
+   enforce=True;public_controls=True
+   async def turn(self,*args):return {'status':'public_command','authorized':True,'effective_text':'rozsvit','control_token':'once'}
+  self.hass.data={'jarvis_speaker_identity':Speaker()}
+  turn=await self.runtime.prepare(self.user('Rozsviť'),'c')
+  self.assertIsNone(turn.local_reply);self.assertFalse(turn.voice_profile)
+  self.assertEqual(turn.control_token,'once')

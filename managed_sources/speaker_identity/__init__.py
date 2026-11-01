@@ -9,7 +9,7 @@ import tempfile
 import wave
 import aiohttp
 import voluptuous as vol
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED,EVENT_HOMEASSISTANT_STOP
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers import entity_registry as er
@@ -39,7 +39,12 @@ async def async_setup(hass,config):
    data=await response.json()
    if not isinstance(data,dict):raise ValueError('embedding_response')
    return data
- coordinator=Coordinator(hass,root/'profiles.sqlite',infer,enforce=True,calibration_satellite=SATELLITE)
+ coordinator=Coordinator(hass,root/'profiles.sqlite',infer,enforce=True,calibration_satellite=SATELLITE,public_controls=True)
+ async def stop_learning(_event):
+  tasks=list(coordinator.learning_tasks)
+  for task in tasks:task.cancel()
+  if tasks:await asyncio.gather(*tasks,return_exceptions=True)
+ hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP,stop_learning)
  review=CalibrationReview(coordinator.profiles,root/'review-plan.json',SATELLITE)
  matching_control=MatchingControl(coordinator.profiles,review,root/'review-control.json')
  explicit=config.get(DOMAIN,{}).get('authorize_existing_profile')
@@ -60,14 +65,14 @@ async def async_setup(hass,config):
  from homeassistant.const import __version__ as core_version
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun
  adapter=install(hass,PipelineRun,coordinator,core_version,PIPELINE,SATELLITE)
- report={'version':14,'runtime_version':'1.2.1','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
-         'command_policy':'canonical_local_verified_success_silent_v1',
+ report={'version':15,'runtime_version':'1.3.0','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+         'command_policy':'public_local_lights_silent_v1','public_controls':['light'],
          'native_intent_guard':bool(PipelineRun.__dict__.get('_jarvis_voice_intent_guard')),
          'enrollment_trigger_requires_embedding':False,
          'enrollment_policy':'reject_sample_keep_progress_v2',
          'raw_audio_saved':False,'voice_is_authentication':False,'household_accuracy_verified':False,
          'minimum_enrollment_samples':3,'match_threshold':.75,'calibrated_match_threshold':.65,'cohort_match_threshold':.55,'cohort_window_threshold':.5,'cohort_exclusion_margin':.2,'strict_lock_threshold':.75,'match_margin':.12,
-         'automatic_profile_adaptation':'quarantined_candidates','voice_control_requires_authorized_profile':True,
+         'automatic_profile_adaptation':'quarantined_candidates','voice_control_requires_authorized_profile':'locks_and_profile_management_only',
          'replay_detection':'not_installed','backend_host_port_published':False}
  def save(snapshot):
   root.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -99,6 +104,7 @@ async def async_setup(hass,config):
                 profile_count=count,enrollment=coordinator.enrollment_state())
   report['authorization']=await hass.async_add_executor_job(coordinator.profiles.authorization_summary)
   report['adaptation']=await hass.async_add_executor_job(coordinator.adaptation.summary)
+  report['familiar_voices']=await hass.async_add_executor_job(coordinator.familiar.summary)
   await hass.async_add_executor_job(save,dict(report))
   slots={}
   for entity_id in ('select.home_assistant_voice_0a8bde_probouzeci_slovo','select.home_assistant_voice_0a8bde_probouzeci_slovo_2'):

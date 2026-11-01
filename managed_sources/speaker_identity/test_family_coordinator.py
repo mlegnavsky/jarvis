@@ -13,6 +13,7 @@ class FamilyCoordinatorTests(unittest.IsolatedAsyncioTestCase):
   for _ in range(3):self.c.profiles.sample('device',[1,0],4)
   self.c.profiles.bootstrap_authorization('Martin');self.c.enforce=True
  async def test_verified_owner_starts_guide_and_training_commands_never_get_tokens(self):
+  self.c.public_controls=True
   self.owner();r=await self.say('Nauč se nového člena rodiny')
   self.assertEqual(r['status'],'family_enrollment');self.assertFalse(r['authorized'])
   await self.say('Jsem Šarlota',1);await self.say('Ano souhlasím',2)

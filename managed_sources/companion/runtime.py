@@ -29,6 +29,8 @@ class Turn:
  control_token:str|None=None
  effective_text:str|None=None
  continue_listening:bool=True
+ familiar_address:str|None=None
+ ask_name:bool=False
 
 class CompanionRuntime:
  def __init__(self,hass,agent_id):
@@ -49,6 +51,7 @@ class CompanionRuntime:
   if identified:
    principal='voice:'+voice.get('memory_id',voice['profile'])
    address=ADDRESSES.get(normalize(voice['name']),voice['name'])
+   if voice.get('address_allowed') is False:address=None
   if not user.device_id and not getattr(user,'satellite_id',None) and getattr(user.context,'user_id',None):
    try:
     account=await self.hass.auth.async_get_user(user.context.user_id)
@@ -63,6 +66,7 @@ class CompanionRuntime:
   if voice:
    turn.control_token=voice.get('control_token');turn.effective_text=voice.get('effective_text')
    turn.continue_listening=voice.get('retry_recommended') is not False
+   turn.familiar_address=voice.get('familiar_address');turn.ask_name=voice.get('ask_name',False)
   if voice and not identified:self.addresses.pop(principal,None)
   device_context=self.awareness.context(str(conversation),entities,user.text)
   try:
@@ -73,7 +77,7 @@ class CompanionRuntime:
     turn.reset_history=True
    turn=await self.hass.async_add_executor_job(self._prepare_sync,turn)
    if voice and voice.get('local_reply') is not None:turn.local_reply=voice['local_reply']
-   if (speaker is None or getattr(speaker,'enforce',False)) and (user.device_id or getattr(user,'satellite_id',None)) and not (voice or {}).get('authorized'):
+   if (speaker is None or getattr(speaker,'enforce',False) and not getattr(speaker,'public_controls',False)) and (user.device_id or getattr(user,'satellite_id',None)) and not (voice or {}).get('authorized'):
     turn.local_reply=(voice or {}).get('local_reply') or 'Hlas nemám ověřený, povel neprovedu. Řekni prosím delší větu.'
    if voice:
     safe_voice={key:voice[key] for key in ('status','request_introduction') if key in voice}
@@ -113,6 +117,7 @@ class CompanionRuntime:
    turn.store.forget(turn.principal);turn.reset_history=True
    turn.local_reply='Smazala jsem tvoje poznámky a témata ze své paměti.' if turn.verified or turn.voice_profile else 'Vymazala jsem poznámky tohoto rozhovoru ze své paměti.'
   own=turn.store.context(turn.principal)
+  if turn.familiar_address:turn.address=ADDRESSES.get(normalize(turn.familiar_address),turn.familiar_address)
   shared=self.store.context('household')['notes']
   turn.allow_humor=own['humor_allowed'] and not serious_topic(turn.text)
   data={'speaker_identity':'authenticated_HA_user' if turn.verified else 'probabilistic_voice_profile' if turn.voice_profile else 'unverified_session_only',
@@ -124,6 +129,7 @@ class CompanionRuntime:
  async def finish(self,turn,response):
   def finish_sync():
    clean=finish_response(response,turn.store,turn.principal,turn.allow_humor)
+   if turn.ask_name:clean=clean.rstrip()+' Jak se jmenuješ? Můžeš mi odpovědět celou větou.'
    # No inference or fabricated summary: retain original words with source/date.
    if not turn.voice_uncertain and not memory_command(turn.text) and len(turn.text.split())>=4:
     turn.store.topic(turn.principal,turn.conversation,turn.text)
