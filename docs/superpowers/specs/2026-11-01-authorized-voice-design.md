@@ -58,3 +58,11 @@ jako cestu k ovládání zámku.
 Nasazení přes Git, zálohu, revizní kontroly a ověřené opětovné spuštění.
 Uživatelský test: Martin, cizí hlas, TV, ticho, krátké slovo a pokračující
 rozhovor. Akustické fungování a odolnost vůči TV potvrdit až tímto testem.
+
+## Upřesnění po kontrole návrhu
+- Oprávnění navázat na stabilní voice_id Martinova profilu; nové založení stejného jména práva nepřenese.
+- Čekající krátký povel má expiraci 10 sekund. Nová delší věta musí ověřit hlas a výslovně potvrdit tutéž akci a cíl. Libovolný rozhovor není potvrzení odemknutí.
+- Ověření světel nelze použít pro zámek. Vynucení před lokálními příkazy i nástroji LLM.
+- Samotné krátké oslovení otevře pouze šestisekundové okno pro doplnění hlasových dat; bez ověření se běžný rozhovor neotevře.
+- Před přidáním pěti modelů ověřit kapacitu firmwaru a možnost přidat nová modelová ID. Současná správa dokládá nahrazování existujících ID; případné rozšíření musí mít vlastní testy a revizní ochranu.
+- Fyzické testy zahrnou přehrávku Martinova hlasu. Bez detekce přehrávky neslibovat skutečnou autentizaci ani zaručenou ochranu proti TV.
