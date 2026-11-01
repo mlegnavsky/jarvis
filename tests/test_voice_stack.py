@@ -1,5 +1,6 @@
 """Composition audit: installed adapters together, with no audio/provider calls."""
 import asyncio
+from contextlib import suppress
 from dataclasses import dataclass
 import importlib.util
 from pathlib import Path
@@ -28,9 +29,10 @@ class Vad:
 
 class StackTests(unittest.IsolatedAsyncioTestCase):
  def stack(self,reverse=False):
-  events=[];messages=[];captures=[];played=[];stopped=[];began=asyncio.Event();finish=asyncio.Event();hass=object()
+  events=[];terminal_events=[];messages=[];captures=[];played=[];stopped=[];began=asyncio.Event();finish=asyncio.Event();hass=object()
   class Pipeline:
-   def process_event(self,event):events.append(event)
+   def process_event(self,event):
+    self.event_callback(event);events.append(event)
    async def _speech_to_text_stream(self,audio_stream,stt_vad,sample_rate=16000,sample_width=2):
     async for chunk in audio_stream:
      stt_vad.in_command=True;yield chunk.audio
@@ -51,11 +53,29 @@ class StackTests(unittest.IsolatedAsyncioTestCase):
   installers=[lambda:speaker.install(hass,Pipeline,Coordinator(),'2026.6.4','p','s'),
               lambda:output.install(hass,Pipeline,router,'2026.6.4','p','s')]
   for install in reversed(installers) if reverse else installers:self.assertEqual(install(),'active')
-  run=Pipeline();run.hass=hass;run.pipeline=NS(id='p');run._satellite_id='s';run.id='real-shaped-run'
+  run=Pipeline();run.hass=hass;run.pipeline=NS(id='p');run._satellite_id='s';run.id='real-shaped-run';run.event_callback=terminal_events.append
   run.tts_stream=NS(async_set_message=messages.append,media_source_id='media-source://tts/private',token='secret',url='/private',content_type='audio/wav')
   run._streamed_response_text=False
   run.process_event(Event('run-start',{'conversation_id':'c'}))
-  return NS(run=run,events=events,messages=messages,captures=captures,played=played,stopped=stopped,begin=began,finish=finish,router=router,control=control)
+  return NS(run=run,events=events,terminal_events=terminal_events,messages=messages,captures=captures,played=played,stopped=stopped,begin=began,finish=finish,router=router,control=control)
+ async def wait_for_output(self,state,task):
+  ready=asyncio.create_task(state.begin.wait())
+  try:
+   done,_=await asyncio.wait((task,ready),timeout=5,return_when=asyncio.FIRST_COMPLETED)
+   if task in done:
+    await task
+    self.fail('TTS finished before the controlled output stage started')
+   if ready not in done:
+    task.cancel()
+    with suppress(asyncio.CancelledError):await task
+    self.fail('Voice stack never reached the controlled output stage')
+  finally:
+   ready.cancel()
+   with suppress(asyncio.CancelledError):await ready
+ async def test_adapter_failure_propagates_without_hanging_on_playback_start(self):
+  s=self.stack();del s.run.event_callback
+  task=asyncio.create_task(s.run.text_to_speech('Odpověď'))
+  with self.assertRaises(output.OutputError):await self.wait_for_output(s,task)
  async def test_both_valid_setup_orders_preserve_mic_pronunciation_and_output(self):
   for reverse in (False,True):
    s=self.stack(reverse)
@@ -63,17 +83,19 @@ class StackTests(unittest.IsolatedAsyncioTestCase):
     for _ in range(4):yield NS(audio=bytes(32000),speech_probability=.9)
    await s.run.speech_to_text(NS(sample_rate=16000),audio())
    self.assertEqual(len(s.captures),1);self.assertEqual(len(s.captures[0][1]),128000)
-   task=asyncio.create_task(s.run.text_to_speech('Jmenuji se Jarvis.'));await s.begin.wait()
+   task=asyncio.create_task(s.run.text_to_speech('Jmenuji se Jarvis.'));await self.wait_for_output(s,task)
    self.assertEqual(s.messages,['Jmenuji se Džárvis.'])
    self.assertFalse(any(e.type=='tts-end' for e in s.events))
+   self.assertFalse(any(e.type=='tts-start' for e in s.terminal_events))
    s.finish.set();await task
    self.assertEqual(s.events[-1].data['tts_output']['url'],output.SILENT_URL)
    self.assertEqual(s.played,['media-source://tts/private'])
+   self.assertEqual([e.type for e in s.terminal_events],['run-start','tts-end'])
  async def test_cancel_clears_native_followup_and_stops_only_owned_output(self):
   s=self.stack()
   s.run.process_event(Event('intent-end',{'intent_output':{'continue_conversation':True,'conversation_id':'c','response':{'speech':{'plain':{'speech':'Co dál?'}}}}}))
   self.assertIsNotNone(s.control.pending)
-  task=asyncio.create_task(s.run.text_to_speech('Odpověď'));await s.begin.wait();task.cancel()
+  task=asyncio.create_task(s.run.text_to_speech('Odpověď'));await self.wait_for_output(s,task);task.cancel()
   with self.assertRaises(asyncio.CancelledError):await task
   self.assertEqual(s.stopped,[True]);self.assertIsNone(s.control.pending)
   self.assertFalse(any(e.type=='tts-end' for e in s.events))
