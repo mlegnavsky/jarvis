@@ -16,6 +16,7 @@ from homeassistant.util import dt as dt_util
 from .analysis import audio_metrics, summarize_run, word_error, merge_runs
 from .turn_taking import install, native_probe, spoken_name
 from .direct_wake import install as install_direct_wake
+from .firmware_snapshot import read_snapshot
 
 DOMAIN='jarvis_voice_diagnostics'
 CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_EXTRA)
@@ -27,7 +28,7 @@ SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 async def async_setup(hass, config):
     root=Path(hass.config.path('jarvis_workspace/voice_diagnostics'))
     capture=root/'capture'
-    report={'version':2,'started_at':dt_util.utcnow().isoformat(),'self_test':{'status':'not_run','reason':'explicit_service_required'},
+    report={'version':3,'runtime_version':'1.1.2','started_at':dt_util.utcnow().isoformat(),'self_test':{'status':'not_run','reason':'explicit_service_required'},
             'runs':[],'audio':[],'playback':[],'status':'starting','capture_expires_at':None,'capture_deadline_scope':'New recordings disabled after 15 minutes; an active HA run may finish afterward (pipeline timeout up to 5 minutes).'}
     # Restore only bounded diagnostic history, never runtime deadlines or captures.
     def previous_report():
@@ -38,6 +39,7 @@ async def async_setup(hass, config):
             return data if isinstance(data,dict) else {}
         except (OSError,ValueError): return {}
     previous=await hass.async_add_executor_job(previous_report)
+    report['firmware_audio']=await hass.async_add_executor_job(read_snapshot,Path(hass.config.path()))
     for field,limit in (('runs',20),('audio',5),('playback',30)):
         values=previous.get(field)
         if isinstance(values,list):report[field]=[v for v in values if isinstance(v,dict)][-limit:]
@@ -77,7 +79,7 @@ async def async_setup(hass, config):
             await hass.async_add_executor_job(save_sync,snapshot)
         test=report['self_test']
         hass.states.async_set('sensor.jarvis_hlas_diagnostika',report['status'],
-            {'friendly_name':'Jarvis · diagnostika hlasu','self_test':test.get('status'),
+            {'friendly_name':'Jarvis · diagnostika hlasu','version':'1.1.2','self_test':test.get('status'),
              'capture_expires_at':report['capture_expires_at'],'last_run':report['runs'][-1] if report['runs'] else None,
              'last_audio':report['audio'][-1] if report['audio'] else None,
              'report':'jarvis_workspace/voice_diagnostics/report.json'})

@@ -49,6 +49,7 @@ def summarize_run(run_id, events):
     engine = None
     error = None
     continuation = None
+    response_question_mark = None
     satellite_id = None
     timeline = []
     homepod_output = False
@@ -63,7 +64,11 @@ def summarize_run(run_id, events):
             homepod_output=True
         timeline.append({'type':kind[:80], 'at':event['timestamp']})
         if kind=='run-start': satellite_id=data.get('satellite_id')
-        if kind=='intent-end': continuation=(data.get('intent_output') or {}).get('continue_conversation')
+        if kind=='intent-end':
+            output=data.get('intent_output') or {}
+            continuation=output.get('continue_conversation')
+            speech=((output.get('response') or {}).get('speech') or {}).get('plain') or {}
+            response_question_mark='?' in str(speech.get('speech') or '')
         if kind=='stt-start': engine=data.get('engine')
         if kind=='stt-end': transcript=str(data.get('stt_output',{}).get('text',''))[:500]
         if kind=='error': error=str(data.get('code','unknown'))[:80]
@@ -71,7 +76,7 @@ def summarize_run(run_id, events):
         return round(max(0,times[b]-times[a]),3) if a in times and b in times else None
     return {'id':str(run_id), 'started_at':next((e.get('timestamp') for e in events if e.get('type')=='run-start'),None),
             'complete':'run-end' in times,'error':error,'engine':engine,'transcript':transcript,
-            'continue_conversation':continuation,'satellite_id':satellite_id,
+            'continue_conversation':continuation,'response_question_mark':response_question_mark,'satellite_id':satellite_id,
             'speech_started':'stt-vad-start' in times,'timeline':timeline[-40:],
             'outcome':('error' if error else 'in_progress' if 'run-end' not in times else 'no_transcript_observed' if not transcript.strip() else 'intent_completed' if 'intent-end' in times else 'transcript_only'),
             'timings_s':{'capture_until_vad_end':span('stt-start','stt-vad-end'),

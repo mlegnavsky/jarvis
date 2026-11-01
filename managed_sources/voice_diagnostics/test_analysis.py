@@ -48,3 +48,12 @@ class AnalysisTests(unittest.TestCase):
   self.assertIsNone(result['timings_s']['tts_generation_or_cache'])
   self.assertEqual(result['timings_s']['tts_synthesis_and_homepod_output'],12)
   self.assertIn('HomePod',result['note'])
+
+ def test_question_and_continuation_are_independent_observations(self):
+  for continuing in (True,False):
+   result=self.a.summarize_run('r',[{'type':'intent-end','timestamp':'2026-10-28T00:00:00+00:00',
+    'data':{'intent_output':{'continue_conversation':continuing,
+     'response':{'speech':{'plain':{'speech':'Který pokoj? PRIVATE_RESPONSE'}}}}}}])
+   self.assertTrue(result['response_question_mark'])
+   self.assertEqual(result['continue_conversation'],continuing)
+   self.assertNotIn('PRIVATE_RESPONSE',str(result))
