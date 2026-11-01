@@ -7,3 +7,5 @@ Owner rejects physical disconnection and requests autonomous software repair. Co
 3. RED→GREEN tests for target scoping, zero/mute preservation, absent disconnect, PCM metrics and secret-free response facts; relevant suites and pinned API review. Publish with expected HEAD; CAS/backed-up native component activation, then run no-mic probe/recovery/output test and fixed voice agent test. Report device-state proof separately from acoustic proof.
 
 Pinned interfaces: HA2026.6.4 ESPHome button.py/entry_data.py; aioesphomeapi45.3.1 button_command(key,device_id). A remote software restart is an authorized diagnostic recovery, not proof of the underlying acoustic cause.
+
+Owner follow-up: audit every voice/TV rule. Live audit found both legacy HomePod fixed-volume automations enabled because their old output sensor is absent in local mode. Disable only these two exact rules through initial_state false and targeted automation reload, preserve the unrelated heating automation, and distinguish this confirmed conflict from the still-inaudible local hardware path.
