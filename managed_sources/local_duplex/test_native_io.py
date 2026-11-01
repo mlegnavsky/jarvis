@@ -8,6 +8,81 @@ import unittest
 
 
 class NativeOutputTests(unittest.IsolatedAsyncioTestCase):
+    def test_pcm_signal_distinguishes_silent_and_real_audio_without_retaining_it(self):
+        io=importlib.import_module('ha_io')
+        self.assertTrue(io.pcm_signal(bytes(3200))['silent'])
+        result=io.pcm_signal(b'\x00\x20'*1600)
+        self.assertFalse(result['silent'])
+        self.assertAlmostEqual(result['peak_dbfs'],-12.04,places=2)
+        self.assertAlmostEqual(result['rms_dbfs'],-12.04,places=2)
+        self.assertNotIn('audio',result)
+
+    def test_restart_only_selects_exact_device_restart_button(self):
+        io=importlib.import_module('ha_io');sent=[];button_type=object()
+        client=NS(button_command=lambda key,**kw:sent.append((key,kw)))
+        infos={(0,3):NS(key=3,device_id=0,name='Factory Reset'),
+               (7,9):NS(key=9,device_id=7,name='Restart'),
+               (0,8):NS(key=8,device_id=0,name='Restart')}
+        player=NS(_client=client,_static_info=NS(device_id=0),_entry_data=NS(client=client,info={button_type:infos}))
+        io.restart_native(player,button_type=button_type)
+        self.assertEqual(sent,[(8,{'device_id':0})])
+        del infos[(0,8)]
+        with self.assertRaises(ValueError):io.restart_native(player,button_type=button_type)
+
+    def test_renamed_user_disabled_restart_cannot_be_pressed(self):
+        io=importlib.import_module('ha_io');sent=[];button_type=object();info=NS(key=8,device_id=0,name='Restart')
+        client=NS(button_command=lambda *a,**kw:sent.append((a,kw)))
+        player=NS(_client=client,_static_info=NS(device_id=0),_entry_data=NS(client=client,
+            device_info=NS(mac_address='aa:bb:cc:00:11:22'),info={button_type:{(0,8):info}}))
+        looked_up=[]
+        registry=NS(async_get_entity_id=lambda domain,platform,unique:looked_up.append((domain,platform,unique)) or 'button.renamed_restart',
+            async_get=lambda entity_id:NS(disabled_by='user') if entity_id=='button.renamed_restart' else None)
+        allowed=lambda button:io.restart_allowed(registry,player,button,lambda mac,button:'exact-native-unique-id')
+        with self.assertRaises(ValueError):io.restart_native(player,button_type=button_type,allowed=allowed)
+        self.assertEqual(looked_up,[('button','esphome','exact-native-unique-id')])
+        self.assertEqual(sent,[])
+
+    def test_reassert_output_preserves_zero_and_mute(self):
+        io=importlib.import_module('ha_io');sent=[]
+        player=NS(available=True,volume_level=0,is_volume_muted=True,_key=19,_static_info=NS(device_id=0),
+            _client=NS(media_player_command=lambda *a,**kw:sent.append((a,kw))))
+        io.reassert_output(player,mute_command='MUTE',unmute_command='UNMUTE')
+        self.assertEqual(sent,[((19,),{'volume':0,'device_id':0}),((19,),{'command':'MUTE','device_id':0})])
+
+    async def test_software_recovery_requires_observed_disconnect_and_reconnect(self):
+        io=importlib.import_module('ha_io');self.time=0.;events=[]
+        player=NS(available=True,state='idle',_state=NS(),_key=19,_static_info=NS(device_id=0),_entry_data=NS(stale_state=set()))
+        def restart(p):events.append('restart');player.available=False
+        def reassert(p):events.append('reassert')
+        async def wait(seconds):
+            self.time+=seconds
+            if self.time>=.4:player.available=True
+        result=await io.recover_native_output(lambda:player,restart,reassert,clock=lambda:self.time,sleep=wait)
+        self.assertEqual(events,['restart','reassert'])
+        self.assertTrue(result['disconnect_observed'] and result['reconnect_observed'])
+        self.assertFalse(result['microphone_opened'])
+        async def quick(seconds):self.time+=20
+        with self.assertRaises(TimeoutError):
+            await io.recover_native_output(lambda:player,lambda p:None,reassert,clock=lambda:self.time,sleep=quick)
+
+    async def test_recovery_waits_for_fresh_exact_player_state_before_reassert(self):
+        io=importlib.import_module('ha_io');self.time=0.;sent=[];state=NS()
+        key=(type(state),0,19)
+        player=NS(available=True,state='idle',_state=state,_key=19,_static_info=NS(device_id=0),
+            _entry_data=NS(stale_state=set()),volume_level=.8,is_volume_muted=False)
+        def restart(p):player.available=False;player._entry_data.stale_state.add(key)
+        async def wait(seconds):
+            self.time+=seconds
+            if self.time>=.2:player.available=True
+            if self.time>=.6:
+                player.volume_level=0;player.is_volume_muted=True
+                player._entry_data.stale_state.discard(key)
+        result=await io.recover_native_output(lambda:player,restart,
+            lambda p:sent.append((self.time,p.volume_level,p.is_volume_muted)),clock=lambda:self.time,sleep=wait)
+        self.assertGreaterEqual(sent[0][0],.6)
+        self.assertEqual(sent[0][1:],(0,True))
+        self.assertTrue(result['fresh_state_observed'])
+
     def test_native_vad_priming_waits_for_probability_without_mic_audio(self):
         io=importlib.import_module('ha_io');seen=[]
         def process(audio):

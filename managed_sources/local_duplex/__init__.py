@@ -15,10 +15,12 @@ from homeassistant.components.assist_pipeline.pipeline import (
 )
 from homeassistant.components.assist_pipeline.audio_enhancer import MicroVadSpeexEnhancer
 from homeassistant.components.media_player import DATA_COMPONENT
+from homeassistant.components.esphome.entry_data import build_device_unique_id
 from homeassistant.components.tts.media_source import generate_media_source_id
 from homeassistant.const import EVENT_CALL_SERVICE, EVENT_HOMEASSISTANT_STOP, __version__ as CORE_VERSION
 from homeassistant.core import Context
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
+from homeassistant.helpers import entity_registry
 from homeassistant.helpers.target import TargetSelection, async_extract_referenced_entity_ids
 from homeassistant.util import dt as dt_util
 
@@ -26,13 +28,14 @@ from custom_components.extended_openai_conversation.dialogue import is_noise_tra
 from custom_components.jarvis_homepod_output.tv_session import TVSession
 from custom_components.jarvis_voice_diagnostics.turn_taking import spoken_name
 from .adapter import DELEGATE, install, native_session
-from .bridge import TurnBridge
+from .bridge import TurnBridge, response_facts
 from .control import read_control
-from .ha_io import LocalOutput, decode_reference, is_output_change, prime_native_vad, stop_announcement
+from .ha_io import (LocalOutput, decode_reference, is_output_change, pcm_signal,
+    prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native, stop_announcement)
 from .session import Session
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.0.1'
+VERSION='1.0.2'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -73,7 +76,11 @@ class LocalDialogue:
         media_id=generate_media_source_id(self.hass,spoken_name(text),
             engine=pipeline.tts_engine,language=pipeline.tts_language,options=options,cache=True)
         _extension,data=await tts.async_get_media_source_audio(self.hass,media_id)
-        return SimpleNamespace(media_id=media_id,pcm=decode_reference(data))
+        pcm=decode_reference(data)
+        signal=await self.hass.async_add_executor_job(pcm_signal,pcm)
+        self.report['last_tts_signal']=signal
+        if signal['silent']:raise ValueError('tts_reference_is_silent')
+        return SimpleNamespace(media_id=media_id,pcm=pcm,signal=signal)
 
     async def start_output(self,player,media_id):
         await player.async_play_media('music',media_id,announce=True)
@@ -87,6 +94,9 @@ class LocalDialogue:
             lambda data:async_extract_referenced_entity_ids(self.hass,TargetSelection(data)))
 
     async def handle(self,value):
+        if self.probing:
+            async def maintenance(_value):return None
+            return await native_session(value,maintenance)
         async with self.lock:
             proof=self.report['self_test']
             if not self.ready() or proof.get('status')!='passed' or proof.get('pipeline_signature')!=pipeline_signature(value.run.pipeline):
@@ -158,7 +168,8 @@ class LocalDialogue:
                 bridge.clear()
                 await television.release()
                 self.report['last_session']={'run_id':str(run.id),**session.snapshot(),
-                    'output':output.snapshot(),'television':television.snapshot()}
+                    'output':output.snapshot(),'television':television.snapshot(),
+                    'agent_response':bridge.last_response}
                 self.active=None;self.output=None;self.active_run=None
                 await self.save()
 
@@ -173,12 +184,57 @@ class LocalDialogue:
             async with asyncio.timeout(30):prepared=await self.synthesize('Zkouška místního hlasu.',pipeline)
             self.report['self_test']={'status':'passed','scope':'native_VAD_and_TTS_reference_no_playback',
                 'native_vad_probability':probability,'native_vad_warmup_frames':warmup_frames,
-                'reference_seconds':len(prepared.pcm)/32000,
+                'reference_seconds':len(prepared.pcm)/32000,'reference_signal':prepared.signal,
                 'microphone_opened':False,'audible_playback':False,'source_revision':self.source_revision,
                 'pipeline_signature':pipeline_signature(pipeline)}
         except Exception as exc:
             self.report['self_test']={'status':'failed','error':type(exc).__name__,
                 'microphone_opened':False,'audible_playback':False}
+        finally:
+            self.probing=False
+            await self.save()
+
+    async def audio_recover(self):
+        if self.probing:return
+        self.probing=True
+        self.report['audio_recovery']={'status':'running','microphone_opened':False}
+        try:
+            registry=entity_registry.async_get(self.hass)
+            def restart(player):
+                restart_native(player,allowed=lambda info:restart_allowed(registry,player,info,build_device_unique_id))
+            if self.active:self.active.request_close('software_audio_recovery')
+            async with asyncio.timeout(85):
+                async with self.lock:
+                    await self.save()
+                    self.report['audio_recovery']=await recover_native_output(self.player,restart,reassert_output)
+        except Exception as exc:
+            self.report['audio_recovery']={'status':'failed','error':type(exc).__name__,
+                'reason':str(exc) if str(exc) in ('restart_disabled_by_user','exact_restart_button_unavailable',
+                    'native_connection_mismatch','idle_speaker_required','restart_disconnect_unobserved',
+                    'restart_reconnect_unobserved','fresh_output_settings_required') else 'native_audio_recovery_failed',
+                'microphone_opened':False}
+        finally:
+            self.probing=False
+            await self.save()
+
+    async def voice_agent_probe(self):
+        if self.active or self.probing:
+            self.report['voice_agent_probe']={'status':'busy','microphone_opened':False};return
+        self.probing=True
+        self.report['voice_agent_probe']={'status':'running','microphone_opened':False}
+        try:
+            async with self.lock:
+                async with asyncio.timeout(65):
+                    result=await conversation.async_converse(self.hass,
+                        text='Vyprávěj krátký příběh ve dvou větách.',conversation_id=None,
+                        context=Context(),device_id=None,satellite_id=SATELLITE,
+                        language='cs',agent_id=AGENT)
+            facts=response_facts(result.response)
+            self.report['voice_agent_probe']={'status':'failed' if facts['response_type']=='error' or not facts['speech_chars'] else 'passed',
+                **facts,'microphone_opened':False,'audible_playback':False,
+                'voice_identity_fabricated':False,'scope':'fixed_voice_scoped_story_no_actions'}
+        except Exception as exc:
+            self.report['voice_agent_probe']={'status':'failed','error':type(exc).__name__,'microphone_opened':False}
         finally:
             self.probing=False
             await self.save()
@@ -212,7 +268,9 @@ class LocalDialogue:
             self.report.get('last_control_nonce'),time.time())
         if request and not self.probing:
             self.report['last_control_nonce']=request['nonce']
-            self.hass.async_create_task(self.probe() if request['action']=='probe' else self.output_test())
+            handler={'probe':self.probe,'output_test':self.output_test,
+                'audio_recover':self.audio_recover,'voice_agent_probe':self.voice_agent_probe}[request['action']]
+            self.hass.async_create_task(handler())
         report=dict(self.report)
         report.update(updated_at=dt_util.utcnow().isoformat(),adapter=getattr(self,'adapter','starting'),
             status='configured' if self.ready() and getattr(self,'adapter',None)=='active' else 'waiting_for_speaker',

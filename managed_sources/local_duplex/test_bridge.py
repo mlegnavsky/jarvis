@@ -5,6 +5,15 @@ import unittest
 
 
 class BridgeTests(unittest.IsolatedAsyncioTestCase):
+    def test_response_error_facts_do_not_expose_message_or_credentials(self):
+        module=importlib.import_module('bridge')
+        response=NS(as_dict=lambda:{'response_type':'error','data':{'code':'unknown'},
+            'speech':{'plain':{'speech':'PRIVATE api key sk-PRIVATE invalid temperature status 400'}}})
+        facts=module.response_facts(response)
+        self.assertEqual(facts['error_code'],'unknown')
+        self.assertEqual(facts['parameter_hint'],'temperature')
+        self.assertNotIn('PRIVATE',str(facts))
+
     def setup_bridge(self):
         module=importlib.import_module('bridge');self.events=[];self.kwargs=None
         context=NS(id='fresh-context')

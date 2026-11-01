@@ -26,3 +26,10 @@ class ControlTests(unittest.TestCase):
         base={'action':'probe','nonce':'a'*32,'expires_at':180}
         for change in ({'expires_at':99},{'expires_at':10000},{'action':'play'},{'message':'PRIVATE'}):
             self.assertIsNone(self.read({**base,**change}))
+
+    def test_software_recovery_and_fixed_voice_probe_cannot_take_targets_or_text(self):
+        for action in ('audio_recover','voice_agent_probe'):
+            data={'action':action,'nonce':'c'*32,'expires_at':180}
+            self.assertEqual(self.read(data),data)
+            self.assertIsNone(self.read({**data,'target':'other-device'}))
+            self.assertIsNone(self.read({**data,'message':'arbitrary'}))

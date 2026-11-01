@@ -7,9 +7,77 @@ import time
 import wave
 
 if __package__:
-    from .segmenter import EchoReference
+    from .segmenter import EchoReference, samples
 else:
-    from segmenter import EchoReference
+    from segmenter import EchoReference, samples
+
+
+def pcm_signal(pcm):
+    if not isinstance(pcm,bytes) or not pcm or len(pcm)%2 or len(pcm)>32000*90:
+        raise ValueError('invalid_signal_pcm')
+    values=samples(pcm);peak=max(abs(value) for value in values)
+    rms=math.sqrt(sum(value*value for value in values)/len(values))
+    return {'duration_s':round(len(pcm)/32000,3),'silent':peak==0,
+        'peak_dbfs':round(20*math.log10(peak/32768),2) if peak else None,
+        'rms_dbfs':round(20*math.log10(rms/32768),2) if rms else None}
+
+
+def restart_allowed(registry,player,button,build_unique_id):
+    unique=build_unique_id(player._entry_data.device_info.mac_address,button)
+    entity_id=registry.async_get_entity_id('button','esphome',unique)
+    entry=registry.async_get(entity_id) if entity_id else None
+    return not entry or str(entry.disabled_by)!='user'
+
+
+def restart_native(player, *, button_type=None,allowed=None):
+    if button_type is None:
+        from aioesphomeapi import ButtonInfo
+        button_type=ButtonInfo
+    entry=player._entry_data
+    if entry.client is not player._client:raise ValueError('native_connection_mismatch')
+    buttons=[info for info in entry.info.get(button_type,{}).values()
+        if info.device_id==player._static_info.device_id and info.name=='Restart']
+    if len(buttons)!=1:raise ValueError('exact_restart_button_unavailable')
+    if allowed is not None and not allowed(buttons[0]):raise ValueError('restart_disabled_by_user')
+    player._client.button_command(buttons[0].key,device_id=buttons[0].device_id)
+
+
+def reassert_output(player, *, mute_command=None,unmute_command=None):
+    level=player.volume_level;muted=player.is_volume_muted
+    if not player.available or isinstance(level,bool) or not isinstance(level,(int,float)) or not math.isfinite(level) or not 0<=level<=1 or type(muted) is not bool:
+        raise ValueError('fresh_output_settings_required')
+    if mute_command is None or unmute_command is None:
+        from aioesphomeapi import MediaPlayerCommand
+        mute_command=MediaPlayerCommand.MUTE;unmute_command=MediaPlayerCommand.UNMUTE
+    player._client.media_player_command(player._key,volume=level,device_id=player._static_info.device_id)
+    if muted or level>0:
+        player._client.media_player_command(player._key,command=mute_command if muted else unmute_command,
+            device_id=player._static_info.device_id)
+
+
+def fresh_output_state(player):
+    try:
+        state=player._state
+        return state is not None and (type(state),player._static_info.device_id,player._key) not in player._entry_data.stale_state
+    except (AttributeError,KeyError):return False
+
+
+async def recover_native_output(read_player,restart,reassert,*,clock=time.monotonic,sleep=asyncio.sleep):
+    player=read_player()
+    if player is None or not player.available or str(player.state) not in ('idle','off','on'):
+        raise ValueError('idle_speaker_required')
+    restart(player)
+    deadline=clock()+12
+    while (current:=read_player()) is not None and current.available:
+        if clock()>=deadline:raise TimeoutError('restart_disconnect_unobserved')
+        await sleep(.1)
+    deadline=clock()+60
+    while (current:=read_player()) is None or not current.available or str(current.state) not in ('idle','off','on') or not fresh_output_state(current):
+        if clock()>=deadline:raise TimeoutError('restart_reconnect_unobserved')
+        await sleep(.2)
+    reassert(current)
+    return {'status':'restart_verified','disconnect_observed':True,'reconnect_observed':True,'fresh_state_observed':True,
+        'microphone_opened':False,'firmware_changed':False,'audibility_confirmed':False}
 
 
 def decode_reference(data):
