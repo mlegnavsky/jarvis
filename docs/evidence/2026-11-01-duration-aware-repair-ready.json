@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "source_commit": "21c4e26de72d034830a259c7df5ec0bcbff187f9",
+  "deployment_job": {
+    "id": "repair8-apply-20261101",
+    "operation": "deployment_apply",
+    "state": "unknown",
+    "result": {
+      "error": "admin_upstream_outcome_unknown",
+      "retry_with_new_key": false
+    },
+    "backup_slug": "9f916d44",
+    "request_id": "repair8-apply-20261101",
+    "created_at": "2026-11-01T12:14:02.849428+00:00",
+    "started_at": "2026-11-01T12:14:02.864068+00:00",
+    "finished_at": "2026-11-01T12:18:18.838461+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "source_readback": [
+    {
+      "path": "custom_components/jarvis_speaker_identity/owner_calibration.py",
+      "match": true,
+      "revision": "0dea8b5c0849dc13cbcf3e620d7fdcf2f75045e5465cd0bb75bc35f6276ddf31"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/owner_calibration.py",
+      "match": true,
+      "revision": "0dea8b5c0849dc13cbcf3e620d7fdcf2f75045e5465cd0bb75bc35f6276ddf31"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/policy.py",
+      "match": true,
+      "revision": "6292f8512ed74c8f729da3c7b4f77326267c573e7dcab8f85a961b8414fdc46c"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/policy.py",
+      "match": true,
+      "revision": "6292f8512ed74c8f729da3c7b4f77326267c573e7dcab8f85a961b8414fdc46c"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/review.py",
+      "match": true,
+      "revision": "a3948984fbe2ceaecf0af6b6e6880966dc0e7158913e2f797e9ddf00a0dca8c7"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/review.py",
+      "match": true,
+      "revision": "a3948984fbe2ceaecf0af6b6e6880966dc0e7158913e2f797e9ddf00a0dca8c7"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/__init__.py",
+      "match": true,
+      "revision": "ebbaa834ffd47e61a53204927d615dd09aaf83489898496914520190a06d730a"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/__init__.py",
+      "match": true,
+      "revision": "ebbaa834ffd47e61a53204927d615dd09aaf83489898496914520190a06d730a"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/manifest.json",
+      "match": true,
+      "revision": "3fc0c920df1a6e2caad8e37474d249a7d3de7d577d4912713662ace6eac7a6e5"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.json",
+      "match": true,
+      "revision": "3fc0c920df1a6e2caad8e37474d249a7d3de7d577d4912713662ace6eac7a6e5"
+    }
+  ],
+  "verification": {
+    "runtime_version": "1.1.8",
+    "status": "ready",
+    "updated_at": "2026-11-01T12:20:07.926356+00:00",
+    "collection": {
+      "whole_scores": [],
+      "within_sample_min_similarity": null,
+      "status": "collecting",
+      "samples": 0,
+      "required_samples": 2,
+      "mode": "repair",
+      "expires_in_s": 600,
+      "classification": "owner_supplied_unreviewed",
+      "live_profile_changed": false,
+      "raw_audio_saved": false
+    },
+    "review": {
+      "status": "blocked",
+      "reason": "invalid_or_incomplete_independent_evidence",
+      "live_profile_changed": false
+    },
+    "authorization": {
+      "authorized_profiles": 1,
+      "anchor_profiles": 1
+    }
+  },
+  "tests": {
+    "speaker": 104,
+    "homepod": 49,
+    "companion": 49,
+    "ci": "success",
+    "review": "no Critical or Important findings"
+  },
+  "next": {
+    "speaker": "Owner must supply two distinct clean6s+ utterances, then explicitly attest them. Set new repair role owner attestation true only after confirmation; inspect6/6positive+2repairwindows,0/5comparison,gap>=0.2 and strict improvement. Activate only with fresh control and matching evidence revision.",
+    "profile_activation": "not_performed",
+    "household_accuracy_verified": false
+  },
+  "remaining": {
+    "unprompted_native_abort": true,
+    "direction_of_arrival_available": false,
+    "microphone_count": 2
+  }
+}
