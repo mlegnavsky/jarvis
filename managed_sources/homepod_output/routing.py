@@ -129,49 +129,48 @@ def install(hass,pipeline_class,router,core_version,pipeline_id,satellite_id,err
           and not str(run.id).startswith('synthetic-'))
  def process_event(run,event):
   if matches(run) and str(event.type)=='run-start' and not getattr(run,'_jarvis_suppressed_activation',False):router.activate(str(run.id))
-  if matches(run) and getattr(run,'_jarvis_homep…14567 tokens truncated…tional_observation_allowed'],
-                'scope':'fictional clock and exposed entity; no physical device or audio',
-                'minimum_delay_s':300,'cooldown_s':2400,'automatic_announcements':False}
-            import hashlib
-            report['personality_memory_test']['prompt_sha256']=hashlib.sha256(COMPANION_INSTRUCTIONS.encode()).hexdigest()
-            # A separate synthetic identity turn verifies the deployed prompt.
-            async with asyncio.timeout(60):
-                identity=await conversation.async_converse(hass,'Jak se jmenuješ?',None,Context(),language='cs',agent_id='conversation.extended_openai_conversation')
-            answer=identity.response.as_dict().get('speech',{}).get('plain',{}).get('speech','')
-            report['identity_test']={'status':'complete','response':answer,
-                'tts_input':spoken_name(answer),'expected_name':'Anička','passed':'anicka' in normalized(answer)}
-        except Exception as exc:
-            result_report.update(status='error',error=type(exc).__name__,passed=False)
-        report['status']='companion_ready' if result_report.get('passed') and report.get('personality_memory_test',{}).get('passed') and report.get('device_awareness_test',{}).get('passed') and report.get('identity_test',{}).get('passed') else 'companion_test_failed'
-        await save()
+  if matches(run) and getattr(run,'_jarvis_homepod_hold',False):
+   if str(event.type)=='tts-start':
+    # This satellite is not the speaker. Native TTS_START arms its firmware
+    # stop-word detector without an echo reference for the external HomePod.
+    # Keep Core diagnostics/controller events, suppress only the native device
+    # callback for this synchronous notification; always restore it.
+    callback=run.event_callback
+    try:
+     run.event_callback=lambda _event:None
+     return original_event(run,event)
+    finally:run.event_callback=callback
+   if str(event.type)=='tts-end':
+    run._jarvis_homepod_event=event;return None
+  if matches(run) and str(event.type)=='intent-progress' and (event.data or {}).get('tts_start_streaming'):
+   return None
+  return original_event(run,event)
+ async def text_to_speech(run,tts_input,override_media_path=None):
+  if not matches(run):return await original_tts(run,tts_input,override_media_path)
+  router.begin(run)
+  run._jarvis_homepod_hold=True;run._jarvis_homepod_event=None
+  try:
+   await original_tts(run,tts_input,override_media_path)
+   event=run._jarvis_homepod_event
+   if event is None or not event.data.get('tts_output'):
+    router.failed+=1;router.last_error='missing_tts_output';raise ValueError('missing_tts_output')
+   await router.answer(run,event.data['tts_output'])
+   silent={'media_id':SILENT_URL,'token':'jarvis-homepod-silent','url':SILENT_URL,'mime_type':'audio/wav'}
+   original_event(run,replace(event,data={'tts_output':silent}))
+  except asyncio.CancelledError:
+   control=pipeline_class.__dict__.get('_jarvis_turn_adapter')
+   if control is not None and (control.pending or {}).get('run_id')==str(run.id):control.pending=None
+   raise
+  except Exception as exc:
+   control=pipeline_class.__dict__.get('_jarvis_turn_adapter')
+   if control is not None and (control.pending or {}).get('run_id')==str(run.id):control.pending=None
+   raise error_class(code='tts-failed',message='HomePod output failed; terminal speech remains disabled') from exc
+  finally:
+   router.end(run)
+   del run._jarvis_homepod_hold;del run._jarvis_homepod_event
+ pipeline_class.process_event=process_event
+ pipeline_class.text_to_speech=text_to_speech
+ pipeline_class._jarvis_homepod_output=router
+ return 'active'
 
-    async def arm(_call=None):
-        arm_capture()
-        await save()
-    hass.services.async_register(DOMAIN,'run_self_test',self_test,schema=vol.Schema({}))
-    hass.services.async_register(DOMAIN,'arm_capture',arm,schema=vol.Schema({}))
-    hass.services.async_register(DOMAIN,'run_companion_test',companion_test,schema=vol.Schema({}))
-    async_track_time_interval(hass,poll,timedelta(seconds=5))
-    async_track_state_change_event(hass,[PLAYER,SATELLITE],state_changed)
-    async def start(_event=None):
-        # No automatic microphone recording after reboot; capture stays opt-in.
-        try:
-            report['native_turn_probe']=await native_probe(hass,PipelineRun,VoiceCommandSegmenter)
-        except Exception as exc:
-            report['native_turn_probe']={'status':'error','error':type(exc).__name__}
-        report['status']='monitoring'
-        await poll()
-        report['status']='monitoring' if controller.status=='active' else controller.status
-        report['companion_test']={'status':'not_run','reason':'explicit_service_required'}
-        report['pipeline_configuration_changed']=False
-        try:
-            from custom_components.extended_openai_conversation.room_commands import native_resolution_probe
-            report['room_commands']=native_resolution_probe(hass)
-        except Exception as exc:
-            report['room_commands']={'status':'error','error':type(exc).__name__}
-        await save()
-    if hass.is_running:hass.async_create_task(start())
-    else:hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED,start)
-    await save()
-    return True
 

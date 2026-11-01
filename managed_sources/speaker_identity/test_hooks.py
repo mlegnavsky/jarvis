@@ -3,6 +3,42 @@ import unittest
 from hooks import install
 
 class HookTests(unittest.IsolatedAsyncioTestCase):
+ async def test_bare_fallback_requires_native_silence_and_no_started_continuation(self):
+  for started,silence,want in [(True,True,''),(False,False,''),(False,True,'zhasni')]:
+   with self.subTest(started=started,silence=silence):
+    calls=[]
+    class Pipeline:
+     async def _speech_to_text_stream(self,audio_stream,stt_vad,sample_rate=16000,sample_width=2):
+      async for chunk in audio_stream:yield chunk.audio
+     async def speech_to_text(self,metadata,stream):
+      async for _ in self._speech_to_text_stream(stream,object()):pass
+      return 'context:'
+    class Coordinator:
+     async def complete(self,*args):calls.append(args)
+    hass=object();install(hass,Pipeline,Coordinator(),'2026.6.4','p','s')
+    run=Pipeline();run.hass=hass;run.pipeline=NS(id='p');run._satellite_id='s'
+    run._jarvis_direct_command_prefix='zhasni';run._jarvis_direct_continuation_started=started
+    run._jarvis_initial_silence_expired=silence
+    async def audio():
+     for _ in range(4):yield NS(audio=bytes(32000),speech_probability=.55)
+    self.assertEqual(await run.speech_to_text(NS(sample_rate=16000),audio()),want)
+ async def test_complete_room_suffix_is_normalized_before_identity_or_grant(self):
+  calls=[]
+  class Pipeline:
+   async def _speech_to_text_stream(self,audio_stream,stt_vad,sample_rate=16000,sample_width=2):
+    async for chunk in audio_stream:yield chunk.audio
+   async def speech_to_text(self,metadata,stream):
+    async for _ in self._speech_to_text_stream(stream,object()):pass
+    return 'v dětském pokoji'
+  class Coordinator:
+   async def complete(self,*args):calls.append(args)
+  hass=object();install(hass,Pipeline,Coordinator(),'2026.6.4','p','s')
+  run=Pipeline();run.hass=hass;run.pipeline=NS(id='p');run._satellite_id='s';run._jarvis_direct_command_prefix='zhasni'
+  run._jarvis_direct_continuation_started=True
+  async def audio():
+   for _ in range(4):yield NS(audio=bytes(32000),speech_probability=.9)
+  text=await run.speech_to_text(NS(sample_rate=16000),audio())
+  self.assertEqual(text,'zhasni v detskem pokoji');self.assertEqual(calls[-1][3],text)
  async def test_native_local_intents_are_disabled_and_restored_for_target_microphone(self):
   from dataclasses import dataclass
   @dataclass(frozen=True)

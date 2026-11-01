@@ -10,6 +10,20 @@ class Event:
  data:dict
 
 class RoutingTests(unittest.IsolatedAsyncioTestCase):
+ async def test_suppressed_audio_detection_does_not_cancel_current_homepod_answer(self):
+  began=asyncio.Event();finish=asyncio.Event();stopped=[]
+  async def play(media):began.set();await finish.wait()
+  async def stop():stopped.append(True)
+  router,run,calls=self.setup_route(play,stop)
+  run.process_event(Event('run-start',{}))
+  task=asyncio.create_task(run.text_to_speech('Odpověď'));await began.wait()
+  other=type(run)();other.hass=run.hass;other.pipeline=run.pipeline;other._satellite_id=run._satellite_id
+  other.id='suppressed-hint';other.event_callback=lambda event:None;other._jarvis_suppressed_activation=True
+  try:
+   other.process_event(Event('run-start',{}));await asyncio.sleep(0)
+   self.assertFalse(task.done());self.assertEqual(router.latest,'actual-run');self.assertFalse(stopped)
+  finally:
+   finish.set();await asyncio.gather(task,return_exceptions=True)
  async def test_url_terminal_mode_rejects_api_speaker_only_firmware(self):
   self.assertTrue(url_terminal_supported(1))
   self.assertTrue(url_terminal_supported(5))

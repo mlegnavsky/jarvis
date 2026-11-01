@@ -65,7 +65,7 @@ async def async_setup(hass,config):
  from homeassistant.const import __version__ as core_version
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun
  adapter=install(hass,PipelineRun,coordinator,core_version,PIPELINE,SATELLITE)
- report={'version':16,'runtime_version':'1.4.0','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+ report={'version':16,'runtime_version':'1.4.1','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
          'command_policy':'public_local_lights_silent_v2','public_controls':['light'],'shared_command_contract':COMMAND_CONTRACT_VERSION,
          'native_intent_guard':bool(PipelineRun.__dict__.get('_jarvis_voice_intent_guard')),
          'enrollment_trigger_requires_embedding':False,

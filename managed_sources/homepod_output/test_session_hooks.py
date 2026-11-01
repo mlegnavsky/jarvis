@@ -35,6 +35,10 @@ def bind(hass,television):
   self.assertEqual(state(),('b',True,False))
   await asyncio.gather(*tasks)
   self.assertFalse(restored)
+ async def test_suppressed_tv_activation_never_pauses_or_restores_tv(self):
+  fn,state,restored,tasks,run=self.hook();value=run('tv-hint');value._jarvis_suppressed_activation=True
+  fn(value,NS(type='run-start',data={}));fn(value,NS(type='run-end',data={}))
+  self.assertEqual(state(),(None,False,False));self.assertFalse(tasks);self.assertFalse(restored)
  async def test_old_intent_does_not_overwrite_current_followup(self):
   fn,state,restored,tasks,run=self.hook();a,b=run('a'),run('b')
   fn(a,NS(type='run-start',data={}));fn(b,NS(type='run-start',data={}))

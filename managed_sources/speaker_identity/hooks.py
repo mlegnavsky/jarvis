@@ -2,6 +2,10 @@
 from contextlib import aclosing
 import inspect
 from dataclasses import replace
+if __package__:
+ from custom_components.jarvis_voice_common import complete_light_utterance
+else:
+ from managed_sources.voice_common import complete_light_utterance
 
 def install(hass,pipeline_class,coordinator,core_version,pipeline_id,satellite_id):
  if core_version!='2026.6.4':return 'unsupported_core'
@@ -53,8 +57,22 @@ def install(hass,pipeline_class,coordinator,core_version,pipeline_id,satellite_i
    return any(s and s.state in ('playing','buffering','on') for s in values)
   playback=playback_active()
   try:
-   text=await speech(run,metadata,stream)
+   prefix=getattr(run,'_jarvis_direct_command_prefix',None)
+   missing_text=False
+   try:text=await speech(run,metadata,stream)
+   except Exception as exc:
+    if not prefix or getattr(exc,'code',None)!='stt-no-text-recognized':raise
+    text='';missing_text=True
    capture=run._jarvis_identity_capture
+   if prefix:
+    allow_bare=(getattr(run,'_jarvis_initial_silence_expired',False) is True
+                and getattr(run,'_jarvis_direct_continuation_started',True) is False)
+    text=complete_light_utterance(prefix,text,allow_bare=allow_bare)
+    run._jarvis_direct_effective_text=text
+    if missing_text:
+     from homeassistant.components.assist_pipeline.pipeline import PipelineEvent,PipelineEventType
+     run.process_event(PipelineEvent(PipelineEventType.STT_VAD_END,{'timestamp':0}))
+     run.process_event(PipelineEvent(PipelineEventType.STT_END,{'stt_output':{'text':text},'source':'completed_acoustic_command'}))
    # An overlong/mixed interval is never assigned using just its first speaker.
    if capture['truncated']:
     await coordinator.complete(satellite_id,b'',0,text)

@@ -134,6 +134,7 @@ async def async_setup(hass, config):
                         summary['pipeline_id']=pipeline_id
                         runs.append(summary)
                 report['runs']=merge_runs(report['runs'],runs)
+                report['light_dispatch_observations']=list(hass.data.get('jarvis_light_command_observations',[]))
                 if capture_deadline and time.monotonic()>=capture_deadline:
                     cfg=hass.data.get(DATA_CONFIG,{})
                     if cfg.get(CONF_DEBUG_RECORDING_DIR)==str(capture):

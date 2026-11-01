@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-VERSION='1.0.1'
+VERSION='1.0.2'
 
 def normalized(text):
     return ' '.join(re.findall(r'\w+', ''.join(c for c in unicodedata.normalize('NFKD',str(text).casefold()) if not unicodedata.combining(c))))
@@ -30,12 +30,16 @@ def parse_command(text):
     # Quoted examples are data, including when a wake name precedes them.
     if contains_quotes(text):return None
     value=strip_address(text)
+    light_verb=r'(?:rozsvit|rozsvitit|zhasni|zhasnout|zapni|zapnout|vypni|vypnout)\b'
+    value=re.sub(r'^(?:ano|jo|jasne) (?=(?:prosim\b|muzes\b|'+light_verb+'))','',value)
+    value=re.sub(r'^(?:muzes|mohla bys)(?: mi)?(?: prosim(?: te)?)? (?='+light_verb+')','',value)
     value=re.sub(r'^prosim(?: te)?\s+','',value)
     value=re.sub(r'\s+prosim(?: te)?$','',value)
     value=re.sub(r' at tady lepe vidim$','',value)
     # STT may choose the Czech infinitive for an otherwise exact imperative.
     verbs={'rozsvitit':'rozsvit','zhasnout':'zhasni','zapnout':'zapni','vypnout':'vypni'}
     value=re.sub(r'^(rozsvitit|zhasnout|zapnout|vypnout)\b',lambda match:verbs[match[1]],value)
+    value=re.sub(r'^(rozsvit|zhasni|zapni|vypni) prosim(?: te)?(?: |$)',r'\1 ',value).strip()
     value=re.sub(r'^(rozsvit|zhasni|zapni|vypni) (?:mi|me) ',r'\1 ',value)
     if value in ('zamkni','zamkni hlavni vchod','odemkni','odemkni hlavni vchod'):
         return Command(value,'lock','lock' if value.startswith('zamkni') else 'unlock','entrance')
@@ -67,3 +71,16 @@ def is_noise_transcript(text):
     value=normalized(text)
     echo='the following conversation is a smart home user talking to home assistant'
     return not value or value in {'context','blank_audio','silence','no','hm','hmm','ehm','mmm',echo,'context '+echo}
+
+
+def complete_light_utterance(prefix,text,*,allow_bare=False):
+    """Complete an acoustic activation only after its full continuation ended."""
+    hint=parse_command(prefix)
+    if not hint or hint.domain!='light' or hint.scope!='current' or contains_quotes(text):return ''
+    explicit=parse_command(text)
+    if explicit is not None:
+        return explicit.canonical if explicit.domain=='light' else ''
+    if is_noise_transcript(text):
+        return hint.canonical if allow_bare else ''
+    combined=parse_command(hint.canonical+' '+str(text))
+    return combined.canonical if combined and combined.domain=='light' else ''
