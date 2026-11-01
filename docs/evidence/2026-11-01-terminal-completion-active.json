@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "source_commit": "fe6e4f8c5d676ddcf99fb2fb3e01029f713ad084",
-  "source_publication": "blocked_pending_explicit_user_approval_for_public_GitHub_publication",
+  "source_publication": "published_after_explicit_owner_approval",
   "repository": "mlegnavsky/jarvis",
   "branch": "feat/jarvis-addon",
   "scope": "silent suppressed activation terminal cleanup",
@@ -119,12 +119,44 @@
   },
   "remaining": [
     "Actual noisy-room Jarvis/Jarvisi accuracy not measured because test produced no samples",
-    "Owner confirmation of physical LED behavior and next voice activation",
-    "Explicit owner authorization before publishing reviewed patch to public GitHub"
+    "Owner confirmation of physical LED behavior and next voice activation"
   ],
   "verification_limits": [
     "Actual physical LED behavior and post-fix noisy-room activation await owner confirmation",
     "No usable acoustic samples were produced by the earlier test while the terminal was stuck",
     "The C++ characterization covers suppression batches; it does not claim all possible silent-run races or general noise/replay separation"
-  ]
+  ],
+  "published_source_commit": "9548ba1b6d9f40501811d11a5df06e830e67a1ce",
+  "publication": {
+    "repository": "mlegnavsky/jarvis",
+    "branch": "feat/jarvis-addon",
+    "commit": "9548ba1b6d9f40501811d11a5df06e830e67a1ce",
+    "approval": "Explicit owner agreement to the immediately preceding publication question.",
+    "local_reviewed_tree": "ecaebbf23b3d69b38b29e8273f45b977c1b85987",
+    "published_tree": "ecaebbf23b3d69b38b29e8273f45b977c1b85987",
+    "exact_tree_match": true,
+    "connector_used": "GitHub",
+    "local_git_commit_not_transferred": "CLI HTTPS authentication unavailable; connected GitHub created an equivalent commit with the exact reviewed tree.",
+    "ci": [
+      {
+        "id": 41346386783,
+        "event": "pull_request",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 41346382128,
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "metadata_sync": {
+      "job": "terminal-publication-metadata-apply",
+      "state": "verified",
+      "phase": "file_written",
+      "activation": "none",
+      "lease_released": true
+    }
+  }
 }
