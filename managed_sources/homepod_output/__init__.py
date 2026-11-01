@@ -16,7 +16,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED,__version__ as CORE_
 from homeassistant.helpers.event import async_track_time_interval,async_track_state_change_event
 from homeassistant.util import dt as dt_util
 from pyatv.const import FeatureName
-from .routing import Router,install,SILENT_URL,url_terminal_supported,play_at_current_volume
+from .routing import Router,install,SILENT_URL,url_terminal_supported,play_at_current_volume,current_volume,prime_startup_volume
 
 from .tv_session import TVSession
 from .interrupt import install_abort_resume
@@ -41,6 +41,7 @@ class SilenceView(HomeAssistantView):
 async def async_setup(hass,config):
  speech_volume=config[DOMAIN]['speech_volume']
  last_volume={}
+ startup_volume={'status':'pending','target':.45}
  hass.http.register_view(SilenceView())
  def satellite_url_supported():
   component=hass.data.get(SATELLITE_COMPONENT)
@@ -134,8 +135,8 @@ async def async_setup(hass,config):
    await restore_tv(active_run)
  async_track_state_change_event(hass,[TELEVISION],television_state)
  async_track_state_change_event(hass,[SATELLITE],satellite_state)
- report={'version':3,'started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
-         'volume_policy':'follow_homepod','legacy_fixed_volume_ignored':speech_volume,
+ report={'version':4,'runtime_version':'1.0.2','started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
+         'volume_policy':'startup_45_then_follow_homepod_raop','legacy_fixed_volume_ignored':speech_volume,
          'native_abort_resume':'active' if abort_resume else 'unavailable',
          'microphone':SATELLITE,'speech_volume':None,'terminal_spoken_output':False if adapter=='active' else 'native_uncontrolled','audible_test_performed':False,
          'arbitrary_speech_barge_in':False,'cancel_current_answer_hook':True,
@@ -150,8 +151,9 @@ async def async_setup(hass,config):
  async def update(_now=None):
   try:
    entity=player()
-   report.update(player_available=True,raop_stream_file=True,player_state=entity.state,satellite_media_player_url=True,observed_volume=entity.volume_level,
-                 observed_muted=getattr(entity,'is_volume_muted',None),speech_volume=entity.volume_level)
+   observed=entity.volume_level if router.active is not None or startup_volume['status']=='setting' else current_volume(entity)
+   report.update(player_available=True,raop_stream_file=True,player_state=entity.state,satellite_media_player_url=True,observed_volume=observed,
+                 observed_muted=getattr(entity,'is_volume_muted',None),speech_volume=observed)
    report.pop('error',None);report.pop('reason',None)
    status='configured' if adapter=='active' else adapter
   except Exception as exc:
@@ -161,11 +163,21 @@ async def async_setup(hass,config):
   report.update(status=status,updated_at=dt_util.utcnow().isoformat(),playback=router.snapshot(),television=television.snapshot(),television_entity=TELEVISION)
   report['interrupt_resume']=abort_resume.snapshot() if abort_resume else None
   report['last_volume_decision']=dict(last_volume)
+  report['startup_volume']=dict(startup_volume)
   await hass.async_add_executor_job(save,dict(report))
   hass.states.async_set('sensor.jarvis_hlasovy_vystup',status,
     {'friendly_name':'Jarvis · hlasový výstup','speaker':SPEAKER,'adapter':adapter,
      'audible_test_performed':False,'arbitrary_speech_barge_in':False,**router.snapshot()})
- async def start(_event=None):await update()
+ async def start(_event=None):
+  if startup_volume['status']!='pending':return
+  startup_volume['status']='setting'
+  try:
+   async with router.lock:
+    async with asyncio.timeout(8):level=await prime_startup_volume(player())
+   startup_volume.update(status='applied',observed_volume=level)
+  except Exception as exc:
+   startup_volume.update(status='unconfirmed',error=type(exc).__name__)
+  await update()
  if hass.is_running:hass.async_create_task(start())
  else:hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED,start)
  async_track_time_interval(hass,update,timedelta(seconds=10))

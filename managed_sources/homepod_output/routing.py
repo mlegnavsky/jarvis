@@ -13,6 +13,30 @@ def raop_audio_takeover(entity):
  from pyatv.interface import Audio
  return entity.atv.takeover(Protocol.RAOP,Audio)
 
+def current_volume(entity,*,takeover_audio=None):
+ # Check availability before takeover, then read the stream protocol rather
+ # than Companion's idle/stale zero. Never synthesize a positive fallback.
+ level=entity.volume_level
+ if isinstance(level,bool) or not isinstance(level,(int,float)) or not isfinite(level) or not 0<=level<=1:
+  raise ValueError('homepod_volume_unavailable')
+ if getattr(entity,'is_volume_muted',False) is True:return level
+ release=(takeover_audio or raop_audio_takeover)(entity)
+ try:level=entity.volume_level
+ finally:release()
+ if isinstance(level,bool) or not isinstance(level,(int,float)) or not isfinite(level) or not 0<=level<=1:
+  raise ValueError('homepod_raop_volume_unavailable')
+ return level
+
+async def prime_startup_volume(entity,*,takeover_audio=None):
+ release=(takeover_audio or raop_audio_takeover)(entity)
+ try:
+  await entity.async_set_volume_level(.45)
+  level=entity.volume_level
+  if isinstance(level,bool) or not isinstance(level,(int,float)) or not isfinite(level) or abs(level-.45)>.005:
+   raise ValueError('homepod_startup_volume_unconfirmed')
+  return level
+ finally:release()
+
 async def play_at_volume(entity,media_id,volume,*,takeover_audio=None):
  # Idle devices can prefer a non-responsive Companion/MRP volume path.
  # Prime the RAOP session volume through its own audio implementation, then
@@ -28,7 +52,7 @@ async def play_at_current_volume(entity,media_id,*,takeover_audio=None):
  Reapplying that same level through RAOP primes its stream without switching
  to another protocol's stale default. A muted/zero-level device stays silent.
  """
- level=entity.volume_level
+ level=current_volume(entity,takeover_audio=takeover_audio)
  if isinstance(level,bool) or not isinstance(level,(int,float)) or not isfinite(level) or not 0<=level<=1:
   raise ValueError('homepod_volume_unavailable')
  muted=getattr(entity,'is_volume_muted',False) is True
