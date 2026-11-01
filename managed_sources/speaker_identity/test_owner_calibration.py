@@ -77,3 +77,31 @@ class OwnerCalibrationTests(unittest.TestCase):
   with self.profiles._db() as db:
    self.assertEqual(db.execute('SELECT count(*) FROM owner_calibration_samples').fetchone()[0],0)
    self.assertEqual(db.execute('SELECT count(*) FROM owner_calibration_sessions').fetchone()[0],0)
+ def test_owner_resume_preserves_four_samples_and_collects_only_missing_fifth(self):
+  self.start()
+  for n in range(4):self.c.collect('mic',self.item(str(n)))
+  self.now+=601;self.assertEqual(self.c.summary()['status'],'expired')
+  self.control.write_text(json.dumps({'request_id':'b'*32,'action':'resume','profile':'Martin','issued_at':self.now}))
+  self.assertEqual(self.c.process_control(self.control)['status'],'collecting')
+  self.assertEqual(self.c.summary()['samples'],4)
+  self.assertEqual(self.c.collect('mic',self.item('last'))['samples'],5)
+  self.assertEqual(self.c.summary()['status'],'awaiting_review')
+ def test_each_new_clean_sample_refreshes_inactivity_deadline_but_duplicate_does_not(self):
+  self.start();self.now+=590
+  self.c.collect('mic',self.item('new'))
+  self.assertEqual(self.c.summary()['expires_in_s'],600)
+  self.now+=590
+  self.c.collect('mic',self.item('new'))
+  self.assertEqual(self.c.summary()['expires_in_s'],10)
+  self.c.collect('mic',self.item('different'))
+  self.assertEqual(self.c.summary()['expires_in_s'],600)
+ def test_resume_without_same_existing_session_is_rejected(self):
+  self.control.write_text(json.dumps({'request_id':'b'*32,'action':'resume','profile':'Martin','issued_at':self.now}))
+  self.assertEqual(self.c.process_control(self.control)['status'],'rejected')
+ def test_completed_session_cannot_be_resumed_or_reopened(self):
+  self.start()
+  for n in range(5):self.c.collect('mic',self.item(str(n)))
+  self.control.write_text(json.dumps({'request_id':'b'*32,'action':'resume','profile':'Martin','issued_at':self.now}))
+  self.assertEqual(self.c.process_control(self.control)['status'],'rejected')
+  self.assertEqual(self.c.summary()['status'],'awaiting_review')
+  self.assertEqual(self.c.summary()['samples'],5)

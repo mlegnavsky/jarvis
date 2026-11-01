@@ -24,7 +24,7 @@ class OwnerCalibration:
    key=request['request_id'];issued=request['issued_at'];now=self.profiles.clock()
    if not isinstance(key,str) or not re.fullmatch('[a-f0-9]{32}',key):raise ValueError('invalid_request')
    if type(issued) not in (int,float) or not math.isfinite(issued) :raise ValueError('invalid_timestamp')
-   if request['action']!='start' or not isinstance(request['profile'],str) or len(request['profile'])>40:raise ValueError('invalid_request')
+   if request['action'] not in ('start','resume') or not isinstance(request['profile'],str) or len(request['profile'])>40:raise ValueError('invalid_request')
    with self.db() as db:
     db.execute('BEGIN IMMEDIATE')
     if db.execute('SELECT 1 FROM owner_calibration_requests WHERE id=?',(key,)).fetchone():return {'status':'already_consumed'}
@@ -33,6 +33,14 @@ class OwnerCalibration:
     if db.execute('SELECT count(*) FROM owner_calibration_requests').fetchone()[0]>=512:raise ValueError('request_limit')
     row=db.execute('SELECT v.voice_id FROM voices v JOIN voice_authorizations a ON a.voice_id=v.voice_id WHERE v.name=? AND v.model=?',(norm(request['profile']),MODEL_ID)).fetchone()
     if not row:raise ValueError('authorized_existing_profile_required')
+    if request['action']=='resume':
+     previous=db.execute('SELECT id,voice_id,status FROM owner_calibration_sessions WHERE device=? ORDER BY rowid DESC LIMIT 1',(self.satellite,)).fetchone()
+     if not previous or previous[1]!=row[0] or previous[2] not in ('expired','paused','collecting'):raise ValueError('matching_unfinished_session_required')
+     count=db.execute('SELECT count(*) FROM owner_calibration_samples WHERE session=?',(previous[0],)).fetchone()[0]
+     if count>=5:raise ValueError('session_complete')
+     db.execute('INSERT INTO owner_calibration_requests VALUES (?,?)',(key,now+600))
+     db.execute("UPDATE owner_calibration_sessions SET status='collecting',expires=?,rejections=0 WHERE id=?",(now+600,previous[0]))
+     return {'status':'collecting','samples':count,'required_samples':5,'resumed':True}
     db.execute("UPDATE owner_calibration_sessions SET status='cancelled' WHERE device=? AND status='collecting'",(self.satellite,))
     db.execute('INSERT INTO owner_calibration_requests VALUES (?,?)',(key,now+600))
     db.execute('INSERT INTO owner_calibration_sessions (id,voice_id,device,created,expires,status) VALUES (?,?,?,?,?,?)',(key,row[0],self.satellite,now,now+600,'collecting'))
@@ -80,6 +88,7 @@ class OwnerCalibration:
    diagnostic={'whole':{'best_score':round(scores[0],4) if scores else None,'threshold':.75},'classification':'owner_supplied_unreviewed'}
    cursor=db.execute('INSERT OR IGNORE INTO owner_calibration_samples VALUES (?,?,?,?)',(row[0],utterance,json.dumps(v),json.dumps(diagnostic)))
    count+=int(cursor.rowcount==1)
+   if cursor.rowcount==1:db.execute('UPDATE owner_calibration_sessions SET expires=? WHERE id=?',(self.profiles.clock()+600,row[0]))
    if count>=5:db.execute("UPDATE owner_calibration_sessions SET status='awaiting_review' WHERE id=?",(row[0],))
    reply=f'Mám {count} z pěti kalibračních ukázek. '
    reply+=('Řekni prosím jinou větu dlouhou pět až osm sekund.' if count<5 else 'Ukázky jsou uložené odděleně pro kontrolu. Původní otisk ani oprávnění jsem nezměnila.')
