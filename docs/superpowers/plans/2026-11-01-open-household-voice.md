@@ -29,5 +29,5 @@ No raw audio, no training execution, no self-granted locks/private access, immut
 - [x] Run full relevant suites and addon tests; independent review.
 
 ## Task3 — Release
-- [ ] Publish source, acquire lease, storage preflight, backed-up CAS deploy/restart, poll same job, verify runtime/readback and release.
-- [ ] Persist final evidence and limits. No fresh owner calibration required.
+- [x] Publish source, acquire lease, storage preflight, backed-up CAS deploy/restart, poll same job, verify runtime/readback and release.
+- [x] Persist final evidence and limits. No fresh owner calibration required.

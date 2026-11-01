@@ -1,0 +1,204 @@
+{
+  "source_commit": "86a02854bfd256ed83dd9b1cffebd6c2e9b00a73",
+  "verified_at": "2026-11-01T15:29:22.641237+00:00",
+  "runtime": {
+    "version": "1.3.1",
+    "status": "ready",
+    "policy": "public_local_lights_silent_v1",
+    "public_controls": [
+      "light"
+    ],
+    "authorization": {
+      "authorized_profiles": 1,
+      "anchor_profiles": 1
+    },
+    "owner_bank_revision": "c18052f5d63d3d9e825e23ab5448442813fe73cdb0d50b3b4763e6b4729a82d4",
+    "familiar": {
+      "mode": "personalization_only",
+      "clusters": 0,
+      "named": 0,
+      "samples": 0,
+      "raw_audio_saved": false,
+      "grants_permissions": false
+    },
+    "voice": {
+      "captured_at": "2026-11-01T15:30:07.137022+00:00",
+      "entities": [
+        {
+          "entity_id": "select.home_assistant_voice_0a8bde_asistent",
+          "state": "Jarvis"
+        },
+        {
+          "entity_id": "select.home_assistant_voice_0a8bde_asistent_2",
+          "state": "Jarvis"
+        },
+        {
+          "entity_id": "select.home_assistant_voice_0a8bde_probouzeci_slovo",
+          "state": "Jarvis"
+        },
+        {
+          "entity_id": "select.home_assistant_voice_0a8bde_probouzeci_slovo_2",
+          "state": "Hey Jarvis"
+        },
+        {
+          "entity_id": "switch.home_assistant_voice_0a8bde_mute",
+          "state": "off"
+        },
+        {
+          "entity_id": "assist_satellite.home_assistant_voice_0a8bde_assist_satellite",
+          "state": "idle"
+        }
+      ]
+    }
+  },
+  "behavior": {
+    "public_lights_require_speaker_match": false,
+    "public_lights_wait_for_embedding": false,
+    "verified_local_action_success": "silent_no_followup",
+    "failure_or_ambiguity": "audible",
+    "protected": "locks_profile_management_private_context",
+    "familiar_names": "optional_self_reported_personalization_never_identity_proof"
+  },
+  "learning": {
+    "max_clusters": 16,
+    "max_samples_per_cluster": 12,
+    "inactive_expiry_days": 30,
+    "min_distinct_sentences": 6,
+    "min_conversations": 3,
+    "minimum_voiced_seconds": 3,
+    "minimum_consistent_windows": 2,
+    "playback_excluded": true,
+    "no_raw_audio": true,
+    "private_embeddings_only": true,
+    "short_name": "provisional_device_conversation_cluster120s; stored only on returning matched cluster; does not prove who supplied the short name",
+    "permissions_granted": false
+  },
+  "checks": {
+    "speaker_tests": 144,
+    "companion_tests": 54,
+    "addon_tests": 240,
+    "addon_skipped": 20,
+    "manifest": "passed",
+    "independent_review": "No remaining Important/Critical findings; private-principal finding fixed with red/green regression; short-name attribution limitation explicitly documented",
+    "pr_ci_run": 41320997804,
+    "push_ci_run": 41320993790,
+    "ci": "success",
+    "laboratory": {
+      "format": "jarvis-release-v1",
+      "source_commit": "86a02854bfd256ed83dd9b1cffebd6c2e9b00a73",
+      "packages": [
+        {
+          "app": "jarvis",
+          "version": "3.12.2",
+          "source_commit": "86a02854bfd256ed83dd9b1cffebd6c2e9b00a73",
+          "file": "jarvis-3.12.2-86a02854bfd256ed83dd9b1cffebd6c2e9b00a73.zip",
+          "sha256": "afc0a4dceeadc888ce50fc6ec957382d9940f187f09196918e425f626a3ff026",
+          "bytes": 66120,
+          "kind": "source_package_not_built_image"
+        },
+        {
+          "app": "jarvis_updater",
+          "version": "1.0.0",
+          "source_commit": "86a02854bfd256ed83dd9b1cffebd6c2e9b00a73",
+          "file": "jarvis_updater-1.0.0-86a02854bfd256ed83dd9b1cffebd6c2e9b00a73.zip",
+          "sha256": "f2438acebbf3428bb78c1296f4ed4ad2abf8dbaf8d97b610cec37d4e4edaae16",
+          "bytes": 19378,
+          "kind": "source_package_not_built_image"
+        }
+      ],
+      "verified_at": "2026-11-01T15:24:54.093656+00:00",
+      "workflow_run": "41320993790",
+      "checks": "tests_and_container_builds_passed"
+    },
+    "postboot_files": [
+      {
+        "path": "custom_components/extended_openai_conversation/dialogue.py",
+        "exact": true,
+        "revision": "7fa2761e17f66eb6c69742b1fca824ff71e18dfcc25fcdc6d329c59e8fcbe227"
+      },
+      {
+        "path": "custom_components/extended_openai_conversation/runtime.py",
+        "exact": true,
+        "revision": "b37a38fa95656e0105ebff36f36c8ef5efaf0d07b8336df8c9db76fbfab61439"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/__init__.py",
+        "exact": true,
+        "revision": "f74f2f0f0b786c6b725f13fff67280cc2d869ab769fb68c791a298610a9f3ebc"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/coordinator.py",
+        "exact": true,
+        "revision": "0b0461d7223d65f2ab9560eef257902a318acd317a2006d698e1f7a1cc4b5c94"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.json",
+        "exact": true,
+        "revision": "059418fb47f3e6acebe9713b6fd204f1291cc41815957f908a81e56813644b40"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/familiar.py",
+        "exact": true,
+        "revision": "01cdb5221dfd41cf85cd28cc86626ee295ac35b36fec440a42953cef6fec4050"
+      }
+    ]
+  },
+  "deployment": {
+    "initial_public130_job": {
+      "id": "public130-apply-20261101",
+      "operation": "deployment_apply",
+      "state": "running",
+      "result": null,
+      "backup_slug": "85f97361",
+      "request_id": "public130-apply-20261101",
+      "created_at": "2026-11-01T15:17:38.498096+00:00",
+      "started_at": "2026-11-01T15:17:38.510095+00:00",
+      "finished_at": null,
+      "summary": {
+        "changed_fields": [],
+        "expected_version": null,
+        "operation": "deployment_apply",
+        "restore_from": null,
+        "target": null
+      }
+    },
+    "final_public131_job": {
+      "id": "public131-apply-20261101",
+      "operation": "deployment_apply",
+      "state": "unknown",
+      "result": {
+        "error": "admin_upstream_outcome_unknown",
+        "retry_with_new_key": false
+      },
+      "backup_slug": "df2a34c6",
+      "request_id": "public131-apply-20261101",
+      "created_at": "2026-11-01T15:24:16.978684+00:00",
+      "started_at": "2026-11-01T15:24:16.990670+00:00",
+      "finished_at": "2026-11-01T15:28:31.949924+00:00",
+      "summary": {
+        "changed_fields": [],
+        "expected_version": null,
+        "operation": "deployment_apply",
+        "restore_from": null,
+        "target": null
+      }
+    },
+    "interpretation": "Both apply requests returned unknown after Core restart upstream timeout. Neither was replayed. Independent ready runtime/version and exact postboot readback confirm final activation.",
+    "lease_released": true
+  },
+  "retention": {
+    "deleted_old_unprotected": [
+      "fc76d3f2",
+      "bbb7d9bf"
+    ],
+    "latest_three_and_protected_preserved": true
+  },
+  "limitations": {
+    "physical_postfix_command_test": "pending ordinary use",
+    "no_familiar_names_learned_yet": true,
+    "biometric_certainty_claimed": false,
+    "replay_detection_installed": false,
+    "homepod_native_abort_cause": "still_unresolved",
+    "unsupported_tv_heating_routes_added": false
+  }
+}
