@@ -26,6 +26,14 @@ class CommandTests(unittest.TestCase):
    with self.subTest(text=text):
     value=self.resolve(text);self.assertIsNotNone(value)
     self.assertEqual(value['service'],service);self.assertEqual(value['entity_ids'],['light.living'])
+ def test_stt_infinitives_are_local_light_commands(self):
+  for text,service in [('Rozsvítit světlo v obýváku.','turn_on'),('Zhasnout světlo.','turn_off'),('Zapnout světla v obýváku','turn_on'),('Vypnout světlo v obýváku','turn_off')]:
+   with self.subTest(text=text):
+    value=self.resolve(text);self.assertIsNotNone(value)
+    self.assertEqual(value['service'],service);self.assertEqual(value['entity_ids'],['light.living'])
+ def test_infinitives_do_not_execute_examples_or_guess_device_domains(self):
+  for text in ('„Rozsvítit světlo v obýváku“','Když řeknu zhasnout světlo','Zapnout','Vypnout televizi','Rozsvítit a odemknout dveře'):
+   self.assertIsNone(self.resolve(text),text)
  def test_explicit_inflected_room_overrides_source(self):
   for text,entity in [('rozsviť v koupelně','light.bath'),('zhasni v chodbičce','light.hall'),('rozsvit svetla v obyvaku','light.living')]:
    value=self.resolve(text);self.assertIsNotNone(value);self.assertEqual(value['entity_ids'],[entity])

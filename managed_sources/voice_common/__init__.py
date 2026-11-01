@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-VERSION='1.0.0'
+VERSION='1.0.1'
 
 def normalized(text):
     return ' '.join(re.findall(r'\w+', ''.join(c for c in unicodedata.normalize('NFKD',str(text).casefold()) if not unicodedata.combining(c))))
@@ -33,6 +33,9 @@ def parse_command(text):
     value=re.sub(r'^prosim(?: te)?\s+','',value)
     value=re.sub(r'\s+prosim(?: te)?$','',value)
     value=re.sub(r' at tady lepe vidim$','',value)
+    # STT may choose the Czech infinitive for an otherwise exact imperative.
+    verbs={'rozsvitit':'rozsvit','zhasnout':'zhasni','zapnout':'zapni','vypnout':'vypni'}
+    value=re.sub(r'^(rozsvitit|zhasnout|zapnout|vypnout)\b',lambda match:verbs[match[1]],value)
     value=re.sub(r'^(rozsvit|zhasni|zapni|vypni) (?:mi|me) ',r'\1 ',value)
     if value in ('zamkni','zamkni hlavni vchod','odemkni','odemkni hlavni vchod'):
         return Command(value,'lock','lock' if value.startswith('zamkni') else 'unlock','entrance')

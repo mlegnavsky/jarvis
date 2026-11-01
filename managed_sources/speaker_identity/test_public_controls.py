@@ -40,6 +40,20 @@ class PublicControlTests(unittest.IsolatedAsyncioTestCase):
   self.assertTrue(r['authorized'])
   await asyncio.wait_for(entered.wait(),.5);release.set()
   await asyncio.gather(*self.c.learning_tasks)
+ async def test_stt_infinitive_skips_identity_model_and_gets_light_only_grant(self):
+  import asyncio
+  self.c.public_controls=True;self.c.enforce=True
+  async def forbidden(pcm):raise AssertionError('light command must not wait for identity inference')
+  self.c.infer=forbidden
+  text='Rozsvítit světlo v obýváku.'
+  await asyncio.wait_for(self.c.complete('device',bytes(128000),4,text,playback=True),.5)
+  result=await self.c.turn(NS(text=text,device_id='device'),'c')
+  self.assertEqual(result['status'],'public_command')
+  self.assertEqual(result['effective_text'],'rozsvit svetlo v obyvaku')
+  self.assertTrue(result['authorized'])
+  token=result['control_token'];targets=(('light.living',),'living')
+  self.assertTrue(self.c.gate.bind(token,'device',result['effective_text'],('light','turn_on'),targets))
+  self.assertTrue(self.c.gate.consume(token,'device',result['effective_text'],('light','turn_on'),targets))
  async def test_known_unprivileged_profile_is_personalization_only(self):
   self.c.profiles.begin('device','Petr')
   for _ in range(3):self.c.profiles.sample('device',[1.,0.],4)

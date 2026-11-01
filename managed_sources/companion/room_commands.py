@@ -148,7 +148,7 @@ def native_resolution_probe(hass):
                for state in hass.states.async_all()
                if state.entity_id.startswith('light.') and async_should_expose(hass, 'conversation', state.entity_id)]
     cases = []
-    for text in ('Rozsviť', 'Zhasni', 'Rozsviť v koupelně', 'Zhasni v chodbičce'):
+    for text in ('Rozsviť', 'Zhasni', 'Rozsvítit světlo v obýváku.', 'Zhasnout světlo', 'Rozsviť v koupelně', 'Zhasni v chodbičce'):
         user = SimpleNamespace(text=text, device_id=None,
             satellite_id='assist_satellite.home_assistant_voice_0a8bde_assist_satellite')
         request = resolve_input(hass, user, exposed)
