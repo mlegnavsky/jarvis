@@ -7,7 +7,7 @@ from interrupt import install_abort_resume
 
 class InterruptTests(unittest.IsolatedAsyncioTestCase):
  async def exercise(self, *, continuation=True, stop_fails=False, replace=False,
-                    allowed=True, abort=True, change_conversation=False, prebound=False):
+                    allowed=True, abort=True, change_conversation=False, prebound=False, layered=False, foreign_callback=False):
   began=asyncio.Event();resumed=[];stopped=[]
   async def play(media):began.set();await asyncio.Event().wait()
   async def stop():
@@ -22,8 +22,12 @@ class InterruptTests(unittest.IsolatedAsyncioTestCase):
    async def handle_pipeline_stop(self,abort):
     if abort:self._abort_pipeline()
    def _abort_pipeline(self):self._pipeline_task.cancel()
+   def event_callback(self,event):pass
+   def tts_response_finished(self):self.finished=True
   terminal=Terminal();terminal.hass=hass;terminal.entity_id='satellite'
   terminal._conversation_id='conversation';terminal._is_announcing=False
+  terminal.finished=False
+  run.event_callback=(Terminal() if foreign_callback else terminal).event_callback
   subscribed_stop=terminal.handle_pipeline_stop if prebound else None
   async def resume(entity,pending):resumed.append((entity._conversation_id,pending['conversation_id']))
   pending={'run_id':'run','conversation_id':'conversation','seconds':3}
@@ -34,19 +38,38 @@ class InterruptTests(unittest.IsolatedAsyncioTestCase):
    router.begin(run)
    try:await router.answer(run,{'media_id':'speech'})
    finally:router.end(run)
-  task=asyncio.create_task(output());terminal._pipeline_task=task
+  task=asyncio.create_task(output())
+  async def outer():await task
+  wrapper=asyncio.create_task(outer()) if layered else task
+  terminal._pipeline_task=wrapper
   await began.wait()
   await (subscribed_stop or terminal.handle_pipeline_stop)(abort)
   if replace:router.activate('replacement')
   if change_conversation:terminal._conversation_id='new-conversation'
   if not abort:task.cancel()
-  try:await task
+  try:await wrapper
   except asyncio.CancelledError:pass
   terminal._pipeline_task=None
   for _ in range(5):await asyncio.sleep(0)
   if gate.jobs:await asyncio.gather(*list(gate.jobs.values()),return_exceptions=True)
+  gate.test_finished=terminal.finished
   return resumed,stopped,gate
 
+ async def test_distinct_native_and_output_tasks_recover_and_finish_response(self):
+  resumed,stopped,gate=await self.exercise(layered=True)
+  self.assertEqual(resumed,[('conversation','conversation')])
+  self.assertTrue(gate.test_finished)
+ async def test_cancelled_final_reply_is_cleaned_without_reopening(self):
+  resumed,stopped,gate=await self.exercise(continuation=False,layered=True)
+  self.assertEqual(resumed,[])
+  self.assertTrue(gate.test_finished)
+ async def test_muting_blocks_listening_but_still_cleans_cancelled_response(self):
+  resumed,stopped,gate=await self.exercise(allowed=False,layered=True)
+  self.assertEqual(resumed,[])
+  self.assertTrue(gate.test_finished)
+ async def test_unrelated_callback_never_cleans_another_entity(self):
+  resumed,stopped,gate=await self.exercise(foreign_callback=True)
+  self.assertFalse(resumed);self.assertFalse(gate.test_finished)
  async def test_stop_callback_bound_before_install_still_resumes(self):
   resumed,stopped,gate=await self.exercise(prebound=True)
   self.assertEqual(stopped,[True])

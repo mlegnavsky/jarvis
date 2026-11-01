@@ -98,8 +98,13 @@ async def async_setup(hass,config):
   except BaseException:
    if controller.pending==pending:controller.pending=None
    raise
+ async def cancelled_session(run,continuing):
+  nonlocal active_pipeline,pending_followup
+  if active_run!=str(run.id):return
+  active_pipeline=False;pending_followup=continuing
+  if not continuing:await restore_tv(str(run.id))
  abort_resume=install_abort_resume(hass,EsphomeAssistSatellite,router,CORE_VERSION,
-                                  SATELLITE,can_resume,resume_dialogue,current_pending) if adapter=='active' else None
+                                  SATELLITE,can_resume,resume_dialogue,current_pending,cancelled_session) if adapter=='active' else None
  native_event=PipelineRun.process_event
  async def restore_tv(owner):
   if tv_prepare is not None:await asyncio.shield(tv_prepare)
@@ -135,7 +140,7 @@ async def async_setup(hass,config):
    await restore_tv(active_run)
  async_track_state_change_event(hass,[TELEVISION],television_state)
  async_track_state_change_event(hass,[SATELLITE],satellite_state)
- report={'version':5,'runtime_version':'1.0.3','started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
+ report={'version':6,'runtime_version':'1.0.4','started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
          'volume_policy':'startup_45_then_follow_homepod_raop','legacy_fixed_volume_ignored':speech_volume,
          'native_abort_resume':'active' if abort_resume else 'unavailable',
          'microphone':SATELLITE,'speech_volume':None,'terminal_spoken_output':False if adapter=='active' else 'native_uncontrolled','audible_test_performed':False,
