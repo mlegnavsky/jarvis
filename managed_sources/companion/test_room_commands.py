@@ -69,6 +69,7 @@ class RegistryTests(unittest.IsolatedAsyncioTestCase):
   entities={'light.moved':NS(area_id='living',device_id='lamp'),'light.other':NS(area_id=None,device_id='lamp')}
   helpers=NS(area_registry=NS(async_get=lambda hass:areas),device_registry=NS(async_get=lambda hass:NS(async_get=devices.get)),entity_registry=NS(async_get=lambda hass:NS(async_get=entities.get)))
   hass=NS(services=NS(async_call=call),states=NS(get=lambda entity:NS(state='on')))
+  hass.data={'jarvis_speaker_identity':NS(enforce=True,device=lambda user:user.device_id,gate=NS(bind=lambda *a:True,consume=lambda *a:True))}
   user=NS(text='rozsviť',device_id='mic',context=object())
   with patch.dict('sys.modules',{'homeassistant':NS(),'homeassistant.helpers':helpers}):
    await handler(hass,user,[{'entity_id':'light.moved'},{'entity_id':'light.other'}])

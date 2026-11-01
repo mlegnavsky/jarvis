@@ -18,9 +18,10 @@ from .coordinator import Coordinator,admin_forget
 from .hooks import install
 from .policy import MODEL_ID,VoiceProfiles
 from .transport import read_limited
+from .manifest import refresh_manifest
 
 DOMAIN='jarvis_speaker_identity'
-CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_EXTRA)
+CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({vol.Optional('authorize_existing_profile'):str})},extra=vol.ALLOW_EXTRA)
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 BACKEND='http://local-jarvis-core:8766'
@@ -36,7 +37,9 @@ async def async_setup(hass,config):
    data=await response.json()
    if not isinstance(data,dict):raise ValueError('embedding_response')
    return data
- coordinator=Coordinator(hass,root/'profiles.sqlite',infer)
+ coordinator=Coordinator(hass,root/'profiles.sqlite',infer,enforce=True)
+ explicit=config.get(DOMAIN,{}).get('authorize_existing_profile')
+ if explicit:await hass.async_add_executor_job(coordinator.profiles.bootstrap_authorization,explicit)
  hass.data[DOMAIN]=coordinator
  def clear_memory(memory_id):
   from custom_components.extended_openai_conversation.memory import MemoryStore
@@ -53,12 +56,14 @@ async def async_setup(hass,config):
  from homeassistant.const import __version__ as core_version
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun
  adapter=install(hass,PipelineRun,coordinator,core_version,PIPELINE,SATELLITE)
- report={'version':3,'started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+ report={'version':4,'runtime_version':'1.1.0','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+         'native_intent_guard':bool(PipelineRun.__dict__.get('_jarvis_voice_intent_guard')),
          'enrollment_trigger_requires_embedding':False,
          'enrollment_policy':'reject_sample_keep_progress_v2',
          'raw_audio_saved':False,'voice_is_authentication':False,'household_accuracy_verified':False,
          'minimum_enrollment_samples':3,'match_threshold':.75,'match_margin':.12,
-         'automatic_profile_adaptation':False,'backend_host_port_published':False}
+         'automatic_profile_adaptation':'quarantined_candidates','voice_control_requires_authorized_profile':True,
+         'replay_detection':'not_installed','backend_host_port_published':False}
  def save(snapshot):
   root.mkdir(parents=True,exist_ok=True,mode=0o700)
   temporary=root/'report.tmp'
@@ -80,7 +85,15 @@ async def async_setup(hass,config):
   report.update(updated_at=dt_util.utcnow().isoformat(),status=coordinator.status,
                 captured_turns=coordinator.capture_count,last_turn=coordinator.last,
                 profile_count=count,enrollment=coordinator.enrollment_state())
+  report['authorization']=await hass.async_add_executor_job(coordinator.profiles.authorization_summary)
+  report['adaptation']=await hass.async_add_executor_job(coordinator.adaptation.summary)
   await hass.async_add_executor_job(save,dict(report))
+  slots={}
+  for entity_id in ('select.home_assistant_voice_0a8bde_probouzeci_slovo','select.home_assistant_voice_0a8bde_probouzeci_slovo_2'):
+   state=hass.states.get(entity_id)
+   slots[entity_id]=state.state if state else 'missing'
+  await hass.async_add_executor_job(refresh_manifest,root.parent/'voice-system-manifest.json',dict(report),
+    [Path(__file__).parent,Path(hass.config.path('custom_components','extended_openai_conversation'))],report['updated_at'],slots)
   hass.states.async_set('sensor.jarvis_rozpoznavani_hlasu',coordinator.status,
     {'friendly_name':'Jarvis · rozpoznávání mluvčího','profiles':report['profile_count'],
      'adapter':adapter,'captured_turns':coordinator.capture_count,'last_status':coordinator.last.get('status'),

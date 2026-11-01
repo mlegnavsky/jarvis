@@ -22,6 +22,13 @@ def export():
             'entrypoint': {'service': 'jarvis.admin', 'entity_id': 'jarvis.system'},
             'completion_state': 'verified', 'unknown_outcome': 'reconcile_before_retry',
             'operations': dict(sorted(operations.items())),
+            'voice_system':{'runtime_manifest':'jarvis_workspace/voice-system-manifest.json',
+              'generator':'custom_components/jarvis_speaker_identity/manifest.py',
+              'update_trigger':'every runtime report refresh; bounded source-change history',
+              'authorization':'stable explicitly authorized voice_id; per-utterance one-use grants',
+              'learning':'quarantined embeddings; immutable anchors; independent validation required',
+              'wake_models':'firmware and household acceptance required; manifest is not activation',
+              'lock_target':'lock.vstup_zamek_vchod','replay_detection':'not_installed'},
             'known_missing': ['hosted_container_runtime_access', 'verified_discovery_channel_link'],
             'evidence_registry':'docs/capability-evidence.json', 'workflow': 'docs/WORK-MANIFEST.md', 'open_work': 'docs/OPEN-WORK.md'}
 

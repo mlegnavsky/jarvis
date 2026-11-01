@@ -74,3 +74,16 @@ Používej storage a backup_retention před údržbou, deployment_acquire/prepar
 ## Laboratoř a archiv vydání
 
 Aktuální provozní postup: docs/LAB-AND-RELEASES.md. Laboratoř laborator.odladeni.cz používá pouze větev lab/plesk-bootstrap-20261029; produkce feat/jarvis-addon. Publikace do Gitu, nasazení souborů a aktivní runtime jsou oddělené důkazy. Zálohy domácnosti nikdy nepatří do veřejného archivu. Plesk webhook a živá publikace ověřeny commitem30348df692f92e6833a926254eba3a9e933669f7 / run40891692482. Privátní HA zálohy musí podle vlastníka na vlastní server. Cílový SFTP účet a soukromá složka dosud nejsou připojené; tato mezera trvá. Podrobnosti v LAB-AND-RELEASES.md.
+
+
+## Hlasový systém — aktualizace 1.11.2026
+
+První živé čtení: jarvis_workspace/voice-system-manifest.json přes jarvis.admin/file. Soubor se sám obnovuje spolu s hlasovým reportem, počítá hashe skutečně instalovaných Python zdrojů a uchovává omezenou historii změn. Obsahuje podporované postupy, stav oprávnění, oddělené učení i skutečná omezení. Nenahrazuje čerstvou kontrolu firmwaru a fyzické testy.
+
+Zdroj managed_sources/speaker_identity (v1.1.0) vyžaduje explicitní jednorázovou autorizaci existujícího profilu; opravnění je navázané na stabilní voice_id. Profil stejného jména po smazání práva nezíská. Hlasová integrace není přihlášení do HA. Příkazy zhlasování LLM nesmějí obejít místní ověřenou cestu. Světla jsou podle mikrofonu, zamkni/odemkni výhradně lock.vstup_zamek_vchod.
+
+Učení: delší kvalitní rozpoznané úseky mohou vytvořit pouze oddělené kandidáty. Originální kotvy se nemění. Chybí-li ověřené nepřehrávané vzorky nebo nezávislé pozitivní a negativní testy, povyšování profilu zůstává vypnuté. Hlasově Vylepši můj hlasový profil zahájí pět zvláštních pozitivních ověřovacích vět; bez cizích hlasů a replay testů tím nevzniká tvrzení o nezaměnitelnosti.
+
+Výslovnost: Nauč se slovo X znamená Y vyžádá druhé výslovné Potvrzuji slovo X znamená Y; pouze pro autorizovaný stabilní profil a čtyři povolené kanonické povely. Slovník nikdy nemění oprávnění.
+
+Výcvik kandidátů Aničko/zamkni/odemkni: training/anicko-20261101. Modely nejsou automaticky nahrány do firmwaru. Krátké přímé detekce zůstávají blokované, dokud nemáme ověřený zvukový úsek pro identitu; neodstraňovat ochranu jen kvůli funkčnímu akustickému modelu.

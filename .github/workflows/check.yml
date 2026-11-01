@@ -12,6 +12,9 @@ jobs:
           python-version: '3.12'
       - run: pip install -r jarvis/requirements.txt -r requirements-test.txt
       - run: PYTHONPATH=jarvis:jarvis_updater python -m unittest discover -s tests -t . -v
+      - run: python -m unittest discover -s managed_sources/speaker_identity -q
+      - run: python -m unittest discover -s managed_sources/companion -q
+      - run: python scripts/export_capabilities.py && git diff --exit-code docs/operations-manifest.json
       - run: node managed_sources/home_status/tests/card.test.cjs
       - run: python -m unittest discover -s managed_sources/energy_archive -p 'test_*.py'
       - run: node tests/day_energy_chart.cjs

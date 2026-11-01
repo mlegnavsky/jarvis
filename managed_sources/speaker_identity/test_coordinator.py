@@ -6,6 +6,26 @@ import unittest
 from coordinator import Coordinator,admin_forget
 
 class CoordinatorTests(unittest.IsolatedAsyncioTestCase):
+ async def test_enforced_voice_requires_authorization_even_when_name_is_recognized(self):
+  await self.say('Nauč se můj hlas. Jsem Martin.')
+  for n in range(3):await self.say('Ukázková věta číslo '+str(n))
+  self.c.enforce=True
+  result=await self.say('Zhasni')
+  self.assertFalse(result['authorized'])
+  self.assertIn('neprovedu',result['local_reply'])
+ async def test_authorized_command_has_one_use_token_and_candidate_stays_separate(self):
+  await self.say('Nauč se můj hlas. Jsem Martin.')
+  for n in range(3):await self.say('Ukázková věta číslo '+str(n))
+  self.c.profiles.bootstrap_authorization('Martin');self.c.enforce=True
+  result=await self.say('Zhasni')
+  self.assertTrue(result['authorized'])
+  token=result['control_token']
+  self.assertTrue(self.c.gate.consume(token,'device','Zhasni',('light','turn_off')))
+  self.assertFalse(self.c.gate.consume(token,'device','Zhasni',('light','turn_off')))
+ async def test_unknown_voice_cannot_start_enrollment_under_enforcement(self):
+  self.c.enforce=True
+  result=await self.say('Nauč se můj hlas. Jsem Martin.')
+  self.assertFalse(result['authorized']);self.assertEqual(self.c.enrollment_state(),[])
  async def asyncSetUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.time=100
   async def executor(fn,*args):return await asyncio.to_thread(fn,*args)

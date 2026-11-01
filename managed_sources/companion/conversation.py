@@ -145,7 +145,9 @@ class ExtendedOpenAIAgentEntity(
         # One-shot factual requests and known empty STT artifacts must never
         # start model/enrollment flows or reopen TV/background conversations.
         noise = is_noise_transcript(user_input.text)
-        brief = local_time_answer(user_input.text, dt_util.now())
+        speaker=getattr(self.hass,'data',{}).get('jarvis_speaker_identity')
+        protected_voice=bool(user_input.device_id or getattr(user_input,'satellite_id',None))
+        brief = None if protected_voice else local_time_answer(user_input.text, dt_util.now())
         if noise or brief is not None:
             self._recent_devices.pop(device, None)
             response = intent.IntentResponse(language=user_input.language)
@@ -193,7 +195,8 @@ class ExtendedOpenAIAgentEntity(
             self.history.pop(conversation_id, None)
         local_reply = companion_turn.local_reply
         if local_reply is None:
-            local_reply = await async_handle_room_command(self.hass, user_input, exposed_entities)
+            local_reply = await async_handle_room_command(self.hass, user_input, exposed_entities,
+                getattr(companion_turn,'control_token',None),getattr(companion_turn,'effective_text',None))
         if local_reply is not None:
             local_response = intent.IntentResponse(language=user_input.language)
             local_response.async_set_speech(local_reply)
@@ -416,7 +419,7 @@ class ExtendedOpenAIAgentEntity(
         context_threshold = self.options.get(
             CONF_CONTEXT_THRESHOLD, DEFAULT_CONTEXT_THRESHOLD
         )
-        functions = list(map(lambda s: s["spec"], self.get_functions()))
+        functions = [] if (user_input.device_id or getattr(user_input,'satellite_id',None)) else list(map(lambda s: s["spec"], self.get_functions()))
         function_call = "auto"
         if n_requests == self.options.get(
             CONF_MAX_FUNCTION_CALLS_PER_CONVERSATION,
@@ -515,6 +518,9 @@ class ExtendedOpenAIAgentEntity(
         n_requests,
         functionSpec,
     ) -> OpenAIQueryResponse:
+        speaker=getattr(self.hass,'data',{}).get('jarvis_speaker_identity')
+        if user_input.device_id or getattr(user_input,'satellite_id',None):
+            raise HomeAssistantError('Hlasové ovládání vyžaduje ověřený místní povel; nástroj nebyl spuštěn.')
         function = functionSpec["function"]
         function_executor = get_function_executor(function["type"])
 
@@ -593,6 +599,9 @@ class ExtendedOpenAIAgentEntity(
         exposed_entities,
         functionSpec,
     ) -> Any:
+        speaker=getattr(self.hass,'data',{}).get('jarvis_speaker_identity')
+        if user_input.device_id or getattr(user_input,'satellite_id',None):
+            return 'Hlasové ovládání vyžaduje ověřený místní povel; nástroj nebyl spuštěn.'
         function = functionSpec["function"]
         function_executor = get_function_executor(function["type"])
 

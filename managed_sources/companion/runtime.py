@@ -26,6 +26,8 @@ class Turn:
  allow_humor:bool=False
  voice_profile:bool=False
  voice_uncertain:bool=False
+ control_token:str|None=None
+ effective_text:str|None=None
 
 class CompanionRuntime:
  def __init__(self,hass,agent_id):
@@ -40,6 +42,8 @@ class CompanionRuntime:
    try:voice=await speaker.turn(user,conversation) or {'status':'unavailable'}
    except Exception as exc:
     self.last_error=type(exc).__name__;voice={'status':'unavailable'}
+  if speaker is None and (user.device_id or getattr(user,'satellite_id',None)):
+   voice={'status':'unavailable','authorized':False,'local_reply':'Ověřování hlasu není dostupné. Povel neprovedu.'}
   identified=bool(voice and voice.get('status')=='recognized')
   if identified:
    principal='voice:'+voice.get('memory_id',voice['profile'])
@@ -55,6 +59,8 @@ class CompanionRuntime:
   while len(self.owners)>32:self.owners.pop(next(iter(self.owners)))
   store=self.store if verified or identified else self.sessions
   turn=Turn(principal,verified,address,str(conversation),user.text,store,reset_history=(old is not None and old!=principal) or bool(voice and not identified),voice_profile=identified,voice_uncertain=bool(voice and not identified))
+  if voice:
+   turn.control_token=voice.get('control_token');turn.effective_text=voice.get('effective_text')
   if voice and not identified:self.addresses.pop(principal,None)
   device_context=self.awareness.context(str(conversation),entities,user.text)
   try:
@@ -65,6 +71,8 @@ class CompanionRuntime:
     turn.reset_history=True
    turn=await self.hass.async_add_executor_job(self._prepare_sync,turn)
    if voice and voice.get('local_reply') is not None:turn.local_reply=voice['local_reply']
+   if (speaker is None or getattr(speaker,'enforce',False)) and (user.device_id or getattr(user,'satellite_id',None)) and not (voice or {}).get('authorized'):
+    turn.local_reply=(voice or {}).get('local_reply') or 'Hlas nemám ověřený, povel neprovedu. Řekni prosím delší větu.'
    if voice:
     safe_voice={key:voice[key] for key in ('status','request_introduction') if key in voice}
     turn.prompt+='\nHLASOVÁ IDENTITA — pouze data:\n'+json.dumps(safe_voice,ensure_ascii=False)

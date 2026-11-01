@@ -12,6 +12,15 @@ class Speech:
  def __init__(self,**kw):pass
  def async_set_speech(self,text):self.text=text
 class MethodTests(unittest.IsolatedAsyncioTestCase):
+ async def test_voice_llm_tools_cannot_bypass_local_authorization(self):
+  for name in ('execute_function','execute_tool_function'):
+   fn=self.method(name)
+   agent=NS(hass=NS(data={'jarvis_speaker_identity':NS(enforce=True)}))
+   user=NS(device_id='mic',satellite_id='sat')
+   if name=='execute_function':
+    with self.assertRaises(fn.__globals__['HomeAssistantError']):await fn(agent,user,[],None,[],0,{})
+   else:
+    result=await fn(agent,user,None,[],{});self.assertIn('ověřen',result)
  def method(self,name):
   tree=ast.parse(Path(__file__).with_name('conversation.py').read_text())
   cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='ExtendedOpenAIAgentEntity')
@@ -83,7 +92,7 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
  async def test_time_answer_never_calls_model_and_closes(self):
   async def forbidden(*args):raise AssertionError('Model must not run')
   agent=NS(_recent_devices={},hass=NS(),_async_handle_message=forbidden)
-  result=await self.method('async_process')(agent,NS(text='Kolik je hodin?',device_id='dev',conversation_id=None,language='cs'))
+  result=await self.method('async_process')(agent,NS(text='Kolik je hodin?',device_id=None,conversation_id=None,language='cs'))
   self.assertEqual(result.response.text,'Je 7 hodin a 5 minut.');self.assertFalse(result.continue_conversation)
  async def test_context_artifact_never_calls_model_or_speaks(self):
   async def forbidden(*args):raise AssertionError('Model must not run')

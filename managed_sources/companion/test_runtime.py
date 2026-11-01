@@ -22,7 +22,7 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
  async def test_guest_household_note_is_not_persisted(self):
   turn=await self.runtime.prepare(self.user('Zapamatuj si pro domácnost: Testovací klíč je zelený.'),'guest')
   self.assertFalse(self.runtime.store.context('household')['notes'])
-  self.assertIn('rozhovoru',turn.local_reply)
+  self.assertIn('Ověřování hlasu není dostupné',turn.local_reply)
  async def test_anicka_confirms_saved_and_deleted_notes_in_feminine_form(self):
   saved=await self.runtime.prepare(self.user('Zapamatuj si: Zkušební poznámka.',None,'a'),'c')
   self.assertEqual(saved.local_reply,'Uložila jsem si tvoji poznámku.')

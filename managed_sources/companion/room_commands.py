@@ -25,6 +25,13 @@ FORMS = {
 
 
 def resolve(text, source_area, areas, exposed):
+    lock_match=re.fullmatch(r'(zamkni|odemkni)(?: hlavni vchod)?',normalized(text))
+    if lock_match:
+        target='lock.vstup_zamek_vchod'
+        return {'domain':'lock','service':'lock' if lock_match[1]=='zamkni' else 'unlock',
+                'entity_ids':[target] if any(e['entity_id']==target for e in exposed) else [],
+                'area_id':'vstup','area_name':'Hlavní vchod',
+                'error':None if any(e['entity_id']==target for e in exposed) else 'lock_not_exposed'}
     match = re.fullmatch(r'(rozsvit|zhasni)(?: (?:to|svetlo|svetla))?(?: (?:v|ve) (.+))?', normalized(text))
     if not match:
         return None
@@ -58,31 +65,48 @@ def resolve(text, source_area, areas, exposed):
     return result
 
 
-async def execute(hass, request, context):
+async def execute(hass, request, context, *, user=None, token=None):
     errors = {
         'source_room_missing': 'Nevím, ve které místnosti je tento mikrofon. Řekni prosím název místnosti.',
         'room_not_found': 'Tuto místnost neznám. Řekni prosím její název z Home Assistantu.',
         'room_ambiguous': 'Tento název má více místností. Upřesni prosím, kterou myslíš.',
         'no_exposed_lights': 'V této místnosti nemám žádná světla povolená pro hlasové ovládání.',
+        'lock_not_exposed':'Zámek hlavního vchodu není povolený pro toto ovládání.',
     }
     if request['error']:
         return errors[request['error']]
+    domain=request.get('domain','light')
+    if domain=='lock' and (request['entity_ids']!=['lock.vstup_zamek_vchod'] or request['service'] not in ('lock','unlock') or request['area_id']!='vstup'):
+        return 'Tento hlasový povel smí ovládat pouze zámek hlavního vchodu.'
+    speaker=getattr(hass,'data',{}).get('jarvis_speaker_identity')
+    voice=bool(user and (getattr(user,'device_id',None) or getattr(user,'satellite_id',None)))
+    if voice and (speaker is None or not getattr(speaker,'enforce',False)):
+        return 'Povel neprovedu, ověřování hlasu není dostupné.'
+    if speaker and getattr(speaker,'enforce',False) and user is None:
+        return 'Povel neprovedu, chybí ověřený zdroj požadavku.'
+    if speaker and getattr(speaker,'enforce',False) and user and (getattr(user,'device_id',None) or getattr(user,'satellite_id',None)):
+        if not speaker.gate.consume(token,speaker.device(user),user.text,(domain,request['service']),(tuple(request['entity_ids']),request['area_id'])):
+            return 'Povel neprovedu, chybí platné jednorázové ověření hlasu.'
+    elif domain=='lock':
+        # This new lock route is only for voice-authorized local control.
+        return 'Zámek vyžaduje ověřený hlasový povel.'
     try:
-        await hass.services.async_call('light', request['service'],
+        await hass.services.async_call(domain, request['service'],
             {'entity_id': request['entity_ids']}, blocking=True, context=context)
     except Exception:
-        return 'Provedení příkazu ke světlům se nepodařilo potvrdit.'
-    desired = 'on' if request['service'] == 'turn_on' else 'off'
+        return 'Provedení příkazu se nepodařilo potvrdit.'
+    desired = ('locked' if request['service']=='lock' else 'unlocked') if domain=='lock' else ('on' if request['service'] == 'turn_on' else 'off')
     verified = all((state := hass.states.get(entity)) is not None and state.state == desired
                    for entity in request['entity_ids'])
     if verified:
+        if domain=='lock':return 'Hlavní vchod jsem '+('zamkla.' if desired=='locked' else 'odemkla.')
         return ('Rozsvítila' if desired == 'on' else 'Zhasla') + ' jsem světla. Místnost: ' + request['area_name'] + '.'
-    return 'Povel pro světla jsem odeslala. Místnost: ' + request['area_name'] + '. Změnu stavu zatím nemám potvrzenou.'
+    return 'Povel jsem odeslala. Místo: ' + request['area_name'] + '. Změnu stavu zatím nemám potvrzenou.'
 
 
 def resolve_input(hass, user, exposed):
     # Avoid registry access at all for unrelated conversation turns.
-    if not re.match(r'^(rozsvit|zhasni)(?:\s|$)', normalized(user.text)):
+    if not re.match(r'^(rozsvit|zhasni|zamkni|odemkni)(?:\s|$)', normalized(user.text)):
         return None
     from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
     areas_registry, devices, entities = ar.async_get(hass), dr.async_get(hass), er.async_get(hass)
@@ -94,7 +118,7 @@ def resolve_input(hass, user, exposed):
             device = devices.async_get(satellite.device_id)
     targets = []
     for item in exposed:
-        if not item['entity_id'].startswith('light.'):
+        if not item['entity_id'].startswith(('light.','lock.')):
             continue
         entity = entities.async_get(item['entity_id'])
         entity_device = devices.async_get(entity.device_id) if entity and entity.device_id else None
@@ -106,11 +130,18 @@ def resolve_input(hass, user, exposed):
     return request
 
 
-async def async_handle_room_command(hass, user, exposed):
+async def async_handle_room_command(hass, user, exposed, token=None, effective_text=None):
+    if effective_text:
+        from copy import copy
+        user=copy(user);user.text=effective_text
     request = resolve_input(hass, user, exposed)
     if request is None:
         return None
-    return await execute(hass, request, user.context)
+    speaker=getattr(hass,'data',{}).get('jarvis_speaker_identity')
+    if speaker and getattr(speaker,'enforce',False) and (user.device_id or getattr(user,'satellite_id',None)) and not request['error']:
+        if not speaker.gate.bind(token,speaker.device(user),user.text,(request.get('domain','light'),request['service']),(tuple(request['entity_ids']),request['area_id'])):
+            return 'Povel neprovedu, ověření hlasu neodpovídá cíli.'
+    return await execute(hass, request, user.context,user=user,token=token)
 
 
 def native_resolution_probe(hass):

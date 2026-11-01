@@ -258,3 +258,8 @@ Actual model text continuity/name/stop probe passed. Synthetic Piper phrases tes
 ### Volume fix live receipt —31.10.2026 17:36 UTC
 
 Source e95c9e90cf0d6c5b35fdb85ade7d7917511aef31; vol-apply-20261031 verified/active_verified17:36:03.073608Z, backupfc76d3f2.4/4 source/recovery readbacks exact. Runtime outputreportv3, adapteractive, volume_policyfollow_homepod, legacy35%ignored, observed0%, mutepropertyunknown(null); no physical audio test afterrestart. This is actual setting preservation, not acoustic loudness normalization. All38 HomePod tests passed locally after installing missingJinja2; fullCI41224820337/41224826220 success. Pipeline nova unchanged, speakerready/nativeprobe passed but householdprofiles0. Disk2.9GiB; lease releaseverified. No backup deletion or firmware/Core upgrade. Previous provisional claim 'no mic turn since17:12' was a snapshot; predeploymentoutput later recorded one completed run. No acoustic proof inferred from that counter. Remaining limitations above persist. Full machine receipt docs/evidence/2026-10-31-volume-diagnostics.json; owner received detailed private report.
+
+
+## Authorized voice 1.1.0 — 1.11.2026
+Zdrojová implementace oprávnění podle stabilního hlasového ID, jednorázových povelů, oddělených kandidátů, chráněných kotev a automatického provozního manifestu. Nasazení je doloženo samostatnou účtenkou až po ověření běžícího reportu.
+Otevřeno: skutečné domácí testy shody; nezávislé negativní/replay vzorky; detekce přehrávky; hotové a fyzicky ověřené akustické modely Aničko/zamkni/odemkni; ověření kapacity firmwaru a zachycení krátkého slova pro identifikaci. Nesmí se hlásit plné probouzení nebo perfektní hlasový otisk. Modely se trénují ve větvi training/anicko-20261101.

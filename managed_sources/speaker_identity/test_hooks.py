@@ -3,6 +3,20 @@ import unittest
 from hooks import install
 
 class HookTests(unittest.IsolatedAsyncioTestCase):
+ async def test_native_local_intents_are_disabled_and_restored_for_target_microphone(self):
+  from dataclasses import dataclass
+  @dataclass(frozen=True)
+  class Config:
+   id:str='p'
+   prefer_local_intents:bool=True
+  class Pipeline:
+   async def _speech_to_text_stream(self,audio_stream,stt_vad,sample_rate=16000,sample_width=2):yield None
+   async def speech_to_text(self,*a):return ''
+   async def recognize_intent(self,*a):return self.pipeline.prefer_local_intents,self._intent_agent_only
+  hass=object();install(hass,Pipeline,NS(),'2026.6.4','p','s')
+  run=Pipeline();run.hass=hass;run.pipeline=Config();run._satellite_id='s';run._intent_agent_only=False;run.intent_agent=NS(id='conversation.extended_openai_conversation')
+  self.assertEqual(await run.recognize_intent('zhasni','c',None),(False,True))
+  self.assertTrue(run.pipeline.prefer_local_intents);self.assertFalse(run._intent_agent_only)
  async def test_only_target_pipeline_collects_real_pcm_and_releases_buffer(self):
   calls=[];hass=object()
   class Pipeline:
