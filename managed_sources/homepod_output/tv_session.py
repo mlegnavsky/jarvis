@@ -1,5 +1,6 @@
 """Own only the television pause introduced for a Jarvis speech session."""
 import asyncio
+from math import isfinite
 
 FINGERPRINT_KEYS=('media_content_id','media_title','app_id','app_name','source')
 
@@ -16,6 +17,16 @@ class TVSession:
   """Call for state updates, including intermediate external play/off changes."""
   if self._owner is not None and ((state or {}).get('state')!='paused' or fingerprint(state)!=self._owner):
    self._owner=None;self.discarded+=1
+ def shared_volume(self):
+  """Fresh shared-output setting, only while this session owns the TV pause."""
+  state=self.read_state()
+  if self._owner is None or not state or state.get('state')!='paused' or fingerprint(state)!=self._owner:
+   return None
+  attributes=state.get('attributes') or {}
+  level=attributes.get('volume_level')
+  if isinstance(level,bool) or not isinstance(level,(int,float)) or not isfinite(level) or not 0<=level<=1:
+   raise ValueError('shared_output_volume_unavailable')
+  return {'volume':level,'muted':attributes.get('is_volume_muted') is True}
  async def acquire(self):
   async with self._lock:
    state=self.read_state()

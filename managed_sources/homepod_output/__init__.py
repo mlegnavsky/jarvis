@@ -22,11 +22,12 @@ from .tv_session import TVSession
 from .interrupt import install_abort_resume
 
 DOMAIN='jarvis_homepod_output'
-CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({vol.Optional('speech_volume',default=0.45):vol.All(vol.Coerce(float),vol.Range(min=0.05,max=0.8))})},extra=vol.ALLOW_EXTRA)
+VERSION='1.1.2'
 SPEAKER='media_player.homepod_obyvak_homepod_obyvak'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 TELEVISION='media_player.obyvaci_pokoj_obyvaci_pokoj'
+CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({vol.Optional('speech_volume',default=0.45):vol.All(vol.Coerce(float),vol.Range(min=0.05,max=0.8)),vol.Optional('shared_volume_source'):vol.In([TELEVISION])})},extra=vol.ALLOW_EXTRA)
 
 def silence_wav():
  output=io.BytesIO()
@@ -40,6 +41,7 @@ class SilenceView(HomeAssistantView):
 
 async def async_setup(hass,config):
  speech_volume=config[DOMAIN]['speech_volume']
+ shared_volume_source=config[DOMAIN].get('shared_volume_source')
  last_volume={}
  startup_volume={'status':'pending','target':.45}
  hass.http.register_view(SilenceView())
@@ -64,7 +66,9 @@ async def async_setup(hass,config):
   if tv_prepare is not None:
    await asyncio.shield(tv_prepare)
   nonlocal last_volume
-  last_volume=await play_at_current_volume(player(),media_id)
+  shared=television.shared_volume() if shared_volume_source==TELEVISION else None
+  last_volume=await play_at_current_volume(player(),media_id,shared_volume=shared)
+  return last_volume
  async def stop():await player().async_media_stop()
  def read_tv():
   state=hass.states.get(TELEVISION)
@@ -140,8 +144,8 @@ async def async_setup(hass,config):
    await restore_tv(active_run)
  async_track_state_change_event(hass,[TELEVISION],television_state)
  async_track_state_change_event(hass,[SATELLITE],satellite_state)
- report={'version':7,'runtime_version':'1.1.1','started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
-         'volume_policy':'startup_45_then_follow_homepod_raop','legacy_fixed_volume_ignored':speech_volume,
+ report={'version':8,'runtime_version':VERSION,'started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
+         'volume_policy':'owned_shared_apple_tv_else_follow_homepod_raop','shared_volume_source':shared_volume_source,'legacy_fixed_volume_ignored':speech_volume,
          'native_abort_resume':'active' if abort_resume else 'unavailable',
          'microphone':SATELLITE,'speech_volume':None,'terminal_spoken_output':False,'terminal_tts_start_policy':'withheld_for_external_output','interruption_policy':'physical_button_preserved_external_acoustic_stop_not_armed' if adapter=='active' else 'native_uncontrolled','audible_test_performed':False,
          'arbitrary_speech_barge_in':False,'cancel_current_answer_hook':True,
@@ -171,7 +175,7 @@ async def async_setup(hass,config):
   report['startup_volume']=dict(startup_volume)
   await hass.async_add_executor_job(save,dict(report))
   hass.states.async_set('sensor.jarvis_hlasovy_vystup',status,
-    {'friendly_name':'Jarvis · hlasový výstup','speaker':SPEAKER,'adapter':adapter,
+    {'friendly_name':'Jarvis · hlasový výstup','speaker':SPEAKER,'adapter':adapter,'version':VERSION,
      'audible_test_performed':False,'arbitrary_speech_barge_in':False,**router.snapshot()})
  async def start(_event=None):
   if startup_volume['status']!='pending':return

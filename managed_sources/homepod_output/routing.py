@@ -47,20 +47,23 @@ async def play_at_volume(entity,media_id,volume,*,takeover_audio=None):
  finally:release()
  await entity.async_play_media('music',media_id)
 
-async def play_at_current_volume(entity,media_id,*,takeover_audio=None):
+async def play_at_current_volume(entity,media_id,*,takeover_audio=None,shared_volume=None):
  """Snapshot the device setting at answer start; never restore a fixed default.
 
  Reapplying that same level through RAOP primes its stream without switching
  to another protocol's stale default. A muted/zero-level device stays silent.
  """
- level=current_volume(entity,takeover_audio=takeover_audio)
+ # An explicitly configured Apple TV -> HomePod shared output has a separate
+ # current volume. Pausing the TV may make the idle RAOP channel report zero;
+ # that channel value is not the shared output's user-selected mute setting.
+ level=current_volume(entity,takeover_audio=takeover_audio) if shared_volume is None else shared_volume['volume']
  if isinstance(level,bool) or not isinstance(level,(int,float)) or not isfinite(level) or not 0<=level<=1:
   raise ValueError('homepod_volume_unavailable')
- muted=getattr(entity,'is_volume_muted',False) is True
+ muted=getattr(entity,'is_volume_muted',False) is True or (shared_volume is not None and shared_volume['muted'])
  if muted or level==0:
   return {'volume':level,'muted':muted,'played':False,'reason':'muted' if muted else 'zero_volume'}
  await play_at_volume(entity,media_id,level,takeover_audio=takeover_audio)
- return {'volume':level,'muted':False,'played':True,'reason':'follow_homepod'}
+ return {'volume':level,'muted':False,'played':True,'reason':'follow_shared_apple_tv' if shared_volume is not None else 'follow_homepod'}
 
 class OutputError(Exception):
  def __init__(self,code,message):
@@ -69,7 +72,7 @@ class OutputError(Exception):
 class Router:
  def __init__(self,play,stop):
   self.play=play;self.stop=stop;self.lock=asyncio.Lock();self.active=None;self.tasks={};self.runs={};self.latest=None
-  self.started=0;self.completed=0;self.cancelled=0;self.failed=0;self.last_error=None;self.last_playback={}
+  self.started=0;self.completed=0;self.skipped=0;self.cancelled=0;self.failed=0;self.last_error=None;self.last_playback={}
  async def answer(self,run,output):
   async with self.lock:
    if self.latest is not None and self.latest!=str(run.id):raise asyncio.CancelledError()
@@ -77,8 +80,11 @@ class Router:
    self.last_playback={'outcome':'playing'}
    run._jarvis_homepod_stop_confirmed=False
    try:
-    async with asyncio.timeout(180):await self.play(output['media_id'])
-    self.completed+=1;self.last_playback={'outcome':'completed'}
+    async with asyncio.timeout(180):decision=await self.play(output['media_id'])
+    if isinstance(decision,dict) and decision.get('played') is False:
+     self.skipped+=1;self.last_playback={'outcome':'skipped','reason':decision.get('reason','not_played')}
+    else:
+     self.completed+=1;self.last_playback={'outcome':'completed'}
    except asyncio.CancelledError:
     self.cancelled+=1
     self.last_playback={'outcome':'cancelled','reason':getattr(run,'_jarvis_homepod_cancel_reason','unattributed_cancellation'),
@@ -116,7 +122,7 @@ class Router:
   if self.tasks.get(owner) is asyncio.current_task():
    self.tasks.pop(owner,None);self.runs.pop(owner,None)
  def snapshot(self):
-  return {'started':self.started,'completed':self.completed,'cancelled':self.cancelled,
+  return {'started':self.started,'completed':self.completed,'skipped':self.skipped,'cancelled':self.cancelled,
           'failed':self.failed,'active':self.active is not None,'last_error':self.last_error,
           'last_playback':dict(self.last_playback)}
 
