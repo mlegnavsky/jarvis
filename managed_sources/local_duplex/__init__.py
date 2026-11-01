@@ -28,11 +28,11 @@ from custom_components.jarvis_voice_diagnostics.turn_taking import spoken_name
 from .adapter import DELEGATE, install, native_session
 from .bridge import TurnBridge
 from .control import read_control
-from .ha_io import LocalOutput, decode_reference, is_output_change, stop_announcement
+from .ha_io import LocalOutput, decode_reference, is_output_change, prime_native_vad, stop_announcement
 from .session import Session
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.0.0'
+VERSION='1.0.1'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -145,6 +145,7 @@ class LocalDialogue:
                 run.audio_settings=replace(run.audio_settings,is_vad_enabled=True)
                 run.audio_enhancer=MicroVadSpeexEnhancer(run.audio_settings.auto_gain_dbfs,
                     run.audio_settings.noise_suppression_level,True)
+            prime_native_vad(run.audio_enhancer)
             run.process_event(PipelineEvent(PipelineEventType.STT_START,{
                 'engine':pipeline.stt_engine,'metadata':asdict(value.stt_metadata),
                 'audio_processing':asdict(run.stt_provider.audio_processing)}))
@@ -167,11 +168,12 @@ class LocalDialogue:
         self.report['self_test']={'status':'running','scope':'native_VAD_and_TTS_reference_no_playback'}
         try:
             enhancer=MicroVadSpeexEnhancer(0,0,True)
-            chunk=enhancer.enhance_chunk(bytes(320),0)
+            warmup_frames,probability=prime_native_vad(enhancer)
             pipeline=async_get_pipeline(self.hass,PIPELINE)
             async with asyncio.timeout(30):prepared=await self.synthesize('Zkouška místního hlasu.',pipeline)
             self.report['self_test']={'status':'passed','scope':'native_VAD_and_TTS_reference_no_playback',
-                'native_vad_probability':chunk.speech_probability,'reference_seconds':len(prepared.pcm)/32000,
+                'native_vad_probability':probability,'native_vad_warmup_frames':warmup_frames,
+                'reference_seconds':len(prepared.pcm)/32000,
                 'microphone_opened':False,'audible_playback':False,'source_revision':self.source_revision,
                 'pipeline_signature':pipeline_signature(pipeline)}
         except Exception as exc:

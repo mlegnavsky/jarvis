@@ -8,6 +8,18 @@ import unittest
 
 
 class NativeOutputTests(unittest.IsolatedAsyncioTestCase):
+    def test_native_vad_priming_waits_for_probability_without_mic_audio(self):
+        io=importlib.import_module('ha_io');seen=[]
+        def process(audio):
+            seen.append(audio)
+            return -1 if len(seen)<77 else .01
+        enhancer=NS(vad=NS(Process10ms=process))
+        count,probability=io.prime_native_vad(enhancer)
+        self.assertEqual((count,probability),(77,.01))
+        self.assertTrue(all(audio==bytes(320) for audio in seen))
+        with self.assertRaises(ValueError):io.prime_native_vad(NS(vad=NS(Process10ms=lambda audio:float('nan'))))
+        with self.assertRaises(ValueError):io.prime_native_vad(NS(vad=NS(Process10ms=lambda audio:-1)))
+
     def output(self, *, muted=False, volume=.4):
         module=importlib.import_module('ha_io')
         self.commands=[];self.levels=[];self.player=NS(state='idle',available=True,is_volume_muted=muted,volume_level=volume)

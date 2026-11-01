@@ -51,6 +51,7 @@ class Segmenter:
     def feed(self, audio, probability):
         if not isinstance(audio,bytes) or not audio or len(audio)%2 or len(audio)>3200:
             raise ValueError('invalid_pcm_frame')
+        if probability==-1:probability=0.  # Native microVAD: not enough features yet.
         if isinstance(probability,bool) or not isinstance(probability,(int,float)) or not math.isfinite(probability) or not 0<=probability<=1:
             raise ValueError('invalid_speech_probability')
         seconds=len(audio)/RATE_BYTES

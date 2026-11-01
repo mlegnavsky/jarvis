@@ -23,6 +23,19 @@ def decode_reference(data):
     return pcm
 
 
+def prime_native_vad(enhancer):
+    """Fill microVAD1.0.1's74-feature context with silence, never microphone PCM."""
+    vad=getattr(enhancer,'vad',None)
+    if vad is None:raise ValueError('native_vad_required')
+    for count in range(1,201):
+        probability=vad.Process10ms(bytes(320))
+        if isinstance(probability,bool) or not isinstance(probability,(int,float)) or not math.isfinite(probability):
+            raise ValueError('native_vad_probability_invalid')
+        if 0<=probability<=1:return count,probability
+        if probability!=-1:raise ValueError('native_vad_probability_invalid')
+    raise ValueError('native_vad_never_ready')
+
+
 def stop_announcement(player, *, stop_command=None):
     if stop_command is None:
         from aioesphomeapi import MediaPlayerCommand

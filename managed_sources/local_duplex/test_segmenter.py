@@ -48,6 +48,14 @@ class SegmentTests(unittest.TestCase):
         for audio, probability in ((b'x',.8),(pcm(.1),float('nan')),(pcm(.1),2)):
             with self.assertRaises(ValueError):gate.feed(audio,probability)
 
+    def test_native_need_more_audio_sentinel_keeps_preroll(self):
+        gate=self.segmenter();warm=pcm(.01)
+        for _ in range(10):self.assertEqual(gate.feed(warm,-1),[])
+        events=self.feed(gate,.12,.99)+self.feed(gate,.75,0)
+        self.assertEqual([e.kind for e in events],['onset','utterance'])
+        self.assertTrue(events[-1].audio.startswith(warm*10))
+        with self.assertRaises(ValueError):gate.feed(warm,-.5)
+
 
 class ReferenceTests(unittest.TestCase):
     def reference(self, seed):
