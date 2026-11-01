@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "scope": "noisy_room_wake_diagnosis_not_an_acoustic_fix",
+  "source_head": "fb7455ab99c93d5ffc4086300771a56e48743cb4",
+  "observed_at": "2026-11-01T20:00:54.489728+00:00",
+  "owner_report": "Jarvis and Jarvisi fail while television is loud; household speech must remain usable.",
+  "observed": {
+    "microphone": "unmuted",
+    "satellite": "idle",
+    "primary_wake": "Jarvis",
+    "secondary_wake": "no_wake_word",
+    "jarvis_cutoff": 0.98,
+    "firmware_revision": "89dab3881e915eab70e46d23ea9e8e1040944ae42444b60058e4e8da06209b3d",
+    "media": [
+      {
+        "entity_id": "media_player.obyvaci_pokoj_obyvaci_pokoj",
+        "state": "playing"
+      },
+      {
+        "entity_id": "media_player.obyvak_televize_obyvak",
+        "state": "on"
+      }
+    ],
+    "postboot_runs": [
+      {
+        "id": "01M6CAZMH2KCJDN7RVHNQKF1DJ",
+        "started_at": "2026-11-01T19:57:01.867993+00:00",
+        "transcript": "",
+        "speech_started": false,
+        "outcome": "no_transcript_observed"
+      }
+    ],
+    "direct_wake": {
+      "status": "whole_utterance_lights",
+      "version": 3,
+      "commands": 0,
+      "blocked": 1,
+      "scope": "whole_light_utterance_after_acoustic_hint",
+      "continuation_wait_s": 0.75,
+      "television_policy": "explicit_Jarvis_required_while_media_active",
+      "identity_inference": false,
+      "speech_to_text": true,
+      "commands_count_handoffs_not_physical_confirmation": true,
+      "last_blocked_reason": "media-active-explicit-wake-required"
+    },
+    "recording_active": false
+  },
+  "conclusion": "The server has observed a suppressed standalone-light activation, but no successful explicit Jarvis STT run after reboot. This supports investigating acoustic activation first; it does not identify the exact acoustic cause. Raising cutoff to 0.98 was not household-validated and is not accepted as a completed TV fix.",
+  "missing_evidence": [
+    "Device microphone signal containing household Jarvis/Jarvisi with television audible, also a quiet comparison",
+    "On-device scores or reproducible evaluation of the private model using that signal",
+    "False-activation comparison under same media conditions"
+  ],
+  "next_step": "Brief owner-coordinated microphone test; use physical button to capture the otherwise missed wake phrases, with explicitly armed bounded private capture. Analyze before choosing threshold, retraining or microphone changes. Test both missed activations and TV-only false activations.",
+  "changes_performed": false,
+  "acoustic_fix_verified": false,
+  "no_unobserved_threshold_change": true,
+  "income_research": {
+    "enerspot_flexibility_url": "https://enerspot.cz/flexibilita/",
+    "cubee_low_voltage_deye_supported_url": "https://cubee.cz/kompatibilita/stridace",
+    "current_provider_path_requires_cubee": true,
+    "jarvis_direct_partnership_api_not_verified": true,
+    "no_contract_or_energy_settings_changed": true
+  }
+}
