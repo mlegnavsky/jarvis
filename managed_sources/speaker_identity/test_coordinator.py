@@ -145,3 +145,23 @@ class MatchDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
   self.assertTrue((await self.say('Ověřená věta'))['authorized'])
   self.c.infer=other
   self.assertTrue((await self.say('Cizí věta znovu'))['retry_recommended'])
+
+class OwnerCalibrationCoordinatorTests(unittest.IsolatedAsyncioTestCase):
+ asyncSetUp=CoordinatorTests.asyncSetUp
+ asyncTearDown=CoordinatorTests.asyncTearDown
+ say=CoordinatorTests.say
+ async def test_admin_armed_unknown_sample_bypasses_only_collection_not_authorization(self):
+  import json
+  from owner_calibration import OwnerCalibration
+  await self.say('Nauč se můj hlas. Jsem Martin.')
+  for n in range(3):await self.say('Ukázková věta číslo '+str(n))
+  self.c.profiles.bootstrap_authorization('Martin');self.c.enforce=True
+  self.c.owner_calibration=OwnerCalibration(self.c.profiles,'device')
+  control=Path(self.tmp.name)/'control.json'
+  control.write_text(json.dumps({'request_id':'a'*32,'action':'start','profile':'Martin','issued_at':self.c.profiles.clock()}))
+  self.c.owner_calibration.process_control(control)
+  async def infer(pcm):return {'status':'ok','vector':[.7,.7141428],'windows':[],'model':'campplus-aa3cfc16-v1','quality':{'status':'ok','rms':.1,'clipped_fraction':0}}
+  self.c.infer=infer
+  result=await self.say('Zhasni světla v této místnosti.')
+  self.assertEqual(result['status'],'owner_calibration');self.assertEqual(result['samples'],1)
+  self.assertFalse(result['authorized']);self.assertNotIn('control_token',result)

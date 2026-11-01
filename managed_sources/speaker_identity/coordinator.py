@@ -7,11 +7,13 @@ if __package__:
  from .authorization import VoiceGate,command
  from .adaptation import Adaptation
  from .pronunciation import Pronunciation
+ from .owner_calibration import OwnerCalibration
 else:
  from policy import VoiceProfiles,MODEL_ID,norm
  from authorization import VoiceGate,command
  from adaptation import Adaptation
  from pronunciation import Pronunciation
+ from owner_calibration import OwnerCalibration
 
 async def admin_forget(hass,user_id,name,coordinator,clear_memory):
  account=await hass.auth.async_get_user(user_id) if user_id else None
@@ -20,11 +22,12 @@ async def admin_forget(hass,user_id,name,coordinator,clear_memory):
  if memory_id and clear_memory:await hass.async_add_executor_job(clear_memory,memory_id)
 
 class Coordinator:
- def __init__(self,hass,path,infer,clock=time.monotonic,*,enforce=False):
+ def __init__(self,hass,path,infer,clock=time.monotonic,*,enforce=False,calibration_satellite=None):
   self.hass=hass;self.profiles=VoiceProfiles(path);self.infer=infer;self.clock=clock
   self.results={};self.aliases={};self.asked={};self.last={};self.capture_count=0;self.status='starting'
   self.enforce=enforce;self.gate=VoiceGate(clock=clock,challenge_words=('javor','kolo','most','reka','hora','okno','zahrada','strom'));self.adaptation=Adaptation(self.profiles)
   self.pronunciation=Pronunciation(self.profiles);self.calibration={};self.failures={}
+  self.owner_calibration=OwnerCalibration(self.profiles,calibration_satellite) if calibration_satellite else None
  def device(self,user):return getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
  def cancel_for(self,user):
   device=getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
@@ -62,6 +65,11 @@ class Coordinator:
   self.last.update(decision_status=decision.get('status'),accepted_samples=decision.get('samples'))
   return decision
  def _turn_sync(self,device,conversation,text,item):
+  if self.owner_calibration:
+   collected=self.owner_calibration.collect(device,item)
+   if collected is not None:
+    self.gate.cancel(device)
+    return collected
   data=item['result'];value=norm(text)
   good=data.get('status')=='ok' and data.get('model')==MODEL_ID
   vector=data.get('vector') if good else None

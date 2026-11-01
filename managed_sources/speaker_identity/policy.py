@@ -125,6 +125,9 @@ class VoiceProfiles:
    row=db.execute('SELECT voice_id FROM voices WHERE name=?',(key,)).fetchone()
    db.execute('DELETE FROM voices WHERE name=?',(key,))
    if row:
+    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='owner_calibration_sessions'").fetchone():
+     db.execute('DELETE FROM owner_calibration_samples WHERE session IN (SELECT id FROM owner_calibration_sessions WHERE voice_id=?)',(row[0],))
+     db.execute('DELETE FROM owner_calibration_sessions WHERE voice_id=?',(row[0],))
     db.execute('DELETE FROM voice_authorizations WHERE voice_id=?',(row[0],))
     db.execute('DELETE FROM voice_anchors WHERE voice_id=?',(row[0],))
     for table in ('voice_candidates','voice_validation','voice_versions','voice_aliases','voice_provenance'):

@@ -37,7 +37,7 @@ async def async_setup(hass,config):
    data=await response.json()
    if not isinstance(data,dict):raise ValueError('embedding_response')
    return data
- coordinator=Coordinator(hass,root/'profiles.sqlite',infer,enforce=True)
+ coordinator=Coordinator(hass,root/'profiles.sqlite',infer,enforce=True,calibration_satellite=SATELLITE)
  explicit=config.get(DOMAIN,{}).get('authorize_existing_profile')
  if explicit:await hass.async_add_executor_job(coordinator.profiles.bootstrap_authorization,explicit)
  hass.data[DOMAIN]=coordinator
@@ -56,7 +56,7 @@ async def async_setup(hass,config):
  from homeassistant.const import __version__ as core_version
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun
  adapter=install(hass,PipelineRun,coordinator,core_version,PIPELINE,SATELLITE)
- report={'version':5,'runtime_version':'1.1.1','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+ report={'version':6,'runtime_version':'1.1.2','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
          'native_intent_guard':bool(PipelineRun.__dict__.get('_jarvis_voice_intent_guard')),
          'enrollment_trigger_requires_embedding':False,
          'enrollment_policy':'reject_sample_keep_progress_v2',
@@ -70,6 +70,8 @@ async def async_setup(hass,config):
   temporary.write_text(json.dumps(snapshot,ensure_ascii=False,indent=2));temporary.chmod(0o600)
   temporary.replace(root/'report.json')
  async def update(_now=None):
+  report['owner_calibration_control']=await hass.async_add_executor_job(coordinator.owner_calibration.process_control,root/'calibration-control.json')
+  report['owner_calibration']=await hass.async_add_executor_job(coordinator.owner_calibration.summary)
   try:
    async with session.get(BACKEND+'/health',timeout=aiohttp.ClientTimeout(total=3),allow_redirects=False) as response:
     if response.status!=200:raise ValueError('health_http')
