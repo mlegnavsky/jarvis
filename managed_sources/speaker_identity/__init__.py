@@ -20,6 +20,7 @@ from .policy import MODEL_ID,VoiceProfiles
 from .transport import read_limited
 from .manifest import refresh_manifest
 from .review import CalibrationReview
+from .matching_control import MatchingControl
 
 DOMAIN='jarvis_speaker_identity'
 CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({vol.Optional('authorize_existing_profile'):str})},extra=vol.ALLOW_EXTRA)
@@ -40,6 +41,7 @@ async def async_setup(hass,config):
    return data
  coordinator=Coordinator(hass,root/'profiles.sqlite',infer,enforce=True,calibration_satellite=SATELLITE)
  review=CalibrationReview(coordinator.profiles,root/'review-plan.json',SATELLITE)
+ matching_control=MatchingControl(coordinator.profiles,review,root/'review-control.json')
  explicit=config.get(DOMAIN,{}).get('authorize_existing_profile')
  if explicit:await hass.async_add_executor_job(coordinator.profiles.bootstrap_authorization,explicit)
  hass.data[DOMAIN]=coordinator
@@ -58,7 +60,7 @@ async def async_setup(hass,config):
  from homeassistant.const import __version__ as core_version
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun
  adapter=install(hass,PipelineRun,coordinator,core_version,PIPELINE,SATELLITE)
- report={'version':8,'runtime_version':'1.1.4','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+ report={'version':9,'runtime_version':'1.1.5','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
          'native_intent_guard':bool(PipelineRun.__dict__.get('_jarvis_voice_intent_guard')),
          'enrollment_trigger_requires_embedding':False,
          'enrollment_policy':'reject_sample_keep_progress_v2',
@@ -74,6 +76,7 @@ async def async_setup(hass,config):
  async def update(_now=None):
   report['owner_calibration_control']=await hass.async_add_executor_job(coordinator.owner_calibration.process_control,root/'calibration-control.json')
   report['owner_calibration']=await hass.async_add_executor_job(coordinator.owner_calibration.summary)
+  report['matching_control']=await hass.async_add_executor_job(matching_control.process)
   report['calibration_review']=await hass.async_add_executor_job(review.evaluate)
   try:
    async with session.get(BACKEND+'/health',timeout=aiohttp.ClientTimeout(total=3),allow_redirects=False) as response:

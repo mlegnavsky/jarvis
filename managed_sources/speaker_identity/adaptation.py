@@ -58,7 +58,10 @@ class Adaptation:
  def _evaluate(self,db,voice_id):
   row=db.execute('SELECT samples FROM voices WHERE voice_id=?',(voice_id,)).fetchone()
   if not row:raise ValueError('profile_missing')
-  old=json.loads(row[0]);anchors=json.loads(db.execute('SELECT samples FROM voice_anchors WHERE voice_id=?',(voice_id,)).fetchone()[0])
+  old=json.loads(row[0])
+  policy=db.execute('SELECT policy FROM voice_matching_policies WHERE voice_id=?',(voice_id,)).fetchone()
+  if policy and policy[0]!='centroid':return {'status':'manual_matching_policy_requires_owner_control','revision':digest([old,policy[0]])},None,old
+  anchors=json.loads(db.execute('SELECT samples FROM voice_anchors WHERE voice_id=?',(voice_id,)).fetchone()[0])
   candidates=db.execute('SELECT vector,live,utterance FROM voice_candidates WHERE voice_id=? ORDER BY rowid',(voice_id,)).fetchall()
   validation=db.execute('SELECT vector,genuine,utterance FROM voice_validation WHERE voice_id=? ORDER BY rowid',(voice_id,)).fetchall()
   revision=digest([old,candidates,validation])
@@ -90,6 +93,8 @@ class Adaptation:
  def rollback(self,voice_id,expected_revision):
   with self.db() as db:
    db.execute('BEGIN IMMEDIATE')
+   policy=db.execute('SELECT policy FROM voice_matching_policies WHERE voice_id=?',(voice_id,)).fetchone()
+   if policy and policy[0]!='centroid':raise ValueError('manual_matching_policy_requires_owner_control')
    row=db.execute('SELECT samples FROM voices WHERE voice_id=?',(voice_id,)).fetchone()
    version=db.execute('SELECT previous FROM voice_versions WHERE voice_id=? AND revision=?',(voice_id,expected_revision)).fetchone()
    if not row or not version or digest(json.loads(row[0]))!=expected_revision:raise ValueError('revision_conflict')

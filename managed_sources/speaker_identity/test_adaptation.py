@@ -50,3 +50,8 @@ class AdaptationTests(unittest.TestCase):
  def test_candidates_are_bounded_and_survive_restart(self):
   for n in range(20):self.a.offer(self.identity['memory_id'],self.evidence(conversation=str(n),utterance=str(n),vector=[1.,n*.001]))
   self.assertLessEqual(Adaptation(self.db).summary()['candidates'],8)
+ def test_centroid_adaptation_cannot_overwrite_manual_multireference_model(self):
+  with self.db._db() as db:db.execute('INSERT INTO voice_matching_policies VALUES (?,?)',(self.identity['memory_id'],'top_two_mean_v1'))
+  result=self.a.evaluate(self.identity['memory_id'])
+  self.assertEqual(result['status'],'manual_matching_policy_requires_owner_control')
+  with self.assertRaises(ValueError):self.a.promote(self.identity['memory_id'],result['revision'])

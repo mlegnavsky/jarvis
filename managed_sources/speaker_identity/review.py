@@ -1,14 +1,25 @@
 """Read-only, supervised calibration review. Never changes identity or permission."""
 import hashlib,json,re,sqlite3
 if __package__:
- from .policy import MODEL_ID,norm,unit,centroid,similarity
+ from .policy import MODEL_ID,norm,unit,centroid,similarity,profile_score
 else:
- from policy import MODEL_ID,norm,unit,centroid,similarity
+ from policy import MODEL_ID,norm,unit,centroid,similarity,profile_score
 
 ROLES=('owner_provided_calibration_unreviewed','other_speaker_comparison_unreviewed','owner_validation_unreviewed')
+def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True).encode()).hexdigest()
+def model_revision(samples,policy):return digest([samples,policy])
+def evidence_snapshot(db,plan):
+ ids=[x['session_id'] for x in plan['sessions']]
+ voices=db.execute("SELECT v.voice_id,v.model,v.samples,COALESCE(p.policy,'centroid'),CASE WHEN a.voice_id IS NULL THEN 0 ELSE 1 END FROM voices v LEFT JOIN voice_matching_policies p ON p.voice_id=v.voice_id LEFT JOIN voice_authorizations a ON a.voice_id=v.voice_id ORDER BY v.voice_id").fetchall()
+ anchors=db.execute('SELECT voice_id,samples FROM voice_anchors ORDER BY voice_id').fetchall()
+ sessions=db.execute('SELECT id,voice_id,device,status FROM owner_calibration_sessions WHERE id IN (?,?,?) ORDER BY id',ids).fetchall()
+ samples=db.execute('SELECT session,utterance,vector FROM owner_calibration_samples WHERE session IN (?,?,?) ORDER BY session,utterance',ids).fetchall()
+ return [plan,voices,anchors,sessions,samples]
+
 class CalibrationReview:
- def __init__(self,profiles,path,satellite):self.profiles=profiles;self.path=path;self.satellite=satellite
+ def __init__(self,profiles,path,satellite):self.profiles=profiles;self.path=path;self.satellite=satellite;self.proposal=None
  def evaluate(self):
+  self.proposal=None
   try:
    if not self.path.exists():return {'status':'not_prepared','live_profile_changed':False}
    if self.path.is_symlink() or self.path.stat().st_size>16384:raise ValueError('unsafe_plan')
@@ -23,7 +34,8 @@ class CalibrationReview:
     if s.get('speaker_identity_confirmed_by_owner') is not True:raise ValueError('owner_attestation_required')
     if not isinstance(s.get('session_id'),str) or not re.fullmatch('[a-f0-9]{32}',s['session_id']):raise ValueError('invalid_session')
    with self.profiles._db() as db:
-    row=db.execute('SELECT v.voice_id,v.samples FROM voices v JOIN voice_authorizations a ON a.voice_id=v.voice_id WHERE v.name=? AND v.model=?',(norm(plan['reference_profile']),MODEL_ID)).fetchone()
+    db.execute('BEGIN')
+    row=db.execute("SELECT v.voice_id,v.samples,COALESCE(p.policy,'centroid') FROM voices v JOIN voice_authorizations a ON a.voice_id=v.voice_id LEFT JOIN voice_matching_policies p ON p.voice_id=v.voice_id WHERE v.name=? AND v.model=?",(norm(plan['reference_profile']),MODEL_ID)).fetchone()
     if not row:raise ValueError('existing_authorized_profile_required')
     anchor=db.execute('SELECT samples FROM voice_anchors WHERE voice_id=?',(row[0],)).fetchone()
     if not anchor:raise ValueError('anchor_missing')
@@ -40,29 +52,32 @@ class CalibrationReview:
       used.add(key);vectors.append(unit(json.loads(value)))
      groups[slot['role']]=vectors;provenance.append((sid,samples))
     live=[unit(v) for v in json.loads(row[1])];anchors=[unit(v) for v in json.loads(anchor[0])]
-    other_vectors=[[unit(v) for v in json.loads(x[1])] for x in db.execute('SELECT voice_id,samples FROM voices WHERE model=?',(MODEL_ID,)) if x[0]!=row[0]]
+    other_rows=[x for x in db.execute("SELECT v.voice_id,v.samples,COALESCE(p.policy,'centroid') FROM voices v LEFT JOIN voice_matching_policies p ON p.voice_id=v.voice_id WHERE v.model=?",(MODEL_ID,)) if x[0]!=row[0]]
+    other_vectors=[[unit(v) for v in json.loads(x[1])] for x in other_rows]
     all_groups=[live,anchors,*groups.values(),*other_vectors]
     if any(not vs for vs in all_groups):raise ValueError('empty_templates')
     dimension=len(live[0])
     if any(len(v)!=dimension for vs in all_groups for v in vs):raise ValueError('embedding_dimensions')
-    original=centroid(live);base=centroid(anchors);trained=centroid(groups[ROLES[0]])
-    # Fixed before observing holdout results. No threshold search or selection
-    # on the comparison person; the immutable anchor contributes one half.
-    candidate=unit([.5*a+.5*b for a,b in zip(base,trained)])
-    others=[centroid(vs) for vs in other_vectors]
-    def accepted(template,v):
-     score=similarity(template,v)
-     return score>=.75 and (not others or score-max(similarity(o,v) for o in others)>=.12)
+    pool=anchors+groups[ROLES[0]]
+    def score(v):return profile_score(v,pool,'top_two_mean_v1')
+    def accepted(v):
+     value=score(v)
+     other=[profile_score(v,vs,x[2]) for vs,x in zip(other_vectors,other_rows)]
+     return value>=.75 and (not other or value-max(other)>=.12)
     validation=groups[ROLES[2]];negative=groups[ROLES[1]]
-    old_count=sum(accepted(original,v) for v in validation);new_count=sum(accepted(candidate,v) for v in validation)
-    false_accepts=sum(similarity(candidate,v)>=.75 for v in negative)
-    revision=hashlib.sha256(json.dumps([row,anchor,provenance,others,slots],sort_keys=True).encode()).hexdigest()
-    scores=lambda t,vs:[round(similarity(t,v),4) for v in vs]
-    return {'status':'eligible_for_window_test' if new_count==5 and new_count>old_count and false_accepts==0 else 'rejected',
-            'revision':revision,'candidate_policy':'equal_immutable_anchor_and_training_centroid',
-            'threshold':.75,'required_margin':.12,'training_samples':5,'owner_validation_samples':5,'other_validation_samples':5,
+    baseline=[profile_score(v,live,row[2]) for v in validation]
+    old_count=sum(v>=.75 and (not other_rows or v-max(profile_score(w,vs,x[2]) for vs,x in zip(other_vectors,other_rows))>=.12) for v,w in zip(baseline,validation))
+    new_count=sum(accepted(v) for v in validation);false_accepts=sum(score(v)>=.75 for v in negative)
+    snapshot=evidence_snapshot(db,plan);revision=digest(snapshot)
+    active=row[2]=='top_two_mean_v1' and len(live)==len(pool) and all(similarity(a,b)>1-1e-10 for a,b in zip(live,pool))
+    eligible=new_count==5 and new_count>old_count and false_accepts==0
+    if eligible:self.proposal={'voice_id':row[0],'samples':pool,'policy':'top_two_mean_v1','plan':plan,'snapshot':snapshot,'revision':revision}
+    return {'status':('active_supervised_profile' if new_count==5 and false_accepts==0 else 'active_profile_validation_failed') if active else 'eligible_for_controlled_activation' if eligible else 'rejected',
+            'revision':revision,'current_profile_revision':model_revision(json.loads(row[1]),row[2]),'active_policy':row[2],
+            'candidate_policy':'top_two_mean_v1','threshold':.75,'required_margin':.12,
+            'training_samples':5,'owner_validation_samples':5,'other_validation_samples':5,
             'baseline_owner_accepts':old_count,'candidate_owner_accepts':new_count,'candidate_other_accepts':false_accepts,
-            'baseline_owner_scores':scores(original,validation),'candidate_owner_scores':scores(candidate,validation),
-            'candidate_other_scores':scores(candidate,negative),'live_profile_changed':False,
+            'baseline_owner_scores':[round(v,4) for v in baseline],'candidate_owner_scores':[round(score(v),4) for v in validation],
+            'candidate_other_scores':[round(score(v),4) for v in negative],'live_profile_changed':False,
             'window_validation':'not_performed','replay_detection':'not_installed','household_accuracy_verified':False}
   except (OSError,ValueError,TypeError,KeyError,sqlite3.Error):return {'status':'blocked','reason':'invalid_or_incomplete_independent_evidence','live_profile_changed':False}

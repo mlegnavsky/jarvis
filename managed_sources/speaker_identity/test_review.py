@@ -22,7 +22,7 @@ class ReviewTests(unittest.TestCase):
  def tearDown(self):self.tmp.cleanup()
  def test_reports_independent_validation_improvement_without_modifying_profile(self):
   before=self.p.anchors(self.identity['memory_id']);result=self.r.evaluate()
-  self.assertEqual(result['status'],'eligible_for_window_test')
+  self.assertEqual(result['status'],'eligible_for_controlled_activation')
   self.assertEqual(result['baseline_owner_accepts'],0);self.assertEqual(result['candidate_owner_accepts'],5)
   self.assertEqual(result['candidate_other_accepts'],0);self.assertFalse(result['live_profile_changed'])
   self.assertEqual(self.p.identify([1.,0.])['score'],1)
@@ -42,3 +42,32 @@ class ReviewTests(unittest.TestCase):
  def test_mixed_training_dimensions_return_blocked_instead_of_raising(self):
   with self.c.db() as db:db.execute('UPDATE owner_calibration_samples SET vector=? WHERE session=? AND utterance=?',(json.dumps([1.,0.,0.]),f'{0:032x}','owner_provided_calibration_unreviewed0'))
   self.assertEqual(self.r.evaluate()['status'],'blocked')
+ def test_distinct_voice_variants_are_not_lost_by_blending_with_anchor(self):
+  with self.c.db() as db:
+   for n in range(5):db.execute('UPDATE owner_calibration_samples SET vector=? WHERE session=? AND utterance=?',(json.dumps([math.cos(1.2+n*.01),math.sin(1.2+n*.01)]),f'{0:032x}','owner_provided_calibration_unreviewed'+str(n)))
+   db.execute('UPDATE owner_calibration_samples SET vector=? WHERE session=?',(json.dumps([math.cos(1.4),math.sin(1.4)]),f'{2:032x}'))
+   db.execute('UPDATE owner_calibration_samples SET vector=? WHERE session=?',(json.dumps([math.cos(2.8),math.sin(2.8)]),f'{1:032x}'))
+  self.assertEqual(self.r.evaluate()['candidate_owner_accepts'],5)
+ def test_review_uses_one_snapshot_when_other_writer_changes_holdout(self):
+  import review as implementation
+  import sqlite3,threading
+  from unittest.mock import patch
+  expected=self.r.evaluate()['revision'];original=implementation.evidence_snapshot
+  modified=threading.Event();errors=[];threads=[]
+  def write():
+   try:
+    with sqlite3.connect(self.p.path,timeout=5) as db:
+     db.execute('UPDATE owner_calibration_samples SET vector=? WHERE session=?',(json.dumps([math.cos(.8),math.sin(.8)]),f'{1:032x}'))
+     modified.set()
+   except Exception as exc:errors.append(exc);modified.set()
+  def concurrent_snapshot(db,plan):
+   worker=threading.Thread(target=write);threads.append(worker);worker.start()
+   self.assertTrue(modified.wait(2))
+   return original(db,plan)
+  try:
+   with patch.object(implementation,'evidence_snapshot',side_effect=concurrent_snapshot):result=self.r.evaluate()
+  finally:
+   for worker in threads:worker.join(6)
+  self.assertFalse(errors)
+  self.assertEqual(result['revision'],expected)
+  self.assertEqual(self.r.evaluate()['status'],'rejected')

@@ -21,6 +21,16 @@ def unit(vector):
 def similarity(a,b):return sum(x*y for x,y in zip(a,b)) if len(a)==len(b) else -1
 def centroid(vectors):return unit([sum(v[i] for v in vectors)/len(vectors) for i in range(len(vectors[0]))])
 
+def profile_score(vector,vectors,policy='centroid'):
+ v=unit(vector);refs=[unit(x) for x in vectors]
+ if not refs or any(len(x)!=len(v) for x in refs):raise ValueError('embedding_dimensions')
+ if policy=='centroid':return similarity(v,centroid(refs))
+ if policy!='top_two_mean_v1':raise ValueError('invalid_matching_policy')
+ refs=list({tuple(round(x,12) for x in ref):ref for ref in refs}.values())
+ if len(refs)<2:raise ValueError('independent_references_required')
+ scores=sorted((similarity(v,x) for x in refs),reverse=True)
+ return sum(scores[:2])/2
+
 class VoiceProfiles:
  def __init__(self,path,clock=time.time):
   self.path=Path(path);self.clock=clock;self.pending={}
@@ -37,6 +47,7 @@ class VoiceProfiles:
   db.execute('CREATE TABLE IF NOT EXISTS voice_anchors (voice_id TEXT PRIMARY KEY,samples TEXT NOT NULL)')
   db.execute('INSERT OR IGNORE INTO voice_anchors SELECT voice_id,samples FROM voices')
   db.execute('CREATE TABLE IF NOT EXISTS voice_authorizations (voice_id TEXT PRIMARY KEY)')
+  db.execute('CREATE TABLE IF NOT EXISTS voice_matching_policies (voice_id TEXT PRIMARY KEY,policy TEXT NOT NULL)')
   db.execute('CREATE TABLE IF NOT EXISTS voice_meta (key TEXT PRIMARY KEY,value TEXT)')
   db.commit()
   return db
@@ -98,8 +109,8 @@ class VoiceProfiles:
   """Numeric match evidence only: no names, stable IDs or embeddings."""
   v=unit(vector);scores=[]
   with self._db() as db:
-   for (samples,) in db.execute('SELECT samples FROM voices WHERE model=?',(MODEL_ID,)):
-    scores.append(similarity(v,centroid(json.loads(samples))))
+   for samples,policy in db.execute("SELECT v.samples,COALESCE(p.policy,'centroid') FROM voices v LEFT JOIN voice_matching_policies p ON p.voice_id=v.voice_id WHERE v.model=?",(MODEL_ID,)):
+    scores.append(profile_score(v,json.loads(samples),policy))
   scores.sort(reverse=True)
   margin=scores[0]-scores[1] if len(scores)>1 else None
   return {'best_score':round(scores[0],4) if scores else None,
@@ -108,9 +119,9 @@ class VoiceProfiles:
  def identify(self,vector):
   v=unit(vector);scores=[]
   with self._db() as db:
-   for name,label,samples,voice_id in db.execute('SELECT name,label,samples,voice_id FROM voices WHERE model=?',(MODEL_ID,)):
+   for name,label,samples,voice_id,policy in db.execute("SELECT v.name,v.label,v.samples,v.voice_id,COALESCE(p.policy,'centroid') FROM voices v LEFT JOIN voice_matching_policies p ON p.voice_id=v.voice_id WHERE v.model=?",(MODEL_ID,)):
     vectors=json.loads(samples)
-    scores.append((similarity(v,centroid(vectors)),name,label,voice_id))
+    scores.append((profile_score(v,vectors,policy),name,label,voice_id))
   scores.sort(reverse=True)
   if not scores or scores[0][0]<.75:return {'status':'unknown'}
   if len(scores)>1 and scores[0][0]-scores[1][0]<.12:return {'status':'ambiguous'}
@@ -130,7 +141,7 @@ class VoiceProfiles:
      db.execute('DELETE FROM owner_calibration_sessions WHERE voice_id=?',(row[0],))
     db.execute('DELETE FROM voice_authorizations WHERE voice_id=?',(row[0],))
     db.execute('DELETE FROM voice_anchors WHERE voice_id=?',(row[0],))
-    for table in ('voice_candidates','voice_validation','voice_versions','voice_aliases','voice_provenance'):
+    for table in ('voice_candidates','voice_validation','voice_versions','voice_aliases','voice_provenance','voice_matching_policies','voice_matching_versions','voice_matching_requests'):
      if db.execute('SELECT 1 FROM sqlite_master WHERE type=? AND name=?',('table',table)).fetchone():
       db.execute('DELETE FROM '+table+' WHERE voice_id=?',(row[0],))
   for device,slot in list(self.pending.items()):
