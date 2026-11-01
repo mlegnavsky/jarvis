@@ -16,7 +16,8 @@ def evidence_snapshot(db,plan):
  sessions=db.execute('SELECT id,voice_id,device,status,mode FROM owner_calibration_sessions WHERE id IN ('+marks+') ORDER BY id',ids).fetchall()
  samples=db.execute('SELECT session,utterance,vector FROM owner_calibration_samples WHERE session IN ('+marks+') ORDER BY session,utterance',ids).fetchall()
  windows=db.execute('SELECT session,utterance,windows FROM owner_calibration_windows WHERE session IN ('+marks+') ORDER BY session,utterance',ids).fetchall()
- return [{'candidate_policy':'top_two_mean_calibrated_v1','threshold':.65,'required_margin':.12,'second_reference_floor':.6,'required_gap':.2},plan,voices,anchors,sessions,samples,windows]
+ metadata={'candidate_policy':plan['candidate_policy'],**plan['policy_parameters']} if plan.get('schema')==3 else {'candidate_policy':'top_two_mean_calibrated_v1','threshold':.65,'required_margin':.12,'second_reference_floor':.6,'required_gap':.2}
+ return [metadata,plan,voices,anchors,sessions,samples,windows]
 
 class CalibrationReview:
  def __init__(self,profiles,path,satellite):self.profiles=profiles;self.path=path;self.satellite=satellite;self.proposal=None
@@ -27,6 +28,11 @@ class CalibrationReview:
    if self.path.is_symlink() or self.path.stat().st_size>16384:raise ValueError('unsafe_plan')
    plan=json.loads(self.path.read_text())
    if not isinstance(plan,dict):raise ValueError('invalid_plan')
+   if plan.get('schema')==3:
+    if __package__:from .cohort_review import evaluate
+    else:from cohort_review import evaluate
+    report,self.proposal=evaluate(self.profiles,plan,self.satellite)
+    return report
    if not isinstance(plan.get('reference_profile'),str) or not 0<len(plan['reference_profile'])<=40:raise ValueError('invalid_reference')
    if plan.get('schema') not in (1,2) or plan.get('automatic_profile_update') is not False:raise ValueError('invalid_plan')
    slots=plan.get('sessions');repair=plan['schema']==2;roles=ROLES+(REPAIR_ROLE,) if repair else ROLES

@@ -130,6 +130,16 @@ def install(hass,pipeline_class,router,core_version,pipeline_id,satellite_id,err
  def process_event(run,event):
   if matches(run) and str(event.type)=='run-start':router.activate(str(run.id))
   if matches(run) and getattr(run,'_jarvis_homepod_hold',False):
+   if str(event.type)=='tts-start':
+    # This satellite is not the speaker. Native TTS_START arms its firmware
+    # stop-word detector without an echo reference for the external HomePod.
+    # Keep Core diagnostics/controller events, suppress only the native device
+    # callback for this synchronous notification; always restore it.
+    callback=run.event_callback
+    try:
+     run.event_callback=lambda _event:None
+     return original_event(run,event)
+    finally:run.event_callback=callback
    if str(event.type)=='tts-end':
     run._jarvis_homepod_event=event;return None
   if matches(run) and str(event.type)=='intent-progress' and (event.data or {}).get('tts_start_streaming'):

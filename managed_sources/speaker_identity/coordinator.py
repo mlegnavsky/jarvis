@@ -10,12 +10,14 @@ if __package__:
  from .adaptation import Adaptation
  from .pronunciation import Pronunciation
  from .owner_calibration import OwnerCalibration
+ from .family_enrollment import FamilyEnrollment,STARTS,RESUMES
 else:
  from policy import VoiceProfiles,MODEL_ID,norm
  from authorization import VoiceGate,command
  from adaptation import Adaptation
  from pronunciation import Pronunciation
  from owner_calibration import OwnerCalibration
+ from family_enrollment import FamilyEnrollment,STARTS,RESUMES
 
 async def admin_forget(hass,user_id,name,coordinator,clear_memory):
  account=await hass.auth.async_get_user(user_id) if user_id else None
@@ -29,12 +31,14 @@ class Coordinator:
   self.results={};self.aliases={};self.asked={};self.last={};self.capture_count=0;self.recent_turns=[];self.status='starting'
   self.enforce=enforce;self.gate=VoiceGate(clock=clock,challenge_words=('javor','kolo','most','reka','hora','okno','zahrada','strom'));self.adaptation=Adaptation(self.profiles)
   self.pronunciation=Pronunciation(self.profiles);self.calibration={};self.failures={}
+  self.family=FamilyEnrollment(self.profiles)
   self.owner_calibration=OwnerCalibration(self.profiles,calibration_satellite) if calibration_satellite else None
  def device(self,user):return getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
  def cancel_for(self,user):
   device=getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
   self.results.pop(device,None);self.profiles.cancel(device)
   self.gate.cancel(device)
+  self.family.interrupt(device,cancel=norm(getattr(user,'text','')) in {'koncime','konec','stop','staci','dekuji konec','diky konec','uz koncime','to je vse','to je vsechno','to je vsechno dekuji','ukonci rozhovor','prestan poslouchat','dobrou noc','zrus zauceni','zrus pridavani clena rodiny'})
  def enrollment_state(self):
   now=self.profiles.clock()
   return [{'samples':len(slot['samples']),'required_samples':3,
@@ -79,7 +83,11 @@ class Coordinator:
    if 'matching' in item:self.last['matching']=copy.deepcopy(item['matching'])
   return decision
  def _turn_sync(self,device,conversation,text,item):
-  if self.owner_calibration:
+  family_value=re.sub(r'^anicko\s+','',norm(text))
+  family=self.family.collect(device,text,item)
+  if family is not None:
+   self.gate.cancel(device);return family
+  if self.owner_calibration and family_value not in STARTS|RESUMES:
    collected=self.owner_calibration.collect(device,item)
    if collected is not None:
     self.gate.cancel(device)
@@ -93,8 +101,8 @@ class Coordinator:
   if identity.get('status')=='recognized':
    inconsistent=False
    for window in data.get('windows',[]):
-    match=self.profiles.identify(window);window_scores.append(match.get('score',-1))
-    diagnostic['windows'].append({'status':match['status'],**self.profiles.match_diagnostics(window)})
+    match=self.profiles.identify(window,window=True);window_scores.append(match.get('score',-1))
+    diagnostic['windows'].append({'status':match['status'],**self.profiles.match_diagnostics(window,window=True)})
     if match.get('profile')!=identity['profile']:inconsistent=True
    if inconsistent:identity={'status':'uncertain_windows'}
   item['matching']=diagnostic
@@ -102,6 +110,14 @@ class Coordinator:
   if value=='smaz muj hlasovy profil' and not strong:identity={'status':'strict_identity_required'}
   authorized=bool(identity.get('status')=='recognized' and self.profiles.is_authorized(identity.get('memory_id')))
   if authorized:self.failures.pop(device,None)
+  if family_value in STARTS|RESUMES:
+   if authorized:
+    self.gate.cancel(device);self.profiles.cancel(device)
+    try:return self.family.start(device,identity['memory_id'],resume=family_value in RESUMES)
+    except ValueError:return {'status':'family_enrollment_error','calibration':True,'authorized':False,'retry_recommended':False,'local_reply':'Toto zaučení nemohu založit nebo obnovit.'}
+   if data.get('status')=='too_short':return {'status':'family_owner_confirmation_required','authorized':False,'retry_recommended':True,'local_reply':'Pro spuštění potřebuji ověřit hlas správce. Řekni prosím celou větu: Aničko, prosím nauč se nového člena rodiny a proveď ho zaučením.'}
+  if self.enforce and identity.get('status')=='recognized' and not authorized:
+   return {**identity,'authorized':False,'retry_recommended':False,'local_reply':'Poznávám tě jako '+identity['name']+'. Povel zatím neprovedu. Oprávnění k ovládání domu ještě musí potvrdit Martin.'}
   if self.enforce and not authorized:
    prior=self.failures.pop(device,None)
    failures=(prior['count'] if prior and 0<=self.clock()-prior['at']<=300 else 0)+1
@@ -200,6 +216,9 @@ class Coordinator:
    return {'status':'identity_conflict','request_introduction':False}
   if identity.get('status')=='recognized':
    action=command(identity.get('effective_text',text))
+   if action and not self.profiles.can_control(identity['memory_id'],action[0]):
+    self.gate.cancel(device)
+    return {'status':'voice_scope_required','authorized':False,'retry_recommended':False,'local_reply':'Pro tento povel nemáš nastavené oprávnění. Povel neprovedu.'}
    if action and action[0]=='lock' and not strong:
     self.gate.cancel(device)
     return {'status':'strict_lock_identity_required','authorized':False,'retry_recommended':False,'local_reply':'Pro ovládání zámku potřebuji silnější ověření hlasu. Tento povel teď neprovedu.'}

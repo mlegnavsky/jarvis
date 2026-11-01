@@ -60,12 +60,12 @@ async def async_setup(hass,config):
  from homeassistant.const import __version__ as core_version
  from homeassistant.components.assist_pipeline.pipeline import PipelineRun
  adapter=install(hass,PipelineRun,coordinator,core_version,PIPELINE,SATELLITE)
- report={'version':12,'runtime_version':'1.1.8','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
+ report={'version':13,'runtime_version':'1.2.0','started_at':dt_util.utcnow().isoformat(),'model':MODEL_ID,'adapter':adapter,
          'native_intent_guard':bool(PipelineRun.__dict__.get('_jarvis_voice_intent_guard')),
          'enrollment_trigger_requires_embedding':False,
          'enrollment_policy':'reject_sample_keep_progress_v2',
          'raw_audio_saved':False,'voice_is_authentication':False,'household_accuracy_verified':False,
-         'minimum_enrollment_samples':3,'match_threshold':.75,'calibrated_match_threshold':.65,'strict_lock_threshold':.75,'match_margin':.12,
+         'minimum_enrollment_samples':3,'match_threshold':.75,'calibrated_match_threshold':.65,'cohort_match_threshold':.55,'cohort_window_threshold':.5,'cohort_exclusion_margin':.2,'strict_lock_threshold':.75,'match_margin':.12,
          'automatic_profile_adaptation':'quarantined_candidates','voice_control_requires_authorized_profile':True,
          'replay_detection':'not_installed','backend_host_port_published':False}
  def save(snapshot):
@@ -75,6 +75,8 @@ async def async_setup(hass,config):
   temporary.replace(root/'report.json')
  async def update(_now=None):
   report['owner_calibration_control']=await hass.async_add_executor_job(coordinator.owner_calibration.process_control,root/'calibration-control.json')
+  report['family_control']=await hass.async_add_executor_job(coordinator.family.process_control,root/'family-control.json')
+  report['family_enrollment']=await hass.async_add_executor_job(coordinator.family.summary)
   report['owner_calibration']=await hass.async_add_executor_job(coordinator.owner_calibration.summary)
   report['matching_control']=await hass.async_add_executor_job(matching_control.process)
   report['calibration_review']=await hass.async_add_executor_job(review.evaluate)

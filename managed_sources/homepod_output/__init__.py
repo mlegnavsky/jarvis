@@ -140,10 +140,10 @@ async def async_setup(hass,config):
    await restore_tv(active_run)
  async_track_state_change_event(hass,[TELEVISION],television_state)
  async_track_state_change_event(hass,[SATELLITE],satellite_state)
- report={'version':6,'runtime_version':'1.0.4','started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
+ report={'version':7,'runtime_version':'1.1.0','started_at':dt_util.utcnow().isoformat(),'adapter':adapter,'speaker':SPEAKER,
          'volume_policy':'startup_45_then_follow_homepod_raop','legacy_fixed_volume_ignored':speech_volume,
          'native_abort_resume':'active' if abort_resume else 'unavailable',
-         'microphone':SATELLITE,'speech_volume':None,'terminal_spoken_output':False if adapter=='active' else 'native_uncontrolled','audible_test_performed':False,
+         'microphone':SATELLITE,'speech_volume':None,'terminal_spoken_output':False,'terminal_tts_start_policy':'withheld_for_external_output','interruption_policy':'physical_button_preserved_external_acoustic_stop_not_armed' if adapter=='active' else 'native_uncontrolled','audible_test_performed':False,
          'arbitrary_speech_barge_in':False,'cancel_current_answer_hook':True,
          'wake_or_stop_word_physical_test':'deferred_until_user_home',
          'echo_reference_for_external_homepod':'not_available_on_stock_voice_pe',

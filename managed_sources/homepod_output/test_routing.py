@@ -18,15 +18,33 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
  def setup_route(self,play,stop=None):
   calls=[];hass=object()
   class Pipeline:
-   def process_event(self,event):calls.append(event)
+   def process_event(self,event):
+    self.event_callback(event);calls.append(event)
    async def text_to_speech(self,text,override_media_path=None):
     self.process_event(Event('tts-start',{'tts_input':text}))
     self.process_event(Event('tts-end',{'tts_output':{'media_id':'media-source://tts/private','token':'private-token','url':'/private-audio','mime_type':'audio/mpeg'}}))
   async def noop():pass
   router=Router(play,stop or noop)
   self.assertEqual(install(hass,Pipeline,router,'2026.6.4','pipeline','satellite'),'active')
-  run=Pipeline();run.hass=hass;run.pipeline=NS(id='pipeline');run._satellite_id='satellite';run.id='actual-run'
+  run=Pipeline();run.hass=hass;run.pipeline=NS(id='pipeline');run._satellite_id='satellite';run.id='actual-run';run.event_callback=lambda event:None
   return router,run,calls
+ async def test_external_output_never_arms_terminal_speaking_stop_word(self):
+  began=asyncio.Event();finish=asyncio.Event();terminal=[]
+  async def play(media):began.set();await finish.wait()
+  router,run,calls=self.setup_route(play);callback=terminal.append;run.event_callback=callback
+  task=asyncio.create_task(run.text_to_speech('Delší odpověď z HomePodu'))
+  await began.wait()
+  self.assertEqual(terminal,[])
+  self.assertEqual([e.type for e in calls],['tts-start'])
+  self.assertIs(run.event_callback,callback)
+  finish.set();await task
+  self.assertEqual([e.type for e in terminal],['tts-end'])
+  self.assertEqual(terminal[0].data['tts_output']['url'],SILENT_URL)
+ async def test_unrelated_tts_start_still_reaches_native_terminal(self):
+  async def play(media):pass
+  _,run,_=self.setup_route(play);terminal=[];run.event_callback=terminal.append;run.pipeline=NS(id='other')
+  await run.text_to_speech('Jiná trasa')
+  self.assertEqual([e.type for e in terminal],['tts-start','tts-end'])
  async def test_homepod_completes_before_silent_satellite_end(self):
   began=asyncio.Event();finish=asyncio.Event()
   async def play(media):self.assertEqual(media,'media-source://tts/private');began.set();await finish.wait()
