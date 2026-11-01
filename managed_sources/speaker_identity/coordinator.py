@@ -24,7 +24,7 @@ class Coordinator:
   self.hass=hass;self.profiles=VoiceProfiles(path);self.infer=infer;self.clock=clock
   self.results={};self.aliases={};self.asked={};self.last={};self.capture_count=0;self.status='starting'
   self.enforce=enforce;self.gate=VoiceGate(clock=clock,challenge_words=('javor','kolo','most','reka','hora','okno','zahrada','strom'));self.adaptation=Adaptation(self.profiles)
-  self.pronunciation=Pronunciation(self.profiles);self.calibration={}
+  self.pronunciation=Pronunciation(self.profiles);self.calibration={};self.failures={}
  def device(self,user):return getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
  def cancel_for(self,user):
   device=getattr(user,'satellite_id',None) or self.aliases.get(user.device_id,user.device_id)
@@ -66,20 +66,43 @@ class Coordinator:
   good=data.get('status')=='ok' and data.get('model')==MODEL_ID
   vector=data.get('vector') if good else None
   identity=self.profiles.identify(vector) if vector else {'status':data.get('status','unknown')}
+  diagnostic={'whole':{'status':identity['status']},'windows':[]}
+  if vector:diagnostic['whole'].update(self.profiles.match_diagnostics(vector))
   if identity.get('status')=='recognized':
+   inconsistent=False
    for window in data.get('windows',[]):
     match=self.profiles.identify(window)
-    if match.get('profile')!=identity['profile']:identity={'status':'uncertain_windows'};break
+    diagnostic['windows'].append({'status':match['status'],**self.profiles.match_diagnostics(window)})
+    if match.get('profile')!=identity['profile']:inconsistent=True
+   if inconsistent:identity={'status':'uncertain_windows'}
+  self.last['matching']=diagnostic
   authorized=bool(identity.get('status')=='recognized' and self.profiles.is_authorized(identity.get('memory_id')))
+  if authorized:self.failures.pop(device,None)
   if self.enforce and not authorized:
+   prior=self.failures.pop(device,None)
+   failures=(prior['count'] if prior and 0<=self.clock()-prior['at']<=300 else 0)+1
+   self.failures[device]={'count':failures,'at':self.clock()}
+   while len(self.failures)>4:self.failures.pop(next(iter(self.failures)))
    if data.get('status')=='too_short' and norm(text) in ('zhasni','rozsvit','zamkni','odemkni'):
     challenge=self.gate.pending(device,text)
     phrases={'zhasni':'Potvrzuji zhasnutí světel v této místnosti.', 'rozsvit':'Potvrzuji rozsvícení světel v této místnosti.',
              'zamkni':'Potvrzuji zamknutí hlavního vchodu.', 'odemkni':'Potvrzuji odemknutí hlavního vchodu.'}
     reply='Krátké slovo nestačí k ověření hlasu. Řekni do deseti sekund: '+phrases[norm(text)].rstrip('.')+(' '+challenge if challenge else '')+'.'
    else:
-    self.gate.cancel(device);reply='Tvůj hlas nemám jistě ověřený a povel neprovedu. Řekni prosím delší větu.'
-   return {'status':identity.get('status','unknown'),'authorized':False,'local_reply':reply}
+    self.gate.cancel(device)
+    reasons={'uncertain_windows':'Celá věta odpovídá profilu, ale její části nepotvrdily stejný hlas. Ztiš prosím okolní zvuk.',
+             'too_short':'Pro ověření potřebuji alespoň tři sekundy souvislé řeči.',
+             'quiet':'Nahrávka je příliš tichá. Přibliž se prosím k mikrofonu.',
+             'clipped':'Zvuk je přebuzený. Mluv prosím přirozeně a trochu dál od mikrofonu.',
+             'inconsistent':'Části nahrávky se příliš liší. Ztiš prosím televizi a ostatní hlasy.',
+             'unavailable':'Služba ověřování hlasu není dostupná. Opakování věty teď nepomůže.'}
+    reply='Hlas nemám ověřený, povel neprovedu. '+reasons.get(identity.get('status'),'Hlas se dost jistě neshoduje s uloženým profilem.')
+   retry=failures<3 and identity.get('status')!='unavailable'
+   if not retry:
+    self.gate.cancel(device)
+    reply='Hlas se nepodařilo ověřit. Povel neprovedu. Další věty teď neopakuj, je potřeba zkontrolovat diagnostiku.'
+   self.last['verification_failures']=failures
+   return {'status':identity.get('status','unknown'),'authorized':False,'local_reply':reply,'retry_recommended':retry}
   confirmed=self.gate.confirm(device,text,authorized)
   if authorized:
    identity={**identity,'authorized':True}

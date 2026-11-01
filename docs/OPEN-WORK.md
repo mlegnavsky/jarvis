@@ -267,3 +267,12 @@ Otevřeno: skutečné domácí testy shody; nezávislé negativní/replay vzorky
 
 ### Hlas 1.1.0 — ověřené nasazení 1.11.2026
 Čti také jarvis_workspace/voice-deployment-receipt.json. Původní job voice11-apply-20261101 skončil runtime_check_failed při startu, ale následné čerstvé ověření potvrdilo 28/28 souborů, report runtime1.1.0/ready, native_intent_guard=true, jeden autorizovaný profil a zachované kotvy. Žádný zápis nebyl opakován. Neopakovat apply pod novým klíčem. Manifest jarvis_workspace/voice-system-manifest.json se sám obnovuje; jeho hashe popisují soubory na disku, nikoli nezávislý důkaz aktivace. Skutečná domácí přesnost a wake modely zůstávají neověřené; detailní meze a výcvikový běh jsou v účtence.
+
+
+## Voice matching diagnosis — 1.11.2026, source prepared
+
+Owner's 8.23s voiced turn completed inference but failed `uncertain_windows`: whole-utterance identity recognized; at least one half-utterance failed profile identification. Existing report does not preserve half scores, so acoustic cause and appropriate calibration remain unknown. Do not reduce authorization thresholds or claim improved household recognition from this evidence.
+
+Speaker identity1.1.1 adds anonymous aggregate/window scores and margins, specific quality/matching explanations, and a bounded three-attempt failure response. No identity vectors/audio saved; original anchors,0.75 matching threshold,0.12 margin, window veto and command authorization remain unchanged.56 speaker tests pass. This is diagnostic/feedback repair, not completed voice accuracy repair.
+
+Owner approved local cleanup. Old unprotected backups aee76900 (693.67MB) and1f1a5cc3 (692.48MB) deleted with metadata CAS; both jobs verified. Three latest and protected automatic backup preserved. Laborca backup recoverability not inferred from owner statement. Next: backed-up CAS deployment+restart+source/report readback, followed by one household test with per-window scores.

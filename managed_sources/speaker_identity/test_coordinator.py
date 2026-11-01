@@ -105,3 +105,43 @@ class CoordinatorTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(cleared,[memory_id]);self.assertEqual(self.c.profiles.count(),0)
 
 
+
+class MatchDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
+ asyncSetUp=CoordinatorTests.asyncSetUp
+ asyncTearDown=CoordinatorTests.asyncTearDown
+ say=CoordinatorTests.say
+ async def prepare_authorized(self):
+  await self.say('Nauč se můj hlas. Jsem Martin.')
+  for n in range(3):await self.say('Ukázková věta číslo '+str(n))
+  self.c.profiles.bootstrap_authorization('Martin');self.c.enforce=True
+ async def test_window_rejection_explains_segment_problem_and_preserves_gate(self):
+  await self.prepare_authorized()
+  async def infer(pcm):return {'status':'ok','vector':[1.,0.],'windows':[[1.,0.],[.7,.7141428]],'model':'campplus-aa3cfc16-v1'}
+  self.c.infer=infer
+  result=await self.say('Toto je dostatečně dlouhá věta pro ověření hlasu.')
+  self.assertFalse(result['authorized'])
+  self.assertNotIn('control_token',result)
+  self.assertIn('části',result['local_reply'])
+  self.assertNotIn('delší',result['local_reply'])
+  diag=self.c.last['matching']
+  self.assertEqual(diag['whole']['status'],'recognized')
+  self.assertEqual(len(diag['windows']),2)
+  self.assertAlmostEqual(diag['windows'][1]['best_score'],.7,places=3)
+  for private in ('vector','memory_id','martin'):
+   self.assertNotIn(private,str(diag))
+ async def test_repeated_unknown_voice_does_not_request_another_sentence_forever(self):
+  self.c.enforce=True
+  for n in range(3):result=await self.say('Neověřená věta číslo '+str(n))
+  self.assertFalse(result['authorized'])
+  self.assertFalse(result['retry_recommended'])
+  self.assertIn('diagnostiku',result['local_reply'])
+ async def test_success_resets_failure_counter(self):
+  await self.prepare_authorized()
+  infer=self.c.infer
+  async def other(pcm):return {'status':'ok','vector':[0.,1.],'windows':[],'model':'campplus-aa3cfc16-v1'}
+  self.c.infer=other
+  await self.say('Cizí věta jedna');await self.say('Cizí věta dva')
+  self.c.infer=infer
+  self.assertTrue((await self.say('Ověřená věta'))['authorized'])
+  self.c.infer=other
+  self.assertTrue((await self.say('Cizí věta znovu'))['retry_recommended'])

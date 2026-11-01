@@ -97,6 +97,16 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
   self.assertTrue(other.reset_history)
   self.assertNotIn('Martinova',other.prompt)
 
+ async def test_voice_retry_limit_stops_followup_listening(self):
+  class Speaker:
+   enforce=True
+   async def turn(self,user,conversation):
+    return {'status':'unknown','authorized':False,'retry_recommended':False,'local_reply':'Další věty teď neopakuj.'}
+  self.hass.data={'jarvis_speaker_identity':Speaker()}
+  turn=await self.runtime.prepare(self.user('Další pokus'),'voice-loop')
+  self.assertFalse(getattr(turn,'continue_listening',True))
+
+
 class PolicyTests(unittest.TestCase):
  def test_fictional_native_probe(self):self.assertTrue(fictional_probe()['passed'])
  def test_joke_filter_preserves_failure_after_misplaced_joke(self):

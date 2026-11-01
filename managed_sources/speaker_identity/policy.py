@@ -94,6 +94,17 @@ class VoiceProfiles:
    db.execute('INSERT INTO voices VALUES (?,?,?,?,?,?)',(slot['name'],slot['label'],MODEL_ID,json.dumps(slot['samples']),self.clock(),voice_id))
   self.cancel(device)
   return {'status':'enrolled','name':slot['label'],'profile':slot['name'],'memory_id':voice_id}
+ def match_diagnostics(self,vector):
+  """Numeric match evidence only: no names, stable IDs or embeddings."""
+  v=unit(vector);scores=[]
+  with self._db() as db:
+   for (samples,) in db.execute('SELECT samples FROM voices WHERE model=?',(MODEL_ID,)):
+    scores.append(similarity(v,centroid(json.loads(samples))))
+  scores.sort(reverse=True)
+  margin=scores[0]-scores[1] if len(scores)>1 else None
+  return {'best_score':round(scores[0],4) if scores else None,
+          'margin':round(margin,4) if margin is not None else None,
+          'threshold':.75,'required_margin':.12}
  def identify(self,vector):
   v=unit(vector);scores=[]
   with self._db() as db:

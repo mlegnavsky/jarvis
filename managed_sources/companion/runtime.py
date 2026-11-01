@@ -28,6 +28,7 @@ class Turn:
  voice_uncertain:bool=False
  control_token:str|None=None
  effective_text:str|None=None
+ continue_listening:bool=True
 
 class CompanionRuntime:
  def __init__(self,hass,agent_id):
@@ -61,6 +62,7 @@ class CompanionRuntime:
   turn=Turn(principal,verified,address,str(conversation),user.text,store,reset_history=(old is not None and old!=principal) or bool(voice and not identified),voice_profile=identified,voice_uncertain=bool(voice and not identified))
   if voice:
    turn.control_token=voice.get('control_token');turn.effective_text=voice.get('effective_text')
+   turn.continue_listening=voice.get('retry_recommended') is not False
   if voice and not identified:self.addresses.pop(principal,None)
   device_context=self.awareness.context(str(conversation),entities,user.text)
   try:
