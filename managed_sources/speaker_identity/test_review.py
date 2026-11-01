@@ -20,6 +20,36 @@ class ReviewTests(unittest.TestCase):
   self.config={'schema':1,'reference_profile':'Martin','sessions':roles,'automatic_profile_update':False};self.save();self.r=CalibrationReview(self.p,self.plan,'mic')
  def save(self):self.plan.write_text(json.dumps(self.config))
  def tearDown(self):self.tmp.cleanup()
+ def prepare_repair(self):
+  current=self.r.evaluate();proposal=self.r.proposal
+  with self.c.db() as db:
+   db.execute('UPDATE voices SET samples=? WHERE voice_id=?',(json.dumps(proposal['samples']),self.identity['memory_id']))
+   db.execute('INSERT INTO voice_matching_policies VALUES (?,?)',(self.identity['memory_id'],'top_two_mean_calibrated_v1'))
+   db.execute('UPDATE owner_calibration_samples SET vector=? WHERE session=?',(json.dumps([math.cos(3.4),math.sin(3.4)]),f'{1:032x}'))
+   sid='e'*32
+   db.execute('INSERT INTO owner_calibration_sessions(id,voice_id,device,created,expires,status,mode) VALUES (?,?,?,?,?,?,?)',(sid,self.identity['memory_id'],'mic',0,600,'awaiting_review','repair'))
+   for name,angle,parts in [('fresh-training',1.85,[1.80,1.90]),('fresh-holdout',1.95,[1.92,1.98])]:
+    db.execute('INSERT INTO owner_calibration_samples VALUES (?,?,?,?)',(sid,name,json.dumps([math.cos(angle),math.sin(angle)]),'{}'))
+    db.execute('INSERT INTO owner_calibration_windows VALUES (?,?,?)',(sid,name,json.dumps([[math.cos(a),math.sin(a)] for a in parts])))
+  self.config['schema']=2;self.config['sessions'].append({'session_id':sid,'role':'owner_duration_repair_unreviewed','speaker_identity_confirmed_by_owner':True});self.save()
+ def test_repair_uses_training_parts_but_independently_validates_new_whole_and_windows(self):
+  self.prepare_repair();result=self.r.evaluate()
+  self.assertEqual(result['status'],'eligible_for_controlled_activation')
+  self.assertEqual(result['baseline_owner_accepts'],5);self.assertEqual(result['candidate_owner_accepts'],6)
+  self.assertEqual(result['candidate_other_accepts'],0)
+  self.assertEqual(result['repair_holdout_windows'],2)
+  heldout=[math.cos(1.95),math.sin(1.95)]
+  self.assertNotIn(heldout,self.r.proposal['samples'])
+ def test_repair_revision_binds_private_training_windows(self):
+  self.prepare_repair();old=self.r.evaluate()['revision']
+  with self.c.db() as db:db.execute('UPDATE owner_calibration_windows SET windows=? WHERE utterance=?',(json.dumps([[math.cos(1.81),math.sin(1.81)],[math.cos(1.90),math.sin(1.90)]]),'fresh-training'))
+  self.assertNotEqual(old,self.r.evaluate()['revision'])
+ def test_repair_bad_holdout_window_or_missing_evidence_blocks_activation(self):
+  self.prepare_repair()
+  with self.c.db() as db:db.execute('UPDATE owner_calibration_windows SET windows=? WHERE utterance=?',(json.dumps([[math.cos(1.92),math.sin(1.92)],[math.cos(2.8),math.sin(2.8)]]),'fresh-holdout'))
+  self.assertEqual(self.r.evaluate()['status'],'rejected')
+  with self.c.db() as db:db.execute('DELETE FROM owner_calibration_windows WHERE utterance=?',('fresh-holdout',))
+  self.assertEqual(self.r.evaluate()['status'],'blocked')
  def test_reports_independent_validation_improvement_without_modifying_profile(self):
   before=self.p.anchors(self.identity['memory_id']);result=self.r.evaluate()
   self.assertEqual(result['status'],'eligible_for_controlled_activation')

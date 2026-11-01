@@ -18,6 +18,26 @@ class OwnerCalibrationTests(unittest.TestCase):
   return self.c.process_control(self.control)
  def item(self,key='u',**changes):
   return {'result':{'status':'ok','model':'campplus-aa3cfc16-v1','vector':[.7,.7141428],'quality':{'status':'ok','rms':.1,'clipped_fraction':0}},'voiced':5,'playback':False,'utterance':key,**changes}
+ def test_repair_collects_two_long_utterances_and_private_windows_without_grant(self):
+  self.control.write_text(json.dumps({'request_id':'e'*32,'action':'repair','profile':'Martin','issued_at':self.now}))
+  self.assertEqual(self.c.process_control(self.control)['required_samples'],2)
+  old=self.profiles.anchors(self.voice)
+  sample=self.item('repair-a',voiced=7)
+  sample['result']['windows']=[[.72,.693974],[.68,.733212]]
+  first=self.c.collect('mic',sample)
+  self.assertEqual(first['samples'],1);self.assertTrue(first['retry_recommended'])
+  sample['utterance']='repair-b';last=self.c.collect('mic',sample)
+  self.assertEqual(last['samples'],2);self.assertFalse(last['retry_recommended'])
+  self.assertEqual(self.c.summary()['required_samples'],2)
+  self.assertEqual(self.c.summary()['status'],'awaiting_review')
+  self.assertEqual(old,self.profiles.anchors(self.voice))
+  with self.c.db() as db:self.assertEqual(db.execute('SELECT count(*) FROM owner_calibration_windows').fetchone()[0],2)
+  self.profiles.forget('Martin')
+  with self.c.db() as db:self.assertEqual(db.execute('SELECT count(*) FROM owner_calibration_windows').fetchone()[0],0)
+ def test_repair_missing_windows_is_rejected_without_progress(self):
+  self.control.write_text(json.dumps({'request_id':'f'*32,'action':'repair','profile':'Martin','issued_at':self.now}))
+  self.c.process_control(self.control)
+  self.assertEqual(self.c.collect('mic',self.item('missing',voiced=7))['samples'],0)
  def test_owner_collection_accepts_unrecognized_voice_without_grant_or_profile_mutation(self):
   old=self.profiles.anchors(self.voice);self.start()
   result=self.c.collect('mic',self.item())
