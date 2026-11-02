@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "date": "2026-11-02",
-  "status": "source_ready_activation_pending",
+  "status": "active_verified_physical_acceptance_pending",
   "local_version": "1.1.1",
   "common_version": "1.0.3",
   "observed_loop": {
@@ -44,5 +44,69 @@
     "actual household self-echo/interruption/loud-TV acceptance",
     "bathroom light channel identity unknown"
   ],
-  "activation": null
+  "activation": {
+    "job": "household-context-v111-apply",
+    "phase": "active_verified",
+    "finished_at": "2026-11-02T01:34:52.225181+00:00",
+    "backup_slug": "2a6e8309",
+    "core_version": "2026.6.4",
+    "files_exact": 30,
+    "files_total": 30,
+    "runtime_status": "configured",
+    "microphone_mute": "off",
+    "legacy_volume_automations": "off",
+    "heating": "on"
+  },
+  "source_commit": "bb34f7f3e7b0ef8f6e5b507dfbe79a1d68f92f22",
+  "source_revision": "c882705032798e6033d35958d7706fa1a07fc64d45e084c9e6b2eace18f501aa",
+  "source_ci": [
+    {
+      "id": 41372840626,
+      "conclusion": "success"
+    },
+    {
+      "id": 41372836817,
+      "conclusion": "success"
+    }
+  ],
+  "catalogue": {
+    "state_count": 386,
+    "registered_entity_count": 471,
+    "entity_count": 486,
+    "returned_entities": 486,
+    "device_count": 48,
+    "area_count": 16,
+    "context_bytes": 63570,
+    "truncated": false,
+    "metadata_truncated": true,
+    "action_permissions_changed": false
+  },
+  "native_probe": {
+    "status": "passed",
+    "microphone_opened": false,
+    "audible_playback": false,
+    "native_vad_warmup_frames": 77,
+    "reference_seconds": 2.8316875,
+    "pipeline_signature": "7e4a5a90ac21fdfa8394d3fad1cc682875dec1bf74b5a6baab85ac471fdf5f91"
+  },
+  "live_companion": {
+    "passed": true,
+    "recall": true,
+    "continuation": true,
+    "stop": true,
+    "personality_memory": true,
+    "identity": true,
+    "prompt_sha256": "ad132e880a35e634f06a9bf340f11f47e738cf520e5107c1eab5437962457f36"
+  },
+  "native_room_resolution": {
+    "total_cases": 13,
+    "resolved_cases": 12,
+    "bathroom": "pre-existing no_exposed_lights; circuit identity required"
+  },
+  "retention": {
+    "deleted_old_unprotected": "109a32e8",
+    "latest_three_and_protected_preserved": true
+  },
+  "lease_release": "verified_unlocked",
+  "metadata_receipt": "household-context-v111-receipt-apply verified;3/3exact;activation none"
 }

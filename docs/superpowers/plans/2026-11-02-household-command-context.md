@@ -1,6 +1,6 @@
 # Household command context Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Give Jarvis current device knowledge and Czech light synonyms while preserving television guards and silent local actions.
 
@@ -66,5 +66,7 @@
 - [x] Implement minimal guards and version1.1.1; preserve all unrelated behavior.
 - [x] Run companion, shared, duplex, HomePod and diagnostics suites plus addon/manifest checks; expect pass.
 - [x] Fresh whole-change review; fix Important/Critical once with RED→GREEN, no re-review.
-- [ ] Publish source CAS, prepare exact files/recovery/metadata, verify backup space/authorized retention, backed-up activate once.
-- [ ] Verify actual versions, complete catalogue counts/readonly aliases/loaded source, fresh native synthesis probe; do not execute household devices during resolution checks. Preserve explicit acoustic acceptance limits and release lease.
+- [x] Publish source CAS, prepare exact files/recovery/metadata, verify backup space/authorized retention, backed-up activate once.
+- [x] Verify actual versions, complete catalogue counts/readonly aliases/loaded source, fresh native synthesis probe; do not execute household devices during resolution checks. Preserve explicit acoustic acceptance limits and release lease.
+
+Activation: sourcebb34f7f3e7b0ef8f6e5b507dfbe79a1d68f92f22, backed-up jobhousehold-context-v111-apply active_verified01:34:52UTC; native probe and live companion/catalogue passed. Lease releaseverified01:36:51UTC. Acoustic acceptance remains separate; see public evidence JSON.
