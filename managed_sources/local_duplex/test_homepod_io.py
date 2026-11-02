@@ -17,7 +17,7 @@ class HomePodTests(unittest.IsolatedAsyncioTestCase):
         cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='LocalDialogue')
         targets=[];player=NS(entity_id=HOME,available=True,state='off')
         async def start(player,media,volume):targets.append(player.entity_id);await asyncio.sleep(.04)
-        state=lambda _player,_shared:{'volume':.45,'muted':False,'source':'raop','busy':False}
+        state=lambda _player:{'volume':.45,'muted':False,'source':'raop','busy':False}
         timing=lambda _player:{'position_s':.1,'latency_s':0.}
         scope={'HomePodOutput':self.module().HomePodOutput,'homepod_state':state,
             'play_homepod_file':start,'homepod_timing':timing}
@@ -136,10 +136,10 @@ class HomePodTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):await io.prime_homepod(player,protocol='raop')
         self.assertEqual(calls,before)
 
-    def test_shared_tv_zero_mute_and_native_packet_timing(self):
+    def test_tv_zero_and_mute_cannot_silence_homepod_speech(self):
         io=self.module();player,audio,_=self.native();audio.volume=45.
         decision=io.homepod_state(player,{'volume':0.,'muted':True},protocol='raop')
-        self.assertEqual((decision['volume'],decision['muted'],decision['source']),(0.,True,'shared_tv'))
+        self.assertEqual((decision['volume'],decision['muted'],decision['source']),(.45,False,'raop'))
         manager=audio.playback_manager
         self.assertIsNone(io.homepod_timing(player,protocol='raop'))
         manager.stream_client=NS(playback_info=NS(position=.2))
@@ -153,7 +153,7 @@ class HomePodTests(unittest.IsolatedAsyncioTestCase):
         async def start(player,media,level):
             self.commands.append((player.entity_id,media,level));self.started.set();await self.finish.wait()
         def timing(player):return {'position_s':.1,'latency_s':2.} if self.started.is_set() else None
-        def state(player,shared):return {'volume':0. if zero else .45,'muted':False,'source':'raop','busy':False}
+        def state(player):return {'volume':0. if zero else .45,'muted':False,'source':'raop','busy':False}
         async def wait(seconds):self.time+=seconds;await asyncio.sleep(0)
         return module.HomePodOutput(lambda:self.player,tts,start,state,timing,clock=lambda:self.time,sleep=wait)
 

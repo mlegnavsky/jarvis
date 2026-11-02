@@ -9,7 +9,6 @@ class ImportContractTests(unittest.TestCase):
         root=Path(__file__).resolve().parents[1]
         sources={
             'custom_components.extended_openai_conversation.dialogue':root/'companion/dialogue.py',
-            'custom_components.jarvis_homepod_output.tv_session':root/'homepod_output/tv_session.py',
             'custom_components.jarvis_voice_diagnostics.turn_taking':root/'voice_diagnostics/turn_taking.py',
         }
         tree=ast.parse(Path(__file__).with_name('__init__.py').read_text())

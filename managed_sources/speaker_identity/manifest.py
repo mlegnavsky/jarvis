@@ -26,7 +26,7 @@ def build_manifest(report,sources,previous,observed_at,wake_slots):
    'matching_control_policy':'fresh admin activate/rollback;CAS evidence/model revision;replay limitation acknowledgement;stable ID/anchors/permissions preserved',
    'owner_calibration_control':'jarvis_workspace/speaker_identity/calibration-control.json',
    'owner_calibration_policy':'authenticated admin file_write; fresh single-use start/resume; 5 samples;600s inactivity; accepted samples refresh deadline; unreviewed collection only; no profile promotion',
-   'speaker_report':'jarvis_workspace/speaker_identity/report.json','output_report':'jarvis_workspace/homepod_output/report.json',
+   'speaker_report':'jarvis_workspace/speaker_identity/report.json','output_report':'jarvis_workspace/local_duplex/report.json',
    'diagnostics':'jarvis_workspace/voice_diagnostics/report.json','runtime_source':'custom_components/jarvis_speaker_identity',
    'recovery_source':'jarvis_workspace/voice_release/files','deployment':'lease -> revision-bound prepare -> backed-up apply -> verified job -> live report -> release',
    'completion':'queued/running/accepted/file_written are not active_verified; never replay unknown with a new request_id'},

@@ -25,7 +25,7 @@ from homeassistant.helpers.target import TargetSelection, async_extract_referenc
 from homeassistant.util import dt as dt_util
 
 from custom_components.extended_openai_conversation.dialogue import is_noise_transcript
-from custom_components.jarvis_homepod_output.tv_session import TVSession
+from .tv_session import TVSession
 from custom_components.jarvis_voice_diagnostics.turn_taking import spoken_name
 from .adapter import DELEGATE, install, native_session
 from .bridge import TurnBridge, response_facts
@@ -37,7 +37,7 @@ from .speech_file import SpeechFiles, create_owned_file, release_prepared
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.1.1'
+VERSION='1.2.0'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -61,7 +61,7 @@ class LocalDialogue:
         self.homepod_init_task=None
         self.homepod_initializing=False
         self.report={'runtime_version':VERSION,'core_version':CORE_VERSION,'mode':'local_microphone_homepod_speech',
-            'speaker':HOME,'microphone':SATELLITE,'cloud_audio':'completed_utterances_only',
+            'speaker':HOME,'microphone':SATELLITE,'volume_policy':'homepod_raop_only_tv_pause_separate','cloud_audio':'completed_utterances_only',
             'raw_microphone_saved':False,'acoustic_acceptance_verified':False,
             'firmware_changed':False,'sessions':0,'last_session':None,'self_test':{'status':'not_run'},
             'homepod_startup':{'status':'pending','policy':'startup45_once_then_current_volume'}}
@@ -107,13 +107,13 @@ class LocalDialogue:
             await asyncio.shield(self.homepod_init_task)
         return self.report['homepod_startup']['status']=='applied'
 
-    def homepod_audio_state(self,player,shared):
+    def homepod_audio_state(self,player):
         if self.report['homepod_startup']['status']!='applied':raise ValueError('homepod_not_initialized')
-        return homepod_state(player,shared)
+        return homepod_state(player)
 
-    def make_output(self,pipeline,shared_volume=lambda:None):
+    def make_output(self,pipeline):
         return HomePodOutput(self.homepod,lambda text:self.synthesize(text,pipeline),
-            play_homepod_file,self.homepod_audio_state,homepod_timing,shared_volume=shared_volume)
+            play_homepod_file,self.homepod_audio_state,homepod_timing)
 
     def television(self):
         def read_tv():
@@ -122,11 +122,6 @@ class LocalDialogue:
         async def tv_call(service):
             await self.hass.services.async_call('media_player',service,{'entity_id':TELEVISION},blocking=True)
         return TVSession(read_tv,tv_call)
-
-    @staticmethod
-    def shared_volume(television):
-        try:return television.shared_volume()
-        except ValueError:return None
 
     def ready(self):
         player=self.player();speaker=self.hass.data.get('jarvis_speaker_identity')
@@ -191,7 +186,7 @@ class LocalDialogue:
             finally:
                 if guards.get(key) is input_allowed:guards.pop(key,None)
         television=self.television()
-        output=self.make_output(pipeline,lambda:self.shared_volume(television))
+        output=self.make_output(pipeline)
         def input_allowed():return not session.done and not session.closed and television.input_safe()
         def overlap(audio):return output.last_overlap_at is not None and time.monotonic()-output.last_overlap_at<len(audio)/32000+1
         bridge=TurnBridge(transcribe,hass.data['jarvis_speaker_identity'].complete,converse,
@@ -321,7 +316,7 @@ class LocalDialogue:
         self.probing=True
         if self.active:self.active.request_close('operator_homepod_output_test')
         television=self.television()
-        output=self.make_output(async_get_pipeline(self.hass,PIPELINE),lambda:self.shared_volume(television))
+        output=self.make_output(async_get_pipeline(self.hass,PIPELINE))
         def service_called(event):
             if self.output_changed(event):output.disown();television.abandon()
         unsubscribe=self.hass.bus.async_listen(EVENT_CALL_SERVICE,service_called)

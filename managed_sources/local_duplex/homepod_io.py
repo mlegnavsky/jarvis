@@ -47,11 +47,8 @@ async def prime_homepod(player,*,protocol=None):
 
 def homepod_state(player,shared=None,*,protocol=None):
     audio=raop_audio(player,protocol)
-    if shared is not None:
-        if not isinstance(shared,dict) or set(shared)!={'volume','muted'} or type(shared['muted']) is not bool:
-            raise ValueError('shared_volume_unavailable')
-        volume=level(shared['volume']);muted=shared['muted'];source='shared_tv'
-    else:volume=level(audio.volume/100);muted=False;source='raop'
+    # Deprecated shared argument is ignored: television volume is not speech volume.
+    volume=level(audio.volume/100);muted=False;source='raop'
     return {'volume':volume,'muted':muted or getattr(player,'is_volume_muted',None) is True,
         'source':source,'busy':audio.playback_manager._is_acquired}
 
@@ -78,9 +75,9 @@ async def play_homepod_file(player,media_id,volume,*,protocol=None):
 
 
 class HomePodOutput(LocalOutput):
-    def __init__(self,read_player,tts,start,read_state,timing,*,shared_volume=lambda:None,**kwargs):
+    def __init__(self,read_player,tts,start,read_state,timing,**kwargs):
         super().__init__(read_player,tts,start,None,**kwargs)
-        self.read_state=read_state;self.timing=timing;self.shared_volume=shared_volume
+        self.read_state=read_state;self.timing=timing
         self.native_task=None;self.last_volume_decision=None;self.latency_s=None
         self.cleanup_tasks=set();self.stop_timeout=3.
         self.echo_min_bytes=12800
@@ -95,7 +92,7 @@ class HomePodOutput(LocalOutput):
     def available_player(self):
         player=self.read_player()
         if player is None or not player.available:raise ValueError('homepod_unavailable')
-        decision=self.read_state(player,self.shared_volume())
+        decision=self.read_state(player)
         self.last_volume_decision=decision
         if decision['busy'] or (str(player.state) in ('playing','buffering') and decision['source']!='shared_tv'):
             raise ValueError('homepod_already_playing')
