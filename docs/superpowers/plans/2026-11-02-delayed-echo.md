@@ -31,6 +31,8 @@ No failed AEC, new recording, voice/profile/firmware/Core/model/provider/volume 
 - [ ] Publish with fresh expected public HEAD, verify CI, backed-up CAS activation, fresh source/native probe/output and mic checks, release lease.
 - [ ] Record source and runtime proof, keep long-room acceptance and latency open until actual user evidence.
 
+Partial activation evidence: public e59225b421bf025e1bb184c2864bb97b9333c16d, exact reviewed tree15ffcbabf3037009372cf0e253c60faa1805217c; both CI runs and push laboratory job succeeded. echo126-apply-20261102 verified/active_verified23:04:17UTC with backupf17abe4b. All7files exact on fresh read and runtime1.2.6/source52c151f9 confirmed. Postboot native probe and output test remain NOT RUN; the voice readiness gate remains closed. Interrupted tool execution lost ephemeral store including own deployment token. Leaseecho126-20261102 remains held until epoch1793663726.0198748; do not bypass it or repeat activation/backup. See docs/evidence/2026-11-02-echo126-activation-pending-probe.json for exact recovery steps. Private receipt still says prepared; authoritative apply job records activation. Task3 remains unchecked deliberately.
+
 ## Ledger
 Base local a9a50d8 matches publicf019ac24a33d5e32c2ff68d70da3433ba7763cfe tree8726d73617b2b29d0bb112e29ea5173d56b4b727. Runtime1.2.5/source604e6b84. No product modifications from latency research. Long-conversation failure supersedes earlier short-story acceptance. The last EOF reason is known but its external cause is not: no speculative auto-rearm.
 
