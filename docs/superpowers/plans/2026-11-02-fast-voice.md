@@ -26,8 +26,10 @@ No new credentials/provider or household service rights. Preserve Marin, own0/mu
 ## Task2: EOF attribution and deployment proof
 - [x] RED source-EOF test expects audio_source_ended with elapsed/stage while owned output still cleaned.
 - [x] Add explicit EOF evidence, correct client scheduling label while retaining compatibility key as deprecated.
-- [ ] Independent review, publish, backed-up CAS deployment, fresh postboot probe and model audit. Select faster valid candidate via policy CAS, then same voice-scoped probe with TV paused/restored, no playback/actions.
-- [ ] Verify source/runtime, fixed output, release lease; record measured result and next physical test. Human barge-in/AEC remains pending.
+- [x] Independent review, publish, backed-up CAS deployment, fresh postboot probe and model audit. Select faster valid candidate via policy CAS, then same voice-scoped probe with TV paused/restored, no playback/actions.
+- [x] Verify source/runtime, fixed output, release lease; record measured result and next physical test. Human barge-in/AEC remains pending.
 
 ## Review ledger
 Fresh review found FIFO open could block forever; O_NONBLOCK regression RED→GREEN fixes it. Regraded fixed512token cap because it could regress configured longer answers; preserve larger configured budget, regression RED→GREEN. Short replies are a prompt choice, never forced truncation. Deferred minor: no direct integration test for operator TV probe wiring; TVSession unit behavior is covered and live pause/restore remains an acceptance check. Benchmark fixed-greeting results alone never establish full-turn speed.
+
+Completion: first speed stage deployed/verified; evidence docs/evidence/2026-11-02-fast-voice.json. Acoustic total latency and AEC remain open, never represented as complete.
