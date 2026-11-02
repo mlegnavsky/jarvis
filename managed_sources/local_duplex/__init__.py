@@ -40,7 +40,7 @@ from .speech_file import SpeechFiles, create_owned_file, release_prepared
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.2.5'
+VERSION='1.2.6'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'

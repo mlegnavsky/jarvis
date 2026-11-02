@@ -47,3 +47,77 @@ class TextEchoTests(unittest.TestCase):
     def test_real_reply_after_playback_with_small_preroll_overlap_is_not_echo(self):
         guard=self.echo();guard.remember('Můžeš říct světlo.',started_at=10,duration=3,tail=.4)
         self.assertFalse(guard.matches('světlo',captured_from=12.9,captured_until=14.5))
+
+    def test_small_asr_variants_of_generated_question_are_echo(self):
+        guard=self.echo();guard.remember('Chceš abych ti řekla další příběh?',started_at=10,duration=4,tail=2)
+        for text in ('Chceš abych ti řekla dlouhý příběh?',
+                     'Chceš abych řekla další příběh?',
+                     'Chceš abych ti řekla ještě další příběh?'):
+            self.assertTrue(guard.matches(text,captured_from=11,captured_until=13),text)
+
+    def test_human_corrections_and_short_response_to_question_are_retained(self):
+        guard=self.echo();guard.remember('Chceš abych ti řekla další příběh?',started_at=10,duration=4,tail=2)
+        for text in ('Ne, chceš abych ti řekla další příběh?',
+                     'Proč chceš abych ti řekla další příběh?',
+                     'Chceš abych ti neřekla další příběh?',
+                     'Chceš abych ti řekla stop další příběh?',
+                     'Chci další příběh','Nechci další příběh','Ano','Ne','Stop',
+                     'Zhasni v obýváku'):
+            self.assertFalse(guard.matches(text,captured_from=11,captured_until=13),text)
+
+    def test_asr_variant_outside_output_interval_is_human(self):
+        guard=self.echo();guard.remember('Co pro tebe můžu udělat?',started_at=10,duration=3,tail=2)
+        self.assertTrue(guard.matches('Co pro tebe mohu udělat?',captured_from=11,captured_until=13))
+        self.assertFalse(guard.matches('Co pro tebe mohu udělat?',captured_from=16,captured_until=18))
+
+    def test_repeated_delayed_questions_do_not_become_new_turns(self):
+        guard=self.echo()
+        for i in range(8):
+            guard.remember('Chceš slyšet delší příběh číslo '+str(i)+'?',started_at=10*i,duration=3,tail=1.9)
+            self.assertTrue(guard.matches('Chceš slyšet dlouhý příběh číslo '+str(i)+'?',
+                captured_from=10*i+3.4,captured_until=10*i+4.4))
+        self.assertLessEqual(len(guard.records),3)
+
+    def test_guard_exposes_scalar_reason_without_transcript_words(self):
+        guard=self.echo();guard.remember('Co pro tebe můžu udělat?',started_at=10,duration=3,tail=2)
+        guard.matches('Co pro tebe mohu udělat?',captured_from=11,captured_until=13)
+        self.assertEqual(guard.last_facts['decision'],'generated_asr_variant')
+        self.assertEqual(guard.last_facts['edit_distance'],1)
+        self.assertNotIn('mohu',str(guard.last_facts));self.assertNotIn('muzu',str(guard.last_facts))
+
+    def test_output_diagnostics_are_bounded_and_do_not_save_words(self):
+        output=importlib.import_module('ha_io').LocalOutput(lambda:None,None,None,None)
+        output.text_echo.remember('Co pro tebe můžu udělat?',started_at=10,duration=3,tail=2)
+        for _ in range(40):output.is_own_transcript('Co pro tebe mohu udělat?',bytes(32000),12.)
+        facts=output.snapshot()['transcript_guard']
+        self.assertEqual(len(facts),32)
+        self.assertTrue(all(x['decision']=='generated_asr_variant' for x in facts))
+        self.assertNotIn('mohu',str(facts));self.assertNotIn('muzu',str(facts))
+
+    def test_new_negation_position_is_preserved_even_if_word_was_elsewhere(self):
+        guard=self.echo();guard.remember('Můžeš říct ano nebo ne a pokračovat dál.',started_at=10,duration=4,tail=2)
+        self.assertFalse(guard.matches('Můžeš říct ne ano nebo ne a pokračovat dál.',
+            captured_from=11,captured_until=13))
+
+    def test_scalar_reason_uses_overlapping_record_not_newer_unrelated_output(self):
+        guard=self.echo()
+        guard.remember('Co pro tebe můžu udělat?',started_at=10,duration=3,tail=2)
+        guard.remember('Nová odpověď.',started_at=20,duration=2,tail=2)
+        self.assertFalse(guard.matches('Kolik je hodin?',captured_from=11,captured_until=13))
+        self.assertEqual(guard.last_facts['decision'],'different_words')
+        self.assertEqual(guard.last_facts['overlap_ratio'],1.)
+
+    def test_indirect_human_request_changes_action_instead_of_becoming_echo(self):
+        for original,candidate in (
+            ('Můžeš zapnout světlo v obýváku?','Můžeš vypnout světlo v obýváku?'),
+            ('Můžeš zamknout dveře u vchodu?','Můžeš odemknout dveře u vchodu?')):
+            guard=self.echo();guard.remember(original,started_at=10,duration=4,tail=2)
+            self.assertFalse(guard.matches(candidate,captured_from=11,captured_until=13),candidate)
+
+    def test_dp_prefix_cannot_delete_new_negation_or_repeated_stop(self):
+        for original,candidate in (
+            ('Stop chci slyšet jiný příběh','Stop stop chci slyšet jiný příběh'),
+            ('Já ti mohu povědět další dlouhý příběh teď večer ne',
+             'Já ne já ti mohu povědět další dlouhý příběh teď večer ne')):
+            guard=self.echo();guard.remember(original,started_at=10,duration=4,tail=2)
+            self.assertFalse(guard.matches(candidate,captured_from=11,captured_until=13),candidate)

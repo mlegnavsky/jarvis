@@ -177,7 +177,7 @@ class ConfirmedInterruptionTests(unittest.IsolatedAsyncioTestCase):
         echo=importlib.import_module('text_echo').TextEcho()
         echo.remember('Co pro tebe můžu udělat?',started_at=10.,duration=4.,tail=.4)
         clock=[11.5];agents=[];stops=[];playing=asyncio.Event();release=asyncio.Event()
-        async def transcriber(audio):return 'příběh' if audio==b'first' else 'Co pro tebe můžu udělat?'
+        async def transcriber(audio):return 'příběh' if audio==b'first' else 'Co pro tebe mohu udělat?'
         async def complete(*args,**kwargs):pass
         async def converse(**kwargs):
             agents.append(kwargs['text'])

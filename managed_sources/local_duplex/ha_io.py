@@ -139,21 +139,25 @@ class LocalOutput:
         self.tts_generation_ms=None;self.first_audio_wait_ms=None;self.playback_requested_at=None
         self.pending=[]
         self.echo_min_bytes=7680;self.text_echo=TextEcho();self.pending_text='';self.text_echo_suppressed=0
+        self.transcript_facts=deque(maxlen=32)
 
     def snapshot(self):
-        return {key:getattr(self,key) for key in ('owned','started','completed','skipped',
+        facts={key:getattr(self,key) for key in ('owned','started','completed','skipped',
             'stopped','echo_frames','overlap_frames','discarded','last_stop_s',
             'last_reference_duration_s','last_error','text_echo_suppressed','tts_generation_ms','first_audio_wait_ms')}
+        return {**facts,'transcript_guard':list(self.transcript_facts)}
 
     def echo_tail_seconds(self):return .4
 
     def remember_speech(self):
         self.text_echo.remember(self.pending_text,started_at=self.started_at,
-            duration=self.last_reference_duration_s,tail=.4)
+            duration=self.last_reference_duration_s,tail=self.echo_tail_seconds())
 
     def is_own_transcript(self,text,audio,captured_until):
         matched=self.text_echo.matches(text,captured_from=captured_until-len(audio)/32000,
                                       captured_until=captured_until)
+        self.transcript_facts.append({**self.text_echo.last_facts,
+            'capture_audio_ms':round(len(audio)/32),'output_owned_at_check':self.owned})
         if matched:self.text_echo_suppressed+=1
         return matched
 

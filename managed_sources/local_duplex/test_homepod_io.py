@@ -218,3 +218,17 @@ class HomePodTests(unittest.IsolatedAsyncioTestCase):
         for _ in range(3):await asyncio.sleep(0)
         await output.stop();await asyncio.gather(task,return_exceptions=True)
         self.assertGreaterEqual(output.tail_until-output.clock(),output.latency_s+.4-1e-8)
+
+    async def test_normal_completion_keeps_same_delayed_echo_tail(self):
+        output=await self.output();task=asyncio.create_task(output.play('Co pro tebe můžu udělat?'))
+        await self.started.wait()
+        for _ in range(3):await asyncio.sleep(0)
+        self.time=5.;self.finish.set();await task
+        self.assertGreaterEqual(output.tail_until-output.clock(),output.latency_s+.4-1e-8)
+
+    async def test_remembered_own_question_covers_delayed_capture_after_end(self):
+        output=await self.output();output.started_at=10.;output.latency_s=1.5
+        output.last_reference_duration_s=3.;output.pending_text='Co pro tebe můžu udělat?'
+        output.remember_speech()
+        self.assertTrue(output.is_own_transcript('Co pro tebe můžu udělat?',bytes(32000),14.4))
+        self.assertFalse(output.is_own_transcript('Ano',bytes(32000),14.4))

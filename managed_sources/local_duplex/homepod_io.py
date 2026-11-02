@@ -147,8 +147,8 @@ class HomePodOutput(LocalOutput):
                 await self.native_task
             if not self.owned or owner!=self.generation:raise asyncio.CancelledError()
             if self.started_at is None:raise ValueError('homepod_audio_start_unobserved')
-            self.completed+=1;self.owned=False;self.tail_until=self.clock()+.4
-            self.text_echo.stopped(at=self.clock(),tail=.4)
+            self.completed+=1;self.owned=False;self.tail_until=self.clock()+self.echo_tail_seconds()
+            self.text_echo.stopped(at=self.clock(),tail=self.echo_tail_seconds())
         except asyncio.CancelledError:
             await self.stop();raise
         except Exception as exc:

@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import json
 import math
 import random
 import struct
@@ -74,6 +75,20 @@ class PlaybackObserverTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(turn['timings_ms'],{'stt':2100.,'agent':1500.})
         self.assertEqual(turn['output'],{'stopped':1})
         self.assertNotIn('private speech',str(observer.snapshot()))
+
+    async def test_turn_history_does_not_repeat_full_transcript_diagnostics(self):
+        observer=self.observer(NS(owned=False))
+        rows=[{'decision':'generated_asr_variant','candidate_words':6,'reference_words':14,
+            'shared_words':5,'edit_distance':1,'overlap_ratio':1.,'capture_audio_ms':1200,
+            'output_owned_at_check':True} for _ in range(32)]
+        original={'transcript_guard':rows,'completed':1}
+        async def play(_text):pass
+        for _ in range(12):await observer.play(play,'not saved',{'stt':123.},lambda:original)
+        snapshot=observer.snapshot()
+        self.assertEqual(len(snapshot['turns']),8)
+        self.assertTrue(all(len(x['output']['transcript_guard'])==1 for x in snapshot['turns']))
+        self.assertEqual(len(original['transcript_guard']),32)
+        self.assertLess(len(json.dumps(snapshot,indent=2).encode()),128*1024)
 
     async def test_enhancer_early_close_closes_the_observed_input(self):
         closed=[];observer=self.observer(NS(owned=False))

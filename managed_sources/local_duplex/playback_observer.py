@@ -104,5 +104,11 @@ class PlaybackObserver:
         try:
             return await play(text)
         finally:
-            try:self.turns.append({'timings_ms':before,'output':output_snapshot()})
+            try:
+                facts=dict(output_snapshot())
+                # Full32-row history belongs to current output only. Repeating
+                # it in every retained turn can overflow the128KiB boot report.
+                if isinstance(facts.get('transcript_guard'),list):
+                    facts['transcript_guard']=facts['transcript_guard'][-1:]
+                self.turns.append({'timings_ms':before,'output':facts})
             except Exception:self.errors+=1
