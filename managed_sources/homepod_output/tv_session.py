@@ -17,6 +17,10 @@ class TVSession:
   """Call for state updates, including intermediate external play/off changes."""
   if self._owner is not None and ((state or {}).get('state')!='paused' or fingerprint(state)!=self._owner):
    self._owner=None;self.discarded+=1
+ def input_safe(self):
+  try:state=self.read_state()
+  except Exception:return False
+  return bool(state and state.get('state') in ('paused','off','idle','standby'))
  def abandon(self):
   self._generation+=1
   if self._owner is not None:self._owner=None;self.discarded+=1

@@ -12,10 +12,12 @@ else:
 class Session:
     def __init__(self, *, transcribe, respond, play, stop, idle_seconds=8,
                  clock=time.monotonic, gate=None, silence_seconds=.7,
-                 max_seconds=240, max_turns=24,on_interrupt=None,input_timeout_seconds=5,playback_active=None):
+                 max_seconds=240, max_turns=24,on_interrupt=None,input_timeout_seconds=5,playback_active=None,
+                 on_capture=None):
         self.transcribe=transcribe;self.respond=respond;self.play=play;self.stop=stop
         self.clock=clock;self.gate=gate;self.idle_seconds=idle_seconds
         self.on_interrupt=on_interrupt
+        self.on_capture=on_capture
         self.playback_active=playback_active or (lambda:self.stage=='speaking')
         self.max_seconds=max_seconds;self.max_turns=max_turns
         self.input_timeout_seconds=input_timeout_seconds
@@ -52,36 +54,41 @@ class Session:
                         async with asyncio.timeout(3):await old
             if not self.closed:self.stage='idle';self.idle_at=self.clock()
 
-    async def submit(self, audio, voiced, truncated):
+    async def submit(self, audio, voiced, truncated,*,captured_until=None):
         if self.closed or self.done:return
+        captured_until=self.clock() if captured_until is None else captured_until
         if truncated:
             self.truncated+=1;self.idle_at=self.clock();return
         if self.interrupt_task is not None:
             await self.interrupt_task;self.interrupt_task=None
+        if self.closed or self.done:return
         if self.task is not None and not self.task.done():
             if self.playback_active():await self.interrupt()
             else:
                 self.deferred_turns+=1
                 if self._pending is not None:self.deferred_replaced+=1
-                self._pending=(audio,voiced,False,self.clock())
+                self._pending=(audio,voiced,False,captured_until)
                 return
         if self._pending is not None:
             self._pending=None;self.deferred_replaced+=1
+        if self.closed or self.done:return
         self.generation+=1;generation=self.generation
-        self.task=asyncio.create_task(self._turn(generation,audio,voiced))
+        self.task=asyncio.create_task(self._turn(generation,audio,voiced,captured_until))
 
-    async def _turn(self, generation, audio, voiced):
+    async def _turn(self, generation, audio, voiced,captured_until=None):
         try:
+            if self.closed or self.done:return
             self.stage='transcribing'
+            if self.on_capture:self.on_capture(self.clock() if captured_until is None else captured_until)
             async with asyncio.timeout(30):text=await self.transcribe(audio,voiced,False)
-            if generation!=self.generation or self.closed or not text:return
+            if generation!=self.generation or self.closed or self.done or not text:return
             self.stage='thinking'
             async with asyncio.timeout(60):result=await self.respond(text)
-            if generation!=self.generation or self.closed:return
+            if generation!=self.generation or self.closed or self.done:return
             if result.speech:
                 self.stage='speaking'
                 async with asyncio.timeout(100):await self.play(result.speech)
-            if generation!=self.generation or self.closed:return
+            if generation!=self.generation or self.closed or self.done:return
             self.completed_turns+=1
             if self.completed_turns>=self.max_turns:self.request_close('turn_limit')
             elif not result.continuing and not result.speech and self._pending is None:
@@ -119,7 +126,7 @@ class Session:
                     busy=self.task is not None and not self.task.done()
                     if not busy and self._pending is not None and not self.done:
                         pending,self._pending=self._pending,None
-                        if 0<=self.clock()-pending[3]<=5:await self.submit(*pending[:3])
+                        if 0<=self.clock()-pending[3]<=5:await self.submit(*pending[:3],captured_until=pending[3])
                         else:self.deferred_expired+=1
                         busy=self.task is not None and not self.task.done()
                     if not busy and not self.segmenter.active and self.clock()-self.idle_at>=self.idle_seconds:

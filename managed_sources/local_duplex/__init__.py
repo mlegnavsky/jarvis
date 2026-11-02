@@ -37,7 +37,7 @@ from .speech_file import SpeechFiles, create_owned_file, release_prepared
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.1.0'
+VERSION='1.1.1'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -183,18 +183,27 @@ class LocalDialogue:
             if result.result!=SpeechResultState.SUCCESS:raise ValueError('stt_failed')
             text=str(result.text or '').strip()
             return '' if is_noise_transcript(text) else text
-        async def converse(**kwargs):return await conversation.async_converse(hass,**kwargs)
+        async def converse(**kwargs):
+            guards=hass.data.setdefault('jarvis_voice_input_guards',{})
+            key=kwargs['context'].id
+            guards[key]=input_allowed
+            try:return await conversation.async_converse(hass,**kwargs)
+            finally:
+                if guards.get(key) is input_allowed:guards.pop(key,None)
         television=self.television()
         output=self.make_output(pipeline,lambda:self.shared_volume(television))
+        def input_allowed():return not session.done and not session.closed and television.input_safe()
         def overlap(audio):return output.last_overlap_at is not None and time.monotonic()-output.last_overlap_at<len(audio)/32000+1
         bridge=TurnBridge(transcribe,hass.data['jarvis_speaker_identity'].complete,converse,
             context_factory=lambda:Context(parent_id=run.context.id),device_id=value.device_id,
             satellite_id=value.satellite_id,conversation_id=value.session.conversation_id,
             agent_id=AGENT,language=pipeline.stt_language or run.language,
-            extra_system_prompt=value.conversation_extra_system_prompt,playback_overlap=overlap)
+            extra_system_prompt=value.conversation_extra_system_prompt,playback_overlap=overlap,
+            transcript_filter=lambda text,audio,at:'' if output.is_own_transcript(text,audio,at) else text,
+            input_allowed=input_allowed)
         session=Session(transcribe=bridge.transcribe,respond=bridge.respond,play=output.play,stop=output.stop,
             gate=output.gate,silence_seconds=run.audio_settings.silence_seconds,on_interrupt=bridge.interrupted,
-            playback_active=output.playing)
+            playback_active=output.playing,on_capture=bridge.set_capture_time)
         self.active=session;self.output=output;self.active_run=str(run.id);self.report['sessions']+=1
         async def changed(event):
             state=event.data.get('new_state')
@@ -203,7 +212,8 @@ class LocalDialogue:
             elif event.data['entity_id']==TELEVISION:
                 owned=television.snapshot()['owned']
                 television.observe(state.as_dict() if state else None)
-                if owned and not television.snapshot()['owned']:session.request_close('television_changed')
+                if not television.input_safe():session.request_close('television_audible')
+                elif owned and not television.snapshot()['owned']:session.request_close('television_changed')
         def service_called(event):
             if self.output_changed(event):
                 output.disown();television.abandon();session.request_close('speaker_changed_externally')
@@ -211,6 +221,7 @@ class LocalDialogue:
         unsubscribe_service=hass.bus.async_listen(EVENT_CALL_SERVICE,service_called)
         try:
             await television.acquire()
+            if not television.input_safe():session.request_close('television_not_quiet')
             if session.done:return
             if not run.audio_settings.is_vad_enabled:
                 run.audio_settings=replace(run.audio_settings,is_vad_enabled=True)
@@ -230,7 +241,7 @@ class LocalDialogue:
                 await television.release()
                 self.report['last_session']={'run_id':str(run.id),**session.snapshot(),
                     'output':output.snapshot(),'television':television.snapshot(),
-                    'agent_response':bridge.last_response}
+                    'agent_response':bridge.last_response,'input_blocked':bridge.input_blocked}
                 self.active=None;self.output=None;self.active_run=None
                 await self.save()
 
@@ -353,6 +364,7 @@ class LocalDialogue:
             active_run=self.active_run,active=self.active.snapshot() if self.active else None,
             output=self.output.snapshot() if self.output else None)
         report['source_revision']=self.source_revision
+        report['household_catalog']=self.hass.data.get('jarvis_household_catalog_summary')
         player=self.player()
         report['local_player']={'available':bool(player and player.available),
             'state':str(player.state) if player else None,'volume':player.volume_level if player else None,

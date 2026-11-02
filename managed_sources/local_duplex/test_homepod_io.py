@@ -191,3 +191,18 @@ class HomePodTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(asyncio.CancelledError):await task
         self.assertEqual(output.stopped,0)
         self.assertEqual(len(self.commands),1)
+
+    async def test_homepod_echo_uses_full_reference_window_before_classification(self):
+        output=await self.output();output.owned=True;output.started_at=0.
+        segmenter=importlib.import_module('segmenter');output.reference=segmenter.EchoReference(b'\x00\x20'*16000)
+        session=NS(segmenter=segmenter.Segmenter())
+        frame=NS(audio=bytes(320),speech_probability=.99)
+        for _ in range(39):self.assertEqual(output.gate(frame,session),[])
+        self.assertEqual(len(output.gate(frame,session)),40)
+
+    async def test_cancel_tail_covers_native_queued_audio_latency(self):
+        output=await self.output();task=asyncio.create_task(output.play('fixed'))
+        await self.started.wait()
+        for _ in range(3):await asyncio.sleep(0)
+        await output.stop();await asyncio.gather(task,return_exceptions=True)
+        self.assertGreaterEqual(output.tail_until-output.clock(),output.latency_s+.4-1e-8)

@@ -5,6 +5,33 @@ import unittest
 
 
 class BridgeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_tv_audible_before_or_during_stt_never_reaches_authority(self):
+        bridge=self.setup_bridge();safe=[False];bridge.input_allowed=lambda:safe[0]
+        self.assertEqual(await bridge.transcribe(b'captured',1,False),'')
+        self.assertEqual(self.events,[])
+        safe[0]=True
+        async def transcribe(audio):safe[0]=False;return 'Zhasni'
+        bridge.transcriber=transcribe
+        self.assertEqual(await bridge.transcribe(b'captured',1,False),'')
+        self.assertIsNone(bridge.audio);self.assertEqual(self.events,[])
+
+    async def test_tv_resuming_during_identity_blocks_agent_and_actions(self):
+        bridge=self.setup_bridge();safe=[True];bridge.input_allowed=lambda:safe[0]
+        async def complete(*a,**kw):safe[0]=False
+        bridge.complete=complete
+        text=await bridge.transcribe(b'captured',1,False);result=await bridge.respond(text)
+        self.assertEqual(result.speech,'');self.assertFalse(result.continuing)
+        self.assertIsNone(self.kwargs);self.assertIsNone(bridge.audio)
+
+    async def test_tv_resuming_while_agent_thinks_discards_its_speech(self):
+        bridge=self.setup_bridge();safe=[True];bridge.input_allowed=lambda:safe[0]
+        async def converse(**kw):
+            safe[0]=False
+            return NS(conversation_id='c',continue_conversation=True,
+                      response=NS(as_dict=lambda:{'speech':{'plain':{'speech':'stale answer'}}}))
+        bridge.converse=converse
+        text=await bridge.transcribe(b'captured',1,False);result=await bridge.respond(text)
+        self.assertEqual(result.speech,'');self.assertFalse(result.continuing)
     def test_response_error_facts_do_not_expose_message_or_credentials(self):
         module=importlib.import_module('bridge')
         response=NS(as_dict=lambda:{'response_type':'error','data':{'code':'unknown'},
@@ -50,3 +77,40 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
         bridge=self.setup_bridge()
         with self.assertRaises(ValueError):await bridge.respond('Zhasni')
         self.assertIsNone(self.kwargs)
+
+    async def test_own_question_filter_uses_capture_time_and_never_enters_agent(self):
+        module=importlib.import_module('bridge');events=[];now=[12.]
+        async def transcribe(audio):now[0]=40.;return 'Co pro tebe můžu udělat?'
+        async def forbidden(*a,**kw):events.append('unexpected')
+        observed=[]
+        def reject(text,audio,captured_until):observed.append(captured_until);return ''
+        bridge=module.TurnBridge(transcribe,forbidden,forbidden,context_factory=lambda:NS(id='c'),
+            device_id='d',satellite_id='s',conversation_id='c',agent_id='a',language='cs',
+            transcript_filter=reject,clock=lambda:now[0])
+        self.assertEqual(await bridge.transcribe(b'captured',.8,False),'')
+        self.assertEqual(observed,[12.]);self.assertIsNone(bridge.audio);self.assertEqual(events,[])
+
+    async def test_real_session_cannot_answer_its_own_question_but_accepts_yes(self):
+        import asyncio
+        bridge_module=importlib.import_module('bridge');session_module=importlib.import_module('session')
+        guard=importlib.import_module('text_echo').TextEcho()
+        guard.remember('Chceš mi říct něco dalšího?',started_at=10,duration=3,tail=2)
+        captured=['Chceš mi říct něco dalšího?'];calls=[]
+        async def transcribe(audio):return captured[0]
+        async def complete(*a,**kw):calls.append('identity')
+        async def converse(**kw):
+            calls.append(('agent',kw['text']))
+            return NS(conversation_id='next',continue_conversation=True,
+                response=NS(as_dict=lambda:{'speech':{'plain':{'speech':''}}}))
+        bridge=bridge_module.TurnBridge(transcribe,complete,converse,context_factory=lambda:NS(id='c'),
+            device_id='d',satellite_id='s',conversation_id='c',agent_id='a',language='cs',clock=lambda:12.,
+            transcript_filter=lambda text,audio,at:'' if guard.matches(text,
+                captured_from=at-len(audio)/32000,captured_until=at) else text)
+        async def nothing(*a):return None
+        session=session_module.Session(transcribe=bridge.transcribe,respond=bridge.respond,
+            play=nothing,stop=nothing,clock=lambda:12.)
+        await session.submit(bytes(32000),.8,False);await session.task
+        self.assertEqual(calls,[]);self.assertEqual(session.completed_turns,0)
+        captured[0]='Ano';await session.submit(bytes(32000),.8,False);await session.task
+        self.assertEqual(calls,['identity',('agent','Ano')]);self.assertEqual(session.completed_turns,1)
+        await session.close()

@@ -1,5 +1,6 @@
 """Completed fresh utterances enter the existing voice-authorized agent."""
 from types import SimpleNamespace
+import time
 
 INTERRUPTION_MARKER='jarvis_local_duplex:previous_answer_interrupted'
 
@@ -22,13 +23,27 @@ def response_facts(response):
 class TurnBridge:
     def __init__(self,transcriber,complete,converse,*,context_factory,device_id,
                  satellite_id,conversation_id,agent_id,language,extra_system_prompt=None,
-                 playback_overlap=lambda audio:False):
+                 playback_overlap=lambda audio:False,transcript_filter=lambda text,audio,at:text,
+                 clock=time.monotonic,input_allowed=lambda:True):
         self.transcriber=transcriber;self.complete=complete;self.converse=converse
         self.context_factory=context_factory;self.device_id=device_id;self.satellite_id=satellite_id
         self.conversation_id=conversation_id;self.agent_id=agent_id;self.language=language
         self.extra_system_prompt=extra_system_prompt;self.playback_overlap=playback_overlap
         self.audio=None;self.voiced=0.;self.interruption_pending=False
         self.last_response=None
+        self.transcript_filter=transcript_filter;self.clock=clock
+        self.input_allowed=input_allowed;self.input_blocked=0
+        self.capture_ended_at=None
+
+    def set_capture_time(self,ended_at):self.capture_ended_at=ended_at
+
+    def allowed(self):
+        try:return self.input_allowed() is True
+        except Exception:return False
+
+    def rejected(self):
+        self.input_blocked+=1
+        return SimpleNamespace(speech='',continuing=False)
 
     def interrupted(self):self.interruption_pending=True
 
@@ -37,10 +52,18 @@ class TurnBridge:
     async def transcribe(self,audio,voiced,truncated):
         self.clear()
         if truncated:return ''
+        if not self.allowed():self.input_blocked+=1;return ''
         self.audio=audio;self.voiced=voiced
-        return await self.transcriber(audio)
+        captured_until=self.clock() if self.capture_ended_at is None else self.capture_ended_at
+        self.capture_ended_at=None
+        text=await self.transcriber(audio)
+        if not self.allowed():self.input_blocked+=1;self.clear();return ''
+        text=self.transcript_filter(text,audio,captured_until)
+        if not text:self.clear()
+        return text
 
     async def respond(self,text):
+        if not self.allowed():self.clear();return self.rejected()
         if self.audio is None:raise ValueError('fresh_utterance_required')
         context=self.context_factory()
         extra=self.extra_system_prompt
@@ -50,9 +73,11 @@ class TurnBridge:
         try:
             await self.complete(self.satellite_id,self.audio,self.voiced,text,
                 context_id=context.id,playback=self.playback_overlap(self.audio))
+            if not self.allowed():return self.rejected()
             result=await self.converse(text=text,conversation_id=self.conversation_id,
                 device_id=self.device_id,satellite_id=self.satellite_id,context=context,
                 language=self.language,agent_id=self.agent_id,extra_system_prompt=extra)
+            if not self.allowed():return self.rejected()
             self.conversation_id=result.conversation_id
             self.last_response=response_facts(result.response)
             speech=((result.response.as_dict().get('speech') or {}).get('plain') or {}).get('speech') or ''

@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "date": "2026-11-02",
+  "status": "source_ready_activation_pending",
+  "local_version": "1.1.1",
+  "common_version": "1.0.3",
+  "observed_loop": {
+    "output_starts": 27,
+    "interruptions": 25,
+    "completed": 2
+  },
+  "changes": [
+    "immutable capture interval echo veto",
+    "400ms reference and negotiated cancellation tail",
+    "fresh bounded read-only household catalogue",
+    "exact Czech light aliases",
+    "quiet television guard at actual service boundary"
+  ],
+  "fresh_tests": {
+    "companion": 76,
+    "local_duplex": 115
+  },
+  "other_fix_pass_tests": {
+    "homepod": 65,
+    "diagnostics": 30,
+    "speaker_identity": 154,
+    "addon": 246,
+    "addon_skipped": 20
+  },
+  "review": {
+    "critical": 0,
+    "important": 4,
+    "minor_regraded_important": 1,
+    "all_findings_fixed": true,
+    "fix_passes": 1
+  },
+  "action_permissions_expanded": false,
+  "raw_audio_or_microphone_transcripts_saved": false,
+  "idle_cloud_stream": false,
+  "homepod_audibility_previously_confirmed_by_owner": true,
+  "voice": "Marin",
+  "acoustic_acceptance_verified": false,
+  "remaining": [
+    "actual household self-echo/interruption/loud-TV acceptance",
+    "bathroom light channel identity unknown"
+  ],
+  "activation": null
+}

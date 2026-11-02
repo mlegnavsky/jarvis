@@ -9,12 +9,13 @@ MEDIA=('media_player.obyvak_televize_obyvak','media_player.obyvaci_pokoj_obyvaci
 def media_active(hass):
     states=getattr(hass,'states',None)
     if states is None:return True
+    if states.get('media_player.obyvaci_pokoj_obyvaci_pokoj') is None:return True
     return any((state:=states.get(entity)) is not None and state.state in
                ('on','playing','buffering','unknown','unavailable') for entity in MEDIA)
 
 
 def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, *, last_wakeups=None, cooldown=2., clock=time.monotonic):
-    report = {'status': 'unsupported_core', 'version': 4, 'commands': 0, 'blocked': 0,
+    report = {'status': 'unsupported_core', 'version': 5, 'commands': 0, 'blocked': 0,
               'scope': 'whole_light_utterance_after_acoustic_hint',
               'continuation_wait_s':.75,'television_policy':'explicit_Jarvis_required_while_media_active',
               'identity_inference': False, 'speech_to_text': True,

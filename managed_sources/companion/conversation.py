@@ -7,8 +7,9 @@ import json
 import logging
 import time
 from .runtime import CompanionRuntime
-from .room_commands import async_handle_room_command
+from .room_commands import async_handle_room_command, voice_input_allowed
 from .dialogue import COMPANION_INSTRUCTIONS, is_pause, is_stop, recent_session, should_continue, is_noise_transcript, local_time_answer
+from .catalog import catalog_context, bound_messages, keep_recent_turns, safe_state, clipped
 from typing import Any, Literal
 
 from openai._exceptions import OpenAIError
@@ -190,7 +191,13 @@ class ExtendedOpenAIAgentEntity(
         exposed_entities = self.get_exposed_entities()
 
         conversation_id = chat_log.conversation_id
+        if not voice_input_allowed(self.hass,user_input):
+            denied=intent.IntentResponse(language=user_input.language);denied.async_set_speech('')
+            return conversation.ConversationResult(response=denied,conversation_id=conversation_id,continue_conversation=False)
         companion_turn = await self._companion.prepare(user_input, conversation_id, exposed_entities)
+        if not voice_input_allowed(self.hass,user_input):
+            denied=intent.IntentResponse(language=user_input.language);denied.async_set_speech('')
+            return conversation.ConversationResult(response=denied,conversation_id=conversation_id,continue_conversation=False)
         if companion_turn.reset_history or self._history_principals.get(conversation_id) != companion_turn.principal:
             self.history.pop(conversation_id, None)
         local_reply = companion_turn.local_reply
@@ -216,6 +223,7 @@ class ExtendedOpenAIAgentEntity(
                 conversation_id=conversation_id, continue_conversation=continuing)
         if conversation_id in self.history:
             messages = self.history[conversation_id]
+            messages[0] = self._generate_system_message(exposed_entities, user_input)
         else:
             user_input.conversation_id = conversation_id
             try:
@@ -241,7 +249,7 @@ class ExtendedOpenAIAgentEntity(
 
         messages.append(user_message)
 
-        memory_context = {"role": "system", "content": companion_turn.prompt}
+        memory_context = {"role": "system", "content": companion_turn.prompt + '\n' + catalog_context(self.hass, exposed_entities)}
         query_messages = [messages[0], memory_context, *messages[1:]]
         try:
             query_response = await self.query(user_input, query_messages, exposed_entities, 0)
@@ -349,15 +357,15 @@ class ExtendedOpenAIAgentEntity(
             entity = entity_registry.async_get(entity_id)
 
             aliases = []
-            if entity and entity.aliases:
-                aliases = entity.aliases
+            if entity:
+                aliases = er.async_get_entity_aliases(self.hass, entity)
 
             exposed_entities.append(
                 {
                     "entity_id": entity_id,
-                    "name": state.name,
-                    "state": self.hass.states.get(entity_id).state,
-                    "aliases": aliases,
+                    "name": clipped(state.name),
+                    "state": safe_state(entity_id,state.state,state.attributes,state.name),
+                    "aliases": [clipped(alias,80) for alias in aliases][:8],
                     "last_changed": state.last_changed.isoformat(),
                 }
             )
@@ -390,22 +398,8 @@ class ExtendedOpenAIAgentEntity(
         )
 
         if strategy == "clear":
-            last_user_message_index = None
-            for i in reversed(range(len(messages))):
-                if messages[i]["role"] == "user":
-                    last_user_message_index = i
-                    break
-
-            if last_user_message_index is not None:
-                # Keep this turn's identity/memory context during recursive tool calls.
-                messages[1:last_user_message_index] = [
-                    item for item in messages[1:last_user_message_index]
-                    if item.get("role") == "system"
-                ]
-                # refresh system prompt when all messages are deleted
-                messages[0] = self._generate_system_message(
-                    exposed_entities, user_input
-                )
+            keep_recent_turns(messages,4)
+            messages[0] = self._generate_system_message(exposed_entities, user_input)
 
     async def query(
         self,
@@ -452,6 +446,10 @@ class ExtendedOpenAIAgentEntity(
         )
         token_kwargs = {"max_completion_tokens": max_tokens} if use_new_token_param else {"max_tokens": max_tokens}
 
+        try:
+            bound_messages(messages)
+        except ValueError as exc:
+            raise HomeAssistantError('Kontext zařízení a aktuálního dotazu je příliš velký.') from exc
         response = await self.client.chat.completions.create(
             model=model,
             messages=messages,

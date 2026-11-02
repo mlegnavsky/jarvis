@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-VERSION='1.0.2'
+VERSION='1.0.3'
 
 def normalized(text):
     return ' '.join(re.findall(r'\w+', ''.join(c for c in unicodedata.normalize('NFKD',str(text).casefold()) if not unicodedata.combining(c))))
@@ -24,18 +24,25 @@ class Command:
 
 
 def contains_quotes(text):
-    return any(char in str(text) for char in ('"',"'",'„','“','”','«','»','`'))
+    return any(char in str(text) for char in ('"',"'",'„','“','”','«','»','`','‚','‘','’','‹','›'))
 
 def parse_command(text):
     # Quoted examples are data, including when a wake name precedes them.
     if contains_quotes(text):return None
     value=strip_address(text)
-    light_verb=r'(?:rozsvit|rozsvitit|zhasni|zhasnout|zapni|zapnout|vypni|vypnout)\b'
+    light_verb=r'(?:rozsvit|rozsvitit|rosvit|rozsvet|zhasni|zhasnout|zapni|zapnout|vypni|vypnout)\b'
     value=re.sub(r'^(?:ano|jo|jasne) (?=(?:prosim\b|muzes\b|'+light_verb+'))','',value)
     value=re.sub(r'^(?:muzes|mohla bys)(?: mi)?(?: prosim(?: te)?)? (?='+light_verb+')','',value)
     value=re.sub(r'^prosim(?: te)?\s+','',value)
     value=re.sub(r'\s+prosim(?: te)?$','',value)
     value=re.sub(r' at tady lepe vidim$','',value)
+    value=re.sub(r'^(?:rosvit|rozsvet)(?= |$)','rozsvit',value)
+    value=re.sub(r'\bsvetylko\b','svetlo',value)
+    value=re.sub(r'\bsvetylka\b','svetla',value)
+    value=re.sub(r'^udelej svetlo(?= |$)','rozsvit svetlo',value)
+    value=re.sub(r'^(svetlo|svetla) (zapnout|zapni|vypnout|vypni)(?= |$)',
+                 lambda match:match[2]+' '+match[1],value)
+    value=re.sub(r'^(svetlo|svetla)(?= (?:v|ve|vsude)\b|$)',r'rozsvit \1',value)
     # STT may choose the Czech infinitive for an otherwise exact imperative.
     verbs={'rozsvitit':'rozsvit','zhasnout':'zhasni','zapnout':'zapni','vypnout':'vypni'}
     value=re.sub(r'^(rozsvitit|zhasnout|zapnout|vypnout)\b',lambda match:verbs[match[1]],value)

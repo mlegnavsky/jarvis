@@ -2,6 +2,12 @@ import unittest
 from tv_session import TVSession
 
 class TVSessionTests(unittest.IsolatedAsyncioTestCase):
+ def test_only_verified_quiet_tv_state_allows_microphone_input(self):
+  for state in ('off','idle','paused','standby','playing','on','buffering','unknown','unavailable'):
+   session=self.session(state)
+   self.assertEqual(session.input_safe(),state in ('off','idle','paused','standby'),state)
+  self.state=None
+  self.assertFalse(session.input_safe())
  def session(self,state='playing',confirm=True,fail=False):
   self.state={'state':state,'attributes':{'media_title':'Film','app_id':'tv'}}
   self.calls=[]

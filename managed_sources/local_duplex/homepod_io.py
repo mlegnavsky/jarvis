@@ -83,6 +83,9 @@ class HomePodOutput(LocalOutput):
         self.read_state=read_state;self.timing=timing;self.shared_volume=shared_volume
         self.native_task=None;self.last_volume_decision=None;self.latency_s=None
         self.cleanup_tasks=set();self.stop_timeout=3.
+        self.echo_min_bytes=12800
+
+    def echo_tail_seconds(self):return max(.4,(self.latency_s or 0)+.4)
 
     def snapshot(self):
         return {**super().snapshot(),'target':HOME,'transport':'native_raop_local_file',
@@ -138,12 +141,14 @@ class HomePodOutput(LocalOutput):
                     if self.started_at is None and observed is not None:
                         self.latency_s=observed['latency_s']
                         self.started_at=self.clock()-observed['position_s']+self.latency_s
+                        self.remember_speech()
                     if self.started_at is None and self.clock()>=deadline:raise TimeoutError('homepod_audio_start_unobserved')
                     await self.sleep(.02)
                 await self.native_task
             if not self.owned or owner!=self.generation:raise asyncio.CancelledError()
             if self.started_at is None:raise ValueError('homepod_audio_start_unobserved')
             self.completed+=1;self.owned=False;self.tail_until=self.clock()+.4
+            self.text_echo.stopped(at=self.clock(),tail=.4)
         except asyncio.CancelledError:
             await self.stop();raise
         except Exception as exc:
@@ -158,4 +163,5 @@ class HomePodOutput(LocalOutput):
             if was_owned and not task.cancelling():task.cancel()
             async with asyncio.timeout(self.stop_timeout):await asyncio.shield(asyncio.gather(task,return_exceptions=True))
         if was_owned:self.stopped+=1;self.last_stop_s=round(self.clock()-started,3)
-        self.tail_until=self.clock()+.4
+        self.tail_until=self.clock()+self.echo_tail_seconds()
+        self.text_echo.stopped(at=self.clock(),tail=self.echo_tail_seconds())

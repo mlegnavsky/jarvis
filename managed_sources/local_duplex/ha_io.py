@@ -9,9 +9,11 @@ import wave
 if __package__:
     from .segmenter import EchoReference, samples
     from .speech_file import release_prepared
+    from .text_echo import TextEcho
 else:
     from segmenter import EchoReference, samples
     from speech_file import release_prepared
+    from text_echo import TextEcho
 
 
 def pcm_signal(pcm):
@@ -135,11 +137,24 @@ class LocalOutput:
         self.last_reference_duration_s=None;self.last_error=None
         self.tail_until=0.;self.last_overlap_at=None
         self.pending=[]
+        self.echo_min_bytes=7680;self.text_echo=TextEcho();self.pending_text='';self.text_echo_suppressed=0
 
     def snapshot(self):
         return {key:getattr(self,key) for key in ('owned','started','completed','skipped',
             'stopped','echo_frames','overlap_frames','discarded','last_stop_s',
-            'last_reference_duration_s','last_error')}
+            'last_reference_duration_s','last_error','text_echo_suppressed')}
+
+    def echo_tail_seconds(self):return .4
+
+    def remember_speech(self):
+        self.text_echo.remember(self.pending_text,started_at=self.started_at,
+            duration=self.last_reference_duration_s,tail=.4)
+
+    def is_own_transcript(self,text,audio,captured_until):
+        matched=self.text_echo.matches(text,captured_from=captured_until-len(audio)/32000,
+                                      captured_until=captured_until)
+        if matched:self.text_echo_suppressed+=1
+        return matched
 
     def playing(self):
         return self.owned and self.started_at is not None and self.clock()>=self.started_at
@@ -165,6 +180,7 @@ class LocalOutput:
         self.generation+=1;owner=self.generation
         if self.available_player() is None:return
         prepared=await self.tts(text)
+        self.pending_text=text
         try:await self.play_prepared(prepared,owner)
         finally:await self.release_resource(prepared)
 
@@ -189,6 +205,7 @@ class LocalOutput:
                     await self.sleep(.02)
             if not self.owned or owner!=self.generation:raise asyncio.CancelledError()
             self.started_at=self.clock()
+            self.remember_speech()
             async with asyncio.timeout(95):
                 while self.owned and owner==self.generation and str(player.state)=='playing':
                     if not player.available:raise ValueError('local_speaker_disconnected')
@@ -196,7 +213,8 @@ class LocalOutput:
             if not self.owned or owner!=self.generation:raise asyncio.CancelledError()
             if not player.available or str(player.state) not in ('idle','off','on'):
                 raise ValueError('local_playback_end_unconfirmed')
-            self.completed+=1;self.owned=False;self.tail_until=self.clock()+.4
+            self.completed+=1;self.owned=False;self.tail_until=self.clock()+self.echo_tail_seconds()
+            self.text_echo.stopped(at=self.clock(),tail=.4)
         except asyncio.CancelledError:
             await self.stop()
             raise
@@ -215,7 +233,8 @@ class LocalOutput:
         async with asyncio.timeout(2):
             while player and player.available and str(player.state) not in ('idle','off','on'):await self.sleep(.02)
         if not player.available:raise ValueError('speaker_stop_unconfirmed')
-        self.stopped+=1;self.last_stop_s=round(self.clock()-started,3);self.tail_until=self.clock()+.4
+        self.stopped+=1;self.last_stop_s=round(self.clock()-started,3);self.tail_until=self.clock()+self.echo_tail_seconds()
+        self.text_echo.stopped(at=self.clock(),tail=self.echo_tail_seconds())
 
     def gate(self,frame,session):
         probability=frame.speech_probability or 0.
@@ -229,7 +248,7 @@ class LocalOutput:
         if self.owned:self.overlap_frames+=1;self.last_overlap_at=self.clock()
         self.recent.append(frame.audio);self.recent_bytes+=len(frame.audio)
         while self.recent_bytes>12800:self.recent_bytes-=len(self.recent.popleft())
-        if self.recent_bytes<7680:
+        if self.recent_bytes<self.echo_min_bytes:
             self.pending.append(candidate);return []
         candidates,self.pending=self.pending+[candidate],[]
         echo=self.reference.is_echo(b''.join(self.recent),played_seconds=self.clock()-self.started_at)

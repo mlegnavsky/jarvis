@@ -25,6 +25,22 @@ FORMS = {
 }
 
 
+def voice_input_allowed(hass,user):
+    """Check the exact active voice context; other clients keep their policy."""
+    data=getattr(hass,'data',{})
+    guards=data.get('jarvis_voice_input_guards',{}) if isinstance(data,dict) else {}
+    context_id=getattr(getattr(user,'context',None),'id',None)
+    if context_id in guards:
+        try:return guards[context_id]() is True
+        except Exception:return False
+    primary=(getattr(user,'satellite_id',None)=='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
+             or getattr(user,'device_id',None)=='6275b9b88bb104060b637664f4cc7be8')
+    if not primary:return True
+    try:state=hass.states.get('media_player.obyvaci_pokoj_obyvaci_pokoj')
+    except Exception:return False
+    return bool(state and state.state in ('paused','off','idle','standby'))
+
+
 def resolve(text, source_area, areas, exposed):
     parsed=parse_command(text)
     if parsed is None:return None
@@ -79,6 +95,10 @@ async def execute(hass, request, context, *, user=None, token=None):
         return 'Tento hlasový povel smí ovládat pouze zámek hlavního vchodu.'
     speaker=getattr(hass,'data',{}).get('jarvis_speaker_identity')
     voice=bool(user and (getattr(user,'device_id',None) or getattr(user,'satellite_id',None)))
+    if voice and not voice_input_allowed(hass,user):
+        if speaker and callable(cancel:=getattr(getattr(speaker,'gate',None),'cancel',None)):
+            cancel(speaker.device(user))
+        return ''
     if voice and (speaker is None or not getattr(speaker,'enforce',False)):
         return 'Povel neprovedu, ověřování hlasu není dostupné.'
     if speaker and getattr(speaker,'enforce',False) and user is None:
@@ -89,6 +109,7 @@ async def execute(hass, request, context, *, user=None, token=None):
     elif domain=='lock':
         # This new lock route is only for voice-authorized local control.
         return 'Zámek vyžaduje ověřený hlasový povel.'
+    if voice and not voice_input_allowed(hass,user):return ''
     try:
         await hass.services.async_call(domain, request['service'],
             {'entity_id': request['entity_ids']}, blocking=True, context=context)
@@ -157,17 +178,22 @@ def native_resolution_probe(hass):
     """Inspect real source/target registries without calling any services."""
     from types import SimpleNamespace
     from homeassistant.components.homeassistant.exposed_entities import async_should_expose
+    from .catalog import catalog_context
+    all_exposed=[{'entity_id':state.entity_id,'state':state.state} for state in hass.states.async_all()
+                 if async_should_expose(hass,'conversation',state.entity_id)]
+    catalog_context(hass,all_exposed)
     exposed = [{'entity_id': state.entity_id, 'state': state.state}
                for state in hass.states.async_all()
                if state.entity_id.startswith('light.') and async_should_expose(hass, 'conversation', state.entity_id)]
     cases = []
-    for text in ('Rozsviť', 'Zhasni', 'Rozsvítit světlo v obýváku.', 'Zhasnout světlo', 'Zhasni v dětském pokoji', 'Můžeš prosím zhasnout v dětském pokoji?', 'Rozsviť v koupelně', 'Zhasni v chodbičce'):
+    for text in ('Rozsviť', 'Zhasni', 'Rozsvítit světlo v obýváku.', 'Zhasnout světlo', 'Zhasni v dětském pokoji', 'Můžeš prosím zhasnout v dětském pokoji?', 'Rozsviť v koupelně', 'Zhasni v chodbičce', 'Světlo', 'Prosím světlo', 'Světlo v dětském pokojíku', 'Světlo vypnout', 'Rozsveť'):
         user = SimpleNamespace(text=text, device_id=None,
             satellite_id='assist_satellite.home_assistant_voice_0a8bde_assist_satellite')
         request = resolve_input(hass, user, exposed)
         cases.append({'text': text, **(request or {'error': 'not_handled'})})
     return {'status': 'passed' if all(c.get('entity_ids') and not c.get('error') for c in cases) else 'needs_configuration',
             'scope': 'real exposed entities and area registries; resolution only; no service calls',
-            'wake_phrase': 'Hey Jarvis', 'new_acoustic_wake_models_installed': False, 'cases': cases}
+            'wake_phrase': 'Hey Jarvis', 'new_acoustic_wake_models_installed': False, 'cases': cases,
+            'household_catalog':hass.data.get('jarvis_household_catalog_summary')}
 
 
