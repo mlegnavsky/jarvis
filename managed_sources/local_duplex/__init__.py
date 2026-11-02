@@ -37,7 +37,7 @@ from .speech_file import SpeechFiles, create_owned_file, release_prepared
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.2.0'
+VERSION='1.2.1'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -57,6 +57,7 @@ class LocalDialogue:
         self.root=Path(hass.config.path('jarvis_workspace','local_duplex'))
         self.lock=asyncio.Lock();self.save_lock=asyncio.Lock();self.probing=False
         self.source_revision=None
+        self.interruptions_disabled_until=0.
         self.speech_files=None
         self.homepod_init_task=None
         self.homepod_initializing=False
@@ -198,7 +199,8 @@ class LocalDialogue:
             input_allowed=input_allowed)
         session=Session(transcribe=bridge.transcribe,respond=bridge.respond,play=output.play,stop=output.stop,
             gate=output.gate,silence_seconds=run.audio_settings.silence_seconds,on_interrupt=bridge.interrupted,
-            playback_active=output.playing,on_capture=bridge.set_capture_time)
+            playback_active=output.playing,on_capture=bridge.set_capture_time,
+            interruptions_enabled=lambda:time.monotonic()>=self.interruptions_disabled_until)
         self.active=session;self.output=output;self.active_run=str(run.id);self.report['sessions']+=1
         async def changed(event):
             state=event.data.get('new_state')
@@ -339,6 +341,14 @@ class LocalDialogue:
                 self.probing=False
                 await self.save()
 
+    async def suspend_interruptions(self):
+        self.interruptions_disabled_until=time.monotonic()+600
+        await self.save()
+
+    async def resume_interruptions(self):
+        self.interruptions_disabled_until=0.
+        await self.save()
+
     async def audio_audit(self):
         # Retained control name now verifies the requested output, never Voice PE speech.
         await self.output_test()
@@ -351,9 +361,13 @@ class LocalDialogue:
             self.report['last_control_nonce']=request['nonce']
             handler={'probe':self.probe,'output_test':self.output_test,
                 'audio_recover':self.audio_recover,'voice_agent_probe':self.voice_agent_probe,
-                'audio_audit':self.audio_audit}[request['action']]
+                'audio_audit':self.audio_audit,'suspend_interruptions':self.suspend_interruptions,
+                'resume_interruptions':self.resume_interruptions}[request['action']]
             self.hass.async_create_task(handler())
         report=dict(self.report)
+        remaining=max(0.,self.interruptions_disabled_until-time.monotonic())
+        report['interruption_test']={'interruptions_enabled':remaining==0,'remaining_s':round(remaining,1),
+            'auto_restore_seconds':600,'input_during_speech':'normal' if remaining==0 else 'discarded'}
         report.update(updated_at=dt_util.utcnow().isoformat(),adapter=getattr(self,'adapter','starting'),
             status='configured' if self.ready() and self.speech_ready() and getattr(self,'adapter',None)=='active' else 'waiting_for_speaker',
             active_run=self.active_run,active=self.active.snapshot() if self.active else None,

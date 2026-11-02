@@ -33,3 +33,9 @@ class ControlTests(unittest.TestCase):
             self.assertEqual(self.read(data),data)
             self.assertIsNone(self.read({**data,'target':'other-device'}))
             self.assertIsNone(self.read({**data,'message':'arbitrary'}))
+
+    def test_bounded_interrupt_test_controls(self):
+        for action in ('suspend_interruptions','resume_interruptions'):
+            data={'action':action,'nonce':'d'*32,'expires_at':180}
+            self.assertEqual(self.read(data),data)
+            self.assertIsNone(self.read({**data,'duration':999999}))

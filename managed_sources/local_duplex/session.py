@@ -13,11 +13,13 @@ class Session:
     def __init__(self, *, transcribe, respond, play, stop, idle_seconds=8,
                  clock=time.monotonic, gate=None, silence_seconds=.7,
                  max_seconds=240, max_turns=24,on_interrupt=None,input_timeout_seconds=5,playback_active=None,
-                 on_capture=None):
+                 on_capture=None,interruptions_enabled=None):
         self.transcribe=transcribe;self.respond=respond;self.play=play;self.stop=stop
         self.clock=clock;self.gate=gate;self.idle_seconds=idle_seconds
         self.on_interrupt=on_interrupt
         self.on_capture=on_capture
+        self.interruptions_enabled=interruptions_enabled or (lambda:True)
+        self.input_suppressed=False;self.suppressed_frames=0
         self.playback_active=playback_active or (lambda:self.stage=='speaking')
         self.max_seconds=max_seconds;self.max_turns=max_turns
         self.input_timeout_seconds=input_timeout_seconds
@@ -33,7 +35,7 @@ class Session:
     def snapshot(self):
         return {key:getattr(self,key) for key in ('stage','frames','frames_during_output',
             'completed_turns','interruptions','failures','last_error','truncated','reason',
-            'deferred_turns','deferred_replaced','deferred_expired')}
+            'deferred_turns','deferred_replaced','deferred_expired','suppressed_frames')}
 
     def request_close(self, reason):
         self.reason=reason;self.done=True;self._pending=None;self.finished.set()
@@ -56,6 +58,7 @@ class Session:
 
     async def submit(self, audio, voiced, truncated,*,captured_until=None):
         if self.closed or self.done:return
+        if self.stage=='speaking' and not self.interruptions_enabled():return
         captured_until=self.clock() if captured_until is None else captured_until
         if truncated:
             self.truncated+=1;self.idle_at=self.clock();return
@@ -115,7 +118,13 @@ class Session:
                     if self.done:return
                     self.frames+=1
                     if self.playback_active():self.frames_during_output+=1
-                    qualified=self.gate(frame,self) if self.gate else [(frame.audio,frame.speech_probability)]
+                    suppress_input=self.stage=='speaking' and not self.interruptions_enabled()
+                    if suppress_input and not self.input_suppressed:
+                        self.segmenter=Segmenter(silence_seconds=self.segmenter.silence_seconds)
+                    self.input_suppressed=suppress_input
+                    if suppress_input:
+                        self.suppressed_frames+=1;qualified=[]
+                    else:qualified=self.gate(frame,self) if self.gate else [(frame.audio,frame.speech_probability)]
                     for audio,probability in qualified:
                         for event in self.segmenter.feed(audio,probability or 0):
                             if event.kind=='onset':

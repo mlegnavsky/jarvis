@@ -21,6 +21,38 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
             playback_active=overrides.get('playback_active'),
             input_timeout_seconds=overrides.get('input_timeout_seconds',5))
 
+    async def test_temporary_no_interrupt_discards_overlap_then_accepts_followup(self):
+        session=self.session()
+        enabled=[False]
+        session.interruptions_enabled=lambda:enabled[0]
+        await session.submit(b'first',1,False);await self.playing.wait()
+        original=session.task
+        queue=asyncio.Queue()
+        async def frames():
+            while (frame:=await queue.get()) is not None:yield frame
+        running=asyncio.create_task(session.run(frames()))
+        for _ in range(100):await queue.put(NS(audio=bytes(320),speech_probability=.99))
+        async with asyncio.timeout(1):
+            while session.frames<100:await asyncio.sleep(0)
+        self.assertEqual(session.interruptions,0)
+        self.assertIs(session.task,original)
+        self.assertEqual(session.segmenter.buffered_bytes,0)
+        self.finish.set();await original
+        enabled[0]=True
+        await session.submit(b'followup',1,False);await session.task
+        self.assertEqual([c for c in self.calls if c[0]=='stt'],[('stt',b'first'),('stt',b'followup')])
+        session.request_close('test');await running
+
+    async def test_disabled_interrupt_also_rejects_completed_overlap(self):
+        session=self.session()
+        session.interruptions_enabled=lambda:False
+        await session.submit(b'first',1,False);await self.playing.wait()
+        original=session.task
+        await session.submit(b'overlap',1,False)
+        self.assertIs(session.task,original)
+        self.assertEqual(session.interruptions,0)
+        await session.close()
+
     async def test_spoken_question_keeps_followup_even_without_provider_flag(self):
         async def respond(text):return NS(speech='Chceš pokračovat?',continuing=False)
         async def play(text):self.calls.append(('play',text))
