@@ -6,6 +6,6 @@ Keep one active output: local_duplex native RAOP local WAV. Read current HomePod
 
 - [x] Reproduce sharedTV0/mute suppressing nativeHomePod45 with red test.
 - [x] Remove shared-volume callbacks, consolidate TVSession and delete retired source.
-- [ ] Full tests and independent review; preserve all TV safety/ownership and HomePod zero/mute guards.
-- [ ] Publish then backed-up CAS deploy/restart once; verify source/report/native fixed output and leave selected wake/pipeline unchanged.
-- [ ] After successful activation remove exact inactive legacy runtime files with CAS; write retired-report marker; preserve history/private rollback and audit.
+- [x] Full tests and independent review; preserve all TV safety/ownership and HomePod zero/mute guards.
+- [x] Publish then backed-up CAS deploy/restart once; verify source/report/native fixed output and leave selected wake/pipeline unchanged.
+- [x] After successful activation remove exact inactive legacy runtime files with CAS; write retired-report marker; preserve history/private rollback and audit.
