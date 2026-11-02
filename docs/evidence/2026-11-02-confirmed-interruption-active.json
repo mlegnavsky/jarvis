@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "phase": "active_verified",
+  "version": "1.2.5",
+  "source_commit": "01ef3ece7ba7112356d6b90ebe303857d33376fe",
+  "local_reviewed_source_commit": "cd8a8d48ea6c4a1a45d4366a3e9507aa151b5313",
+  "source_tree": "e9442be48b80ac6df5bc59b45c2242d1edb23239",
+  "source_published": true,
+  "source_tree_matches_reviewed": true,
+  "apply_job": "echo-stutter-apply-20261102",
+  "plan": "echo-stutter-prepare-20261102",
+  "activated_at": "2026-11-02T22:18:17.209550+00:00",
+  "backup": "86b20d21",
+  "core_version": "2026.6.4",
+  "runtime_source": "604e6b845dc25063ad5962babd8868b37864c1cc5dc2aced29424c996b8bb2ab",
+  "cause": "Playback was cancelled at speech onset before the existing transcript echo rejection could run.",
+  "interruption_policy": "completed_transcript_before_stop",
+  "human_barge_in": "after completed utterance endpoint and accepted STT transcript; not immediate first syllable",
+  "baseline": {
+    "output_starts": 4,
+    "microphone_interruptions": 4,
+    "output_completions": 0,
+    "transport_errors": 0
+  },
+  "tests": {
+    "duplex": 159,
+    "companion": 83,
+    "identity": 154,
+    "voice_diagnostics": 30,
+    "addon_total": 242,
+    "addon_skipped": 20,
+    "manifest_and_diff": "passed",
+    "ci": "passed",
+    "ci_runs": [
+      41535664685,
+      41535672715
+    ]
+  },
+  "review": {
+    "p1_fixed": 2,
+    "p2_fixed": 1,
+    "fix_passes": 1,
+    "regressions": "Rejected echo preserves playback and capture; one STT result; natural completion; source EOF; pending correction during confirmation/stop; slow STT cleanup; stale input after stop."
+  },
+  "self_test": {
+    "status": "passed",
+    "scope": "native_VAD_and_TTS_reference_no_playback",
+    "native_vad_probability": 0.00439656525850296,
+    "native_vad_warmup_frames": 77,
+    "reference_seconds": 2.8316875,
+    "reference_signal": {
+      "duration_s": 2.832,
+      "silent": false,
+      "peak_dbfs": -9.07,
+      "rms_dbfs": -23.71
+    },
+    "microphone_opened": false,
+    "audible_playback": false,
+    "source_revision": "604e6b845dc25063ad5962babd8868b37864c1cc5dc2aced29424c996b8bb2ab",
+    "pipeline_signature": "7e4a5a90ac21fdfa8394d3fad1cc682875dec1bf74b5a6baab85ac471fdf5f91"
+  },
+  "output_test": {
+    "status": "passed",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "microphone_opened": false,
+    "native_playback": {
+      "owned": false,
+      "started": 1,
+      "completed": 1,
+      "skipped": 0,
+      "stopped": 0,
+      "echo_frames": 0,
+      "overlap_frames": 0,
+      "discarded": 0,
+      "last_stop_s": null,
+      "last_reference_duration_s": 2.8316875,
+      "last_error": null,
+      "text_echo_suppressed": 0,
+      "tts_generation_ms": 36.4,
+      "first_audio_wait_ms": 2152.7,
+      "target": "media_player.homepod_obyvak_homepod_obyvak",
+      "transport": "native_raop_local_file",
+      "volume_decision": {
+        "volume": 0.45,
+        "muted": false,
+        "source": "raop",
+        "busy": false
+      },
+      "negotiated_latency_s": 1.5,
+      "sender_scheduling_delay_s": 1.5,
+      "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+      "pending_resource_cleanup": 0
+    },
+    "audibility_confirmed": false
+  },
+  "microphone": {
+    "state": "idle",
+    "mute": "off",
+    "observed_at": "2026-11-02T22:18:36.043599+00:00"
+  },
+  "raw_microphone_saved": false,
+  "native_aec_deployed": false,
+  "acoustic_acceptance_verified": false,
+  "one_second_response_verified": false,
+  "backup_cleanup": {
+    "deleted_slug": "a87833e4",
+    "kept_latest_three_and_protected": true,
+    "storage_before_gib": 1.6,
+    "storage_after_gib": 2.3
+  },
+  "files": [
+    {
+      "before_revision": "2e00d53680538eb0f93753edaa62e91381c542d39d5712a6bddc07c4e876ab0c",
+      "new_lines": 466,
+      "new_sha256": "3b921686cef0cb830bffd8c6336c76311fdd803c52e773042c86dd57ec4070a9",
+      "old_lines": 465,
+      "path": "custom_components/jarvis_local_duplex/__init__.py"
+    },
+    {
+      "before_revision": "f8e68dbfded68c2f0c61dc18558b14c156c0991be7611f3810bf2182bce03352",
+      "new_lines": 1,
+      "new_sha256": "0c6ccb1473aab0eeb63392ec5c6c2c5543b8aee190aca8732d090715c186b3e4",
+      "old_lines": 1,
+      "path": "custom_components/jarvis_local_duplex/manifest.json"
+    },
+    {
+      "before_revision": "3913f489836db5470e90f6f8b5e1130ac1767762bdedd83f10bb0ed45edc6f06",
+      "new_lines": 204,
+      "new_sha256": "477b1f174abc4b79900a678d8585e17991d35e085d675e70f03ef5383dd0594d",
+      "old_lines": 170,
+      "path": "custom_components/jarvis_local_duplex/session.py"
+    }
+  ],
+  "private_receipt": "jarvis_workspace/local_duplex/confirmed-interruption-receipt.json",
+  "next_acceptance": "Owner requests a short story, lets it finish without speaking, then tests a separate human interruption. Review fresh runtime counters after each."
+}
