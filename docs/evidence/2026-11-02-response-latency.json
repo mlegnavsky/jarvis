@@ -1,0 +1,49 @@
+{
+  "scope": "stage_measurement_not_latency_fix",
+  "source_commit": "59e64ec723750edce7abe6f822492276bb4d3ab2",
+  "runtime_version": "1.2.2",
+  "owner_reported_delay_s": 7,
+  "owner_confirmed": "speech_fluent_with_interruption_suspended",
+  "volume_zero": "explicit_owner_action_not_protocol_bug",
+  "observed_identity_inference_ms": 0.5,
+  "observed_negotiated_raop_latency_s": 1.5,
+  "new_metrics": [
+    "stt_ms",
+    "identity_ms",
+    "agent_ms",
+    "tts_generation_ms",
+    "estimated_first_audio_wait_ms",
+    "endpoint_silence_ms"
+  ],
+  "audio_timing_limitation": "native_timing_estimate_not_acoustic_confirmation",
+  "tests": {
+    "duplex": 134,
+    "addon_run": 242,
+    "addon_skipped": 20,
+    "manifest": "pass",
+    "diff_check": "pass"
+  },
+  "deployment_job": "latency-apply-20261102",
+  "activation": "active_verified",
+  "speed_improvement_verified": false,
+  "verified_at": "2026-11-02T20:11:12.899601+00:00",
+  "backup": "ecbb9b17",
+  "active_source_revision": "2a494879ffd247038c336be50791194927fc7baad316802141cbf59a5d811705",
+  "postboot_source_files_exact": 5,
+  "postboot_probe": "passed",
+  "ci": {
+    "run": 41516052630,
+    "conclusion": "success"
+  },
+  "fixed_output": {
+    "completed": 1,
+    "skipped": 0,
+    "tts_generation_or_cache_ms": 33.7,
+    "estimated_first_audio_wait_ms": 2051.6,
+    "negotiated_latency_s": 1.5,
+    "own_volume": 0.45,
+    "error": null
+  },
+  "ordinary_turn_metrics": "pending_owner_utterance",
+  "suspension_request": "latency-suspend-20261102"
+}
