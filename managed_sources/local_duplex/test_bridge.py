@@ -5,6 +5,18 @@ import unittest
 
 
 class BridgeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_stage_timings_measure_real_awaits_without_speech_content(self):
+        bridge=self.setup_bridge();clock=[0.];bridge.clock=lambda:clock[0]
+        async def transcribe(audio):clock[0]+=1.;return 'dotaz'
+        async def complete(*a,**kw):clock[0]+=.25
+        async def converse(**kw):
+            clock[0]+=2.
+            return NS(conversation_id='c',continue_conversation=True,
+                response=NS(as_dict=lambda:{'speech':{'plain':{'speech':'odpověď'}}}))
+        bridge.transcriber=transcribe;bridge.complete=complete;bridge.converse=converse
+        text=await bridge.transcribe(b'captured',1,False);await bridge.respond(text)
+        self.assertEqual(bridge.timings_ms,{'stt':1000.,'identity':250.,'agent':2000.})
+
     async def test_tv_audible_before_or_during_stt_never_reaches_authority(self):
         bridge=self.setup_bridge();safe=[False];bridge.input_allowed=lambda:safe[0]
         self.assertEqual(await bridge.transcribe(b'captured',1,False),'')

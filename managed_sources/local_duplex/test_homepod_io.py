@@ -12,6 +12,18 @@ MEDIA='media-source://media_source/local/jarvis_speech/jarvis-'+'a'*32+'.wav'
 class HomePodTests(unittest.IsolatedAsyncioTestCase):
     def module(self):return importlib.import_module('homepod_io')
 
+    async def test_output_reports_synthesis_and_first_audio_wait_separately(self):
+        output=await self.output();original=output.tts
+        async def tts(text):self.time+=.3;return await original(text)
+        output.tts=tts
+        task=asyncio.create_task(output.play('fixed'));await self.started.wait()
+        for _ in range(3):await asyncio.sleep(0)
+        facts=output.snapshot()
+        self.assertEqual(facts['tts_generation_ms'],300.)
+        self.assertGreater(facts['first_audio_wait_ms'],0.)
+        self.assertAlmostEqual(facts['first_audio_wait_ms'],(output.started_at-.3)*1000,places=1)
+        task.cancel();await asyncio.gather(task,return_exceptions=True)
+
     async def test_production_output_factory_routes_only_to_homepod(self):
         tree=ast.parse(Path(__file__).with_name('__init__.py').read_text())
         cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='LocalDialogue')

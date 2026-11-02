@@ -138,6 +138,8 @@ class HomePodOutput(LocalOutput):
                     if self.started_at is None and observed is not None:
                         self.latency_s=observed['latency_s']
                         self.started_at=self.clock()-observed['position_s']+self.latency_s
+                        if self.playback_requested_at is not None:
+                            self.first_audio_wait_ms=round(max(0,self.started_at-self.playback_requested_at)*1000,1)
                         self.remember_speech()
                     if self.started_at is None and self.clock()>=deadline:raise TimeoutError('homepod_audio_start_unobserved')
                     await self.sleep(.02)

@@ -136,13 +136,14 @@ class LocalOutput:
         self.echo_frames=0;self.overlap_frames=0;self.discarded=0;self.last_stop_s=None
         self.last_reference_duration_s=None;self.last_error=None
         self.tail_until=0.;self.last_overlap_at=None
+        self.tts_generation_ms=None;self.first_audio_wait_ms=None;self.playback_requested_at=None
         self.pending=[]
         self.echo_min_bytes=7680;self.text_echo=TextEcho();self.pending_text='';self.text_echo_suppressed=0
 
     def snapshot(self):
         return {key:getattr(self,key) for key in ('owned','started','completed','skipped',
             'stopped','echo_frames','overlap_frames','discarded','last_stop_s',
-            'last_reference_duration_s','last_error','text_echo_suppressed')}
+            'last_reference_duration_s','last_error','text_echo_suppressed','tts_generation_ms','first_audio_wait_ms')}
 
     def echo_tail_seconds(self):return .4
 
@@ -179,7 +180,11 @@ class LocalOutput:
     async def play(self,text):
         self.generation+=1;owner=self.generation
         if self.available_player() is None:return
-        prepared=await self.tts(text)
+        self.tts_generation_ms=None;self.first_audio_wait_ms=None
+        started=self.clock()
+        try:prepared=await self.tts(text)
+        finally:self.tts_generation_ms=round((self.clock()-started)*1000,1)
+        self.playback_requested_at=self.clock()
         self.pending_text=text
         try:await self.play_prepared(prepared,owner)
         finally:await self.release_resource(prepared)

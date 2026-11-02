@@ -37,7 +37,7 @@ from .speech_file import SpeechFiles, create_owned_file, release_prepared
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.2.1'
+VERSION='1.2.2'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -238,7 +238,8 @@ class LocalDialogue:
                 await television.release()
                 self.report['last_session']={'run_id':str(run.id),**session.snapshot(),
                     'output':output.snapshot(),'television':television.snapshot(),
-                    'agent_response':bridge.last_response,'input_blocked':bridge.input_blocked}
+                    'agent_response':bridge.last_response,'input_blocked':bridge.input_blocked,
+                    'timings_ms':dict(bridge.timings_ms),'endpoint_silence_ms':round(session.segmenter.silence_seconds*1000,1)}
                 self.active=None;self.output=None;self.active_run=None
                 await self.save()
 

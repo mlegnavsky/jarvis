@@ -34,6 +34,7 @@ class TurnBridge:
         self.transcript_filter=transcript_filter;self.clock=clock
         self.input_allowed=input_allowed;self.input_blocked=0
         self.capture_ended_at=None
+        self.timings_ms={}
 
     def set_capture_time(self,ended_at):self.capture_ended_at=ended_at
 
@@ -56,7 +57,10 @@ class TurnBridge:
         self.audio=audio;self.voiced=voiced
         captured_until=self.clock() if self.capture_ended_at is None else self.capture_ended_at
         self.capture_ended_at=None
-        text=await self.transcriber(audio)
+        self.timings_ms={}
+        started=self.clock()
+        try:text=await self.transcriber(audio)
+        finally:self.timings_ms['stt']=round((self.clock()-started)*1000,1)
         if not self.allowed():self.input_blocked+=1;self.clear();return ''
         text=self.transcript_filter(text,audio,captured_until)
         if not text:self.clear()
@@ -71,12 +75,18 @@ class TurnBridge:
             extra=(extra+'\n' if extra else '')+INTERRUPTION_MARKER
             self.interruption_pending=False
         try:
-            await self.complete(self.satellite_id,self.audio,self.voiced,text,
-                context_id=context.id,playback=self.playback_overlap(self.audio))
+            started=self.clock()
+            try:
+                await self.complete(self.satellite_id,self.audio,self.voiced,text,
+                    context_id=context.id,playback=self.playback_overlap(self.audio))
+            finally:self.timings_ms['identity']=round((self.clock()-started)*1000,1)
             if not self.allowed():return self.rejected()
-            result=await self.converse(text=text,conversation_id=self.conversation_id,
-                device_id=self.device_id,satellite_id=self.satellite_id,context=context,
-                language=self.language,agent_id=self.agent_id,extra_system_prompt=extra)
+            started=self.clock()
+            try:
+                result=await self.converse(text=text,conversation_id=self.conversation_id,
+                    device_id=self.device_id,satellite_id=self.satellite_id,context=context,
+                    language=self.language,agent_id=self.agent_id,extra_system_prompt=extra)
+            finally:self.timings_ms['agent']=round((self.clock()-started)*1000,1)
             if not self.allowed():return self.rejected()
             self.conversation_id=result.conversation_id
             self.last_response=response_facts(result.response)
