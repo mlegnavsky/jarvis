@@ -11,12 +11,15 @@ def fingerprint(state):
 class TVSession:
  def __init__(self,read_state,call_service):
   self.read_state=read_state;self.call_service=call_service
-  self._owner=None;self._lock=asyncio.Lock()
+  self._owner=None;self._lock=asyncio.Lock();self._generation=0
   self.paused=0;self.resumed=0;self.resume_requested=0;self.discarded=0;self.failed=0;self.last_error=None
  def observe(self,state):
   """Call for state updates, including intermediate external play/off changes."""
   if self._owner is not None and ((state or {}).get('state')!='paused' or fingerprint(state)!=self._owner):
    self._owner=None;self.discarded+=1
+ def abandon(self):
+  self._generation+=1
+  if self._owner is not None:self._owner=None;self.discarded+=1
  def shared_volume(self):
   """Fresh shared-output setting, only while this session owns the TV pause."""
   state=self.read_state()
@@ -35,11 +38,13 @@ class TVSession:
     # A second answer never replaces an invalidated lease in the same call.
     return
    if not state or state.get('state')!='playing':return
+   generation=self._generation
    original=fingerprint(state)
    try:
     async with asyncio.timeout(3):await self.call_service('media_pause')
     async with asyncio.timeout(1.2):
      while True:
+      if generation!=self._generation:self.discarded+=1;return
       state=self.read_state()
       if fingerprint(state)!=original:
        self.discarded+=1;return
@@ -47,6 +52,7 @@ class TVSession:
       if not state or state.get('state') not in ('playing','buffering'):
        self.discarded+=1;return
       await asyncio.sleep(.05)
+    if generation!=self._generation:self.discarded+=1;return
     self._owner=original;self.paused+=1
    except Exception as exc:
     self.failed+=1;self.last_error='pause_'+type(exc).__name__

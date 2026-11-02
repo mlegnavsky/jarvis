@@ -13,6 +13,21 @@ class TVSessionTests(unittest.IsolatedAsyncioTestCase):
  async def test_prepaused_never_resumed(self):
   session=self.session('paused');await session.acquire();await session.release()
   self.assertEqual(self.calls,[])
+ async def test_external_homepod_output_abandons_tv_resume(self):
+  session=self.session();await session.acquire();session.abandon();await session.release()
+  self.assertEqual(self.calls,['media_pause'])
+  self.assertFalse(session.snapshot()['owned'])
+ async def test_abandon_during_pause_await_prevents_late_ownership(self):
+  import asyncio
+  session=self.session();began=asyncio.Event();finish=asyncio.Event()
+  async def delayed(service):
+   self.calls.append(service)
+   if service=='media_pause':began.set();await finish.wait()
+   self.state['state']='paused' if service=='media_pause' else 'playing'
+  session.call_service=delayed
+  task=asyncio.create_task(session.acquire());await began.wait()
+  session.abandon();finish.set();await task;await session.release()
+  self.assertEqual(self.calls,['media_pause'])
  async def test_success_resumes_only_owned_pause(self):
   session=self.session();await session.acquire();self.assertTrue(session.snapshot()['owned'])
   await session.release();self.assertEqual(self.calls,['media_pause','media_play'])

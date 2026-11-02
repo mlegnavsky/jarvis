@@ -141,6 +141,9 @@ class LocalOutput:
             'stopped','echo_frames','overlap_frames','discarded','last_stop_s',
             'last_reference_duration_s','last_error')}
 
+    def playing(self):
+        return self.owned and self.started_at is not None and self.clock()>=self.started_at
+
     def disown(self):
         self.generation+=1;self.owned=False;self.reference=None;self.started_at=None
         self.pending.clear()
@@ -163,7 +166,10 @@ class LocalOutput:
         if self.available_player() is None:return
         prepared=await self.tts(text)
         try:await self.play_prepared(prepared,owner)
-        finally:await release_prepared(prepared)
+        finally:await self.release_resource(prepared)
+
+    async def release_resource(self,prepared):
+        await release_prepared(prepared)
 
     async def play_prepared(self,prepared,owner):
         if owner!=self.generation or asyncio.current_task().cancelling():raise asyncio.CancelledError()
@@ -216,7 +222,7 @@ class LocalOutput:
         candidate=(frame.audio,probability)
         session.segmenter.onset_seconds=.08
         active=self.owned or self.clock()<self.tail_until
-        if not active or self.started_at is None or self.reference is None:
+        if not active or self.started_at is None or self.reference is None or self.clock()<self.started_at:
             self.recent.clear();self.recent_bytes=0
             pending,self.pending=self.pending,[]
             return pending+[candidate]

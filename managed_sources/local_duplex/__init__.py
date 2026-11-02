@@ -4,7 +4,6 @@ from dataclasses import asdict, replace
 from datetime import timedelta
 import hashlib
 import json
-import logging
 from pathlib import Path
 import time
 from types import SimpleNamespace
@@ -31,14 +30,14 @@ from custom_components.jarvis_voice_diagnostics.turn_taking import spoken_name
 from .adapter import DELEGATE, install, native_session
 from .bridge import TurnBridge, response_facts
 from .control import read_control
-from .ha_io import (LocalOutput, decode_reference, is_output_change, pcm_signal,
-    prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native, stop_announcement)
+from .ha_io import (decode_reference, is_output_change, pcm_signal,
+    prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native)
 from .session import Session
-from .native_audit import AudioFacts, audit_native
 from .speech_file import SpeechFiles, create_owned_file, release_prepared
+from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.0.4'
+VERSION='1.1.0'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -59,14 +58,75 @@ class LocalDialogue:
         self.lock=asyncio.Lock();self.save_lock=asyncio.Lock();self.probing=False
         self.source_revision=None
         self.speech_files=None
-        self.report={'runtime_version':VERSION,'core_version':CORE_VERSION,'mode':'local_speaker_continuous_capture',
-            'speaker':PLAYER,'microphone':SATELLITE,'cloud_audio':'completed_utterances_only',
+        self.homepod_init_task=None
+        self.homepod_initializing=False
+        self.report={'runtime_version':VERSION,'core_version':CORE_VERSION,'mode':'local_microphone_homepod_speech',
+            'speaker':HOME,'microphone':SATELLITE,'cloud_audio':'completed_utterances_only',
             'raw_microphone_saved':False,'acoustic_acceptance_verified':False,
-            'firmware_changed':False,'sessions':0,'last_session':None,'self_test':{'status':'not_run'}}
+            'firmware_changed':False,'sessions':0,'last_session':None,'self_test':{'status':'not_run'},
+            'homepod_startup':{'status':'pending','policy':'startup45_once_then_current_volume'}}
 
     def player(self):
         component=self.hass.data.get(DATA_COMPONENT)
         return component.get_entity(PLAYER) if component else None
+
+    def homepod(self):
+        component=self.hass.data.get(DATA_COMPONENT)
+        return component.get_entity(HOME) if component else None
+
+    def speech_ready(self):
+        player=self.homepod()
+        return bool(player and player.available and getattr(player,'atv',None)
+            and self.report['homepod_startup']['status']=='applied')
+
+    def schedule_homepod_initialization(self):
+        player=self.homepod()
+        if (self.report['homepod_startup']['status']=='pending' and player and player.available
+                and not self.homepod_initializing
+                and (self.homepod_init_task is None or self.homepod_init_task.done())):
+            self.homepod_initializing=True
+            try:self.homepod_init_task=self.hass.async_create_task(self.initialize_homepod())
+            except BaseException:self.homepod_initializing=False;raise
+
+    async def initialize_homepod(self):
+        self.report['homepod_startup']={'status':'running','policy':'startup45_once_then_current_volume'}
+        try:self.report['homepod_startup']=await prime_homepod(self.homepod())
+        except HomePodNotReady as exc:
+            self.report['homepod_startup']={'status':'pending','error':type(exc).__name__,
+                'policy':'startup45_once_then_current_volume'}
+        except Exception as exc:
+            self.report['homepod_startup']={'status':'failed',
+                'error':type(exc).__name__,'policy':'startup45_once_then_current_volume'}
+        finally:
+            try:await self.save()
+            finally:self.homepod_initializing=False
+
+    async def ensure_homepod_initialized(self):
+        self.schedule_homepod_initialization()
+        if self.homepod_init_task is not None and not self.homepod_init_task.done():
+            await asyncio.shield(self.homepod_init_task)
+        return self.report['homepod_startup']['status']=='applied'
+
+    def homepod_audio_state(self,player,shared):
+        if self.report['homepod_startup']['status']!='applied':raise ValueError('homepod_not_initialized')
+        return homepod_state(player,shared)
+
+    def make_output(self,pipeline,shared_volume=lambda:None):
+        return HomePodOutput(self.homepod,lambda text:self.synthesize(text,pipeline),
+            play_homepod_file,self.homepod_audio_state,homepod_timing,shared_volume=shared_volume)
+
+    def television(self):
+        def read_tv():
+            state=self.hass.states.get(TELEVISION)
+            return state.as_dict() if state else None
+        async def tv_call(service):
+            await self.hass.services.async_call('media_player',service,{'entity_id':TELEVISION},blocking=True)
+        return TVSession(read_tv,tv_call)
+
+    @staticmethod
+    def shared_volume(television):
+        try:return television.shared_volume()
+        except ValueError:return None
 
     def ready(self):
         player=self.player();speaker=self.hass.data.get('jarvis_speaker_identity')
@@ -92,25 +152,20 @@ class LocalDialogue:
         prepared.pcm=pcm;prepared.signal=signal
         return prepared
 
-    async def start_output(self,player,media_id):
-        await player.async_play_media('music',media_id,announce=True)
-
-    async def stop_output(self,player):
-        if player is None or not player.available:raise ValueError('speaker_stop_unavailable')
-        stop_announcement(player)
-
     def output_changed(self,event):
-        return is_output_change(event.data,PLAYER,
+        return is_output_change(event.data,HOME,
             lambda data:async_extract_referenced_entity_ids(self.hass,TargetSelection(data)))
 
     async def handle(self,value):
         if self.probing:
             async def maintenance(_value):return None
             return await native_session(value,maintenance)
+        await self.ensure_homepod_initialized()
         async with self.lock:
             proof=self.report['self_test']
             if not self.ready() or proof.get('status')!='passed' or proof.get('pipeline_signature')!=pipeline_signature(value.run.pipeline):
-                return DELEGATE
+                async def unavailable(_value):return None
+                return await native_session(value,unavailable)
             return await native_session(value,self.dialogue)
 
     async def dialogue(self,value):
@@ -129,7 +184,8 @@ class LocalDialogue:
             text=str(result.text or '').strip()
             return '' if is_noise_transcript(text) else text
         async def converse(**kwargs):return await conversation.async_converse(hass,**kwargs)
-        output=LocalOutput(self.player,lambda text:self.synthesize(text,pipeline),self.start_output,self.stop_output)
+        television=self.television()
+        output=self.make_output(pipeline,lambda:self.shared_volume(television))
         def overlap(audio):return output.last_overlap_at is not None and time.monotonic()-output.last_overlap_at<len(audio)/32000+1
         bridge=TurnBridge(transcribe,hass.data['jarvis_speaker_identity'].complete,converse,
             context_factory=lambda:Context(parent_id=run.context.id),device_id=value.device_id,
@@ -138,14 +194,8 @@ class LocalDialogue:
             extra_system_prompt=value.conversation_extra_system_prompt,playback_overlap=overlap)
         session=Session(transcribe=bridge.transcribe,respond=bridge.respond,play=output.play,stop=output.stop,
             gate=output.gate,silence_seconds=run.audio_settings.silence_seconds,on_interrupt=bridge.interrupted,
-            playback_active=lambda:output.owned and output.started_at is not None)
+            playback_active=output.playing)
         self.active=session;self.output=output;self.active_run=str(run.id);self.report['sessions']+=1
-        def read_tv():
-            state=hass.states.get(TELEVISION)
-            return state.as_dict() if state else None
-        async def tv_call(service):
-            await hass.services.async_call('media_player',service,{'entity_id':TELEVISION},blocking=True)
-        television=TVSession(read_tv,tv_call)
         async def changed(event):
             state=event.data.get('new_state')
             if event.data['entity_id']==MUTE and (state is None or state.state!='off'):
@@ -156,7 +206,7 @@ class LocalDialogue:
                 if owned and not television.snapshot()['owned']:session.request_close('television_changed')
         def service_called(event):
             if self.output_changed(event):
-                output.disown();session.request_close('speaker_changed_externally')
+                output.disown();television.abandon();session.request_close('speaker_changed_externally')
         unsubscribe=async_track_state_change_event(hass,[MUTE,TELEVISION],changed)
         unsubscribe_service=hass.bus.async_listen(EVENT_CALL_SERVICE,service_called)
         try:
@@ -193,7 +243,7 @@ class LocalDialogue:
             enhancer=MicroVadSpeexEnhancer(0,0,True)
             warmup_frames,probability=prime_native_vad(enhancer)
             pipeline=async_get_pipeline(self.hass,PIPELINE)
-            async with asyncio.timeout(30):prepared=await self.synthesize('Zkouška místního hlasu.',pipeline)
+            async with asyncio.timeout(30):prepared=await self.synthesize('Zkouška hlasu na HomePodu.',pipeline)
             self.report['self_test']={'status':'passed','scope':'native_VAD_and_TTS_reference_no_playback',
                 'native_vad_probability':probability,'native_vad_warmup_frames':warmup_frames,
                 'reference_seconds':len(prepared.pcm)/32000,'reference_signal':prepared.signal,
@@ -255,71 +305,40 @@ class LocalDialogue:
             await self.save()
 
     async def output_test(self):
-        if self.active or self.probing:
-            self.report['output_test']={'status':'busy','microphone_opened':False}
-            return
+        if self.probing:
+            self.report['output_test']={'status':'busy','microphone_opened':False,'speaker':HOME};return
         self.probing=True
-        output=LocalOutput(self.player,lambda text:self.synthesize(text,async_get_pipeline(self.hass,PIPELINE)),
-            self.start_output,self.stop_output)
+        if self.active:self.active.request_close('operator_homepod_output_test')
+        television=self.television()
+        output=self.make_output(async_get_pipeline(self.hass,PIPELINE),lambda:self.shared_volume(television))
         def service_called(event):
-            if self.output_changed(event):output.disown()
+            if self.output_changed(event):output.disown();television.abandon()
         unsubscribe=self.hass.bus.async_listen(EVENT_CALL_SERVICE,service_called)
         try:
-            async with self.lock:
-                async with asyncio.timeout(30):await output.play('Zkouška místního hlasu.')
+            await self.ensure_homepod_initialized()
+            async with asyncio.timeout(45):
+                async with self.lock:
+                    await television.acquire()
+                    await output.play('Zkouška hlasu na HomePodu.')
             self.report['output_test']={'status':'passed' if output.completed==1 else 'skipped',
-                'microphone_opened':False,'native_playback':output.snapshot(),'audibility_confirmed':False}
+                'speaker':HOME,'microphone_opened':False,'native_playback':output.snapshot(),'audibility_confirmed':False}
         except Exception as exc:
-            self.report['output_test']={'status':'failed','error':type(exc).__name__,'microphone_opened':False}
+            self.report['output_test']={'status':'failed','speaker':HOME,'error':type(exc).__name__,
+                'microphone_opened':False,'native_playback':output.snapshot()}
         finally:
             unsubscribe()
             try:await output.stop()
             finally:
+                await television.release()
                 self.probing=False
                 await self.save()
 
     async def audio_audit(self):
-        if self.active or self.probing:
-            self.report['audio_audit']={'status':'busy','microphone_opened':False};return
-        self.probing=True;facts=AudioFacts()
-        self.report['audio_audit']={'status':'running','microphone_opened':False}
-        output=LocalOutput(self.player,lambda text:self.synthesize(text,async_get_pipeline(self.hass,PIPELINE)),
-            self.start_output,self.stop_output)
-        def service_called(event):
-            if self.output_changed(event):output.disown()
-        unsubscribe=self.hass.bus.async_listen(EVENT_CALL_SERVICE,service_called)
-        try:
-            from aioesphomeapi import LogLevel
-            from homeassistant.components.esphome.const import CONF_SUBSCRIBE_LOGS
-            from homeassistant.components.esphome.manager import LOGGER_TO_LOG_LEVEL
-            player=self.player()
-            if player is None:raise ValueError('local_speaker_unavailable')
-            entry=self.hass.config_entries.async_get_entry(player._entry_data.entry_id)
-            if entry is None or entry.runtime_data is not player._entry_data:
-                raise ValueError('native_connection_mismatch')
-            def restore_level():
-                if not entry.options.get(CONF_SUBSCRIBE_LOGS):return LogLevel.LOG_LEVEL_NONE
-                return LOGGER_TO_LOG_LEVEL.get(logging.getLogger('homeassistant.components.esphome.manager').getEffectiveLevel(),
-                    LogLevel.LOG_LEVEL_VERY_VERBOSE)
-            async def playback():
-                await output.play('Zkouška místního hlasu.')
-                return output.snapshot()
-            async with self.lock:
-                result=await audit_native(player,playback,restore_level,facts=facts,
-                    ha_logging=lambda:bool(entry.options.get(CONF_SUBSCRIBE_LOGS)))
-            self.report['audio_audit']={'status':'completed',**result,'audibility_confirmed':False}
-        except asyncio.CancelledError:
-            self.report['audio_audit']={'status':'cancelled',**facts.snapshot()};raise
-        except Exception as exc:
-            self.report['audio_audit']={'status':'failed','error':type(exc).__name__,**facts.snapshot()}
-        finally:
-            unsubscribe()
-            try:await output.stop()
-            finally:
-                self.probing=False
-                await self.save()
+        # Retained control name now verifies the requested output, never Voice PE speech.
+        await self.output_test()
 
     async def save(self,_now=None):
+        if not self.probing and self.active is None:self.schedule_homepod_initialization()
         request=await self.hass.async_add_executor_job(read_control,self.root,
             self.report.get('last_control_nonce'),time.time())
         if request and not self.probing:
@@ -330,7 +349,7 @@ class LocalDialogue:
             self.hass.async_create_task(handler())
         report=dict(self.report)
         report.update(updated_at=dt_util.utcnow().isoformat(),adapter=getattr(self,'adapter','starting'),
-            status='configured' if self.ready() and getattr(self,'adapter',None)=='active' else 'waiting_for_speaker',
+            status='configured' if self.ready() and self.speech_ready() and getattr(self,'adapter',None)=='active' else 'waiting_for_speaker',
             active_run=self.active_run,active=self.active.snapshot() if self.active else None,
             output=self.output.snapshot() if self.output else None)
         report['source_revision']=self.source_revision
@@ -338,8 +357,11 @@ class LocalDialogue:
         report['local_player']={'available':bool(player and player.available),
             'state':str(player.state) if player else None,'volume':player.volume_level if player else None,
             'muted':player.is_volume_muted if player else None}
+        homepod=self.homepod()
+        report['homepod_player']={'entity_id':HOME,'available':bool(homepod and homepod.available),
+            'state':str(homepod.state) if homepod else None}
         self.hass.states.async_set('sensor.jarvis_prerusitelny_hlas',report['status'],
-            {'friendly_name':'Jarvis · přerušitelný hlas','version':VERSION,'speaker':PLAYER,
+            {'friendly_name':'Jarvis · konverzace přes HomePod','version':VERSION,'speaker':HOME,
              'active':self.active is not None,'acoustic_acceptance_verified':False,
              'microphone_while_speaking':self.active.frames_during_output if self.active else None})
         def write():

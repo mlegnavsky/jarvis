@@ -1,5 +1,5 @@
 {
-  "status": "conversation_and_complete_resource_repair_ready",
+  "status": "homepod_output_1.1.0_reviewed_activation_pending",
   "runtime": "1.0.3",
   "source_commit": "5e494c4a938c7427f79df63189caf5f09fd9eec5",
   "native_audit": {
@@ -58,10 +58,39 @@
     "firmware_or_wake_threshold_changed": false
   },
   "tests": {
-    "duplex": 86,
+    "duplex": 97,
     "companion": 63,
-    "homepod": 62,
+    "homepod": 64,
     "manifest": "pass",
-    "fresh_review": "2Important_fixed_RED_GREEN_0Critical_0Minor"
+    "fresh_review": "2Important_fixed_RED_GREEN_0Critical_0Minor",
+    "fresh_homepod_review": "0Critical_3Important_fixed_RED_GREEN_0Minor"
+  },
+  "native_1.0.4": {
+    "source_commit": "a918bf1b428242fdc307b543e7cef8b1fc55a1dd",
+    "job": "conversation-audio-v104-apply",
+    "active_verified": true,
+    "backup_slug": "7f9f9dc2",
+    "files_exact": 13,
+    "ci": "both_success",
+    "native_output_completed": true,
+    "owner_heard_audio": false,
+    "route_superseded_by_owner": true
+  },
+  "homepod_repair": {
+    "version": "1.1.0",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "microphone": "assist_satellite.home_assistant_voice_0a8bde_assist_satellite",
+    "speech_source": "canonical_local_WAV_resolved_to_native_filesystem_path",
+    "protocol": "existing_native_RAOP_interface",
+    "startup_volume": "explicit_owner_45_percent_once",
+    "later_volume": "preserve_current_zero_and_mute",
+    "stop": "cancel_and_drain_only_owned_native_file_task",
+    "resource_cleanup": "retain_WAV_until_owned_native_task_ends_including_timeout",
+    "tv_ownership": "generation_invalidated_on_foreign_playback",
+    "voice_pe_spoken_fallback": false,
+    "legacy_output_domain_enabled": false,
+    "legacy_volume_automations": "off_verified",
+    "physical_acceptance_verified": false,
+    "activation": "pending"
   }
 }
