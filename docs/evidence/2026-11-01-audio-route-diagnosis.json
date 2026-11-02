@@ -1,7 +1,7 @@
 {
-  "status": "homepod_output_1.1.0_reviewed_activation_pending",
-  "runtime": "1.0.3",
-  "source_commit": "5e494c4a938c7427f79df63189caf5f09fd9eec5",
+  "status": "homepod_1.1.0_active_output_completed_acoustic_acceptance_pending",
+  "runtime": "1.1.0",
+  "source_commit": "37a12da5829e9824057e72791276a7d739582446",
   "native_audit": {
     "messages": 133,
     "audio_messages": 26,
@@ -91,6 +91,56 @@
     "legacy_output_domain_enabled": false,
     "legacy_volume_automations": "off_verified",
     "physical_acceptance_verified": false,
-    "activation": "pending"
-  }
+    "activation": "active_verified"
+  },
+  "source_revision": "24dedd90740cf94ca9ed32578a063a3ce008da4f960546f699f3e771736e92a0",
+  "activation": {
+    "job": "homepod-conversation-v110-apply",
+    "finished_at": "2026-11-02T00:17:30.493052+00:00",
+    "backup_slug": "ed793462",
+    "files_exact": 13,
+    "core_version": "2026.6.4",
+    "mode": "local_microphone_homepod_speech",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "startup_volume": 0.45,
+    "legacy_volume_rules": "both_off",
+    "unrelated_heating": "on"
+  },
+  "live_probe": {
+    "native_VAD": "passed",
+    "synthetic_warmup_frames": 77,
+    "reference_seconds": 2.507,
+    "reference_peak_dbfs": -3.61,
+    "reference_rms_dbfs": -20.43,
+    "microphone_opened": false
+  },
+  "homepod_output_test": {
+    "status": "passed",
+    "target": "media_player.homepod_obyvak_homepod_obyvak",
+    "transport": "native_raop_local_file",
+    "started": 1,
+    "completed": 1,
+    "skipped": 0,
+    "stopped": 0,
+    "last_error": null,
+    "volume": 0.45,
+    "muted": false,
+    "negotiated_latency_s": 1.5,
+    "reference_seconds": 2.507,
+    "pending_resource_cleanup": 0,
+    "microphone_opened": false,
+    "audibility_confirmed": false
+  },
+  "ci": {
+    "runs": [
+      41365884224,
+      41365879329
+    ],
+    "conclusion": "success"
+  },
+  "remaining_acceptance": [
+    "physical_HomePod_audibility",
+    "ordinary_conversation_followup_interruption",
+    "loud_TV_wake_and_echo_rejection"
+  ]
 }
