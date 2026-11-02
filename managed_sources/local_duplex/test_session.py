@@ -324,6 +324,8 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         async with asyncio.timeout(2):await running
         self.assertEqual(session.stage,'closed')
         self.assertIn(('stop',),self.calls)
+        self.assertEqual(session.reason,'audio_source_ended')
+        self.assertEqual(session.input_end['stage'],'speaking')
 
     async def test_second_utterance_cancels_first_playback_without_stopping_capture(self):
         turns=[]

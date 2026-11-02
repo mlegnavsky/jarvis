@@ -25,11 +25,13 @@ from homeassistant.helpers.target import TargetSelection, async_extract_referenc
 from homeassistant.util import dt as dt_util
 
 from custom_components.extended_openai_conversation.dialogue import is_noise_transcript
+from custom_components.extended_openai_conversation.const import DEFAULT_CHAT_MODEL
 from .tv_session import TVSession
 from custom_components.jarvis_voice_diagnostics.turn_taking import spoken_name
 from .adapter import DELEGATE, install, native_session
 from .bridge import TurnBridge, response_facts
 from .control import read_control
+from .model_probe import audit_models
 from .ha_io import (decode_reference, is_output_change, pcm_signal,
     prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native)
 from .session import Session
@@ -37,7 +39,7 @@ from .speech_file import SpeechFiles, create_owned_file, release_prepared
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.2.2'
+VERSION='1.2.3'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -291,13 +293,39 @@ class LocalDialogue:
             self.probing=False
             await self.save()
 
+    async def model_audit(self):
+        if self.active or self.probing:
+            self.report['model_audit']={'status':'busy'};return
+        self.probing=True
+        self.report['model_audit']={'status':'running','microphone_opened':False,'household_actions':False}
+        await self.save()
+        try:
+            agent=conversation.async_get_agent(self.hass,AGENT)
+            model=agent.options.get('chat_model',DEFAULT_CHAT_MODEL)
+            self.report['model_audit']={'status':'complete','results':await audit_models(agent.client,model),
+                'microphone_opened':False,'household_actions':False,'response_content_saved':False,
+                'scope':'fixed_greeting_small_context_not_full_household_latency'}
+        except Exception as exc:self.report['model_audit']={'status':'failed','error':type(exc).__name__}
+        finally:
+            self.probing=False
+            await self.save()
+
     async def voice_agent_probe(self):
         if self.active or self.probing:
             self.report['voice_agent_probe']={'status':'busy','microphone_opened':False};return
         self.probing=True
         self.report['voice_agent_probe']={'status':'running','microphone_opened':False}
+        television=self.television()
+        def tv_changed(event):
+            state=event.data.get('new_state')
+            television.observe(state.as_dict() if state else None)
+        unsubscribe=async_track_state_change_event(self.hass,[TELEVISION],tv_changed)
         try:
             async with self.lock:
+                await television.acquire()
+                if not television.input_safe():
+                    self.report['voice_agent_probe']={'status':'skipped','reason':'television_not_quiet'};return
+                started=time.monotonic()
                 async with asyncio.timeout(65):
                     result=await conversation.async_converse(self.hass,
                         text='Vyprávěj krátký příběh ve dvou větách.',conversation_id=None,
@@ -305,13 +333,16 @@ class LocalDialogue:
                         language='cs',agent_id=AGENT)
             facts=response_facts(result.response)
             self.report['voice_agent_probe']={'status':'failed' if facts['response_type']=='error' or not facts['speech_chars'] else 'passed',
-                **facts,'microphone_opened':False,'audible_playback':False,
+                **facts,'duration_ms':round((time.monotonic()-started)*1000,1),'microphone_opened':False,'audible_playback':False,
                 'voice_identity_fabricated':False,'scope':'fixed_voice_scoped_story_no_actions'}
         except Exception as exc:
             self.report['voice_agent_probe']={'status':'failed','error':type(exc).__name__,'microphone_opened':False}
         finally:
-            self.probing=False
-            await self.save()
+            unsubscribe()
+            try:await television.release()
+            finally:
+                self.probing=False
+                await self.save()
 
     async def output_test(self):
         if self.probing:
@@ -363,7 +394,7 @@ class LocalDialogue:
             handler={'probe':self.probe,'output_test':self.output_test,
                 'audio_recover':self.audio_recover,'voice_agent_probe':self.voice_agent_probe,
                 'audio_audit':self.audio_audit,'suspend_interruptions':self.suspend_interruptions,
-                'resume_interruptions':self.resume_interruptions}[request['action']]
+                'resume_interruptions':self.resume_interruptions,'model_audit':self.model_audit}[request['action']]
             self.hass.async_create_task(handler())
         report=dict(self.report)
         remaining=max(0.,self.interruptions_disabled_until-time.monotonic())
@@ -374,6 +405,7 @@ class LocalDialogue:
             active_run=self.active_run,active=self.active.snapshot() if self.active else None,
             output=self.output.snapshot() if self.output else None)
         report['source_revision']=self.source_revision
+        report['model_request']=self.hass.data.get('jarvis_voice_model_facts')
         report['household_catalog']=self.hass.data.get('jarvis_household_catalog_summary')
         player=self.player()
         report['local_player']={'available':bool(player and player.available),

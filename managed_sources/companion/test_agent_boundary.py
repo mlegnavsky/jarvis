@@ -113,6 +113,17 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
       'OpenAIError':type('OpenAIError',(Exception,),{}),'HomeAssistantError':type('HAError',(Exception,),{}),'TemplateError':type('TemplateError',(Exception,),{})}
   exec(compile(ast.Module(body=[fn],type_ignores=[]),'actual-agent-method','exec'),ns)
   return ns[name]
+ async def test_voice_time_answer_prepares_identity_then_skips_model(self):
+  prepared=[]
+  class Companion:
+   async def prepare(self,*a):
+    prepared.append(True);return NS(reset_history=False,principal='p',local_reply=None,prompt='memory')
+  agent=NS(hass=NS(data={}),_companion=Companion(),_history_principals={},history={},get_exposed_entities=lambda:[],
+    _recent_devices={},_dialogue_started={},_dialogue_turns={},
+    _generate_system_message=lambda *a:(_ for _ in ()).throw(AssertionError('time must not use model')))
+  result=await self.method('_async_handle_message')(agent,NS(text='Kolik je hodin?',language='cs',device_id='mic',context=NS(id='c')),NS(conversation_id='c'))
+  self.assertEqual(prepared,[True]);self.assertEqual(result.response.text,'Je 7 hodin a 5 minut.')
+
  async def test_explicit_conversation_id_is_preserved(self):
   async def handle(user,log):return user.conversation_id
   agent=NS(hass=NS(),_companion_lock=asyncio.Lock(),_recent_devices={'dev':('old',time.monotonic())},history={'old':[]},_async_handle_message=handle)

@@ -29,13 +29,13 @@ class Session:
         self.stage='idle';self.done=False;self.closed=False
         self.idle_at=clock();self.frames=0;self.frames_during_output=0
         self.completed_turns=0;self.interruptions=0;self.failures=0;self.last_error=None
-        self.truncated=0;self.reason=None
+        self.truncated=0;self.reason=None;self.input_end=None
         self._pending=None;self.deferred_turns=0;self.deferred_replaced=0;self.deferred_expired=0
 
     def snapshot(self):
         return {key:getattr(self,key) for key in ('stage','frames','frames_during_output',
             'completed_turns','interruptions','failures','last_error','truncated','reason',
-            'deferred_turns','deferred_replaced','deferred_expired','suppressed_frames')}
+            'deferred_turns','deferred_replaced','deferred_expired','suppressed_frames','input_end')}
 
     def request_close(self, reason):
         self.reason=reason;self.done=True;self._pending=None;self.finished.set()
@@ -112,7 +112,10 @@ class Session:
                 while True:
                     try:
                         async with asyncio.timeout(self.input_timeout_seconds):frame=await anext(source)
-                    except StopAsyncIteration:return
+                    except StopAsyncIteration:
+                        self.input_end={'elapsed_s':round(self.clock()-started,3),'stage':self.stage,
+                            'output_active':self.playback_active()}
+                        self.request_close('audio_source_ended');return
                     except TimeoutError:
                         self.request_close('audio_source_stalled');return
                     if self.done:return

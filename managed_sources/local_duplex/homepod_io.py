@@ -87,6 +87,7 @@ class HomePodOutput(LocalOutput):
     def snapshot(self):
         return {**super().snapshot(),'target':HOME,'transport':'native_raop_local_file',
             'volume_decision':self.last_volume_decision,'negotiated_latency_s':self.latency_s,
+            'sender_scheduling_delay_s':self.latency_s,'latency_origin':'pyatv_stream_context_not_receiver_negotiation',
             'pending_resource_cleanup':len(self.cleanup_tasks)}
 
     def available_player(self):

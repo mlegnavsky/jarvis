@@ -7,6 +7,7 @@ import json
 import logging
 import time
 from .runtime import CompanionRuntime
+from .voice_policy import primary_voice, read_policy, request_policy, safe_model
 from .room_commands import async_handle_room_command, voice_input_allowed
 from .dialogue import COMPANION_INSTRUCTIONS, is_pause, is_stop, recent_session, should_continue, is_noise_transcript, local_time_answer
 from .catalog import catalog_context, bound_messages, keep_recent_turns, safe_state, clipped
@@ -204,6 +205,8 @@ class ExtendedOpenAIAgentEntity(
         if local_reply is None:
             local_reply = await async_handle_room_command(self.hass, user_input, exposed_entities,
                 getattr(companion_turn,'control_token',None),getattr(companion_turn,'effective_text',None))
+        if local_reply is None:
+            local_reply = local_time_answer(user_input.text, dt_util.now())
         if local_reply is not None:
             local_response = intent.IntentResponse(language=user_input.language)
             local_response.async_set_speech(local_reply)
@@ -411,6 +414,14 @@ class ExtendedOpenAIAgentEntity(
         """Process a sentence."""
         model = self.options.get(CONF_CHAT_MODEL, DEFAULT_CHAT_MODEL)
         max_tokens = self.options.get(CONF_MAX_TOKENS, DEFAULT_MAX_TOKENS)
+        targeted=primary_voice(user_input)
+        configured_model=model
+        if targeted:
+            policy=await self.hass.async_add_executor_job(read_policy,
+                self.hass.config.path('jarvis_workspace','local_duplex','voice-settings.json'))
+            model,max_tokens,policy_status=request_policy(user_input,model,max_tokens,policy)
+            self.hass.data['jarvis_voice_model_facts']={'configured_model':safe_model(configured_model),
+                'model':safe_model(model),'max_output_tokens':max_tokens,'policy_status':policy_status}
         top_p = self.options.get(CONF_TOP_P, DEFAULT_TOP_P)
         temperature = self.options.get(CONF_TEMPERATURE, DEFAULT_TEMPERATURE)
         use_tools = self.options.get(CONF_USE_TOOLS, DEFAULT_USE_TOOLS)
@@ -450,15 +461,19 @@ class ExtendedOpenAIAgentEntity(
             bound_messages(messages)
         except ValueError as exc:
             raise HomeAssistantError('Kontext zařízení a aktuálního dotazu je příliš velký.') from exc
-        response = await self.client.chat.completions.create(
-            model=model,
-            messages=messages,
-            top_p=top_p,
-            temperature=temperature,
-            user=user_input.conversation_id,
-            **token_kwargs,
-            **tool_kwargs,
-        )
+        provider_started=time.monotonic()
+        try:
+            response = await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                top_p=top_p,
+                temperature=temperature,
+                user=user_input.conversation_id,
+                **token_kwargs,
+                **tool_kwargs,
+            )
+        finally:
+            if targeted:self.hass.data['jarvis_voice_model_facts']['provider_ms']=round((time.monotonic()-provider_started)*1000,1)
 
         _LOGGER.debug("Response %s", json.dumps(response.model_dump(exclude_none=True)))
 
