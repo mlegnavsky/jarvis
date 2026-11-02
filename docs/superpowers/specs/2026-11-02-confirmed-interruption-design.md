@@ -1,0 +1,9 @@
+# Confirm microphone input before stopping HomePod
+
+Owner reports repeated chopped replies and authorizes deployment and Git publication. Fresh1.2.4 runtime shows four starts/four microphone interruptions/zero completions/no transport errors. The onset handler cancels output before TurnBridge can apply its existing generated-text filter. A rejected echo transcript therefore still chops playback. Native AEC remains an unpassed experiment and cannot be deployed as a fix.
+
+Narrow repair: keep capturing while a completed overlap utterance is transcribed and checked by the existing noise/TV/text-echo guards. Only a nonempty accepted transcript may cancel the owned answer, and reuse that transcript exactly once for the new turn. Candidate transcription runs separately from the answer and reader; one candidate and one latest deferred utterance are bounded. Explicit stop/mute/EOF still stop immediately and cancel candidates. A stale/superseded/failed candidate cannot cancel playback or invoke an agent. No candidate may race the first turn's agent/identity preparation.
+
+Tradeoff: human barge-in waits for utterance endpoint and STT, rather than stopping at the first syllable. This is an explicit stabilization stage, not AEC or a one-second/immediate-interruption claim. Preserve HomePod/Marin/own volume, TV ownership, authority, model policy, completed-utterance-only cloud audio and no raw recordings.
+
+Alternatives: stronger envelope filtering has unproven room discrimination; native AEC failed short speech/drift tests; disabling interruption violates the goal. The smallest supported correction is to move the already existing transcript guard before the destructive cancellation. No repeat design questionnaire per AGENTS.md and the owner's repeated instruction to finish the repair.

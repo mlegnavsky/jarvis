@@ -32,6 +32,7 @@ from .adapter import DELEGATE, install, native_session
 from .bridge import TurnBridge, response_facts
 from .control import read_control
 from .model_probe import audit_models
+from .playback_observer import PlaybackObserver
 from .ha_io import (decode_reference, is_output_change, pcm_signal,
     prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native)
 from .session import Session
@@ -39,7 +40,7 @@ from .speech_file import SpeechFiles, create_owned_file, release_prepared
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.2.3'
+VERSION='1.2.5'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -55,7 +56,7 @@ def pipeline_signature(pipeline):
 
 class LocalDialogue:
     def __init__(self,hass):
-        self.hass=hass;self.active=None;self.output=None;self.active_run=None
+        self.hass=hass;self.active=None;self.output=None;self.active_run=None;self.observer=None
         self.root=Path(hass.config.path('jarvis_workspace','local_duplex'))
         self.lock=asyncio.Lock();self.save_lock=asyncio.Lock();self.probing=False
         self.source_revision=None
@@ -66,6 +67,7 @@ class LocalDialogue:
         self.report={'runtime_version':VERSION,'core_version':CORE_VERSION,'mode':'local_microphone_homepod_speech',
             'speaker':HOME,'microphone':SATELLITE,'volume_policy':'homepod_raop_only_tv_pause_separate','cloud_audio':'completed_utterances_only',
             'raw_microphone_saved':False,'acoustic_acceptance_verified':False,
+            'interruption_policy':'completed_transcript_before_stop',
             'firmware_changed':False,'sessions':0,'last_session':None,'self_test':{'status':'not_run'},
             'homepod_startup':{'status':'pending','policy':'startup45_once_then_current_volume'}}
 
@@ -190,6 +192,7 @@ class LocalDialogue:
                 if guards.get(key) is input_allowed:guards.pop(key,None)
         television=self.television()
         output=self.make_output(pipeline)
+        observer=PlaybackObserver(lambda:output)
         def input_allowed():return not session.done and not session.closed and television.input_safe()
         def overlap(audio):return output.last_overlap_at is not None and time.monotonic()-output.last_overlap_at<len(audio)/32000+1
         bridge=TurnBridge(transcribe,hass.data['jarvis_speaker_identity'].complete,converse,
@@ -199,11 +202,13 @@ class LocalDialogue:
             extra_system_prompt=value.conversation_extra_system_prompt,playback_overlap=overlap,
             transcript_filter=lambda text,audio,at:'' if output.is_own_transcript(text,audio,at) else text,
             input_allowed=input_allowed)
-        session=Session(transcribe=bridge.transcribe,respond=bridge.respond,play=output.play,stop=output.stop,
+        async def play_response(text):
+            return await observer.play(output.play,text,bridge.timings_ms,output.snapshot)
+        session=Session(transcribe=bridge.transcribe,respond=bridge.respond,play=play_response,stop=output.stop,
             gate=output.gate,silence_seconds=run.audio_settings.silence_seconds,on_interrupt=bridge.interrupted,
             playback_active=output.playing,on_capture=bridge.set_capture_time,
             interruptions_enabled=lambda:time.monotonic()>=self.interruptions_disabled_until)
-        self.active=session;self.output=output;self.active_run=str(run.id);self.report['sessions']+=1
+        self.active=session;self.output=output;self.observer=observer;self.active_run=str(run.id);self.report['sessions']+=1
         async def changed(event):
             state=event.data.get('new_state')
             if event.data['entity_id']==MUTE and (state is None or state.state!='off'):
@@ -231,7 +236,7 @@ class LocalDialogue:
                 'engine':pipeline.stt_engine,'metadata':asdict(value.stt_metadata),
                 'audio_processing':asdict(run.stt_provider.audio_processing)}))
             await self.save()
-            await session.run(run.process_enhance_audio(value.stt_stream))
+            await session.run(observer.enhanced_source(run.process_enhance_audio,value.stt_stream))
         finally:
             unsubscribe();unsubscribe_service()
             try:await session.close()
@@ -241,8 +246,9 @@ class LocalDialogue:
                 self.report['last_session']={'run_id':str(run.id),**session.snapshot(),
                     'output':output.snapshot(),'television':television.snapshot(),
                     'agent_response':bridge.last_response,'input_blocked':bridge.input_blocked,
-                    'timings_ms':dict(bridge.timings_ms),'endpoint_silence_ms':round(session.segmenter.silence_seconds*1000,1)}
-                self.active=None;self.output=None;self.active_run=None
+                    'timings_ms':dict(bridge.timings_ms),'playback_diagnostics':observer.snapshot(),
+                    'endpoint_silence_ms':round(session.segmenter.silence_seconds*1000,1)}
+                self.active=None;self.output=None;self.observer=None;self.active_run=None
                 await self.save()
 
     async def probe(self):
@@ -404,6 +410,7 @@ class LocalDialogue:
             status='configured' if self.ready() and self.speech_ready() and getattr(self,'adapter',None)=='active' else 'waiting_for_speaker',
             active_run=self.active_run,active=self.active.snapshot() if self.active else None,
             output=self.output.snapshot() if self.output else None)
+        report['playback_diagnostics']=self.observer.snapshot() if self.observer else None
         report['source_revision']=self.source_revision
         report['model_request']=self.hass.data.get('jarvis_voice_model_facts')
         report['household_catalog']=self.hass.data.get('jarvis_household_catalog_summary')
