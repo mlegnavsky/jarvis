@@ -1,5 +1,5 @@
 {
-  "status": "marin_configured_sarcasm_prompt_activation_pending",
+  "status": "active_verified_marin_and_gentle_sarcasm",
   "homepod_audibility_owner_confirmed": true,
   "user_request": "pleasant_less_robotic_voice_and_sarcasm",
   "prior_no_sarcasm_preference_superseded": true,
@@ -24,5 +24,50 @@
   "remaining_acceptance": [
     "actual_conversation_followup_interruption",
     "loud_TV_wake_and_echo_rejection"
-  ]
+  ],
+  "source_commit": "825f9851ff3c3e68175978ce26c3f693b33eb4ef",
+  "activation": {
+    "job": "pleasant-voice-style-apply",
+    "phase": "active_verified",
+    "finished_at": "2026-11-02T00:37:27.133181+00:00",
+    "backup_slug": "a87833e4",
+    "files_exact": 5,
+    "core_version": "2026.6.4"
+  },
+  "live_companion": {
+    "passed": true,
+    "actual_loaded_prompt_sha256": "ad132e880a35e634f06a9bf340f11f47e738cf520e5107c1eab5437962457f36",
+    "prompt_matches_source": true,
+    "fictional_memory_and_humor_filter": true,
+    "identity_and_device_awareness": true,
+    "physical_actions": false
+  },
+  "live_marin_synthesis": {
+    "passed": true,
+    "reference_seconds": 2.8316875,
+    "peak_dbfs": -9.07,
+    "rms_dbfs": -23.71,
+    "microphone_opened": false
+  },
+  "live_homepod_output": {
+    "status": "passed",
+    "transport": "native_raop_local_file",
+    "started": 1,
+    "completed": 1,
+    "skipped": 0,
+    "last_error": null,
+    "volume": 0.4,
+    "volume_source": "shared_tv",
+    "muted": false,
+    "pending_resource_cleanup": 0,
+    "negotiated_latency_seconds": 1.5,
+    "microphone_opened": false
+  },
+  "ci": {
+    "runs": [
+      41367688270,
+      41367683298
+    ],
+    "conclusion": "success"
+  }
 }
