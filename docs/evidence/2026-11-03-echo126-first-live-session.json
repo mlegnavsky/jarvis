@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "scope": "first_real_session_after_native_verification_not_acceptance",
+  "observed_at": "2026-11-03T04:01:27.639181+00:00",
+  "runtime_version": "1.2.6",
+  "source_revision": "52c151f927d245b04a164bc8125d64c5f0254ca997e22ce4d303c0e94d1f4882",
+  "run_id": "01M6FRZY9SF8822KBQGEMM8C16",
+  "frames": 8346,
+  "approximate_audio_s": 83.46,
+  "output": {
+    "started": 5,
+    "completed": 2,
+    "stopped": 3,
+    "skipped": 0,
+    "last_error": null
+  },
+  "microphone_interruptions": 3,
+  "confirmations": 8,
+  "rejected_confirmations": 4,
+  "text_echo_suppressed": 3,
+  "guard_decisions": [
+    {
+      "decision": "no_recent_output",
+      "candidate_words": 3,
+      "reference_words": 0,
+      "shared_words": 0,
+      "overlap_ratio": 0,
+      "edit_distance": null,
+      "output_owned_at_check": false
+    },
+    {
+      "decision": "different_words",
+      "candidate_words": 3,
+      "reference_words": 6,
+      "shared_words": 1,
+      "overlap_ratio": 1,
+      "edit_distance": null,
+      "output_owned_at_check": false
+    },
+    {
+      "decision": "outside_output_interval",
+      "candidate_words": 7,
+      "reference_words": 0,
+      "shared_words": 0,
+      "overlap_ratio": 0,
+      "edit_distance": null,
+      "output_owned_at_check": true
+    },
+    {
+      "decision": "different_words",
+      "candidate_words": 4,
+      "reference_words": 74,
+      "shared_words": 1,
+      "overlap_ratio": 0.5094,
+      "edit_distance": null,
+      "output_owned_at_check": true
+    },
+    {
+      "decision": "no_recent_output",
+      "candidate_words": 0,
+      "reference_words": 0,
+      "shared_words": 0,
+      "overlap_ratio": 0,
+      "edit_distance": null,
+      "output_owned_at_check": true
+    },
+    {
+      "decision": "generated_asr_variant",
+      "candidate_words": 16,
+      "reference_words": 40,
+      "shared_words": 15,
+      "overlap_ratio": 1,
+      "edit_distance": 1,
+      "output_owned_at_check": true
+    },
+    {
+      "decision": "generated_exact_phrase",
+      "candidate_words": 4,
+      "reference_words": 40,
+      "shared_words": 4,
+      "overlap_ratio": 1,
+      "edit_distance": 0,
+      "output_owned_at_check": true
+    },
+    {
+      "decision": "different_words",
+      "candidate_words": 3,
+      "reference_words": 40,
+      "shared_words": 0,
+      "overlap_ratio": 1,
+      "edit_distance": null,
+      "output_owned_at_check": true
+    },
+    {
+      "decision": "no_recent_output",
+      "candidate_words": 0,
+      "reference_words": 0,
+      "shared_words": 0,
+      "overlap_ratio": 0,
+      "edit_distance": null,
+      "output_owned_at_check": true
+    },
+    {
+      "decision": "generated_exact_phrase",
+      "candidate_words": 7,
+      "reference_words": 7,
+      "shared_words": 7,
+      "overlap_ratio": 1,
+      "edit_distance": 0,
+      "output_owned_at_check": false
+    }
+  ],
+  "session_close_reason": "silence_timeout",
+  "failures": 0,
+  "television": {
+    "paused": 1,
+    "resumed": 1,
+    "failed": 0
+  },
+  "raw_microphone_saved": false,
+  "transcripts_saved": false,
+  "interruption_attribution": "unknown_user_confirmation_needed",
+  "long_conversation_acceptance_verified": false,
+  "latency_improvement_claimed": false
+}
