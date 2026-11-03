@@ -17,14 +17,29 @@ class StreamAborted(OSError):
     pass
 
 
+class PlaybackFlow:
+    def __init__(self):
+        self.lock=threading.Lock();self.paused=False;self.resumed_at=0.
+
+    def pause(self):
+        with self.lock:self.paused=True
+
+    def resume(self):
+        with self.lock:self.paused=False;self.resumed_at=time.monotonic()
+
+    def state(self):
+        with self.lock:return self.paused,self.resumed_at
+
+
 class AudioPipe(io.BufferedIOBase):
     """Async producer, blocking codec consumer, bounded memory and real errors."""
-    def __init__(self,*,limit=262144,stall_seconds=5):
+    def __init__(self,*,limit=262144,stall_seconds=5,backpressure=None):
         super().__init__()
         self.loop=asyncio.get_running_loop();self.limit=limit;self.stall=stall_seconds
         self.condition=threading.Condition();self.buffer=bytearray()
         self.eof=False;self.error=None;self.peak_bytes=0;self.active_readers=0
         self.space=asyncio.Event();self.space.set()
+        self.backpressure=backpressure if backpressure is not None else PlaybackFlow()
 
     def readable(self):return True
     def seekable(self):return False
@@ -44,7 +59,11 @@ class AudioPipe(io.BufferedIOBase):
                 self.buffer.extend(data[offset:offset+count]);offset+=count
                 self.peak_bytes=max(self.peak_bytes,len(self.buffer));self.condition.notify_all()
             if not count:
-                async with asyncio.timeout(self.stall):await self.space.wait()
+                # A full bounded queue is normal playback pacing. The owner
+                # supplies the overall deadline and abort wakes this waiter.
+                self.backpressure.pause()
+                try:await self.space.wait()
+                finally:self.backpressure.resume()
 
     def finish(self):
         with self.condition:self.eof=True;self.condition.notify_all()
@@ -65,7 +84,14 @@ class AudioPipe(io.BufferedIOBase):
         with self.condition:
             self.active_readers+=1
             try:
-                while not self.eof and len(self.buffer)<requested:
+                # Codec reads may ask for many seconds of compressed speech.
+                # Return available bytes as a valid short read: waiting for the
+                # whole request mistakes normal native playback backpressure
+                # for an empty/stalled provider stream.
+                while not self.eof and not self.buffer:
+                    paused,resumed_at=self.backpressure.state()
+                    deadline=max(deadline,resumed_at+self.stall)
+                    if paused:deadline=time.monotonic()+self.stall
                     left=deadline-time.monotonic()
                     if left<=0:raise TimeoutError('speech_reader_stalled')
                     self.condition.wait(left)
@@ -134,7 +160,8 @@ def decode_reference(pipe,publish):
 
 class SpeechStream:
     def __init__(self,create_response,execute,decode):
-        self.loop=asyncio.get_running_loop();self.native=AudioPipe();self.reference_pipe=AudioPipe()
+        self.loop=asyncio.get_running_loop();flow=PlaybackFlow()
+        self.native=AudioPipe(backpressure=flow);self.reference_pipe=AudioPipe(backpressure=flow)
         self.reference=GrowingReference();self.ready=asyncio.Event();self.closed=False;self.error=None
         self.compressed_bytes=0;self.started=time.monotonic();self.first_reference_ms=None
         self.producer_eof_ms=None;self.cleanup_pending=False;self._release=None

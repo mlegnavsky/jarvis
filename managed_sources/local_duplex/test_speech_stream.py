@@ -9,6 +9,46 @@ GENERATED_TONE="SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//OE
 
 
 class SpeechStreamTests(unittest.IsolatedAsyncioTestCase):
+    async def test_slow_native_consumer_does_not_fail_reference_or_producer(self):
+        module=self.module();payload=b'01234567'*64
+        class Response:
+            async def iter_bytes(self):
+                for offset in range(0,len(payload),8):
+                    yield payload[offset:offset+8]
+                    await asyncio.sleep(0)
+        class Context:
+            async def __aenter__(self):return Response()
+            async def __aexit__(self,*_args):pass
+        def decode(pipe,publish):
+            while pipe.read(8):publish(b'\x00\x10'*160)
+        stream=module.SpeechStream(lambda:Context(),asyncio.to_thread,decode)
+        stream.native.limit=32
+        stream.native.stall=stream.reference_pipe.stall=.02
+        try:
+            await asyncio.sleep(.08)
+            self.assertIsNone(stream.error,'legitimate native backpressure failed the stream')
+            self.assertFalse(stream.producer.done())
+            # The20ms budget above targets the paused-consumer phase only.
+            stream.native.stall=stream.reference_pipe.stall=.5
+            received=bytearray()
+            while chunk:=await asyncio.to_thread(stream.native.read,32):received.extend(chunk)
+            await stream.wait_finished()
+            self.assertEqual(received,payload)
+        finally:await stream.release()
+        self.assertEqual(stream.native.active_readers,0)
+        self.assertEqual(stream.reference_pipe.active_readers,0)
+
+    async def test_available_bytes_do_not_stall_until_a_large_codec_request_is_full(self):
+        pipe=self.module().AudioPipe(limit=64,stall_seconds=.03)
+        await pipe.feed(b'available')
+        try:
+            data=await asyncio.to_thread(pipe.read,64)
+        except TimeoutError:
+            self.fail('valid available stream bytes were reported as a stalled reader')
+        self.assertEqual(data,b'available')
+        pipe.finish()
+        self.assertEqual(await asyncio.to_thread(pipe.read,64),b'')
+
     def test_reference_prefix_copies_do_not_pin_or_erase_active_reference(self):
         from segmenter import EchoReference
         data=b'\x00\x10'*16000

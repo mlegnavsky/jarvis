@@ -1,0 +1,682 @@
+{
+  "schema": 1,
+  "scope": "host_realtime_synthetic_dialogue_fault_injection",
+  "started_utc": "2026-11-03T08:49:49.656445+00:00",
+  "source_fingerprint": "0188c6b6f946487e975cd7d7cdd8d7ec62610ed32202bc76717831b3b6b99750",
+  "runtime_version": "1.3.2",
+  "requested_seconds": 70.0,
+  "wall_seconds": 70.1922,
+  "session": {
+    "stage": "closed",
+    "frames": 7020,
+    "frames_during_output": 6031,
+    "completed_turns": 1,
+    "interruptions": 0,
+    "failures": 0,
+    "last_error": null,
+    "truncated": 0,
+    "reason": "audio_source_ended",
+    "deferred_turns": 0,
+    "deferred_replaced": 0,
+    "deferred_expired": 0,
+    "suppressed_frames": 0,
+    "input_end": {
+      "elapsed_s": 70.192,
+      "stage": "idle",
+      "output_active": false
+    },
+    "interruption_policy": "completed_transcript_before_stop",
+    "confirmations": 1,
+    "rejected_confirmations": 1,
+    "confirmation_failures": 0
+  },
+  "output": {
+    "owned": false,
+    "started": 1,
+    "completed": 1,
+    "skipped": 0,
+    "stopped": 0,
+    "echo_frames": 404,
+    "overlap_frames": 6031,
+    "discarded": 0,
+    "last_stop_s": null,
+    "last_reference_duration_s": 60.084,
+    "last_error": null,
+    "text_echo_suppressed": 1,
+    "tts_generation_ms": 23.2,
+    "first_audio_wait_ms": 1500.1,
+    "transcript_guard": [
+      {
+        "decision": "no_recent_output",
+        "candidate_words": 5,
+        "reference_words": 0,
+        "shared_words": 0,
+        "overlap_ratio": 0.0,
+        "edit_distance": null,
+        "capture_audio_ms": 2620,
+        "output_owned_at_check": false
+      },
+      {
+        "decision": "generated_exact_phrase",
+        "candidate_words": 6,
+        "reference_words": 185,
+        "overlap_ratio": 1.0,
+        "shared_words": 6,
+        "edit_distance": 0,
+        "capture_audio_ms": 3940,
+        "output_owned_at_check": true
+      }
+    ],
+    "target": "media_player.homepod_obyvak_homepod_obyvak",
+    "transport": "native_raop_mp3_stream",
+    "volume_decision": {
+      "volume": 0.45,
+      "muted": false,
+      "source": "raop",
+      "busy": false
+    },
+    "negotiated_latency_s": 1.5,
+    "sender_scheduling_delay_s": 1.5,
+    "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+    "pending_resource_cleanup": 0,
+    "streaming": {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 480717,
+      "reference_seconds": 60.084,
+      "first_reference_ms": 4.0,
+      "producer_eof_ms": 24753.1,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 2048,
+      "cleanup_pending": false,
+      "error_type": null,
+      "raw_microphone_saved": false
+    }
+  },
+  "observer": {
+    "scope": "active_dialogue_scalar_playback_observations",
+    "frames_seen": 7020,
+    "frames_during_output": 6181,
+    "timing_unavailable_frames": 2,
+    "frames_before_sender_estimate": 147,
+    "clipped_frames": 0,
+    "peak_dbfs": -13.67,
+    "max_rms": 0.124576,
+    "max_receive_minus_nominal_ms": 9.3,
+    "capture_origin": "first_received_chunk_nominal_sample_count_not_hardware_clock",
+    "observations": [
+      {
+        "elapsed_capture_s": 24.25,
+        "correlation": 0.626,
+        "offset_ms": -580,
+        "reference_window_frame": 1868,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 24.35,
+        "correlation": 0.8138,
+        "offset_ms": 80,
+        "reference_window_frame": 1812,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 24.45,
+        "correlation": 0.9613,
+        "offset_ms": 1250,
+        "reference_window_frame": 1705,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 24.55,
+        "correlation": 0.9588,
+        "offset_ms": 1250,
+        "reference_window_frame": 1715,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 24.65,
+        "correlation": 0.9554,
+        "offset_ms": 1250,
+        "reference_window_frame": 1725,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 24.75,
+        "correlation": 0.9694,
+        "offset_ms": 1250,
+        "reference_window_frame": 1735,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 24.85,
+        "correlation": 0.936,
+        "offset_ms": 1250,
+        "reference_window_frame": 1745,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 24.95,
+        "correlation": 0.8731,
+        "offset_ms": 490,
+        "reference_window_frame": 1831,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 25.05,
+        "correlation": 0.8958,
+        "offset_ms": 1240,
+        "reference_window_frame": 1766,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 25.15,
+        "correlation": 0.9267,
+        "offset_ms": 1240,
+        "reference_window_frame": 1776,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 25.25,
+        "correlation": 0.9238,
+        "offset_ms": 1240,
+        "reference_window_frame": 1786,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 25.35,
+        "correlation": 0.9407,
+        "offset_ms": 1250,
+        "reference_window_frame": 1795,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 25.45,
+        "correlation": 0.9652,
+        "offset_ms": 1250,
+        "reference_window_frame": 1805,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 25.55,
+        "correlation": 0.9753,
+        "offset_ms": 1250,
+        "reference_window_frame": 1815,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 25.65,
+        "correlation": 0.9635,
+        "offset_ms": 1240,
+        "reference_window_frame": 1826,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 25.75,
+        "correlation": 0.9599,
+        "offset_ms": 1240,
+        "reference_window_frame": 1836,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 25.85,
+        "correlation": 0.9779,
+        "offset_ms": 1240,
+        "reference_window_frame": 1846,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 25.95,
+        "correlation": 0.9741,
+        "offset_ms": 1240,
+        "reference_window_frame": 1856,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 26.05,
+        "correlation": 0.9703,
+        "offset_ms": 1240,
+        "reference_window_frame": 1866,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 26.15,
+        "correlation": 0.9727,
+        "offset_ms": 1240,
+        "reference_window_frame": 1876,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 26.25,
+        "correlation": 0.9477,
+        "offset_ms": 1240,
+        "reference_window_frame": 1886,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 26.35,
+        "correlation": 0.9393,
+        "offset_ms": 1250,
+        "reference_window_frame": 1895,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 26.45,
+        "correlation": 0.7738,
+        "offset_ms": 1240,
+        "reference_window_frame": 1906,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 26.55,
+        "correlation": 0.9459,
+        "offset_ms": 1250,
+        "reference_window_frame": 1915,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 26.65,
+        "correlation": 0.9502,
+        "offset_ms": 1250,
+        "reference_window_frame": 1925,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 26.75,
+        "correlation": 0.958,
+        "offset_ms": 1250,
+        "reference_window_frame": 1935,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 26.85,
+        "correlation": 0.9698,
+        "offset_ms": 1250,
+        "reference_window_frame": 1945,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 26.95,
+        "correlation": 0.89,
+        "offset_ms": 1250,
+        "reference_window_frame": 1955,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 27.05,
+        "correlation": 0.894,
+        "offset_ms": 1080,
+        "reference_window_frame": 1982,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 27.15,
+        "correlation": 0.9486,
+        "offset_ms": 1080,
+        "reference_window_frame": 1992,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 27.25,
+        "correlation": 0.882,
+        "offset_ms": -220,
+        "reference_window_frame": 2132,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 27.35,
+        "correlation": 0.6086,
+        "offset_ms": -820,
+        "reference_window_frame": 2202,
+        "window_ms": 400,
+        "search_ms": 1500
+      }
+    ],
+    "latest": {
+      "elapsed_capture_s": 27.35,
+      "correlation": 0.6086,
+      "offset_ms": -820,
+      "reference_window_frame": 2202,
+      "window_ms": 400,
+      "search_ms": 1500
+    },
+    "turns": [
+      {
+        "timings_ms": {
+          "stt": 551.6,
+          "identity": 0.0,
+          "agent": 150.7
+        },
+        "output": {
+          "owned": false,
+          "started": 1,
+          "completed": 1,
+          "skipped": 0,
+          "stopped": 0,
+          "echo_frames": 404,
+          "overlap_frames": 6031,
+          "discarded": 0,
+          "last_stop_s": null,
+          "last_reference_duration_s": 60.084,
+          "last_error": null,
+          "text_echo_suppressed": 1,
+          "tts_generation_ms": 23.2,
+          "first_audio_wait_ms": 1500.1,
+          "transcript_guard": [
+            {
+              "decision": "generated_exact_phrase",
+              "candidate_words": 6,
+              "reference_words": 185,
+              "overlap_ratio": 1.0,
+              "shared_words": 6,
+              "edit_distance": 0,
+              "capture_audio_ms": 3940,
+              "output_owned_at_check": true
+            }
+          ],
+          "target": "media_player.homepod_obyvak_homepod_obyvak",
+          "transport": "native_raop_mp3_stream",
+          "volume_decision": {
+            "volume": 0.45,
+            "muted": false,
+            "source": "raop",
+            "busy": false
+          },
+          "negotiated_latency_s": 1.5,
+          "sender_scheduling_delay_s": 1.5,
+          "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+          "pending_resource_cleanup": 0,
+          "streaming": {
+            "transport": "native_raop_mp3_stream",
+            "compressed_bytes": 480717,
+            "reference_seconds": 60.084,
+            "first_reference_ms": 4.0,
+            "producer_eof_ms": 24753.1,
+            "producer_done": true,
+            "decoder_done": true,
+            "native_pending_peak": 262144,
+            "reference_pending_peak": 2048,
+            "cleanup_pending": false,
+            "error_type": null,
+            "raw_microphone_saved": false
+          }
+        }
+      }
+    ],
+    "diagnostic_errors": 0,
+    "source_closed": true,
+    "capture_errors": 0,
+    "input_modified": false,
+    "raw_microphone_saved": false,
+    "correlation_is_acoustic_proof": false,
+    "waveform": {
+      "scope": "raw_PCM_similarity_only_not_input_decision",
+      "observations": [
+        {
+          "elapsed_capture_s": 58.98,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.913,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 59.98,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 2.023,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 60.99,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.841,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 61.99,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.63,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 63.0,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.449,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 64.0,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 2.449,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 65.01,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.158,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 66.02,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.334,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        }
+      ],
+      "latest": {
+        "elapsed_capture_s": 66.02,
+        "status": "no_variation",
+        "comparisons": 0,
+        "processing_ms": 1.334,
+        "kernel": "audioop_findfactor",
+        "acoustic_echo_proof": false
+      },
+      "scheduled": 62,
+      "busy_skips": 0,
+      "errors": 0,
+      "stale_results": 0,
+      "pending": false,
+      "raw_audio_saved": false,
+      "input_modified": false
+    }
+  },
+  "source_closed": true,
+  "input_frame_lateness_peak_ms": 19.551,
+  "gate_buffer_peak_bytes": 24960,
+  "injected_frames": {
+    "human_frames": 168,
+    "echo_exact_frames": 568
+  },
+  "reader_exceptions": [],
+  "stt": [
+    {
+      "event_index": 0,
+      "origin": "human",
+      "fixture_onset_s": 1.0,
+      "transcript": "Tell me a long story.",
+      "at_s": 4.0727
+    },
+    {
+      "event_index": 2,
+      "origin": "echo_exact",
+      "fixture_onset_s": 24.0,
+      "transcript": "They were looking for an island",
+      "at_s": 28.242
+    }
+  ],
+  "agent": [
+    {
+      "input": "Tell me a long story.",
+      "origin": "human",
+      "event_index": 0,
+      "at_s": 4.0728,
+      "answer": "A small boat left the quiet harbour before sunrise. Anna carried a map, a lantern, and a basket of bread. Her friend Daniel watched the water. They were looking for an island that appeared only on an old family map. The morning wind moved the clouds and the distant shore slowly disappeared. At noon they saw a white tower above the trees. A narrow path led from the beach to a wooden door. Behind the door they found a garden filled with flowers and a friendly keeper who had been waiting for visitors. He offered them tea and explained how people had cared for the island for many years. Every spring they repaired the paths and planted new trees. Anna opened her map and marked the safe route through the rocks. Daniel helped the keeper mend a little bridge. When evening came, the lanterns around the garden began to shine. They sat together and listened to the sea. The next morning they sailed home with a new map and a promise to return. Which part of their journey would you like to hear about next?"
+    }
+  ],
+  "events": [
+    {
+      "at_s": 0.0,
+      "event": "run_start",
+      "duration_s": 70.0,
+      "source_fingerprint": "0188c6b6f946487e975cd7d7cdd8d7ec62610ed32202bc76717831b3b6b99750"
+    },
+    {
+      "at_s": 4.0728,
+      "event": "agent",
+      "origin": "human",
+      "event_index": 0,
+      "input": "Tell me a long story."
+    },
+    {
+      "at_s": 4.2469,
+      "event": "output_start",
+      "answer_index": 1
+    },
+    {
+      "at_s": 60.0001,
+      "event": "checkpoint",
+      "nominal_s": 60.0,
+      "session": {
+        "stage": "speaking",
+        "frames": 6000,
+        "frames_during_output": 5425,
+        "completed_turns": 0,
+        "interruptions": 0,
+        "failures": 0,
+        "last_error": null,
+        "truncated": 0,
+        "reason": null,
+        "deferred_turns": 0,
+        "deferred_replaced": 0,
+        "deferred_expired": 0,
+        "suppressed_frames": 0,
+        "input_end": null,
+        "interruption_policy": "completed_transcript_before_stop",
+        "confirmations": 1,
+        "rejected_confirmations": 1,
+        "confirmation_failures": 0
+      },
+      "output": {
+        "started": 1,
+        "completed": 0,
+        "stopped": 0
+      }
+    },
+    {
+      "at_s": 66.0458,
+      "event": "output_end",
+      "native_bytes": 10586120
+    }
+  ],
+  "unwanted_echo_agent_turns": 0,
+  "human_agent_turns": 1,
+  "stream_resources": [
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 480717,
+      "reference_seconds": 60.084,
+      "first_reference_ms": 4.0,
+      "producer_eof_ms": 24753.1,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 2048,
+      "cleanup_pending": false,
+      "error_type": null,
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    }
+  ],
+  "boundaries": {
+    "real": [
+      "Session",
+      "Segmenter",
+      "TurnBridge",
+      "TextEcho",
+      "HomePodOutput",
+      "PlaybackObserver",
+      "streaming pipes",
+      "miniaudio1.71",
+      "pyatv0.17 audio source"
+    ],
+    "simulated": [
+      "microphone",
+      "VAD probability",
+      "ASR text and 550ms delay",
+      "identity",
+      "agent response and 150ms delay",
+      "TTS provider",
+      "RAOP receiver/1.5s timing",
+      "room impulse response"
+    ],
+    "not_verified": [
+      "real microphone",
+      "real ASR errors",
+      "speaker identity",
+      "provider latency",
+      "HomePod/network",
+      "actual room acceptance"
+    ]
+  },
+  "real_microphone_opened": false,
+  "household_actions": false,
+  "production_files_changed": false,
+  "synthetic_audio_only": true,
+  "acoustic_fix_proved": false,
+  "checks": {
+    "source_unchanged": true,
+    "duration_reached": true,
+    "no_provider_failure": true,
+    "all_workers_done": true,
+    "all_readers_closed": true,
+    "pipes_within_256k_each": true,
+    "no_echo_self_answers": true,
+    "all_seven_human_turns_accepted": null
+  }
+}
