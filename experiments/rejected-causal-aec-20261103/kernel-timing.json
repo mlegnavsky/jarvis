@@ -1,0 +1,12 @@
+{
+  "scope": "host_only_numpy_fft_predictor_kernel_not_alignment_or_resampling",
+  "sample_rate": 4000,
+  "taps": 512,
+  "fft_size": 1024,
+  "output_block_ms": 80,
+  "iterations": 500,
+  "median_ms": 0.015634002920705825,
+  "p99_ms": 0.17899327758641442,
+  "max_ms": 0.5802550003863871,
+  "numpy_version": "2.3.5"
+}
