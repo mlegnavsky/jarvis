@@ -1,0 +1,9 @@
+# Native kernel for usable Green waveform observation
+
+Runtime1.2.7/source6ff5306e activated correctly, but actual Green probe exhausted25ms after288comparisons (25.223ms), before producing similarity. Host11.6ms timing was not portable. This is a new target-hardware performance failure after the earlier review, not another acoustic suppression fix. Voice readiness remains passed; recording remains off.
+
+Keep the observation-only design,400ms/500Hz/+/-2000ms/2001comparisons/25ms/onejob per second/onepending/eightscalar rows and all audio/authority behavior. Replace Python per-sample dot multiplication with audioop.findfactor, which Core2026.6.4 already pins through audioop-lts==0.2.2 in its base pyproject. Source: https://github.com/home-assistant/core/blob/2026.6.4/pyproject.toml . No package/Core/firmware/provider/profile/volume install or change.
+
+Quantize averaged samples to PCM16 in memory; compute exact Pearson centering/variance on those quantized samples. For each reference window obtain dot via findfactor(reference_window,microphone)*sum(microphone^2), then subtract microphone_mean*reference_sum and normalize. No fit score is treated as echo. Retain Python-dot fallback for missing optional native kernel; report kernel name and unavailability honestly. Preserve expired-budget/invalid-clock and missing-alternative safeguards.
+
+Validate native/fallback parity with DC shift, gain, inversion, low variation near PCM limits, silence and known1250ms delay. Then fresh review of this follow-up diff, source CI, backed-up CAS1.2.8 activation, native generated-reference proof and fixed HomePod output. A short native proof is still not full2001position worst-case, hardware-clock calibration, physical echo/human separation or1s dialogue acceptance. If native proof is unavailable, investigation is still incomplete.

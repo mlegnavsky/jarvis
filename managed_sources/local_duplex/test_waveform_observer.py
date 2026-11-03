@@ -5,6 +5,7 @@ import math
 import random
 import sys
 import unittest
+from unittest.mock import patch
 
 
 def pcm(values):
@@ -129,3 +130,38 @@ class WaveformObserverTests(unittest.TestCase):
         self.assertLessEqual(result['comparisons'],2001)
         self.assertLess(len(json.dumps(result)),2048)
         self.assertTrue(all(isinstance(v,(str,int,float,bool,type(None))) for v in result.values()))
+
+    def test_existing_core_native_kernel_is_selected_and_returns_same_delay(self):
+        reference=shaped(15,6)
+        result=self.measure(self.delayed(reference),reference,played_seconds=2.7,clock=lambda:0.)
+        self.assertIn('kernel',result)
+        self.assertEqual(result['kernel'],'audioop_findfactor')
+        self.assertEqual(result['offset_ms'],1250)
+        self.assertGreater(result['correlation'],.999)
+
+    def test_native_and_fallback_preserve_centering_gain_and_inversion(self):
+        module=importlib.import_module('waveform_observer')
+        self.assertTrue(hasattr(module,'_native_findfactor'),'native vector kernel is missing')
+        reference=shaped(52,6)
+        for gain,bias in ((1.,0),(-.35,0),(.35,4000)):
+            with self.subTest(gain=gain,bias=bias):
+                changed=pcm(round(gain*x+bias) for x in importlib.import_module('segmenter').samples(reference))
+                mic=self.delayed(changed)
+                native=self.measure(mic,reference,played_seconds=2.7,clock=lambda:0.)
+                with patch.object(module,'_native_findfactor',None):
+                    fallback=self.measure(mic,reference,played_seconds=2.7,clock=lambda:0.)
+                self.assertEqual(native['status'],'measured')
+                self.assertEqual(fallback['status'],'measured')
+                self.assertEqual(fallback['kernel'],'python_dot')
+                self.assertEqual(native['offset_ms'],1250)
+                self.assertEqual(native['offset_ms'],fallback['offset_ms'])
+                self.assertAlmostEqual(native['correlation'],fallback['correlation'],places=3)
+                self.assertAlmostEqual(native['peak_margin'],fallback['peak_margin'],places=3)
+
+    def test_native_kernel_handles_small_variation_near_pcm_limit(self):
+        reference=pcm(32700+x//1000 for x in importlib.import_module('segmenter').samples(shaped(8,6)))
+        result=self.measure(self.delayed(reference),reference,played_seconds=2.7,clock=lambda:0.)
+        self.assertIn('kernel',result)
+        self.assertEqual(result['kernel'],'audioop_findfactor')
+        self.assertEqual(result['offset_ms'],1250)
+        self.assertGreater(result['correlation'],.99)

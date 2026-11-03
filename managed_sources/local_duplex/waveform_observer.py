@@ -1,7 +1,17 @@
 """CPU-bounded waveform similarity facts; never an input/echo decision."""
 import math
+from array import array
 from operator import mul
 import time
+import warnings
+
+try:
+    # Core3.14 pins audioop-lts0.2.2. Python3.12 test hosts use its stdlib predecessor.
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore',message="'audioop' is deprecated.*",category=DeprecationWarning)
+        from audioop import findfactor as _native_findfactor
+except ImportError:
+    _native_findfactor=None
 
 if __package__:
     from .segmenter import samples
@@ -21,6 +31,7 @@ def measure_waveform(microphone, reference, *, played_seconds, clock=time.perf_c
                 status='work_budget_exhausted';facts={}
         return {'status':status,'comparisons':comparisons,
             'processing_ms':elapsed,
+            'kernel':'audioop_findfactor' if _native_findfactor is not None else 'python_dot',
             'acoustic_echo_proof':False,**facts}
     if (isinstance(played_seconds,bool) or not isinstance(played_seconds,(int,float))
             or not math.isfinite(played_seconds) or not 0<=played_seconds<=120):
@@ -38,14 +49,14 @@ def measure_waveform(microphone, reference, *, played_seconds, clock=time.perf_c
     if first>last:return result('insufficient_reference')
     # Only the relevant <=4.4s reference slice is decoded/averaged in the worker.
     raw=samples(microphone[-12800:])
-    microphone=[sum(raw[i:i+32])/32 for i in range(0,len(raw),32)]
+    microphone=[round(sum(raw[i:i+32])/32) for i in range(0,len(raw),32)]
     raw=samples(reference[first*64:(last+count)*64])
-    reference=[sum(raw[i:i+32])/32 for i in range(0,len(raw),32)]
-    mean=sum(microphone)/count
-    centered=[x-mean for x in microphone]
-    power=sum(x*x for x in centered)
+    reference=[round(sum(raw[i:i+32])/32) for i in range(0,len(raw),32)]
+    total_mic=sum(microphone);squared_mic=sum(x*x for x in microphone)
+    power=squared_mic-total_mic*total_mic/count
     if power<1e-9:return result('no_variation')
-    prefix=[0.];squares=[0.]
+    mic_pcm=array('h',microphone).tobytes();ref_pcm=array('h',reference).tobytes()
+    prefix=[0];squares=[0]
     for value in reference:
         prefix.append(prefix[-1]+value);squares.append(squares[-1]+value*value)
     scores=[]
@@ -58,7 +69,10 @@ def measure_waveform(microphone, reference, *, played_seconds, clock=time.perf_c
         total=prefix[offset+count]-prefix[offset]
         energy=squares[offset+count]-squares[offset]-total*total/count
         if energy<1e-9:continue
-        score=sum(map(mul,centered,reference[offset:offset+count]))/math.sqrt(power*energy)
+        if _native_findfactor is not None:
+            dot=_native_findfactor(ref_pcm[offset*2:(offset+count)*2],mic_pcm)*squared_mic
+        else:dot=sum(map(mul,microphone,reference[offset:offset+count]))
+        score=(dot-total_mic*total/count)/math.sqrt(power*energy)
         scores.append((max(-1.,min(1.,score)),offset))
     if not scores:return result('no_reference_variation')
     score,offset=max(scores,key=lambda x:abs(x[0]))
