@@ -37,7 +37,7 @@ Interface: install optional operator_handle before validate; native_session opti
 - [x] Fresh review0Critical/3Important/0Minor. All3 fixed in one RED/GREEN pass,264duplex/242addon20optional skips/manifest/diff GREEN. Durable independent isolation and exact native reconnect added to close the marker-loss boundary; every ruling/exclusion recorded in hostproof.
 
 ### Task3: publish, activate, measure once, close
-- [ ] Exact public tree/expectedHEAD CI+immutable publication, lease/space/backup/CAS/native1.3.4 activation.
-- [ ] Fresh generated-only probe and exactsource verified before one fresh room_test control.
-- [ ] One <=30s actual measurement; poll same operation/report, no automatic remote restart. Read on-Green scalar results, verify satellite idle/PCM0/closed tasks and owned restoration.
-- [ ] Preserve outcome/limits/rulings in public sanitized evidence and private receipt, release lease, docsclosure. Original acoustic goal stays open unless physical evidence proves it.
+- [x] Exact public tree/expectedHEAD CI+immutable publication, lease/space/backup/CAS/native1.3.4 activation.
+- [x] Fresh generated-only probe and exactsource verified before one fresh room_test control.
+- [x] One actual measurement:29.4037s native window/27.44s paired PCM; HomePod15.09875s complete.22 analysis windows/30.636s budget exhausted, scalar result persisted/PCM0. No second mic. Actual135 recovery independently verified after automatic startup check failed; fresh runtime/probe/guardfalse/nativeidle verified.
+- [x] All evidence/rulings retained, private finalreceipt exact d1be6ec59a6c96e9491991645b1187e20795d84d1b56828f780a6b47aad9391d;135release verified12:19:08UTC/fresh unlocked/private token removed. Docsclosure publication pending. Acoustic goal remains OPEN.

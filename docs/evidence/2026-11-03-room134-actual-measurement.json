@@ -614,11 +614,14 @@
     }
   ],
   "runtime_recovery": {
-    "state": "pending135_fix",
+    "state": "independently_verified135",
     "problem": "APIClient45.3.1 has no is_connected property; guard correctly stays closed but save/report loop raises",
     "stale_report_at": "2026-11-03T11:54:48.978327+00:00",
     "analysis_result_proves_erasure": true,
-    "no_second_microphone_start": true
+    "no_second_microphone_start": true,
+    "version": "1.3.5",
+    "source_revision": "d98c0d748d5d5ed5c3414889f54c805594a20a57d90ddba7c98502f7ca286f7f",
+    "evidence": "docs/evidence/2026-11-03-room135-native-recovery.json"
   },
   "source_identity_proof": false,
   "acoustic_fix_proved": false
