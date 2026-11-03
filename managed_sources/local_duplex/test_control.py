@@ -6,6 +6,15 @@ import unittest
 
 
 class ControlTests(unittest.TestCase):
+    def test_memory_capture_controls_are_one_target_short_lived_and_replay_checked(self):
+        for action in ('capture_next','capture_discard'):
+            data={'action':action,'nonce':'e'*32,'expires_at':180}
+            self.assertEqual(self.read(data),data)
+            self.assertIsNone(self.read(data,'e'*32))
+            self.assertIsNone(self.read({**data,'expires_at':221}))
+            self.assertIsNone(self.read({**data,'duration':900}))
+            self.assertIsNone(self.read({**data,'target':'other-microphone'}))
+
     def read(self,data,last=None):
         module=importlib.import_module('control')
         with tempfile.TemporaryDirectory() as root:

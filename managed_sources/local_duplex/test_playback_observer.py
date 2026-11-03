@@ -10,6 +10,49 @@ import unittest
 
 
 class PlaybackObserverTests(unittest.IsolatedAsyncioTestCase):
+    async def test_capture_clock_error_is_isolated_from_original_audio(self):
+        calls=[0]
+        def clock():
+            calls[0]+=1
+            if calls[0]==2:raise ValueError('capture clock')
+            return 0.
+        capture=NS(observe_raw=lambda *a:None,fail=lambda *a:None)
+        observer=importlib.import_module('playback_observer').PlaybackObserver(lambda:NS(owned=False),clock=clock,capture=capture)
+        async def source():yield bytes(320)
+        self.assertEqual([x async for x in observer.source(source())],[bytes(320)])
+        self.assertEqual(observer.capture_errors,1)
+
+    async def test_optional_capture_taps_forward_exact_frames_and_original_source_errors(self):
+        calls=[]
+        class Capture:
+            def observe_raw(self,data,at):calls.append(('raw',data))
+            def observe_enhanced(self,frame):calls.append(('enhanced',frame.audio))
+        chunks=[b'\x01\x00'*160,b'\x02\x00'*160]
+        async def source():
+            for data in chunks:yield data
+            raise RuntimeError('original source failure')
+        async def enhance(source):
+            async for data in source:yield NS(audio=data,speech_probability=.9)
+        observer=self.observer(NS(owned=False));observer.capture=Capture()
+        forwarded=[]
+        with self.assertRaisesRegex(RuntimeError,'original source failure'):
+            async for frame in observer.enhanced_source(enhance,source()):forwarded.append(frame.audio)
+        self.assertEqual(forwarded,chunks)
+        self.assertEqual(calls,[('raw',chunks[0]),('enhanced',chunks[0]),('raw',chunks[1]),('enhanced',chunks[1])])
+
+    async def test_failing_capture_never_changes_input_or_hides_source_error(self):
+        class Broken:
+            def observe_raw(self,*a):raise RuntimeError('diagnostic only')
+            def observe_enhanced(self,*a):raise RuntimeError('diagnostic only')
+            def fail(self,*a):pass
+        observer=self.observer(NS(owned=False));observer.capture=Broken()
+        async def source():yield b'\x01\x00'*160
+        async def enhance(source):
+            async for data in source:yield NS(audio=data,speech_probability=.9)
+        result=[f.audio async for f in observer.enhanced_source(enhance,source())]
+        self.assertEqual(result,[b'\x01\x00'*160])
+        self.assertGreater(getattr(observer,'capture_errors',0),0)
+
     def observer(self, output):
         return importlib.import_module('playback_observer').PlaybackObserver(lambda:output, clock=lambda:0.)
 

@@ -95,6 +95,10 @@ class EchoReference:
         self.pcm=pcm  # Immutable generated reference; never serialized by diagnostics.
         self.levels=envelopes(pcm)
 
+    def pcm_prefix(self,limit):
+        if type(limit) is not int or not 0<=limit<=RATE_BYTES*90:raise ValueError('invalid_reference_prefix')
+        return self.pcm[:limit]
+
     def is_echo(self, microphone, *, played_seconds):
         if played_seconds is None or not math.isfinite(played_seconds) or played_seconds<0:
             return False

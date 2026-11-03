@@ -15,7 +15,7 @@ else:
 
 
 class PlaybackObserver:
-    def __init__(self, read_output, *, clock=time.monotonic,run_executor=None):
+    def __init__(self, read_output, *, clock=time.monotonic,run_executor=None,capture=None):
         self.read_output=read_output;self.clock=clock
         self.frames=0;self.output_frames=0;self.unknown_frames=0;self.before_start_frames=0
         self.errors=0;self.clipped_frames=0;self.peak=0;self.max_rms=0.;self.max_receive_lag_ms=0.
@@ -25,6 +25,17 @@ class PlaybackObserver:
         self.wave_task=None;self.wave_next_at=float('-inf')
         self.wave_observations=deque(maxlen=8)
         self.wave_scheduled=0;self.wave_busy_skips=0;self.wave_errors=0;self.wave_stale=0
+        self.capture=capture;self.capture_errors=0
+
+    def capture_call(self,name,*args):
+        if self.capture is None:return
+        try:
+            if name=='observe_raw':args=(*args,self.clock())
+            getattr(self.capture,name)(*args)
+        except Exception:
+            self.capture_errors+=1
+            try:self.capture.fail('capture_tap_failed')
+            except Exception:pass
 
     def snapshot(self):
         rows=list(self.observations)
@@ -36,6 +47,7 @@ class PlaybackObserver:
             'capture_origin':'first_received_chunk_nominal_sample_count_not_hardware_clock',
             'observations':rows,'latest':rows[-1] if rows else None,'turns':list(self.turns),
             'diagnostic_errors':self.errors,'source_closed':self.closed,
+            'capture_errors':self.capture_errors,
             'input_modified':False,'raw_microphone_saved':False,
             'correlation_is_acoustic_proof':False,
             'waveform':{'scope':'raw_PCM_similarity_only_not_input_decision',
@@ -117,6 +129,7 @@ class PlaybackObserver:
         try:
             async for chunk in incoming:
                 if origin is None:origin=self.clock()
+                self.capture_call('observe_raw',chunk)
                 try:
                     if not isinstance(chunk,bytes) or len(chunk)%2 or len(chunk)>65536:
                         raise ValueError('invalid_diagnostic_pcm')
@@ -143,7 +156,9 @@ class PlaybackObserver:
         # yielded enhanced frame. Own both layers explicitly, inner first.
         async with aclosing(self.source(source)) as observed:
             async with aclosing(enhance(observed)) as enhanced:
-                async for frame in enhanced:yield frame
+                async for frame in enhanced:
+                    self.capture_call('observe_enhanced',frame)
+                    yield frame
 
     async def play(self, play, text, timings, output_snapshot):
         before=dict(timings)

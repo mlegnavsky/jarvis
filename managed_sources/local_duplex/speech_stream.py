@@ -89,6 +89,10 @@ class GrowingReference(EchoReference):
     @property
     def duration_seconds(self):return len(self._pcm)/32000
 
+    def pcm_prefix(self,limit):
+        if type(limit) is not int or not 0<=limit<=32000*90:raise ValueError('invalid_reference_prefix')
+        return memoryview(self._pcm)[:limit].tobytes()
+
     def append(self,pcm):
         if not isinstance(pcm,bytes) or len(pcm)%2 or len(self._pcm)+len(pcm)>32000*90:
             raise ValueError('speech_duration_limit')

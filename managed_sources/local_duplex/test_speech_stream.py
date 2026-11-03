@@ -9,6 +9,17 @@ GENERATED_TONE="SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//OE
 
 
 class SpeechStreamTests(unittest.IsolatedAsyncioTestCase):
+    def test_reference_prefix_copies_do_not_pin_or_erase_active_reference(self):
+        from segmenter import EchoReference
+        data=b'\x00\x10'*16000
+        normal=EchoReference(data)
+        self.assertTrue(hasattr(normal,'pcm_prefix'),'bounded immutable reference prefix missing')
+        growing=self.module().GrowingReference();growing.append(data)
+        for ref in (normal,growing):self.assertEqual(ref.pcm_prefix(320),data[:320])
+        growing.append(data[:320])
+        self.assertEqual(normal.pcm,data)
+        self.assertEqual(len(growing.pcm),len(data)+320)
+
     async def test_real_codec_reference_matches_native_pcm_with_encoder_padding(self):
         try:import miniaudio
         except ImportError:self.skipTest('miniaudio test dependency is unavailable')

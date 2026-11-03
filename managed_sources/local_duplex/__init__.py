@@ -37,6 +37,7 @@ from .control import read_control
 from .model_probe import audit_models
 from .playback_observer import PlaybackObserver
 from .waveform_observer import measure_waveform
+from .calibration import CalibrationManager
 from .ha_io import (decode_reference, is_output_change, pcm_signal,
     prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native)
 from .session import Session
@@ -45,7 +46,7 @@ from .speech_stream import open_speech_stream
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, play_homepod_stream, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.3.0'
+VERSION='1.3.1'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -75,6 +76,20 @@ class LocalDialogue:
             'interruption_policy':'completed_transcript_before_stop',
             'firmware_changed':False,'sessions':0,'last_session':None,'self_test':{'status':'not_run'},
             'homepod_startup':{'status':'pending','policy':'startup45_once_then_current_volume'}}
+        self.calibration=CalibrationManager(self.root,hass.async_add_executor_job,
+            is_idle=lambda:self.active is None and not self.probing,
+            ready=self.calibration_ready)
+
+    def calibration_ready(self):
+        proof=self.report.get('self_test') or {}
+        return bool(proof.get('status')=='passed' and proof.get('source_revision')==self.source_revision
+            and (proof.get('calibration_probe') or {}).get('status')=='passed')
+
+    async def capture_next(self,nonce,expires_at):
+        await self.calibration.arm(nonce,expires_at)
+
+    async def capture_discard(self):
+        await self.calibration.discard()
 
     def player(self):
         component=self.hass.data.get(DATA_COMPONENT)
@@ -225,9 +240,12 @@ class LocalDialogue:
             input_allowed=input_allowed)
         async def play_response(text):
             return await observer.play(output.play,text,bridge.timings_ms,output.snapshot)
+        def captured(at):
+            bridge.set_capture_time(at)
+            observer.capture_call('mark_event',at)
         session=Session(transcribe=bridge.transcribe,respond=bridge.respond,play=play_response,stop=output.stop,
             gate=output.gate,silence_seconds=run.audio_settings.silence_seconds,on_interrupt=bridge.interrupted,
-            playback_active=output.playing,on_capture=bridge.set_capture_time,
+            playback_active=output.playing,on_capture=captured,
             interruptions_enabled=lambda:time.monotonic()>=self.interruptions_disabled_until)
         self.active=session;self.output=output;self.observer=observer;self.active_run=str(run.id);self.report['sessions']+=1
         async def changed(event):
@@ -248,6 +266,7 @@ class LocalDialogue:
             await television.acquire()
             if not television.input_safe():session.request_close('television_not_quiet')
             if session.done:return
+            observer.capture=self.calibration.attach(lambda:output)
             if not run.audio_settings.is_vad_enabled:
                 run.audio_settings=replace(run.audio_settings,is_vad_enabled=True)
                 run.audio_enhancer=MicroVadSpeexEnhancer(run.audio_settings.auto_gain_dbfs,
@@ -260,16 +279,19 @@ class LocalDialogue:
             await session.run(observer.enhanced_source(run.process_enhance_audio,value.stt_stream))
         finally:
             unsubscribe();unsubscribe_service()
-            try:await session.close()
+            try:
+                try:await session.close()
+                finally:
+                    bridge.clear()
+                    await television.release()
             finally:
-                bridge.clear()
-                await television.release()
                 self.report['last_session']={'run_id':str(run.id),**session.snapshot(),
                     'output':output.snapshot(),'television':television.snapshot(),
                     'agent_response':bridge.last_response,'input_blocked':bridge.input_blocked,
                     'timings_ms':dict(bridge.timings_ms),'playback_diagnostics':observer.snapshot(),
                     'endpoint_silence_ms':round(session.segmenter.silence_seconds*1000,1)}
                 self.active=None;self.output=None;self.observer=None;self.active_run=None
+                self.calibration.finish(observer.capture)
                 await self.save()
 
     async def probe(self):
@@ -288,12 +310,16 @@ class LocalDialogue:
                         prepared.pcm[:12800],prepared.pcm,played_seconds=1.65))
             except Exception as exc:
                 waveform={'status':'unavailable','error':type(exc).__name__,'acoustic_echo_proof':False}
+            try:
+                calibration=await self.calibration.probe(prepared.pcm) if hasattr(self,'calibration') else {'status':'unavailable'}
+            except Exception as exc:calibration={'status':'unavailable','error_type':type(exc).__name__}
             self.report['self_test']={'status':'passed','scope':'native_VAD_and_TTS_reference_no_playback',
                 'native_vad_probability':probability,'native_vad_warmup_frames':warmup_frames,
                 'reference_seconds':len(prepared.pcm)/32000,'reference_signal':prepared.signal,
                 'microphone_opened':False,'audible_playback':False,'source_revision':self.source_revision,
                 'pipeline_signature':pipeline_signature(pipeline),
-                'waveform_probe':{**waveform,'scope':'generated_reference_only_no_microphone'}}
+                'waveform_probe':{**waveform,'scope':'generated_reference_only_no_microphone'},
+                'calibration_probe':calibration}
         except Exception as exc:
             self.report['self_test']={'status':'failed','error':type(exc).__name__,
                 'microphone_opened':False,'audible_playback':False}
@@ -425,10 +451,13 @@ class LocalDialogue:
             self.report.get('last_control_nonce'),time.time())
         if request and not self.probing:
             self.report['last_control_nonce']=request['nonce']
-            handler={'probe':self.probe,'output_test':self.output_test,
-                'audio_recover':self.audio_recover,'voice_agent_probe':self.voice_agent_probe,
-                'audio_audit':self.audio_audit,'suspend_interruptions':self.suspend_interruptions,
-                'resume_interruptions':self.resume_interruptions,'model_audit':self.model_audit}[request['action']]
+            if request['action']=='capture_next':handler=lambda:self.capture_next(request['nonce'],request['expires_at'])
+            elif request['action']=='capture_discard':handler=self.capture_discard
+            else:
+                handler={'probe':self.probe,'output_test':self.output_test,
+                    'audio_recover':self.audio_recover,'voice_agent_probe':self.voice_agent_probe,
+                    'audio_audit':self.audio_audit,'suspend_interruptions':self.suspend_interruptions,
+                    'resume_interruptions':self.resume_interruptions,'model_audit':self.model_audit}[request['action']]
             self.hass.async_create_task(handler())
         report=dict(self.report)
         remaining=max(0.,self.interruptions_disabled_until-time.monotonic())
@@ -440,6 +469,7 @@ class LocalDialogue:
             output=self.output.snapshot() if self.output else None)
         report['playback_diagnostics']=self.observer.snapshot() if self.observer else None
         report['source_revision']=self.source_revision
+        report['calibration']=self.calibration.snapshot()
         report['model_request']=self.hass.data.get('jarvis_voice_model_facts')
         report['household_catalog']=self.hass.data.get('jarvis_household_catalog_summary')
         player=self.player()
@@ -489,6 +519,7 @@ async def async_setup(hass,config):
     async_track_time_interval(hass,app.save,timedelta(seconds=3))
     async def stopping(_event):
         if app.active:app.active.request_close('homeassistant_stopping')
+        await app.calibration.close()
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP,stopping)
     await app.save()
     return True
