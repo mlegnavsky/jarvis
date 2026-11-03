@@ -20,6 +20,6 @@ Interfaces: CaptureData holds mutable raw/enhanced/ref PCM with reprhidden and w
 - [x] RED known generated delay/gain/filtered and independent same-envelope diagnostics, FFTfallback parity/coherence, ambiguity/budget; implement pure analyzer with no classification threshold.
 - [x] RED/GREEN optional observer taps preserve exact bytes/boundaries/errors and existing audio decisions; fresh <=120s capture controls, no recording by probes/operator playback, native-generated analysis proof.
 - [x] Full duplex/affected suites, manifest/diff; one fresh review and one material RED/GREEN fix pass.
-- [ ] Commit/publicexpectedHEAD/exacttree/CI; short privatelease/space/retention/backed-upCAS; exactsource/nativeVAD/TTS/analysis/idle-state verification; arm once only after proof.
+- [x] Commit/publicexpectedHEAD/exacttree/CI; short privatelease/space/retention/backed-upCAS; exactsource/nativeVAD/TTS/analysis/idle-state verification; arm once only after proof.
 - [ ] Owner normally wakes assistant: quiet first20s of requestedstory, then one human “přestaň”. Read actual private scalar results, verify zero retainedPCM, decide next acoustic change from evidence.
 Expected commands: PYTHONPATH=managed_sources/local_duplex python -m unittest discover -s managed_sources/local_duplex -q; python scripts/check_manifest.py; git diff --check. Software pass is not room acceptance.
