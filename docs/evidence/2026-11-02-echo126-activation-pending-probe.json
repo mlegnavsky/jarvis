@@ -17,11 +17,27 @@
     "files_exact_on_fresh_read": 7
   },
   "ci": {
-    "push": {"id": 41541737295, "conclusion": "success"},
-    "pull_request": {"id": 41541743850, "conclusion": "success"},
-    "laboratory_publication_job": {"id": 125607970424, "conclusion": "success"}
+    "push": {
+      "id": 41541737295,
+      "conclusion": "success"
+    },
+    "pull_request": {
+      "id": 41541743850,
+      "conclusion": "success"
+    },
+    "laboratory_publication_job": {
+      "id": 125607970424,
+      "conclusion": "success"
+    }
   },
-  "tests": {"duplex": 172, "companion": 83, "identity": 154, "diagnostics": 30, "addon": 242, "addon_skipped": 20},
+  "tests": {
+    "duplex": 172,
+    "companion": 83,
+    "identity": 154,
+    "diagnostics": 30,
+    "addon": 242,
+    "addon_skipped": 20
+  },
   "postboot": {
     "reported_at": "2026-11-02T23:04:49.436108+00:00",
     "adapter": "active",
@@ -50,5 +66,6 @@
     "aec3_deployed": false,
     "wider_RMS_gate_deployed": false
   },
-  "resume": "Do not restart or reapply. Reconcile the same verified job, current source and lease. After lease expiry acquire a new short lease with a durably retained private token; use fresh CAS control nonce for probe, verify exact source, then idle-only fixed output_test, update private receipt and release. Browser fallback requires the user consent required by browser guidance. Microphone diagnostic recording has not been authorized."
+  "resume": "Do not restart or reapply. Reconcile the same verified job, current source and lease. After lease expiry acquire a new short lease with a durably retained private token; use fresh CAS control nonce for probe, verify exact source, then idle-only fixed output_test, update private receipt and release. Browser fallback requires the user consent required by browser guidance. Microphone diagnostic recording has not been authorized.",
+  "superseded_by": "docs/evidence/2026-11-03-echo126-native-verification.json"
 }
