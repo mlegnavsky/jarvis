@@ -1,0 +1,3 @@
+# Upstream without a Sendspin media source. Compilation must verify all IDs.
+packages:
+  jarvis_reference_common: !include voice-pe-common.yaml

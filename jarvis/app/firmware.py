@@ -7,9 +7,10 @@ from .config_files import ConfigFiles
 from .firmware_client import FirmwareClient
 from .policy import APIError
 from .ha import UpstreamError
+from .firmware_reference import facts as reference_facts, staged_source
 
 ADDON='5c53de3b_esphome'
-FIELDS={'firmware_model_settings':{'target','model_id','probability_cutoff','expected_revision'},'firmware_compile':{'target','expected_revision'},'firmware_install':{'target','expected_revision'},
+FIELDS={'firmware_reference_stage':{'target','source_sha','profile','expected_revision'},'firmware_model_settings':{'target','model_id','probability_cutoff','expected_revision'},'firmware_compile':{'target','expected_revision'},'firmware_install':{'target','expected_revision'},
         'firmware_config_restore':{'target','backup_id','expected_revision'},
         'firmware_model_install':{'target','model_id','model_base64','sha256','manifest','expected_revision'}}
 
@@ -41,7 +42,13 @@ class FirmwareStore(WorkspaceFiles):
   return data,entries
  def metadata(self,target):
   data,entries=self.config(target)
-  return {'target':target,'revision':data['revision'],'models':[self.model_metadata(i,n) for i,n in entries],'credentials_exposed':False}
+  return {'target':target,'revision':data['revision'],'models':[self.model_metadata(i,n) for i,n in entries],'credentials_exposed':False,'reference_profile':reference_facts(data['content'])}
+ def stage_reference(self,args):
+  data,_=self.config(args['target'])
+  if data['revision']!=args.get('expected_revision'):raise APIError(409,'firmware_revision_conflict')
+  candidate=staged_source(data['content'],args)
+  result=self.write_raw(self.target(args['target']),candidate.encode(),args['expected_revision'],0o600)
+  return {**result,'activation_performed':False,'source_sha':args['source_sha'],'profile':args['profile']}
  def local_model(self,node):
   manifest_path='esphome/'+node.value
   raw,_=self.raw(manifest_path)
@@ -138,12 +145,13 @@ class FirmwareBridge:
     row=db.execute('SELECT operation,before_data FROM jobs WHERE key=?',(args['backup_id'],)).fetchone()
    saved=json.loads(row[1]) if row and row[1] else {}
    before=saved.get('firmware_config',{})
-   if not row or row[0] not in ('firmware_model_install','firmware_model_settings') or before.get('path')!=store.target(args['target']) or not isinstance(before.get('content'),str):raise APIError(404,'firmware_backup_not_found')
+   if not row or row[0] not in ('firmware_model_install','firmware_model_settings','firmware_reference_stage') or before.get('path')!=store.target(args['target']) or not isinstance(before.get('content'),str):raise APIError(404,'firmware_backup_not_found')
    self.admin.remember(key,{'firmware_config':ConfigFiles.read(store,store.target(args['target']))})
    result=store.write_raw(before['path'],before['content'].encode(),args['expected_revision'],0o600)
    return {**result,'activation_performed':False}
-  if operation in ('firmware_model_install','firmware_model_settings'):
+  if operation in ('firmware_model_install','firmware_model_settings','firmware_reference_stage'):
    self.admin.remember(key,{'firmware_config':ConfigFiles.read(store,store.target(args['target']))})
+   if operation=='firmware_reference_stage':return store.stage_reference(args)
    return store.tune_model(args) if operation=='firmware_model_settings' else store.install_model(args)
   if operation=='firmware_install':
    configured=unwrap(await self.client.call('devices/list'),'devices')

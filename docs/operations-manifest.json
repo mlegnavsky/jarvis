@@ -209,6 +209,15 @@
       ],
       "source": "jarvis/app/firmware.py"
     },
+    "firmware_reference_stage": {
+      "arguments": [
+        "expected_revision",
+        "profile",
+        "source_sha",
+        "target"
+      ],
+      "source": "jarvis/app/firmware.py"
+    },
     "heating_settings": {
       "arguments": [
         "changes",

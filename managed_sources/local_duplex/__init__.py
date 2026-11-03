@@ -35,6 +35,8 @@ from custom_components.jarvis_voice_diagnostics.turn_taking import spoken_name
 from .adapter import DELEGATE, install, native_session, operator_installed
 from .bridge import TurnBridge, response_facts
 from .control import read_control
+from .reference_native import NativeReferenceEndpoint
+from .reference_probe import GeneratedReferenceProbe, claim_probe
 from .model_probe import audit_models
 from .playback_observer import PlaybackObserver
 from .waveform_observer import measure_waveform
@@ -49,7 +51,7 @@ from .speech_stream import open_speech_stream
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, play_homepod_stream, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.3.5'
+VERSION='1.3.6'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -72,6 +74,7 @@ class LocalDialogue:
         self.interruptions_disabled_until=0.
         self.speech_files=None
         self.room_measurement=None;self.room_native_link=None;self.room_isolated=False
+        self.reference_probe_task=None
         self.homepod_init_task=None
         self.homepod_initializing=False
         self.report={'runtime_version':VERSION,'core_version':CORE_VERSION,'mode':'local_microphone_homepod_speech',
@@ -363,6 +366,10 @@ class LocalDialogue:
             return await native_session(value,maintenance)
         await self.ensure_homepod_initialized()
         async with self.lock:
+            # A probe can acquire maintenance during either await above.
+            if self.probing:
+                async def maintenance(_value):return None
+                return await native_session(value,maintenance)
             proof=self.report['self_test']
             if not self.ready() or proof.get('status')!='passed' or proof.get('pipeline_signature')!=pipeline_signature(value.run.pipeline):
                 async def unavailable(_value):return None
@@ -458,6 +465,31 @@ class LocalDialogue:
                 self.active=None;self.output=None;self.observer=None;self.active_run=None
                 self.calibration.finish(observer.capture)
                 await self.save()
+
+    async def reference_probe(self,nonce):
+        if self.probing or self.active is not None or self.room_isolated or self.lock.locked():return
+        self.probing=True;self.reference_probe_task=asyncio.current_task()
+        probe=None
+        self.report['reference_probe']={'status':'running','microphone_opened':False,
+            'acoustic_verified':False,'production_reference_enabled':False}
+        try:
+            if not await self.hass.async_add_executor_job(claim_probe,self.root,nonce,time.time()):
+                self.report['reference_probe']['status']='already_consumed';return
+            player=self.player()
+            if player is None or str(player.state) not in ('idle','off','on'):
+                raise ValueError('reference_player_busy')
+            entry=self.hass.config_entries.async_get_entry(player._entry_data.entry_id)
+            if entry is None or entry.domain!='esphome':raise ValueError('native_entry_required')
+            endpoint=NativeReferenceEndpoint(player,encrypted=bool(entry.data.get('noise_psk')))
+            probe=GeneratedReferenceProbe(endpoint,self.root,self.hass.async_add_executor_job)
+            self.report['reference_probe']=probe.report
+            await probe.run()
+        except Exception as exc:
+            self.report['reference_probe'].update(status='failed',error=type(exc).__name__)
+        finally:
+            self.report['reference_probe']['production_reference_enabled']=False
+            self.probing=False;self.reference_probe_task=None
+            await self.save()
 
     async def probe(self):
         if self.probing:return
@@ -620,6 +652,7 @@ class LocalDialogue:
             if request['action']=='capture_next':handler=lambda:self.capture_next(request['nonce'],request['expires_at'])
             elif request['action']=='capture_discard':handler=self.capture_discard
             elif request['action']=='room_test':handler=lambda:self.room_test(request['nonce'],request['expires_at'])
+            elif request['action']=='reference_probe':handler=lambda:self.reference_probe(request['nonce'])
             else:
                 handler={'probe':self.probe,'output_test':self.output_test,
                     'audio_recover':self.audio_recover,'voice_agent_probe':self.voice_agent_probe,
@@ -692,6 +725,10 @@ async def async_setup(hass,config):
     hass.data[DOMAIN]=app
     async_track_time_interval(hass,app.save,timedelta(seconds=3))
     async def stopping(_event):
+        reference_task=app.reference_probe_task
+        if reference_task is not None and not reference_task.done():
+            reference_task.cancel()
+            await asyncio.gather(reference_task,return_exceptions=True)
         if app.active:app.active.request_close('homeassistant_stopping')
         measurement=app.room_measurement
         if measurement is not None and measurement.task is not None and not measurement.task.done():

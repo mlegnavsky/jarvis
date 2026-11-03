@@ -1,0 +1,125 @@
+--- a/i2s_audio/speaker/i2s_audio_speaker.cpp
++++ b/i2s_audio/speaker/i2s_audio_speaker.cpp
+@@ -340,6 +340,8 @@
+ }
+ 
+ void I2SAudioSpeakerBase::drain_lockstep_(uint32_t extra_frames) {
++  // Jarvis 2026-11-03: these frames did NOT have trustworthy DMA completion.
++  this->dma_discard_callbacks_();
+   // Stop DMA so no more completion events arrive while the queues are rebuilt
+   i2s_channel_disable(this->tx_handle_);
+   xEventGroupClearBits(this->event_group_, SpeakerEventGroupBits::ERR_DROPPED_EVENT);
+--- a/i2s_audio/speaker/i2s_audio_speaker.h
++++ b/i2s_audio/speaker/i2s_audio_speaker.h
+@@ -48,6 +48,10 @@
+  public:
+   float get_setup_priority() const override { return esphome::setup_priority::PROCESSOR; }
+ 
++  // Jarvis 2026-11-03: invalidate reference timing BEFORE discarded DMA credit.
++  template<typename F> void add_dma_discard_callback(F &&callback) {
++    this->dma_discard_callbacks_.add(std::forward<F>(callback));
++  }
+   void setup() override;
+   void dump_config() override;
+   void loop() override;
+@@ -163,6 +167,8 @@
+   /// @param bytes_read Number of bytes of audio data
+   void swap_esp32_mono_samples_(uint8_t *data, size_t bytes_read);
+ 
++  CallbackManager<void()> dma_discard_callbacks_{};
++
+   TaskHandle_t speaker_task_handle_{nullptr};
+   EventGroupHandle_t event_group_{nullptr};
+ 
+--- a/sendspin/sendspin_hub.cpp
++++ b/sendspin/sendspin_hub.cpp
+@@ -16,6 +16,7 @@
+ #include "esphome/core/version.h"
+ 
+ #include <esp_log.h>
++#include <esp_timer.h>
+ 
+ #include <cstring>
+ #include <memory>
+@@ -119,6 +120,17 @@
+ 
+ void SendspinHub::setup() {
+   auto config = this->build_client_config_();
++  // Jarvis 2026-11-03: keep reference diagnostics fresh; ordinary hubs unchanged.
++  if (this->reference_diagnostics_) {
++    config.time_burst_interval_ms = 500;
++    config.time_burst_response_timeout_ms = 500;
++    config.liveness_timeout_ms = 2500;
++#ifdef USE_SENDSPIN_PLAYER
++    // The reference adapter has exactly one frame layout, never mono or compressed.
++    this->player_config_.audio_formats = {{sendspin::SendspinCodecFormat::PCM, 2, 48000, 16}};
++    this->player_config_.fixed_delay_us = 0;
++#endif
++  }
+   this->client_ = std::make_unique<sendspin::SendspinClient>(std::move(config));
+ 
+   // Set up persistence (preferences must be initialized before providers are added to the client). These key names
+@@ -164,6 +176,11 @@
+   }
+ }
+ 
++void SendspinHub::on_time_sync_updated(float error) {
++  this->reference_sync_error_ = error;
++  this->reference_sync_at_ = esp_timer_get_time();
++}
++
+ void SendspinHub::loop() {
+   if (this->enabled_.has_value() && this->unpaired_access_.has_value() &&
+       this->enabled_.value() != this->client_->is_started() && !this->status_has_error()) {
+@@ -174,6 +191,10 @@
+     }
+   }
+   this->client_->loop();
++  if (!this->client_->is_connected()) {
++    this->reference_trust_ = sendspin::ConnectionTrust::NONE;
++    this->reference_sync_at_ = 0;
++  }
+ 
+ #ifdef USE_MDNS_SUPPORTS_ENABLE_DISABLE
+   this->update_mdns_service_();
+--- a/sendspin/sendspin_hub.h
++++ b/sendspin/sendspin_hub.h
+@@ -98,6 +98,20 @@
+  public:
+   SendspinHub();
+ 
++  // Jarvis 2026-11-03: main-loop diagnostics for the silent reference endpoint.
++  // Kalman error is diagnostic only; it is NOT a physical clock uncertainty bound.
++  void enable_reference_diagnostics() { this->reference_diagnostics_ = true; }
++  bool reference_connected() const { return this->client_ && this->client_->is_connected(); }
++  bool reference_paired_owner(const std::string &server_id) const {
++    if (!this->reference_connected() || this->reference_trust_ != sendspin::ConnectionTrust::USER) return false;
++    const auto info = this->client_->get_server_information();
++    return info.has_value() && !server_id.empty() && info->server_id == server_id;
++  }
++  bool reference_time_synced() const { return this->reference_connected() && this->client_->is_time_synced(); }
++  float reference_sync_error() const { return this->reference_sync_error_; }
++  int64_t reference_sync_at() const { return this->reference_sync_at_; }
++
++
+   float get_setup_priority() const override { return sendspin_priority::HUB; }
+   void setup() override;
+   void loop() override;
+@@ -306,6 +320,17 @@
+   /// @brief Keeps the `_sendspin` mDNS service advertised while the client is running.
+   void update_mdns_service_();
+ #endif
++
++  // Jarvis 2026-11-03: callbacks run on the main loop, never the sync task.
++  void on_time_sync_updated(float error) override;
++  void on_trust_changed(sendspin::ConnectionTrust trust) override {
++    this->reference_trust_ = trust;
++    if (trust != sendspin::ConnectionTrust::USER) this->reference_sync_at_ = 0;
++  }
++  bool reference_diagnostics_{false};
++  sendspin::ConnectionTrust reference_trust_{sendspin::ConnectionTrust::NONE};
++  float reference_sync_error_{0};
++  int64_t reference_sync_at_{0};
+ 
+   // --- SendspinClientListener overrides ---
+   void on_group_update(const sendspin::GroupUpdateObject &group) override;

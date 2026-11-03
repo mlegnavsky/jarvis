@@ -1,0 +1,58 @@
+# Reference-only Sendspin renderer, idle until an encrypted native arm action.
+# The Git revision is injected by the target-scoped firmware stage operation.
+external_components:
+  - source:
+      type: git
+      url: https://github.com/mlegnavsky/jarvis
+      ref: ${jarvis_reference_source_sha}
+      path: firmware/reference_bridge/components
+    refresh: never
+    components: [jarvis_reference, i2s_audio, sendspin]
+sendspin:
+  id: sendspin_hub
+  unpaired_access: false
+jarvis_reference:
+  id: jarvis_reference_gate
+  output_speaker: i2s_audio_speaker
+  dac_id: aic3204_dac
+  amplifier_id: internal_speaker_amp
+  sendspin_id: sendspin_hub
+speaker:
+  - id: !extend mixing_speaker
+    output_speaker: jarvis_reference_gate
+    bits_per_sample: 16
+api:
+  actions:
+    - action: jarvis_reference_status
+      supports_response: only
+      then:
+        - api.respond:
+            data: !lambda |-
+              root["status"] = id(jarvis_reference_gate).status_json();
+    - action: jarvis_reference_arm
+      variables:
+        generation: int
+        owner: string
+        duration_ms: int
+      supports_response: only
+      then:
+        - api.respond:
+            data: !lambda |-
+              root["accepted"] = generation > 0 && duration_ms > 0 &&
+                id(jarvis_reference_gate).arm(generation, owner, duration_ms);
+              root["status"] = id(jarvis_reference_gate).status_json();
+    - action: jarvis_reference_cancel
+      variables:
+        generation: int
+      supports_response: only
+      then:
+        - api.respond:
+            data: !lambda |-
+              root["accepted"] = generation > 0 && id(jarvis_reference_gate).cancel(generation);
+              root["status"] = id(jarvis_reference_gate).status_json();
+    - action: jarvis_reference_pairing
+      supports_response: only
+      then:
+        - api.respond:
+            data: !lambda |-
+              root["pairing_token"] = id(sendspin_hub).get_pairing_token().value_or("");

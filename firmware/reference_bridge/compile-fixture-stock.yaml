@@ -1,0 +1,14 @@
+# UNSUPPORTED BUILD-ONLY EXPERIMENT: stock audible playback is not preserved.
+# Compile-only fixture, never flash this image.
+packages:
+  base: !include compile-fixture.yaml
+esphome:
+  name: jarvis-reference-stock-compile
+  build_path: /tmp/jarvis-reference-stock-build
+media_source:
+  - platform: sendspin
+    id: original_sendspin_source
+    codecs: [FLAC, PCM]
+    fixed_delay: 480us
+jarvis_reference:
+  existing_player: original_sendspin_source

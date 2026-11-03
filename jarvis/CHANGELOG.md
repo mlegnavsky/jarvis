@@ -1,3 +1,10 @@
+# 3.12.3
+
+- Report allowlisted public Voice PE package metadata without exposing credentials.
+- Stage a fixed, commit-pinned silent reference package for the one allowed Voice PE configuration with CAS and explicit restore. Compilation and installation remain separate operations.
+- No reference playback, microphone capture, or firmware installation is enabled by updating Jarvis.
+- Stock Sendspin overlay is an unsupported build experiment and is rejected before staging; only legacy source staging is available pending exact device compile.
+
 # 3.12.2
 
 - Send the complete unchanged native pipeline fields required by Core when changing its TTS voice.

@@ -745,3 +745,37 @@ Read-only hardware-reference feasibility found a digital preDAC/preAMP VoicePE�
 ## Additional causal subtractor also rejected —3Nov2026
 
 Independent read-only numerical helper tested a genuinely past-trained/frozen future-waveform predictor, not the earlier per-current-window fitted classifier.96fits/2693scalarcases: stable linear future echo attenuation1.34–26.34dB and frozen current-human component preserved; all contaminated/AGC bootstrap cases failopen, so zero echo removal there. Futuregain÷4 and nonlinear gating still amplify error to-5.54/-7.52dB despite energy guard; changed guard decisions add up to17.7× humanenergy artifacts. NO-GO, no productionintegration/livechanges. Fullowned authored-fixture scripts and compressed scalar case results under experiments/rejected-causal-aec-20261103, REPORT/summary/provenance preserve every limit. No actualroomPCM retained or replayed; room nonlinearDSP remainsunknown. Current1.3.5/d98 remains unchanged/lease released.
+
+
+## Synchronized reference candidate —3Nov2026, not deployed
+
+Native1.3.6/addon3.12.3 candidates add exact owned RAOP sample timing, paired
+Sendspin PCM, a silent Voice PE I2S gate and a fixed generated-only native probe.
+The probe never opens a microphone or HomePod. Production dialogue is not yet
+attached to this reference. Full implementation/limits: docs/superpowers/plans/2026-11-03-reference-bridge.md and experiments/reference-bridge-20261103/README.md.
+Both exact ESPHome2026.10.1 minimal fixtures compile; real overlays pass codegen;
+UBSAN lease checks pass.312duplex tests and246addon tests(20optional skips) pass.
+A single real encrypted240s transport experiment has a preserved FALSE verdict
+(clear+end coalescing criterion); separate clear-only test passes. A7.571352s
+actual-module SDK integration passes with simulated native counters/ACK only.
+Neither experiment proves physical DMA, HomePod alignment, AEC or conversation.
+
+Live baseline remains native1.3.5/d98 andaddon3.12.2, Core2026.6.4 unchanged.
+Deployment preflight:1.6GiB free, mandatorybackup threshold2GiB; no newbackup,
+firmware change, deployment or microphone use. Retention preview identifies
+old unprotected ba75b0ef708.05MB and9edc3711710.38MB; explicit deletion approval
+is still missing. Preserve latest3(b77ec1cd/d9346e31/4fb5ba7f) andprotected27122c9a.
+Continue from concrete reviewed publication and CI, then approved cleanup,
+addon update/safe installed-package metadata, exact target compile and backed-up
+CAS activation. Existing consumed room latch remains immutable.
+Original stutter/self-answer/barge-in/1s goal remains OPEN.
+
+Review correction: stock_sendspin staging is now explicitly rejected before any
+write because its experimental listener replacement silences normal Sendspin
+media. Its YAML/fixture remains a build-only experiment, not a deployable profile.
+Only legacy staging is allowed, and exact installed-package compatibility remains
+a required compile gate. Review also found and corrected zero-progress callback
+busy-loop and HA initialization/probe ownership race. Full review/rulings are in
+docs/evidence/2026-11-03-reference-bridge-review.json.
+
+Final host checks after the review fixes:314duplex tests10.259s PASS;247addon tests7.562s PASS(20optional skips); manifest and diff checks PASS. No live activation.

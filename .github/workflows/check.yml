@@ -25,6 +25,28 @@ jobs:
       - run: python scripts/check_manifest.py
       - run: python scripts/simulate_heating.py
       - run: PYTHONPATH=managed_sources/firmware_bridge python -m unittest discover -s managed_sources/firmware_bridge/tests -q
+  reference-firmware:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture: [compile-fixture.yaml, compile-fixture-stock.yaml]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install esphome==2026.10.1
+      - name: Verify reference ownership and DMA accounting
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=undefined firmware/reference_bridge/tests/lease_test.cpp -o /tmp/reference-lease-test
+          /tmp/reference-lease-test
+          python firmware/reference_bridge/tests/audio_write_test.py
+      - name: Check real overlay code generation
+        run: python firmware/reference_bridge/tests/overlay_codegen_test.py
+      - name: Compile exact ESP32-S3 endpoint
+        run: esphome compile firmware/reference_bridge/${{ matrix.fixture }}
   energy-chart:
     runs-on: ubuntu-latest
     steps:
@@ -74,7 +96,7 @@ jobs:
           tags: jarvis-smoke:local
       - run: python scripts/smoke_container.py ${{ matrix.app }}
   publish-laboratory:
-    needs: [tests, containers, backup-dav, energy-chart]
+    needs: [tests, containers, backup-dav, energy-chart, reference-firmware]
     if: github.event_name == 'push' && github.ref == 'refs/heads/feat/jarvis-addon'
     runs-on: ubuntu-latest
     permissions:

@@ -1,0 +1,185 @@
+{
+  "schema": 1,
+  "verified_at": "2026-11-03T13:37:19.125133+00:00",
+  "esphome": "2026.10.1",
+  "esp_idf": "5.5.6",
+  "sendspin_cpp": "0.9.3",
+  "target": "esp32s3",
+  "result": "compile_and_host_tests_passed_not_deployed",
+  "inputs": {
+    "sha256_map_digest": "cccb6b8a2b00c9d763ce71598b4fcae8f8e21e6fe37496b84073d96ea33c2de3",
+    "digest_encoding": "SHA256 of sorted compact JSON relative-path:SHA256 map, excluding build-proof.json and generated caches",
+    "file_count": 53,
+    "firmware_component_files": {
+      "components/jarvis_reference/__init__.py": "217e85310f96b619b268a6a98dab3682d10e8ba9c21e554d1bf8d6d3e0004815",
+      "components/jarvis_reference/jarvis_reference.cpp": "47e3c2a3f40d37668b858425864d191332ca5499a71c9fd41faa7f62d995e54b",
+      "components/jarvis_reference/jarvis_reference.h": "6d94dd5efb743a715540f81ff9714f5a9bfd426da57c1275dafc02a884236cd7",
+      "components/jarvis_reference/lease.h": "0c8feb0e5c5c7a0641de9b56987b04d9d6063f53812589c6d57ef4b3fa7f8e9a"
+    },
+    "overlay_sha256": {
+      "voice-pe-common.yaml": "a6a31a5a82b92a87e9675f9c8ac652edb77fb5c7afdedeaf85c11d9c1b234ec8",
+      "voice-pe-legacy.yaml": "3d2bd1f4d20ec715b0d7daa6538811cf709fcbf56ac621a1334872f600c4455d",
+      "voice-pe-stock-sendspin.yaml": "caedab4a7d1009ecb7159ed51ab020276c8e76e98cc8e564d0bed28a0b42f776"
+    },
+    "upstream_hooks_patch_sha256": "ba51665ccd46e8645108e80933b49d59f3e0cfb02ef689941a63dffa3d4de46e",
+    "upstream_manifest_sha256": "72c2c756ba18adeb65fb75a7ab5d9b0025487205e50717a49b2dfec6b4265c01",
+    "original_upstream_files_verified": 36,
+    "modified_upstream_file_count": 4
+  },
+  "host_tests": {
+    "lease": {
+      "passed": true,
+      "sanitizer": "undefined",
+      "exit_code": 0,
+      "command": "g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=all firmware/reference_bridge/tests/lease_test.cpp -o /tmp/reference-lease-test-ubsan && /tmp/reference-lease-test-ubsan",
+      "test_source_sha256": "ac89fa4e38641e07a5f56bd70b750b8ae7e07e6aec300797146d486e34a532cf",
+      "includes": "ownership, silence, DMA/discard accounting, stale generations, signal counters and simulated 240 s state scenario"
+    },
+    "overlays": {
+      "profiles": {
+        "legacy": {
+          "passed": true,
+          "fixture_sha256": "48ffac51a74425a3b35b6298e09f0e8d94937db72ad592edfc9af20aa24adbca",
+          "generated_cpp_sha256": "b87222ccfc2399e5effd292f98c60f7e7ff217d8c6a05499a691861f3df573b0",
+          "stock_listener_before_reference": false,
+          "all_normal_output_through_gate": true
+        },
+        "stock-sendspin": {
+          "passed": true,
+          "fixture_sha256": "5474612650765e1b47bd980ea6b67deeba45883c8bbe76735a5b59873ac106ec",
+          "generated_cpp_sha256": "8935f0f7529dc923f6e749f06a8b3c5c456e460c0211e4e61f0d6ffb573ac77e",
+          "stock_listener_before_reference": true,
+          "all_normal_output_through_gate": true
+        }
+      },
+      "scope": "real overlay code generation against minimal hardware fixtures; no installed device package"
+    },
+    "overlay_command": "/tmp/refbridge-esphome-env/bin/python firmware/reference_bridge/tests/overlay_codegen_test.py",
+    "overlay_test_source_sha256": "99e4531cd774081f3cba12c152b86f9ff4b29ed4e1fbe86bc66b087fce535ca4",
+    "upstream_patch_applies_cleanly": true,
+    "audio_write": {
+      "passed": true,
+      "command": "python3 firmware/reference_bridge/tests/audio_write_test.py",
+      "sanitizer": "undefined",
+      "tick_ms_tested": [
+        1,
+        10
+      ],
+      "production_method": "actual on_audio_write body extracted automatically and compiled with host I2S/timer/FreeRTOS substitutes; real mutex and lease",
+      "cases": "idle, armed, draining, stale clock, expired lease, DAC unmute, partial-frame rejection, full output; cross-thread cancel access during delay; positive partial and malformed physical writes retain return behavior",
+      "red_observed": "unfixed production failed: zero-progress write must block at least one tick",
+      "lock_mutation_red_observed": "removing unlock from the extracted method failed: rejected writer must release mutex before delaying",
+      "red_log_sha256": "01b18963b0fc77eda11adcb38c34fd6968fbea0dce12e5aed3bbca2b02ba47f9",
+      "lock_mutation_red_log_sha256": "1c52e7dd0c25e41f3e4e029ced0211c315962fe48ee10f347ad6f6a2db2ce66b",
+      "green_log_sha256": "f6b8b229be899ba191b0d41bc3681f9e11288ad764c66c8954a4f96682d4da7d",
+      "test_sha256": {
+        "audio_write_test.cpp": "f584180cf949e1fe25c562fb96d35a8392a8fc8cba322e9a1792c72bd6348baa",
+        "audio_write_test.py": "837d450d39d3e0c5bbf38c6bd147774862441785074cb5ecd13e4f4cdc7e1463"
+      }
+    }
+  },
+  "builds": {
+    "legacy": {
+      "passed": true,
+      "exit_code": 0,
+      "command": "/tmp/refbridge-esphome-env/bin/esphome compile firmware/reference_bridge/compile-fixture.yaml",
+      "fixture_sha256": "e0a941b34d921bc9405ca422e3fe921703b128b51ff8ef05a01d5a8aab08541b",
+      "config_hash": "0x71fc91a2",
+      "generated_cpp_sha256": "dfd2c75139f53bdcfa0dc543821166ec91f2c86a792079e7f44699c8cbe21fa2",
+      "dependencies_lock_sha256": "626b743d49abd4625b4f65eaf6322bed64a886d177afce93d05a76c3dace5b49",
+      "compiled_source_files_verified": 7,
+      "artifacts": {
+        "firmware.elf": {
+          "path": "/tmp/jarvis-reference-build/build/firmware.elf",
+          "sha256": "2ee740a703786f31a4062acc9220e99145a043c22631374276e2de9f3f75f430",
+          "bytes": 27181328
+        },
+        "firmware.ota.bin": {
+          "path": "/tmp/jarvis-reference-build/build/firmware.ota.bin",
+          "sha256": "81b85e2382519be87ecdba31f53577b0059d1bd5f314a7bc1c3015998d0a0325",
+          "bytes": 1126944
+        },
+        "firmware.factory.bin": {
+          "path": "/tmp/jarvis-reference-build/build/firmware.factory.bin",
+          "sha256": "622d2df46cd0c5341f5c21d917ec972d899bbae675109f85d5e24e243c1c5252",
+          "bytes": 1192480
+        }
+      },
+      "static_memory": {
+        "ram_used_bytes": 112627,
+        "ram_total_bytes": 341760,
+        "flash_used_bytes": 1126823,
+        "flash_total_bytes": 8126464
+      },
+      "listener_registration_lines": {
+        "reference_hub->set_listener(reference_gate);": 551
+      },
+      "compile_log_sha256": "d63ee6c06195f974d06ec786ce5d2756c67c2bb79f55d31536d2b2ffb321c1d8",
+      "warnings": [
+        "WARNING 'unpaired_access' is off but there is no pairing method (static_pairing_code or a dynamic pairing code), so no new server can pair with this device"
+      ],
+      "freertos_tick_hz": 1000
+    },
+    "stock-sendspin": {
+      "passed": true,
+      "exit_code": 0,
+      "command": "/tmp/refbridge-esphome-env/bin/esphome compile firmware/reference_bridge/compile-fixture-stock.yaml",
+      "fixture_sha256": "bbcd41c3fd1f6d719f961f73d991c322239d56004c5fc750549592271445a0aa",
+      "config_hash": "0xf7bc1094",
+      "generated_cpp_sha256": "2b2466ab1ca890e2143ef3bd5d1eee9bef6d838c3fe3a3669b9bd1891237ab04",
+      "dependencies_lock_sha256": "626b743d49abd4625b4f65eaf6322bed64a886d177afce93d05a76c3dace5b49",
+      "compiled_source_files_verified": 7,
+      "artifacts": {
+        "firmware.elf": {
+          "path": "/tmp/jarvis-reference-stock-build/build/firmware.elf",
+          "sha256": "e587d4ea7a27b11882b79214e8d234981c9873e3ebce03386cb8d623c618139a",
+          "bytes": 27873108
+        },
+        "firmware.ota.bin": {
+          "path": "/tmp/jarvis-reference-stock-build/build/firmware.ota.bin",
+          "sha256": "f5b2671377f9a0bad78c49903a478fdd9ce182ddf3b42bea39d427a1ade23a9c",
+          "bytes": 1133936
+        },
+        "firmware.factory.bin": {
+          "path": "/tmp/jarvis-reference-stock-build/build/firmware.factory.bin",
+          "sha256": "bf350fa51b98ae1c3424c231247e89e0c5ac5c5c098ed4cc1a3b4757adff4829",
+          "bytes": 1199472
+        }
+      },
+      "static_memory": {
+        "ram_used_bytes": 112691,
+        "ram_total_bytes": 341760,
+        "flash_used_bytes": 1133827,
+        "flash_total_bytes": 8126464
+      },
+      "listener_registration_lines": {
+        "reference_hub->set_listener(original_sendspin_source);": 582,
+        "reference_hub->set_listener(reference_gate);": 669
+      },
+      "compile_log_sha256": "1ca7b57a2de30977ad827517271824716d7ff034e298705cc3e126fdd7f71e8f",
+      "warnings": [
+        "WARNING 'unpaired_access' is off but there is no pairing method (static_pairing_code or a dynamic pairing code), so no new server can pair with this device"
+      ],
+      "freertos_tick_hz": 1000,
+      "unsupported_build_only_experiment": true
+    }
+  },
+  "environment_workaround": {
+    "local_only": true,
+    "reason": "psutil cannot find own PID in restricted /proc; CMake helper uses its documented Linux os.getppid fallback",
+    "path_suffix": "idf_component_manager/prepare_components/cmake_pid.py",
+    "before_sha256": "f626ae76d90bdd22c4c75fef5bd10b6d138c49ca4ea390953b8967bd0cf74132",
+    "after_sha256": "e41106e519d557bea784556124adcec648750d36a501abf93de524bd590891fd",
+    "runtime_firmware_modified_by_workaround": false
+  },
+  "limitations": [
+    "The compile fixtures are never-flashed, credential-free ESP32-S3 targets; they do not prove compatibility with the currently installed full Voice PE package.",
+    "API encryption in fixtures is provisioning-only. Deployment must preserve the real encrypted API, existing pin assignments and all physical speaker consumers behind the gate.",
+    "Memory figures are static link allocations, not measured runtime heap/PSRAM peaks or scheduler/DMA behavior.",
+    "No firmware upload, microphone, live device, HomePod, room acoustics, latency or barge-in test was performed by this firmware verification.",
+    "The 240 s lease scenario is accelerated host state simulation, not a 4-minute hardware/acoustic test.",
+    "LeakSanitizer is unavailable in the restricted /proc environment. The final C++ host run used UBSAN only.",
+    "Compiler pairing warning concerns absent static/dynamic display codes. The library always provisions pairing_psk; its token is exposed only by the native API action. Real-device pairing remains untested.",
+    "The stock-sendspin overlay is an unsupported build-only experiment: replacing the stock listener does not preserve audible stock Sendspin playback. It must not be staged or deployed."
+  ]
+}

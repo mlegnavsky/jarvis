@@ -9,3 +9,6 @@ aiowebdav2==0.6.2
 
 # Real streamed-reference codec used by the installed pyatv path; tests only.
 miniaudio==1.71
+
+# Pinned native RAOP transport exercised by interoperability tests.
+pyatv==0.17.0
