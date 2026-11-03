@@ -22,9 +22,9 @@ Files: waveform_observer.py/test_waveform_observer.py; __init__.py/manifest.json
 Interface measure_waveform unchanged; add scalar kernel name. Existing async observer unchanged.
 - [x] RED native-kernel availability, native/fallback parity under gain/DC/inversion and near-limit variation; keep all192existing regressions.
 - [x] Implement PCM16 quantized Pearson dot through existing findfactor with bounded Python fallback.
-- [ ] GREEN full relevant suites and fresh follow-up review; one material RED/GREEN fix pass if needed.
-- [ ] Publish expected HEAD/exact tree, CI; space/retention/lease; backed-up CAS1.2.8; native generated-reference proof, source/fixed output/mic/receipt/release.
-- [ ] Record usable native facts; real-room acoustic solution and latency still OPEN.
+- [x] GREEN full relevant suites and fresh follow-up review; one material RED/GREEN fix pass if needed.
+- [x] Publish expected HEAD/exact tree, CI; space/retention/lease; backed-up CAS1.2.8; native generated-reference proof, source/fixed output/mic/receipt/release.
+- [x] Record usable native facts; real-room acoustic solution and latency still OPEN.
 
 ## Ledger
 Base reviewed1.2.7 a91c4a6e875a31bf5ad98243fc5db133c8d9c9a4. Operator wave127-apply verified05:16:12UTC/backupcf7385ba. Native selftest passed, waveform budget exhausted288/25.223ms. Original plan's operator goal remains incomplete pending this follow-up. Core pyproject dependency was read from exact2026.6.4 tag; do not install anything. Execution method and diagnostic scope remain owner-delegated.
@@ -32,3 +32,7 @@ Base reviewed1.2.7 a91c4a6e875a31bf5ad98243fc5db133c8d9c9a4. Operator wave127-ap
 195duplex GREEN (3new native/DC/gain/inversion/near-limit regressions first RED), manifest/diff GREEN. Native/fallback are mathematically checked; actual Green result remains mandatory. Follow-up review pending.
 
 Fresh follow-up review a91c4a6..5d37574: Critical0/Important0/Minor0. Independent195GREEN and manifest/diff passed.2500near-limit pairs compared with exact-integer Pearson: maxabsolute deviation1.04e-6. Actual import failure fallback tested to2001positions/1250ms and budget exit. Host20native probes all measured2001positions, median4.2975ms/max6.903ms; still not ARM proof. Root owns native generated-reference/installed-kernel/source/CI/CAS/output/lease verification. Short native proof does not establish full2001worst-case or room separation/clock/latency. No general big-endian hardware claim; current Green target is little-endian. No re-review of prior1.2.7 changes and no new source modifications after this review.
+
+Target activation completed3Nov2026. Public sourcefeb65f1cd0c9d29b7225869ac3b3d4848f765097 is exactly local28ae0f3/treecf6aa892b8537a1cdf673218da6047e75b889a11; push41583856360 and PR41583861894 CI/laboratory publication succeeded. wave128-apply-20261103 verified/active_verified05:30:54UTC, backup42b6d49d.3changed runtime files freshly exact; runtime1.2.8/source7bfaf3bb6f884effeb579e357e1b3ec52222d11441af96f818bb219f8cf8c6de. Native generated-reference waveform measured1216comparisons/19.651ms/correlation1/constructed1250ms/kernelaudioop_findfactor; this is a usable short ARM proof, not physical delay or full2001worst-case proof. NativeVAD/TTS and fixed HomePod output passed; no mic opened by either test. Lease release verified05:36:17UTC.
+
+Latest real session had0frames/0outputs/television_not_quiet because Apple TV integration was unavailable/setup_error. Separate backed-up integration reload voice-tv-reload-20261103 verified05:47:43UTC, backupba75b0ef, integrationloaded and TVplaying; no Core restart. Fresh native source/probe retained, mic off-mute/satelliteidle. Receipt exactreadback e6646d3500006fcb887f3672f2429c91cebf4798f9adad07a25495ccf41150f5. Recovery lease release verified05:48:40UTC/freshlockedfalse, private token removed. Evidence docs/evidence/2026-11-03-waveform128-native-verification.json. Diagnostic deliverable complete; actual conversation/startup/own-echo/human interruption and latency acceptance remain OPEN. No deferred minors.
