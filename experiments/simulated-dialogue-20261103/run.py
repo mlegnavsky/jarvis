@@ -312,6 +312,7 @@ async def simulate(duration, destination, expected_source):
         'stt': stt_rows, 'agent': agent_rows, 'events': rows,
         'unwanted_echo_agent_turns': len(faults),
         'human_agent_turns': sum(row['origin']=='human' for row in agent_rows),
+        'human_inputs_expected': sum(kind=='human' and at+length<=duration for at,length,kind,_text,_delay in EVENTS),
         'stream_resources': [{**s.snapshot(), 'native_readers': s.native.active_readers,
                               'reference_readers': s.reference_pipe.active_readers,
                               'producer_done': s.producer.done(), 'decoder_done': s.decoder.done()}
@@ -334,7 +335,7 @@ async def simulate(duration, destination, expected_source):
         'all_readers_closed': all(s.native.active_readers==s.reference_pipe.active_readers==0 for s in streams),
         'pipes_within_256k_each': all(s.native.peak_bytes<=262144 and s.reference_pipe.peak_bytes<=262144 for s in streams),
         'no_echo_self_answers': not faults,
-        'all_seven_human_turns_accepted': None if duration<240 else sum(row['origin']=='human' for row in agent_rows)==7,
+        'all_scheduled_human_turns_accepted': sum(row['origin']=='human' for row in agent_rows)==result['human_inputs_expected'],
     }
     destination.write_text(json.dumps(result, indent=2)+'\n')
     print(json.dumps({'event': 'result', 'path': str(destination), 'wall_seconds': result['wall_seconds'],
@@ -348,8 +349,10 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--native-deps', type=Path)
     parser.add_argument('--transport-control', action='store_true')
+    parser.add_argument('--extended-conversation', action='store_true')
     parser.add_argument('--expected-source', required=True)
     args = parser.parse_args()
     if args.transport_control: EVENTS[:] = EVENTS[:3]
+    if args.extended_conversation: EVENTS.append((275., 2., 'human', 'Finish the long story.', None))
     if args.native_deps: sys.path.insert(0, str(args.native_deps.resolve()))
     asyncio.run(simulate(args.duration, args.output, args.expected_source))

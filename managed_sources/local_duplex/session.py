@@ -27,8 +27,11 @@ class Session:
         self.task=None;self.confirmation_task=None;self.generation=0
         self.switch=asyncio.Lock();self.finished=asyncio.Event()
         self.stage='idle';self.done=False;self.closed=False
-        self.idle_at=clock();self.frames=0;self.frames_during_output=0
-        self.completed_turns=0;self.interruptions=0;self.failures=0;self.last_error=None
+        self.idle_at=clock();self.activity_at=self.idle_at
+        self.session_budget_policy='since_last_accepted_turn'
+        self.frames=0;self.frames_during_output=0
+        self.completed_turns=0;self.accepted_turns=0
+        self.interruptions=0;self.failures=0;self.last_error=None
         self.truncated=0;self.reason=None;self.input_end=None
         self._pending=None;self.deferred_turns=0;self.deferred_replaced=0;self.deferred_expired=0
         self.confirmations=0;self.rejected_confirmations=0;self.confirmation_failures=0
@@ -36,9 +39,10 @@ class Session:
 
     def snapshot(self):
         return {key:getattr(self,key) for key in ('stage','frames','frames_during_output',
-            'completed_turns','interruptions','failures','last_error','truncated','reason',
+            'completed_turns','accepted_turns','interruptions','failures','last_error','truncated','reason',
             'deferred_turns','deferred_replaced','deferred_expired','suppressed_frames','input_end',
-            'interruption_policy','confirmations','rejected_confirmations','confirmation_failures')}
+            'interruption_policy','confirmations','rejected_confirmations','confirmation_failures',
+            'session_budget_policy')}
 
     def request_close(self, reason):
         self.reason=reason;self.done=True;self._pending=None;self.finished.set()
@@ -99,6 +103,10 @@ class Session:
                 self.rejected_confirmations+=1;return
             if not 0<=self.clock()-captured_until<=5:
                 self.deferred_expired+=1;return
+            if self.accepted_turns>=self.max_turns:
+                if not original.done():await self.interrupt()
+                self.request_close('turn_limit');return
+            self.activity_at=self.clock()
             if not original.done():await self.interrupt()
             if self.closed or self.done:return
             if self._pending is not None:
@@ -120,6 +128,10 @@ class Session:
                 if self.on_capture:self.on_capture(self.clock() if captured_until is None else captured_until)
                 async with asyncio.timeout(30):text=await self.transcribe(audio,voiced,False)
             if generation!=self.generation or self.closed or self.done or not text:return
+            if self.accepted_turns>=self.max_turns:
+                self.request_close('turn_limit');return
+            self.accepted_turns+=1
+            self.activity_at=self.clock()
             self.stage='thinking'
             async with asyncio.timeout(60):result=await self.respond(text)
             if generation!=self.generation or self.closed or self.done:return
@@ -128,7 +140,8 @@ class Session:
                 async with asyncio.timeout(100):await self.play(result.speech)
             if generation!=self.generation or self.closed or self.done:return
             self.completed_turns+=1
-            if self.completed_turns>=self.max_turns:self.request_close('turn_limit')
+            if self.completed_turns>=self.max_turns or self.accepted_turns>=self.max_turns:
+                self.request_close('turn_limit')
             elif not result.continuing and not result.speech and self._pending is None:
                 self.request_close('conversation_finished')
         except asyncio.CancelledError:
@@ -177,14 +190,16 @@ class Session:
                         busy=any(task is not None and not task.done() for task in (self.task,self.confirmation_task))
                     if not busy and not self.segmenter.active and self.clock()-self.idle_at>=self.idle_seconds:
                         self.request_close('silence_timeout');return
-                    if self.clock()-started>=self.max_seconds:
+                    if self.clock()-self.activity_at>=self.max_seconds:
                         self.request_close('session_limit');return
         reader=asyncio.create_task(consume())
         finished=asyncio.create_task(self.finished.wait())
         try:
-            async with asyncio.timeout(self.max_seconds+1):
-                ready,_pending=await asyncio.wait({reader,finished},return_when=asyncio.FIRST_COMPLETED)
-                if reader in ready:await reader
+            # Capture stalls and every provider stage retain their own finite
+            # deadlines. Accepted dialogue renews the watchdog above; session
+            # wall age must not cancel a current answer.
+            ready,_pending=await asyncio.wait({reader,finished},return_when=asyncio.FIRST_COMPLETED)
+            if reader in ready:await reader
         finally:
             for task in (reader,finished):
                 if not task.done():task.cancel()
