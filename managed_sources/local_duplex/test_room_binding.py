@@ -12,7 +12,7 @@ from calibration import CalibrationManager
 from adapter import DELEGATE,native_session
 from room_measurement import reserved_marker
 from room_measurement import RoomMeasurement
-from room_native import NativeRoomLink
+from room_native import NativeRoomLink,client_disconnected
 
 
 @dataclass
@@ -33,6 +33,7 @@ class RoomBindingTests(unittest.IsolatedAsyncioTestCase):
         cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='LocalDialogue')
         scope=dict(asyncio=asyncio,DELEGATE=DELEGATE,native_session=native_session,
             reserved_marker=reserved_marker,asdict=asdict,replace=replace,
+            client_disconnected=client_disconnected,
             PipelineEvent=lambda kind,data=None:NS(type=kind,data=data),
             PipelineEventType=NS(RUN_START='run-start',RUN_END='run-end',STT_START='stt-start',INTENT_END='intent-end'),
             MicroVadSpeexEnhancer=lambda *args:NS(),prime_native_vad=lambda enhancer:(77,.01),
@@ -166,7 +167,7 @@ class RoomBindingTests(unittest.IsolatedAsyncioTestCase):
             restored=self.app();restored.calibration=calibration
             await restored.restore_room_isolation()
             self.assertTrue(restored.room_isolated)
-            old=NS(cli=NS(is_connected=True),available=True,state='idle')
+            old=NS(cli=NS(connected_address='native-address',api_version=(1,14)),available=True,state='idle')
             current=old
             restored.room_native_link=NS(entity=old,original_client=old.cli)
             restored.hass=NS(data={'satellites':NS(get_entity=lambda _:current)})
@@ -174,7 +175,7 @@ class RoomBindingTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(await restored.release_room_isolation())
             current=NS(available=True,state='idle')
             self.assertFalse(await restored.release_room_isolation())
-            old.cli.is_connected=False
+            old.cli.connected_address=None;old.cli.api_version=None
             self.assertTrue(await restored.release_room_isolation())
             self.assertFalse(restored.room_isolated)
             self.assertFalse(calibration.store.read('room-test-isolation.json')['active'])

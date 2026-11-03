@@ -40,7 +40,7 @@ from .playback_observer import PlaybackObserver
 from .waveform_observer import measure_waveform
 from .calibration import CalibrationManager
 from .room_measurement import RoomMeasurement, PASSAGE, reserved_marker
-from .room_native import NativeRoomLink
+from .room_native import NativeRoomLink, client_disconnected
 from .ha_io import (decode_reference, is_output_change, pcm_signal,
     prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native, stop_announcement)
 from .session import Session
@@ -49,7 +49,7 @@ from .speech_stream import open_speech_stream
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, play_homepod_stream, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.3.4'
+VERSION='1.3.5'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -120,7 +120,7 @@ class LocalDialogue:
         # new entity and a disconnected old API client: no old callbacks or
         # microphone packets can cross this connection boundary.
         if link is not None and (current is link.entity or link.original_client is None
-                or link.original_client.is_connected):return False
+                or not client_disconnected(link.original_client)):return False
         await self.calibration.execute(self.calibration.store.write,'room-test-isolation.json',
             {'active':False,'released_by':'fresh_native_connection'})
         self.room_isolated=False;return True

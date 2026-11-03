@@ -4,6 +4,14 @@ import re
 TARGET='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 MEDIA=re.compile(r'media-source://media_source/local/jarvis_speech/jarvis-[a-f0-9]{32}\.wav')
 MARKER=re.compile(r'jarvis-room-test:[a-f0-9]{32}')
+_UNKNOWN=object()
+
+
+def client_disconnected(client):
+    # Public APIClientBase properties in aioesphomeapi45.3.1 both become
+    # None when its on-stop hook clears the connection. Unknown stays closed.
+    return (getattr(client,'connected_address',_UNKNOWN) is None
+        and getattr(client,'api_version',_UNKNOWN) is None)
 
 
 class NativeRoomLink:

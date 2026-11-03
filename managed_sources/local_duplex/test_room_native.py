@@ -7,6 +7,12 @@ import unittest
 
 
 class NativeRoomTests(unittest.IsolatedAsyncioTestCase):
+    async def test_pinned_api_client_connection_shape_has_no_is_connected_property(self):
+        self.assertTrue(hasattr(self.module,'client_disconnected'),'pinned native connection check missing')
+        self.assertTrue(self.module.client_disconnected(NS(connected_address=None,api_version=None)))
+        self.assertFalse(self.module.client_disconnected(NS(connected_address='native-address',api_version=(1,14))))
+        self.assertFalse(self.module.client_disconnected(object()))
+
     async def asyncSetUp(self):
         self.assertIsNotNone(importlib.util.find_spec('room_native'),'fixed native room link missing')
         self.module=importlib.import_module('room_native');self.events=[];self.calls=[];self.announcements=[]
