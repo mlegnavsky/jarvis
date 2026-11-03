@@ -119,7 +119,12 @@
   },
   "raw_microphone_saved": false,
   "transcripts_saved": false,
-  "interruption_attribution": "unknown_user_confirmation_needed",
+  "interruption_attribution": "owner_confirmed_autonomous_not_human",
   "long_conversation_acceptance_verified": false,
-  "latency_improvement_claimed": false
+  "latency_improvement_claimed": false,
+  "owner_confirmation": {
+    "date": "2026-11-03",
+    "report": "Zastavovala se sama; delší rozhovor dělá problémy."
+  },
+  "room_acceptance": "failed"
 }

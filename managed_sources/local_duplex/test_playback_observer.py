@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import inspect
 import json
 import math
 import random
@@ -163,3 +164,108 @@ class PlaybackObserverTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(asyncio.CancelledError):await task
         self.assertEqual(closed,[True])
         self.assertTrue(observer.closed)
+
+
+class WaveformIntegrationTests(unittest.IsolatedAsyncioTestCase):
+    def make_observer(self,output,executor):
+        cls=importlib.import_module('playback_observer').PlaybackObserver
+        self.assertIn('run_executor',inspect.signature(cls).parameters,
+            'optional nonblocking waveform executor is missing')
+        self.now=0.
+        return cls(lambda:output,clock=lambda:self.now,run_executor=executor)
+
+    def reference(self,seed=42,seconds=5):
+        data=importlib.import_module('test_waveform_observer').shaped(seed,seconds)
+        return importlib.import_module('segmenter').EchoReference(data)
+
+    async def direct_executor(self,func):return func()
+
+    async def stream(self,observer,data):
+        chunks=[data[i:i+3200] for i in range(0,len(data),3200)]
+        async def source():
+            for at,chunk in enumerate(chunks):
+                self.now=at/10
+                yield chunk
+                await asyncio.sleep(0)
+        result=[chunk async for chunk in observer.source(source())]
+        self.assertEqual(result,chunks)
+        await asyncio.sleep(0)
+        return observer.snapshot()['waveform']
+
+    async def test_waveform_worker_finds_delay_without_changing_chunks(self):
+        reference=self.reference()
+        observer=self.make_observer(NS(owned=True,started_at=0.,reference=reference),self.direct_executor)
+        data=(bytes(40000)+reference.pcm)[:5*32000]
+        stats=await self.stream(observer,data)
+        measured=[x for x in stats['observations'] if x['status']=='measured']
+        self.assertTrue(any(x['offset_ms']==1250 and x['correlation']>.999 for x in measured))
+        self.assertFalse(stats['raw_audio_saved'])
+        self.assertFalse(stats['input_modified'])
+
+    async def test_blocked_executor_does_not_block_input_or_close(self):
+        entered=asyncio.Event()
+        async def blocked(func):
+            entered.set()
+            await asyncio.Event().wait()
+        reference=self.reference()
+        observer=self.make_observer(NS(owned=True,started_at=0.,reference=reference),blocked)
+        async with asyncio.timeout(2):stats=await self.stream(observer,reference.pcm)
+        self.assertTrue(entered.is_set())
+        self.assertGreater(stats['busy_skips'],0)
+        self.assertFalse(stats['pending'])
+        self.assertTrue(observer.closed)
+
+    async def test_executor_failure_is_scalar_and_does_not_break_input(self):
+        async def broken(func):raise RuntimeError('optional executor unavailable')
+        reference=self.reference()
+        observer=self.make_observer(NS(owned=True,started_at=0.,reference=reference),broken)
+        stats=await self.stream(observer,reference.pcm)
+        self.assertGreater(stats['errors'],0)
+        self.assertNotIn('optional executor unavailable',json.dumps(observer.snapshot()))
+
+    async def test_waveform_history_and_report_are_bounded_and_contain_no_samples(self):
+        reference=self.reference(seconds=20)
+        observer=self.make_observer(NS(owned=True,started_at=0.,reference=reference),self.direct_executor)
+        stats=await self.stream(observer,reference.pcm)
+        self.assertEqual(len(stats['observations']),8)
+        self.assertGreater(stats['scheduled'],8)
+        for row in stats['observations']:
+            self.assertTrue(all(isinstance(x,(str,int,float,bool,type(None))) for x in row.values()))
+        encoded=json.dumps(observer.snapshot(),indent=2)
+        self.assertLess(len(encoded.encode()),128*1024)
+
+    async def test_completed_measurement_from_replaced_reference_is_discarded(self):
+        entered=asyncio.Event();release=asyncio.Event();returned=asyncio.Event()
+        async def blocked(func):
+            entered.set();await release.wait()
+            result=func();returned.set();return result
+        reference=self.reference()
+        output=NS(owned=True,started_at=-1.25,reference=reference)
+        observer=self.make_observer(output,blocked)
+        for at in range(40):
+            self.now=(at+1)/100
+            observer.observe(reference.pcm[at*320:(at+1)*320],self.now,self.now)
+        await entered.wait()
+        output.reference=self.reference(seed=73)
+        observer.observe(output.reference.pcm[:320],.41,.41)
+        release.set();await returned.wait();await asyncio.sleep(0)
+        stats=observer.snapshot()['waveform']
+        self.assertEqual(stats['stale_results'],1)
+        self.assertEqual(stats['observations'],[])
+
+    async def test_burst_capture_uses_receive_clock_to_bound_work_rate(self):
+        reference=self.reference()
+        observer=self.make_observer(NS(owned=True,started_at=0.,reference=reference),self.direct_executor)
+        self.now=0.
+        # Five seconds nominal capture arrives at one receive time.
+        for at in range(500):
+            observer.observe(reference.pcm[at*320:(at+1)*320],(at+1)/100,0.)
+            await asyncio.sleep(0)
+        self.assertLessEqual(observer.snapshot()['waveform']['scheduled'],1)
+
+    async def test_invalid_receive_clock_does_not_schedule_unbounded_work(self):
+        reference=self.reference()
+        observer=self.make_observer(NS(owned=True,started_at=0.,reference=reference),self.direct_executor)
+        for at in range(40):
+            observer.observe(reference.pcm[at*320:(at+1)*320],(at+1)/100,float('nan'))
+        self.assertEqual(observer.snapshot()['waveform']['scheduled'],0)

@@ -2,6 +2,7 @@
 import asyncio
 from dataclasses import asdict, replace
 from datetime import timedelta
+from functools import partial
 import hashlib
 import json
 from pathlib import Path
@@ -33,6 +34,7 @@ from .bridge import TurnBridge, response_facts
 from .control import read_control
 from .model_probe import audit_models
 from .playback_observer import PlaybackObserver
+from .waveform_observer import measure_waveform
 from .ha_io import (decode_reference, is_output_change, pcm_signal,
     prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native)
 from .session import Session
@@ -40,7 +42,7 @@ from .speech_file import SpeechFiles, create_owned_file, release_prepared
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.2.6'
+VERSION='1.2.7'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -192,7 +194,7 @@ class LocalDialogue:
                 if guards.get(key) is input_allowed:guards.pop(key,None)
         television=self.television()
         output=self.make_output(pipeline)
-        observer=PlaybackObserver(lambda:output)
+        observer=PlaybackObserver(lambda:output,run_executor=hass.async_add_executor_job)
         def input_allowed():return not session.done and not session.closed and television.input_safe()
         def overlap(audio):return output.last_overlap_at is not None and time.monotonic()-output.last_overlap_at<len(audio)/32000+1
         bridge=TurnBridge(transcribe,hass.data['jarvis_speaker_identity'].complete,converse,
@@ -261,11 +263,18 @@ class LocalDialogue:
             warmup_frames,probability=prime_native_vad(enhancer)
             pipeline=async_get_pipeline(self.hass,PIPELINE)
             async with asyncio.timeout(30):prepared=await self.synthesize('Zkouška hlasu na HomePodu.',pipeline)
+            try:
+                async with asyncio.timeout(.5):
+                    waveform=await self.hass.async_add_executor_job(partial(measure_waveform,
+                        prepared.pcm[:12800],prepared.pcm,played_seconds=1.65))
+            except Exception as exc:
+                waveform={'status':'unavailable','error':type(exc).__name__,'acoustic_echo_proof':False}
             self.report['self_test']={'status':'passed','scope':'native_VAD_and_TTS_reference_no_playback',
                 'native_vad_probability':probability,'native_vad_warmup_frames':warmup_frames,
                 'reference_seconds':len(prepared.pcm)/32000,'reference_signal':prepared.signal,
                 'microphone_opened':False,'audible_playback':False,'source_revision':self.source_revision,
-                'pipeline_signature':pipeline_signature(pipeline)}
+                'pipeline_signature':pipeline_signature(pipeline),
+                'waveform_probe':{**waveform,'scope':'generated_reference_only_no_microphone'}}
         except Exception as exc:
             self.report['self_test']={'status':'failed','error':type(exc).__name__,
                 'microphone_opened':False,'audible_playback':False}

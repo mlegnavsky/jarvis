@@ -1,6 +1,7 @@
 import asyncio
 import ast
 import importlib
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace as NS
 import unittest
@@ -11,6 +12,40 @@ MEDIA='media-source://media_source/local/jarvis_speech/jarvis-'+'a'*32+'.wav'
 
 class HomePodTests(unittest.IsolatedAsyncioTestCase):
     def module(self):return importlib.import_module('homepod_io')
+
+    async def test_production_probe_measures_reference_without_opening_microphone(self):
+        tree=ast.parse(Path(__file__).with_name('__init__.py').read_text())
+        cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='LocalDialogue')
+        released=[]
+        async def release(prepared):released.append(prepared)
+        scope={'asyncio':asyncio,'MicroVadSpeexEnhancer':lambda *args:object(),
+            'prime_native_vad':lambda enhancer:(77,.01),'async_get_pipeline':lambda *args:NS(),
+            'PIPELINE':'fixed','pipeline_signature':lambda pipeline:'signature',
+            'release_prepared':release,'partial':partial,
+            'measure_waveform':importlib.import_module('waveform_observer').measure_waveform}
+        exec(compile(ast.Module(body=[cls],type_ignores=[]),'production-dialogue','exec'),scope)
+        app=object.__new__(scope['LocalDialogue']);app.probing=False;app.report={};app.source_revision='native-source'
+        async def execute(func,*args):return func(*args)
+        app.hass=NS(async_add_executor_job=execute)
+        prepared=NS(pcm=importlib.import_module('test_waveform_observer').shaped(13,3),signal={'silent':False})
+        async def synthesize(text,pipeline):return prepared
+        async def save():pass
+        app.synthesize=synthesize;app.save=save
+        await app.probe()
+        proof=app.report['self_test']
+        self.assertEqual(proof['status'],'passed')
+        self.assertIn('waveform_probe',proof)
+        self.assertEqual(proof['waveform_probe']['status'],'measured')
+        self.assertEqual(proof['waveform_probe']['offset_ms'],1250)
+        self.assertFalse(proof['microphone_opened'])
+        self.assertFalse(proof['audible_playback'])
+        self.assertEqual(released,[prepared])
+        async def unavailable(func,*args):raise TimeoutError('executor unavailable')
+        app.hass.async_add_executor_job=unavailable
+        await app.probe()
+        self.assertEqual(app.report['self_test']['status'],'passed')
+        self.assertEqual(app.report['self_test']['waveform_probe']['status'],'unavailable')
+        self.assertEqual(len(released),2)
 
     async def test_output_reports_synthesis_and_first_audio_wait_separately(self):
         output=await self.output();original=output.tts

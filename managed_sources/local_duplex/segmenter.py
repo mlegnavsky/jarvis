@@ -92,6 +92,7 @@ class EchoReference:
     def __init__(self, pcm):
         if not isinstance(pcm,bytes) or len(pcm)%2 or not 320<=len(pcm)<=RATE_BYTES*90:
             raise ValueError('invalid_reference_pcm')
+        self.pcm=pcm  # Immutable generated reference; never serialized by diagnostics.
         self.levels=envelopes(pcm)
 
     def is_echo(self, microphone, *, played_seconds):
