@@ -11,6 +11,7 @@ from types import SimpleNamespace
 
 import voluptuous as vol
 from homeassistant.components import conversation, tts
+from homeassistant.components.assist_satellite.const import DATA_COMPONENT as SATELLITE_COMPONENT, AssistSatelliteEntityFeature
 from homeassistant.components.assist_pipeline.pipeline import (
     PipelineEvent, PipelineEventType, PipelineInput, async_get_pipeline,
 )
@@ -31,22 +32,24 @@ from custom_components.extended_openai_conversation.dialogue import is_noise_tra
 from custom_components.extended_openai_conversation.const import DEFAULT_CHAT_MODEL
 from .tv_session import TVSession
 from custom_components.jarvis_voice_diagnostics.turn_taking import spoken_name
-from .adapter import DELEGATE, install, native_session
+from .adapter import DELEGATE, install, native_session, operator_installed
 from .bridge import TurnBridge, response_facts
 from .control import read_control
 from .model_probe import audit_models
 from .playback_observer import PlaybackObserver
 from .waveform_observer import measure_waveform
 from .calibration import CalibrationManager
+from .room_measurement import RoomMeasurement, PASSAGE, reserved_marker
+from .room_native import NativeRoomLink
 from .ha_io import (decode_reference, is_output_change, pcm_signal,
-    prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native)
+    prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native, stop_announcement)
 from .session import Session
 from .speech_file import SpeechFiles, create_owned_file, release_prepared
 from .speech_stream import open_speech_stream
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, play_homepod_stream, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.3.3'
+VERSION='1.3.4'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -68,6 +71,7 @@ class LocalDialogue:
         self.source_revision=None
         self.interruptions_disabled_until=0.
         self.speech_files=None
+        self.room_measurement=None;self.room_native_link=None;self.room_isolated=False
         self.homepod_init_task=None
         self.homepod_initializing=False
         self.report={'runtime_version':VERSION,'core_version':CORE_VERSION,'mode':'local_microphone_homepod_speech',
@@ -90,6 +94,167 @@ class LocalDialogue:
 
     async def capture_discard(self):
         await self.calibration.discard()
+
+    def room_operator_ready(self):
+        return bool(CORE_VERSION=='2026.6.4' and getattr(self,'adapter',None)=='active'
+            and operator_installed(self.hass,PipelineInput,self.operator_handle))
+
+    async def restore_room_isolation(self):
+        try:
+            state=await self.calibration.execute(self.calibration.store.read,'room-test-isolation.json')
+            self.room_isolated=state is not None and (not isinstance(state,dict) or state.get('active') is not False)
+        except Exception:self.room_isolated=True
+
+    async def isolate_room_test(self):
+        self.room_isolated=True
+        await self.calibration.execute(self.calibration.store.write,'room-test-isolation.json',{'active':True})
+
+    async def release_room_isolation(self):
+        if (not getattr(self,'room_isolated',False) or self.probing or self.active is not None
+                or not self.room_operator_ready()):return False
+        component=self.hass.data.get(SATELLITE_COMPONENT)
+        current=component.get_entity(SATELLITE) if component else None
+        if not current or not current.available or str(current.state)!='idle':return False
+        link=getattr(self,'room_native_link',None)
+        # A fresh Core setup has no old entity/link. Otherwise require both a
+        # new entity and a disconnected old API client: no old callbacks or
+        # microphone packets can cross this connection boundary.
+        if link is not None and (current is link.entity or link.original_client is None
+                or link.original_client.is_connected):return False
+        await self.calibration.execute(self.calibration.store.write,'room-test-isolation.json',
+            {'active':False,'released_by':'fresh_native_connection'})
+        self.room_isolated=False;return True
+
+    def room_test_ready(self):
+        component=self.hass.data.get(SATELLITE_COMPONENT)
+        satellite=component.get_entity(SATELLITE) if component else None
+        mute=self.hass.states.get(MUTE)
+        if not (self.room_operator_ready() and not self.room_isolated
+                and self.active is None and self.calibration.state=='off' and self.ready()
+                and self.speech_ready() and self.calibration_ready() and mute and mute.state=='off'
+                and satellite and satellite.available and str(satellite.state)=='idle'
+                and satellite._pipeline_task is None
+                and satellite.supported_features & AssistSatelliteEntityFeature.START_CONVERSATION):return False
+        selected=async_get_pipeline(self.hass,satellite._resolve_pipeline())
+        return selected.id==PIPELINE and selected.conversation_engine==AGENT
+
+    async def prepare_room_test(self):
+        prepared=None;silent=None
+        try:
+            prepared=await self.synthesize(PASSAGE,async_get_pipeline(self.hass,PIPELINE))
+            if len(prepared.pcm)>24*32000:raise ValueError('fixed_room_reference_too_long')
+            silent=await create_owned_file(self.hass.async_add_executor_job,self.speech_files,bytes(6400))
+            output=self.make_output(async_get_pipeline(self.hass,PIPELINE),streaming=False)
+            async def fixed(_text):return prepared
+            output.tts=fixed;self.output=output
+            async def release():
+                try:await release_prepared(prepared)
+                finally:await release_prepared(silent)
+            return SimpleNamespace(output=output,media_id=silent.media_id,release=release)
+        except BaseException:
+            try:
+                if prepared is not None:await release_prepared(prepared)
+            finally:
+                if silent is not None:await release_prepared(silent)
+            raise
+
+    async def operator_handle(self,value):
+        marker=value.conversation_extra_system_prompt
+        measurement=getattr(self,'room_measurement',None)
+        if not reserved_marker(marker) and not self.room_isolated:
+            # A new human activation owns the satellite now; stop only our
+            # diagnostic and let the normal validated dialogue proceed.
+            task=getattr(measurement,'task',None)
+            if task is not None and not task.done():
+                measurement.abort('external_pipeline')
+                await asyncio.shield(asyncio.gather(task,return_exceptions=True))
+            return DELEGATE
+        run=value.run
+        def begin():
+            # Core run.start() can start its optional disk recorder. This
+            # read-only operator emits only lifecycle metadata instead.
+            run.process_event(PipelineEvent(PipelineEventType.RUN_START,{
+                'pipeline':run.pipeline.id,'language':run.language,
+                'conversation_id':value.session.conversation_id,
+                'device_id':value.device_id,'satellite_id':value.satellite_id}))
+        async def body(_value):
+            try:
+                eligible=(run.pipeline.id==PIPELINE and str(run.start_stage)=='stt'
+                    and str(run.end_stage)=='tts' and value.stt_stream is not None
+                    and value.stt_metadata is not None and int(value.stt_metadata.sample_rate)==16000)
+                if not eligible or measurement is None or not measurement.accepts(marker):return
+                run.audio_settings=replace(run.audio_settings,is_vad_enabled=True)
+                run.audio_enhancer=MicroVadSpeexEnhancer(run.audio_settings.auto_gain_dbfs,
+                    run.audio_settings.noise_suppression_level,True)
+                prime_native_vad(run.audio_enhancer)
+                run.process_event(PipelineEvent(PipelineEventType.STT_START,{
+                    'engine':run.pipeline.stt_engine,'metadata':asdict(value.stt_metadata),
+                    'audio_processing':{'prefers_auto_gain_enabled':False,'prefers_noise_reduction_enabled':False}}))
+                await measurement.capture(value.stt_stream,run.process_enhance_audio)
+            finally:
+                run.process_event(PipelineEvent(PipelineEventType.INTENT_END,{'intent_output':{
+                    'conversation_id':value.session.conversation_id,'continue_conversation':False}}))
+        return await native_session(value,body,begin=begin)
+
+    async def room_test(self,nonce,expires_at):
+        if self.probing or not self.room_test_ready():
+            self.report['room_test_request']={'state':'rejected_not_ready'};return
+        self.probing=True
+        satellite=self.hass.data[SATELLITE_COMPONENT].get_entity(SATELLITE)
+        local_player=self.player();television=self.television()
+        event_types={'intent_end':PipelineEventType.INTENT_END,'run_end':PipelineEventType.RUN_END}
+        link=NativeRoomLink(satellite,lambda:stop_announcement(local_player),
+            lambda kind,data=None:PipelineEvent(event_types[kind],data))
+        self.room_native_link=link
+        async def start_native(media_id,marker):
+            if not self.room_operator_ready():raise ValueError('room_operator_wrapper_unavailable')
+            await link.start(media_id,marker)
+        measurement=RoomMeasurement(calibration=self.calibration,prepare=self.prepare_room_test,
+            start_native=start_native,stop_native=link.stop,ready=self.room_test_ready,
+            isolate=self.isolate_room_test)
+        measurement.task=asyncio.current_task()
+        self.room_measurement=measurement
+        def changed(event):
+            state=event.data.get('new_state')
+            if event.data['entity_id']==MUTE and (state is None or state.state!='off'):
+                measurement.abort('microphone_muted')
+            elif event.data['entity_id']==TELEVISION:
+                owned=television.snapshot()['owned'];television.observe(state.as_dict() if state else None)
+                if not television.input_safe():measurement.abort('television_audible')
+                elif owned and not television.snapshot()['owned']:measurement.abort('television_changed')
+        def service_called(event):
+            if self.output_changed(event):
+                if measurement.output is not None:measurement.output.disown()
+                television.abandon();measurement.abort('speaker_changed_externally')
+            elif is_output_change(event.data,PLAYER,
+                    lambda data:async_extract_referenced_entity_ids(self.hass,TargetSelection(data))):
+                link.disown();measurement.abort('satellite_output_changed_externally')
+        unsubscribe=async_track_state_change_event(self.hass,[MUTE,TELEVISION],changed)
+        unsubscribe_service=self.hass.bus.async_listen(EVENT_CALL_SERVICE,service_called)
+        try:
+            async with self.lock:
+                await television.acquire()
+                if not television.input_safe():
+                    self.report['room_test_request']={'state':'rejected_television_not_quiet'};return
+                await measurement.run(nonce,expires_at)
+        finally:
+            unsubscribe();unsubscribe_service()
+            try:
+                try:
+                    if measurement.native_start_sent:
+                        try:
+                            entry=satellite.platform.config_entry
+                            if entry is None or entry.domain!='esphome':raise ValueError('exact_native_entry_required')
+                            async with asyncio.timeout(30):
+                                if not await self.hass.config_entries.async_reload(entry.entry_id):
+                                    raise ValueError('native_connection_reset_failed')
+                            self.report['room_connection_reset']={'state':'reloaded','new_microphone_start':False}
+                        except Exception as error:
+                            self.report['room_connection_reset']={'state':'failed','error_type':type(error).__name__}
+                finally:await television.release()
+            finally:
+                self.probing=False;self.output=None
+                await self.save()
 
     def player(self):
         component=self.hass.data.get(DATA_COMPONENT)
@@ -446,6 +611,7 @@ class LocalDialogue:
         await self.output_test()
 
     async def save(self,_now=None):
+        await self.release_room_isolation()
         if not self.probing and self.active is None:self.schedule_homepod_initialization()
         request=await self.hass.async_add_executor_job(read_control,self.root,
             self.report.get('last_control_nonce'),time.time())
@@ -453,6 +619,7 @@ class LocalDialogue:
             self.report['last_control_nonce']=request['nonce']
             if request['action']=='capture_next':handler=lambda:self.capture_next(request['nonce'],request['expires_at'])
             elif request['action']=='capture_discard':handler=self.capture_discard
+            elif request['action']=='room_test':handler=lambda:self.room_test(request['nonce'],request['expires_at'])
             else:
                 handler={'probe':self.probe,'output_test':self.output_test,
                     'audio_recover':self.audio_recover,'voice_agent_probe':self.voice_agent_probe,
@@ -470,6 +637,11 @@ class LocalDialogue:
         report['playback_diagnostics']=self.observer.snapshot() if self.observer else None
         report['source_revision']=self.source_revision
         report['calibration']=self.calibration.snapshot()
+        measurement=getattr(self,'room_measurement',None);link=getattr(self,'room_native_link',None)
+        report['room_test']=measurement.snapshot() if measurement is not None else {'state':'off'}
+        report['room_test_native']=link.snapshot() if link is not None else None
+        report['room_test_isolation']={'active':getattr(self,'room_isolated',False),
+            'release_requires':'fresh_native_connection_not_prompt_absence'}
         report['model_request']=self.hass.data.get('jarvis_voice_model_facts')
         report['household_catalog']=self.hass.data.get('jarvis_household_catalog_summary')
         player=self.player()
@@ -507,11 +679,13 @@ async def async_setup(hass,config):
         if not isinstance(data,dict):data={}
         return source,data
     app.source_revision,old=await hass.async_add_executor_job(previous)
+    await app.restore_room_isolation()
     proof=old.get('self_test') or {}
     if not isinstance(proof,dict):proof={}
     if proof.get('source_revision')==app.source_revision and proof.get('status')=='passed':app.report['self_test']=proof
     app.report['last_control_nonce']=old.get('last_control_nonce')
     app.adapter=install(hass,PipelineInput,CORE_VERSION,PIPELINE,SATELLITE,app.handle,
+        operator_handle=app.operator_handle,
         error_event=lambda error:PipelineEvent(PipelineEventType.ERROR,{
             'code':getattr(error,'code','local-voice-preparation-failed'),
             'message':getattr(error,'message','Voice provider preparation failed')}))
@@ -519,6 +693,10 @@ async def async_setup(hass,config):
     async_track_time_interval(hass,app.save,timedelta(seconds=3))
     async def stopping(_event):
         if app.active:app.active.request_close('homeassistant_stopping')
+        measurement=app.room_measurement
+        if measurement is not None and measurement.task is not None and not measurement.task.done():
+            measurement.abort('homeassistant_stopping')
+            await asyncio.gather(measurement.task,return_exceptions=True)
         await app.calibration.close()
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP,stopping)
     await app.save()

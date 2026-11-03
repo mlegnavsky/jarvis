@@ -1,9 +1,10 @@
-# One automatic room measurement — pending owner permission
+# One automatic room measurement — owner authorized
 
-Status: proposed operation only. No remote microphone activation is enabled
-or performed. Owner says nobody is home and requests autonomous simulation.
+Status: owner explicitly approved one remote <=30s measurement on3Nov2026
+(latest request5d44e702 “Ano souhlasim”). Implementation/native activation
+is being verified; no microphone activation has occurred yet.
 Existing30s RAM-only capture is ready for an already-open normal dialogue;
-that does not supply permission for a new remotely initiated microphone run.
+the newly approved fixed operator route supplies this one remote run.
 
 ## Exact proposed scope
 
@@ -43,8 +44,8 @@ The exact Core2026.6.4 satellite implementation and service schema were read.
 The missing scope is explicit owner permission and a fixed remote-start
 operator route, not a request for the owner to be physically at home.
 
-## Approval requested after authorized session fix is complete
+## Scope approved after authorized session fix was complete
 
-Allow this one remotely initiated30s room test for this repair, with the
+Owner approved this one remotely initiated30s room test for this repair, with the
 limits above. This is not permission for a persistent microphone listener,
 general start_conversation proxy or recurring recording.

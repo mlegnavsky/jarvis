@@ -6,6 +6,14 @@ import unittest
 
 
 class ControlTests(unittest.TestCase):
+    def test_one_shot_room_test_has_no_target_text_or_long_activation_window(self):
+        data={'action':'room_test','nonce':'f'*32,'expires_at':180}
+        self.assertEqual(self.read(data),data)
+        for extra in ({'target':'other-microphone'},{'text':'other story'},
+                      {'duration':300},{'expires_at':221}):
+            self.assertIsNone(self.read({**data,**extra}))
+        self.assertIsNone(self.read(data,'f'*32))
+
     def test_memory_capture_controls_are_one_target_short_lived_and_replay_checked(self):
         for action in ('capture_next','capture_discard'):
             data={'action':action,'nonce':'e'*32,'expires_at':180}

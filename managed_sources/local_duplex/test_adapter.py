@@ -6,6 +6,66 @@ import unittest
 
 
 class AdapterTests(unittest.IsolatedAsyncioTestCase):
+    async def test_changed_pipeline_still_reaches_operator_before_original_core(self):
+        adapter=importlib.import_module('adapter');hass=object();events=[]
+        class Input:
+            async def execute(value,validate=False):events.append('cloud_fallback')
+        async def handle(value):events.append('dialogue')
+        async def operator(value):events.append('local_close')
+        adapter.install(hass,Input,'2026.6.4','expected','satellite',handle,operator_handle=operator)
+        value=Input();value.run=NS(hass=hass,pipeline=NS(id='changed'),start_stage='stt',end_stage='tts',id='late')
+        value.satellite_id='satellite';value.wake_word_phrase=None;value.stt_stream=object();value.stt_metadata=NS(sample_rate=16000)
+        await value.execute(validate=True)
+        self.assertEqual(events,['local_close'])
+
+    async def test_operator_installation_proof_rejects_replaced_wrapper_and_other_owner(self):
+        adapter=importlib.import_module('adapter');self.assertTrue(hasattr(adapter,'operator_installed'))
+        hass=object()
+        class Input:
+            async def execute(value,validate=False):pass
+        async def handle(value):pass
+        async def operator(value):return adapter.DELEGATE
+        adapter.install(hass,Input,'2026.6.4','p','s',handle,operator_handle=operator)
+        self.assertTrue(adapter.operator_installed(hass,Input,operator))
+        self.assertFalse(adapter.operator_installed(object(),Input,operator))
+        async def replacement(value,validate=False):pass
+        Input.execute=replacement
+        self.assertFalse(adapter.operator_installed(hass,Input,operator))
+
+    async def test_fixed_operator_route_runs_before_cloud_preparation_and_metadata_begin_skips_debug_start(self):
+        adapter=importlib.import_module('adapter');hass=object();events=[]
+        class Input:
+            async def execute(value,validate=False):events.append('normal_native')
+            async def validate(value):raise AssertionError('operator must not prepare cloud providers')
+        async def handle(value):events.append('dialogue')
+        async def body(value):events.append('bounded_memory_only')
+        async def operator(value):
+            return await adapter.native_session(value,body,begin=lambda:events.append('metadata_start'))
+        adapter.install(hass,Input,'2026.6.4','p','s',handle,operator_handle=operator)
+        async def end():events.append('native_end')
+        def start(**kwargs):raise AssertionError('Core debug recording must not start')
+        value=Input();value.run=NS(hass=hass,pipeline=NS(id='p'),start_stage='stt',
+            end_stage='tts',id='native-room',tts_stream=None,start=start,end=end)
+        value.session=NS(conversation_id='c');value.device_id='d';value.satellite_id='s'
+        value.wake_word_phrase=None;value.stt_stream=object();value.stt_metadata=NS(sample_rate=16000)
+        await value.execute(validate=True)
+        self.assertEqual(events,['metadata_start','bounded_memory_only','native_end'])
+
+    async def test_operator_decline_keeps_normal_validation_and_target_guards(self):
+        adapter=importlib.import_module('adapter');hass=object();events=[]
+        class Input:
+            async def execute(value,validate=False):events.append('native')
+            async def validate(value):events.append('validate')
+        async def handle(value):events.append('dialogue')
+        async def operator(value):events.append('operator_check');return adapter.DELEGATE
+        adapter.install(hass,Input,'2026.6.4','p','s',handle,operator_handle=operator)
+        value=Input();value.run=NS(hass=hass,pipeline=NS(id='p'),start_stage='stt',end_stage='tts',id='real')
+        value.satellite_id='other';value.wake_word_phrase=None;value.stt_stream=object();value.stt_metadata=NS(sample_rate=16000)
+        await value.execute(validate=True)
+        self.assertEqual(events,['native']);events.clear()
+        value.satellite_id='s';await value.execute(validate=True)
+        self.assertEqual(events,['operator_check','validate','dialogue'])
+
     def setup_adapter(self, *, core='2026.6.4'):
         adapter=importlib.import_module('adapter')
         self.native=[];self.sessions=[];self.hass=object()
