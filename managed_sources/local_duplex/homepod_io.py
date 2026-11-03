@@ -74,21 +74,41 @@ async def play_homepod_file(player,media_id,volume,*,protocol=None):
     await player.async_play_media('music',media_id)
 
 
+async def play_homepod_stream(player,stream,volume,*,protocol=None):
+    from pyatv.interface import MediaMetadata
+    audio=raop_audio(player,protocol)
+    if audio.playback_manager._is_acquired:raise ValueError('homepod_already_playing')
+    await audio.set_volume(level(volume)*100)
+    await player.atv.stream.stream_file(stream.native,
+        metadata=MediaMetadata(title='Jarvis'),override_missing_metadata=False)
+    stream.raise_if_failed()
+
+
 class HomePodOutput(LocalOutput):
-    def __init__(self,read_player,tts,start,read_state,timing,**kwargs):
+    def __init__(self,read_player,tts,start,read_state,timing,*,stream_start=None,**kwargs):
         super().__init__(read_player,tts,start,None,**kwargs)
         self.read_state=read_state;self.timing=timing
         self.native_task=None;self.last_volume_decision=None;self.latency_s=None
         self.cleanup_tasks=set();self.stop_timeout=3.
         self.echo_min_bytes=12800
+        self.stream_start=stream_start;self.streaming=None;self.last_stream=None
 
     def echo_tail_seconds(self):return max(.4,(self.latency_s or 0)+.4)
 
     def snapshot(self):
-        return {**super().snapshot(),'target':HOME,'transport':'native_raop_local_file',
+        return {**super().snapshot(),'target':HOME,
+            'transport':'native_raop_mp3_stream' if self.streaming is not None or self.last_stream else 'native_raop_local_file',
             'volume_decision':self.last_volume_decision,'negotiated_latency_s':self.latency_s,
             'sender_scheduling_delay_s':self.latency_s,'latency_origin':'pyatv_stream_context_not_receiver_negotiation',
-            'pending_resource_cleanup':len(self.cleanup_tasks)}
+            'pending_resource_cleanup':len(self.cleanup_tasks),
+            'streaming':self.streaming.snapshot() if self.streaming is not None else self.last_stream}
+
+    def remember_speech(self):
+        if self.streaming is None:return super().remember_speech()
+        # Unknown-length response has a hard90s bound; actual stop/completion
+        # clamps the interval. No fabricated full duration is reported.
+        self.text_echo.remember(self.pending_text,started_at=self.started_at,
+            duration=90,tail=self.echo_tail_seconds())
 
     def available_player(self):
         player=self.read_player()
@@ -101,10 +121,16 @@ class HomePodOutput(LocalOutput):
         return player
 
     def disown(self):
+        if self.streaming is not None:self.streaming.abort()
         super().disown()
         if self.native_task is not None and not self.native_task.done() and not self.native_task.cancelling():self.native_task.cancel()
 
     async def release_resource(self,prepared):
+        if getattr(prepared,'reference',None) is not None:
+            await release_prepared(prepared)
+            if self.streaming is prepared:
+                self.last_stream=prepared.snapshot();self.streaming=None
+            return
         task=self.native_task
         if task is not None and not task.done():
             # A timed-out teardown still owns its open audio source. Hand cleanup
@@ -124,10 +150,18 @@ class HomePodOutput(LocalOutput):
         if owner!=self.generation or asyncio.current_task().cancelling():raise asyncio.CancelledError()
         player=self.available_player()
         if player is None:return
-        self.reference=EchoReference(prepared.pcm);self.last_reference_duration_s=len(prepared.pcm)/32000
+        streamed=getattr(prepared,'reference',None) is not None
+        if streamed:
+            if self.stream_start is None:raise ValueError('streaming_transport_unavailable')
+            self.streaming=prepared;self.reference=prepared.reference
+            self.last_reference_duration_s=self.reference.duration_seconds
+        else:
+            self.reference=EchoReference(prepared.pcm);self.last_reference_duration_s=len(prepared.pcm)/32000
         self.started_at=None;self.latency_s=None;self.tail_until=0.;self.recent.clear();self.recent_bytes=0;self.pending.clear()
         self.owned=True
-        self.native_task=asyncio.create_task(self.start(player,prepared.media_id,self.last_volume_decision['volume']))
+        self.native_task=asyncio.create_task(
+            self.stream_start(player,prepared,self.last_volume_decision['volume']) if streamed else
+            self.start(player,prepared.media_id,self.last_volume_decision['volume']))
         self.native_task.add_done_callback(lambda task:None if task.cancelled() else task.exception())
         self.started+=1;deadline=self.clock()+12
         try:
@@ -135,6 +169,9 @@ class HomePodOutput(LocalOutput):
                 while not self.native_task.done():
                     if not self.owned or owner!=self.generation:raise asyncio.CancelledError()
                     if not player.available:raise ValueError('homepod_disconnected')
+                    if streamed:
+                        prepared.raise_if_failed()
+                        self.last_reference_duration_s=self.reference.duration_seconds
                     observed=self.timing(player)
                     if self.started_at is None and observed is not None:
                         self.latency_s=observed['latency_s']
@@ -145,6 +182,9 @@ class HomePodOutput(LocalOutput):
                     if self.started_at is None and self.clock()>=deadline:raise TimeoutError('homepod_audio_start_unobserved')
                     await self.sleep(.02)
                 await self.native_task
+                if streamed:
+                    await prepared.wait_finished()
+                    self.last_reference_duration_s=self.reference.duration_seconds
             if not self.owned or owner!=self.generation:raise asyncio.CancelledError()
             if self.started_at is None:raise ValueError('homepod_audio_start_unobserved')
             self.completed+=1;self.owned=False;self.tail_until=self.clock()+self.echo_tail_seconds()
@@ -159,6 +199,7 @@ class HomePodOutput(LocalOutput):
         self.generation+=1
         was_owned=self.owned
         self.owned=False;started=self.clock();task=self.native_task
+        if self.streaming is not None:self.streaming.abort()
         if task is not None and not task.done():
             if was_owned and not task.cancelling():task.cancel()
             async with asyncio.timeout(self.stop_timeout):await asyncio.shield(asyncio.gather(task,return_exceptions=True))

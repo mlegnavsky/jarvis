@@ -6,3 +6,6 @@ Jinja2==3.1.6
 
 # Exact WebDAV client bundled with Home Assistant Core 2026.6.4
 aiowebdav2==0.6.2
+
+# Real streamed-reference codec used by the installed pyatv path; tests only.
+miniaudio==1.71

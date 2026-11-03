@@ -1,0 +1,733 @@
+{
+  "schema": 1,
+  "version": "1.2.8",
+  "source_revision": "7bfaf3bb6f884effeb579e357e1b3ec52222d11441af96f818bb219f8cf8c6de",
+  "checked_at": "2026-11-03T05:55:35.871053+00:00",
+  "owner_reported_delay_seconds": 17,
+  "owner_reports_stuttering": true,
+  "first_turn_estimated_delay_ms": 17570.5,
+  "interpretation": {
+    "dominant_wait": "whole_TTS_response_before_playback",
+    "self_cancels": "three_completed_microphone_inputs_accepted_before_playback_stop",
+    "transport_errors": 0,
+    "each_interruption_source_not_independently_identified": true,
+    "source_EOF_external_cause": "unknown"
+  },
+  "last_session": {
+    "run_id": "01M6FZHQ9PQ785GKJ855XPAPK5",
+    "stage": "closed",
+    "frames": 4617,
+    "frames_during_output": 635,
+    "completed_turns": 0,
+    "interruptions": 3,
+    "failures": 0,
+    "last_error": null,
+    "truncated": 0,
+    "reason": "audio_source_ended",
+    "deferred_turns": 4,
+    "deferred_replaced": 1,
+    "deferred_expired": 0,
+    "suppressed_frames": 0,
+    "input_end": {
+      "elapsed_s": 45.379,
+      "stage": "speaking",
+      "output_active": true
+    },
+    "interruption_policy": "completed_transcript_before_stop",
+    "confirmations": 5,
+    "rejected_confirmations": 2,
+    "confirmation_failures": 0,
+    "output": {
+      "owned": false,
+      "started": 4,
+      "completed": 0,
+      "skipped": 0,
+      "stopped": 4,
+      "echo_frames": 391,
+      "overlap_frames": 635,
+      "discarded": 0,
+      "last_stop_s": 0.137,
+      "last_reference_duration_s": 5.378125,
+      "last_error": null,
+      "text_echo_suppressed": 0,
+      "tts_generation_ms": 1622.6,
+      "first_audio_wait_ms": 2130.8,
+      "transcript_guard": [
+        {
+          "decision": "no_recent_output",
+          "candidate_words": 6,
+          "reference_words": 0,
+          "shared_words": 0,
+          "overlap_ratio": 0,
+          "edit_distance": null,
+          "capture_audio_ms": 3120,
+          "output_owned_at_check": false
+        },
+        {
+          "decision": "different_words",
+          "candidate_words": 2,
+          "reference_words": 104,
+          "overlap_ratio": 1,
+          "shared_words": 0,
+          "edit_distance": null,
+          "capture_audio_ms": 1040,
+          "output_owned_at_check": true
+        },
+        {
+          "decision": "different_words",
+          "candidate_words": 3,
+          "reference_words": 104,
+          "overlap_ratio": 1,
+          "shared_words": 0,
+          "edit_distance": null,
+          "capture_audio_ms": 2130,
+          "output_owned_at_check": true
+        },
+        {
+          "decision": "no_recent_output",
+          "candidate_words": 0,
+          "reference_words": 0,
+          "shared_words": 0,
+          "overlap_ratio": 0,
+          "edit_distance": null,
+          "capture_audio_ms": 1080,
+          "output_owned_at_check": true
+        },
+        {
+          "decision": "different_words",
+          "candidate_words": 3,
+          "reference_words": 14,
+          "overlap_ratio": 1,
+          "shared_words": 2,
+          "edit_distance": null,
+          "capture_audio_ms": 1070,
+          "output_owned_at_check": true
+        },
+        {
+          "decision": "no_recent_output",
+          "candidate_words": 0,
+          "reference_words": 0,
+          "shared_words": 0,
+          "overlap_ratio": 0,
+          "edit_distance": null,
+          "capture_audio_ms": 1610,
+          "output_owned_at_check": true
+        }
+      ],
+      "target": "media_player.homepod_obyvak_homepod_obyvak",
+      "transport": "native_raop_local_file",
+      "volume_decision": {
+        "volume": 0.45,
+        "muted": false,
+        "source": "raop",
+        "busy": false
+      },
+      "negotiated_latency_s": 1.5,
+      "sender_scheduling_delay_s": 1.5,
+      "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+      "pending_resource_cleanup": 0
+    },
+    "television": {
+      "owned": false,
+      "paused": 1,
+      "resumed": 1,
+      "resume_requested": 1,
+      "discarded": 0,
+      "failed": 0,
+      "last_error": null
+    },
+    "agent_response": {
+      "response_type": "action_done",
+      "speech_chars": 66,
+      "question": true
+    },
+    "input_blocked": 0,
+    "timings_ms": {
+      "stt": 633
+    },
+    "playback_diagnostics": {
+      "scope": "active_dialogue_scalar_playback_observations",
+      "frames_seen": 4617,
+      "frames_during_output": 1528,
+      "timing_unavailable_frames": 302,
+      "frames_before_sender_estimate": 242,
+      "clipped_frames": 0,
+      "peak_dbfs": -0.39,
+      "max_rms": 0.800141,
+      "max_receive_minus_nominal_ms": 0,
+      "capture_origin": "first_received_chunk_nominal_sample_count_not_hardware_clock",
+      "observations": [
+        {
+          "elapsed_capture_s": 38.41,
+          "correlation": 0.9507,
+          "offset_ms": 1250,
+          "reference_window_frame": 39,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 38.51,
+          "correlation": 0.9642,
+          "offset_ms": 1250,
+          "reference_window_frame": 49,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 38.61,
+          "correlation": 0.9871,
+          "offset_ms": 1250,
+          "reference_window_frame": 59,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 38.71,
+          "correlation": 0.9777,
+          "offset_ms": 1250,
+          "reference_window_frame": 69,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 38.81,
+          "correlation": 0.9825,
+          "offset_ms": 1250,
+          "reference_window_frame": 79,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 38.91,
+          "correlation": 0.9823,
+          "offset_ms": 1250,
+          "reference_window_frame": 89,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 39.01,
+          "correlation": 0.9777,
+          "offset_ms": 1250,
+          "reference_window_frame": 99,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 39.11,
+          "correlation": 0.9642,
+          "offset_ms": 1250,
+          "reference_window_frame": 109,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 39.21,
+          "correlation": 0.9408,
+          "offset_ms": 1250,
+          "reference_window_frame": 119,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 43.89,
+          "correlation": 0.6126,
+          "offset_ms": -860,
+          "reference_window_frame": 33,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 43.99,
+          "correlation": 0.4207,
+          "offset_ms": -1440,
+          "reference_window_frame": 101,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 44.09,
+          "correlation": 0.5034,
+          "offset_ms": -360,
+          "reference_window_frame": 3,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 44.19,
+          "correlation": 0.4601,
+          "offset_ms": -360,
+          "reference_window_frame": 13,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 44.29,
+          "correlation": 0.8856,
+          "offset_ms": -900,
+          "reference_window_frame": 77,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 44.39,
+          "correlation": 0.6722,
+          "offset_ms": -960,
+          "reference_window_frame": 93,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 44.49,
+          "correlation": 0.7628,
+          "offset_ms": -360,
+          "reference_window_frame": 43,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 44.59,
+          "correlation": 0.79,
+          "offset_ms": -360,
+          "reference_window_frame": 53,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 44.69,
+          "correlation": 0.8631,
+          "offset_ms": -400,
+          "reference_window_frame": 67,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 44.79,
+          "correlation": 0.8261,
+          "offset_ms": -530,
+          "reference_window_frame": 90,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 44.89,
+          "correlation": 0.8704,
+          "offset_ms": -820,
+          "reference_window_frame": 129,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 44.99,
+          "correlation": 0.9245,
+          "offset_ms": 50,
+          "reference_window_frame": 52,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 45.09,
+          "correlation": 0.8456,
+          "offset_ms": 40,
+          "reference_window_frame": 63,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 45.19,
+          "correlation": 0.8109,
+          "offset_ms": -140,
+          "reference_window_frame": 91,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 45.29,
+          "correlation": 0.7396,
+          "offset_ms": 90,
+          "reference_window_frame": 78,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 45.39,
+          "correlation": 0.9706,
+          "offset_ms": 170,
+          "reference_window_frame": 80,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 45.49,
+          "correlation": 0.9543,
+          "offset_ms": 180,
+          "reference_window_frame": 89,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 45.59,
+          "correlation": 0.8474,
+          "offset_ms": 180,
+          "reference_window_frame": 99,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 45.69,
+          "correlation": 0.7148,
+          "offset_ms": 1070,
+          "reference_window_frame": 20,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 45.79,
+          "correlation": 0.8284,
+          "offset_ms": 790,
+          "reference_window_frame": 58,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 45.89,
+          "correlation": 0.8782,
+          "offset_ms": 1260,
+          "reference_window_frame": 21,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 45.99,
+          "correlation": 0.8942,
+          "offset_ms": 1260,
+          "reference_window_frame": 31,
+          "window_ms": 400,
+          "search_ms": 1500
+        },
+        {
+          "elapsed_capture_s": 46.09,
+          "correlation": 0.9293,
+          "offset_ms": 1260,
+          "reference_window_frame": 41,
+          "window_ms": 400,
+          "search_ms": 1500
+        }
+      ],
+      "latest": {
+        "elapsed_capture_s": 46.09,
+        "correlation": 0.9293,
+        "offset_ms": 1260,
+        "reference_window_frame": 41,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      "turns": [
+        {
+          "timings_ms": {
+            "stt": 949.8,
+            "identity": 0.5,
+            "agent": 3098.7
+          },
+          "output": {
+            "owned": false,
+            "started": 1,
+            "completed": 0,
+            "skipped": 0,
+            "stopped": 1,
+            "echo_frames": 103,
+            "overlap_frames": 240,
+            "discarded": 0,
+            "last_stop_s": 0.06,
+            "last_reference_duration_s": 51.951875,
+            "last_error": null,
+            "text_echo_suppressed": 0,
+            "tts_generation_ms": 10249.5,
+            "first_audio_wait_ms": 2572,
+            "transcript_guard": [
+              {
+                "decision": "different_words",
+                "candidate_words": 2,
+                "reference_words": 104,
+                "overlap_ratio": 1,
+                "shared_words": 0,
+                "edit_distance": null,
+                "capture_audio_ms": 1040,
+                "output_owned_at_check": true
+              }
+            ],
+            "target": "media_player.homepod_obyvak_homepod_obyvak",
+            "transport": "native_raop_local_file",
+            "volume_decision": {
+              "volume": 0.45,
+              "muted": false,
+              "source": "raop",
+              "busy": false
+            },
+            "negotiated_latency_s": 1.5,
+            "sender_scheduling_delay_s": 1.5,
+            "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+            "pending_resource_cleanup": 0
+          }
+        },
+        {
+          "timings_ms": {
+            "stt": 536.8,
+            "identity": 0.5,
+            "agent": 1692.1
+          },
+          "output": {
+            "owned": false,
+            "started": 2,
+            "completed": 0,
+            "skipped": 0,
+            "stopped": 2,
+            "echo_frames": 147,
+            "overlap_frames": 302,
+            "discarded": 0,
+            "last_stop_s": 0.065,
+            "last_reference_duration_s": 6.068,
+            "last_error": null,
+            "text_echo_suppressed": 0,
+            "tts_generation_ms": 1645.5,
+            "first_audio_wait_ms": 2122.6,
+            "transcript_guard": [
+              {
+                "decision": "different_words",
+                "candidate_words": 3,
+                "reference_words": 104,
+                "overlap_ratio": 1,
+                "shared_words": 0,
+                "edit_distance": null,
+                "capture_audio_ms": 2130,
+                "output_owned_at_check": true
+              }
+            ],
+            "target": "media_player.homepod_obyvak_homepod_obyvak",
+            "transport": "native_raop_local_file",
+            "volume_decision": {
+              "volume": 0.45,
+              "muted": false,
+              "source": "raop",
+              "busy": false
+            },
+            "negotiated_latency_s": 1.5,
+            "sender_scheduling_delay_s": 1.5,
+            "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+            "pending_resource_cleanup": 0
+          }
+        },
+        {
+          "timings_ms": {
+            "stt": 624.8,
+            "identity": 0.5,
+            "agent": 1401.1
+          },
+          "output": {
+            "owned": false,
+            "started": 3,
+            "completed": 0,
+            "skipped": 0,
+            "stopped": 3,
+            "echo_frames": 336,
+            "overlap_frames": 506,
+            "discarded": 0,
+            "last_stop_s": 0.059,
+            "last_reference_duration_s": 6.625625,
+            "last_error": null,
+            "text_echo_suppressed": 0,
+            "tts_generation_ms": 1732.2,
+            "first_audio_wait_ms": 2149.1,
+            "transcript_guard": [
+              {
+                "decision": "different_words",
+                "candidate_words": 3,
+                "reference_words": 14,
+                "overlap_ratio": 1,
+                "shared_words": 2,
+                "edit_distance": null,
+                "capture_audio_ms": 1070,
+                "output_owned_at_check": true
+              }
+            ],
+            "target": "media_player.homepod_obyvak_homepod_obyvak",
+            "transport": "native_raop_local_file",
+            "volume_decision": {
+              "volume": 0.45,
+              "muted": false,
+              "source": "raop",
+              "busy": false
+            },
+            "negotiated_latency_s": 1.5,
+            "sender_scheduling_delay_s": 1.5,
+            "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+            "pending_resource_cleanup": 0
+          }
+        },
+        {
+          "timings_ms": {
+            "stt": 572.7,
+            "identity": 0.5,
+            "agent": 1802.8
+          },
+          "output": {
+            "owned": false,
+            "started": 4,
+            "completed": 0,
+            "skipped": 0,
+            "stopped": 4,
+            "echo_frames": 391,
+            "overlap_frames": 635,
+            "discarded": 0,
+            "last_stop_s": 0.137,
+            "last_reference_duration_s": 5.378125,
+            "last_error": null,
+            "text_echo_suppressed": 0,
+            "tts_generation_ms": 1622.6,
+            "first_audio_wait_ms": 2130.8,
+            "transcript_guard": [
+              {
+                "decision": "no_recent_output",
+                "candidate_words": 0,
+                "reference_words": 0,
+                "shared_words": 0,
+                "overlap_ratio": 0,
+                "edit_distance": null,
+                "capture_audio_ms": 1610,
+                "output_owned_at_check": true
+              }
+            ],
+            "target": "media_player.homepod_obyvak_homepod_obyvak",
+            "transport": "native_raop_local_file",
+            "volume_decision": {
+              "volume": 0.45,
+              "muted": false,
+              "source": "raop",
+              "busy": false
+            },
+            "negotiated_latency_s": 1.5,
+            "sender_scheduling_delay_s": 1.5,
+            "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+            "pending_resource_cleanup": 0
+          }
+        }
+      ],
+      "diagnostic_errors": 0,
+      "source_closed": true,
+      "input_modified": false,
+      "raw_microphone_saved": false,
+      "correlation_is_acoustic_proof": false,
+      "waveform": {
+        "scope": "raw_PCM_similarity_only_not_input_decision",
+        "observations": [
+          {
+            "elapsed_capture_s": 31.17,
+            "status": "measured",
+            "comparisons": 1196,
+            "processing_ms": 22.55,
+            "kernel": "audioop_findfactor",
+            "acoustic_echo_proof": false,
+            "correlation": -0.0899,
+            "offset_ms": -248,
+            "peak_margin": 0.0099,
+            "alternative_count": 1155,
+            "reference_window_sample": 319,
+            "window_ms": 400,
+            "search_ms": 2000,
+            "sample_rate": 500
+          },
+          {
+            "elapsed_capture_s": 36.16,
+            "status": "invalid_timing",
+            "comparisons": 0,
+            "processing_ms": 0.015,
+            "kernel": "audioop_findfactor",
+            "acoustic_echo_proof": false
+          },
+          {
+            "elapsed_capture_s": 37.16,
+            "status": "measured",
+            "comparisons": 1198,
+            "processing_ms": 22.243,
+            "kernel": "audioop_findfactor",
+            "acoustic_echo_proof": false,
+            "correlation": 0.2204,
+            "offset_ms": -854,
+            "peak_margin": 0.0825,
+            "alternative_count": 1157,
+            "reference_window_sample": 624,
+            "window_ms": 400,
+            "search_ms": 2000,
+            "sample_rate": 500
+          },
+          {
+            "elapsed_capture_s": 38.15,
+            "status": "work_budget_exhausted",
+            "comparisons": 1040,
+            "processing_ms": 27.616,
+            "kernel": "audioop_findfactor",
+            "acoustic_echo_proof": false
+          },
+          {
+            "elapsed_capture_s": 39.16,
+            "status": "work_budget_exhausted",
+            "comparisons": 1104,
+            "processing_ms": 25.156,
+            "kernel": "audioop_findfactor",
+            "acoustic_echo_proof": false
+          },
+          {
+            "elapsed_capture_s": 43.82,
+            "status": "invalid_timing",
+            "comparisons": 0,
+            "processing_ms": 0.019,
+            "kernel": "audioop_findfactor",
+            "acoustic_echo_proof": false
+          },
+          {
+            "elapsed_capture_s": 44.81,
+            "status": "measured",
+            "comparisons": 1196,
+            "processing_ms": 21.906,
+            "kernel": "audioop_findfactor",
+            "acoustic_echo_proof": false,
+            "correlation": -0.1765,
+            "offset_ms": -326,
+            "peak_margin": 0.0624,
+            "alternative_count": 1155,
+            "reference_window_sample": 358,
+            "window_ms": 400,
+            "search_ms": 2000,
+            "sample_rate": 500
+          },
+          {
+            "elapsed_capture_s": 45.75,
+            "status": "work_budget_exhausted",
+            "comparisons": 1024,
+            "processing_ms": 30.094,
+            "kernel": "audioop_findfactor",
+            "acoustic_echo_proof": false
+          }
+        ],
+        "latest": {
+          "elapsed_capture_s": 45.75,
+          "status": "work_budget_exhausted",
+          "comparisons": 1024,
+          "processing_ms": 30.094,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        "scheduled": 13,
+        "busy_skips": 0,
+        "errors": 0,
+        "stale_results": 0,
+        "pending": false,
+        "raw_audio_saved": false,
+        "input_modified": false
+      }
+    },
+    "endpoint_silence_ms": 700
+  },
+  "raw_microphone_saved": false,
+  "room_acceptance": "failed"
+}

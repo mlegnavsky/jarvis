@@ -18,7 +18,9 @@ from homeassistant.components.assist_pipeline.audio_enhancer import MicroVadSpee
 from homeassistant.components.media_player import DATA_COMPONENT
 from homeassistant.components.esphome.entry_data import build_device_unique_id
 from homeassistant.components.tts.media_source import generate_media_source_id
-from homeassistant.const import EVENT_CALL_SERVICE, EVENT_HOMEASSISTANT_STOP, __version__ as CORE_VERSION
+from homeassistant.const import CONF_PROMPT, EVENT_CALL_SERVICE, EVENT_HOMEASSISTANT_STOP, __version__ as CORE_VERSION
+from homeassistant.components.openai_conversation.tts import OpenAITTSEntity
+from homeassistant.components.openai_conversation.const import CONF_CHAT_MODEL, CONF_TTS_SPEED, RECOMMENDED_TTS_SPEED
 from homeassistant.core import Context
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers import entity_registry
@@ -39,10 +41,11 @@ from .ha_io import (decode_reference, is_output_change, pcm_signal,
     prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native)
 from .session import Session
 from .speech_file import SpeechFiles, create_owned_file, release_prepared
-from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, prime_homepod
+from .speech_stream import open_speech_stream
+from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, play_homepod_stream, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.2.8'
+VERSION='1.3.0'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -118,9 +121,25 @@ class LocalDialogue:
         if self.report['homepod_startup']['status']!='applied':raise ValueError('homepod_not_initialized')
         return homepod_state(player)
 
-    def make_output(self,pipeline):
-        return HomePodOutput(self.homepod,lambda text:self.synthesize(text,pipeline),
-            play_homepod_file,self.homepod_audio_state,homepod_timing)
+    def make_output(self,pipeline,*,streaming=True):
+        return HomePodOutput(self.homepod,
+            lambda text:self.stream_speech(text,pipeline) if streaming else self.synthesize(text,pipeline),
+            play_homepod_file,self.homepod_audio_state,homepod_timing,
+            stream_start=play_homepod_stream if streaming else None)
+
+    async def stream_speech(self,text,pipeline):
+        component=self.hass.data.get(tts.DATA_COMPONENT)
+        entity=component.get_entity(pipeline.tts_engine) if component is not None else None
+        if not isinstance(entity,OpenAITTSEntity) or not entity.available:
+            raise ValueError('configured_openai_tts_entity_required')
+        options={**entity.default_options,**entity.subentry.data}
+        if pipeline.tts_voice is not None:options[tts.ATTR_VOICE]=pipeline.tts_voice
+        client=entity.entry.runtime_data
+        return await open_speech_stream(lambda:client.audio.speech.with_streaming_response.create(
+            model=options[CONF_CHAT_MODEL],voice=options[tts.ATTR_VOICE],input=spoken_name(text),
+            instructions=str(options.get(CONF_PROMPT)),
+            speed=options.get(CONF_TTS_SPEED,RECOMMENDED_TTS_SPEED),response_format='mp3'),
+            self.hass.async_add_executor_job)
 
     def television(self):
         def read_tv():
@@ -374,7 +393,7 @@ class LocalDialogue:
             async with asyncio.timeout(45):
                 async with self.lock:
                     await television.acquire()
-                    await output.play('Zkouška hlasu na HomePodu.')
+                    await output.play('Na návsi stál starý dub. Každé ráno pod ním odpočíval malý pes a pozoroval, jak se vesnice probouzí. Jednoho dne se vedle něj posadila kočka. A od té chvíle už na ranní hlídku nikdy nebyl sám.')
             self.report['output_test']={'status':'passed' if output.completed==1 else 'skipped',
                 'speaker':HOME,'microphone_opened':False,'native_playback':output.snapshot(),'audibility_confirmed':False}
         except Exception as exc:
