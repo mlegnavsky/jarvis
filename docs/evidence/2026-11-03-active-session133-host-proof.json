@@ -120,7 +120,10 @@
     ]
   },
   "deployment": {
-    "state": "pending"
+    "state": "active_verified",
+    "public_source": "49432b79c04fe50ec4a20cda5f276484bef3f3cf",
+    "native_evidence": "docs/evidence/2026-11-03-active-session133-native-verification.json",
+    "microphone_opened": false
   },
   "remaining": [
     "own_echo_with_mismatching_ASR",
