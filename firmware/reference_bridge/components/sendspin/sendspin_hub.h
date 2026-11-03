@@ -102,6 +102,11 @@ class SendspinHub final : public Component,
   // Kalman error is diagnostic only; it is NOT a physical clock uncertainty bound.
   void enable_reference_diagnostics() { this->reference_diagnostics_ = true; }
   bool reference_connected() const { return this->client_ && this->client_->is_connected(); }
+  std::string reference_server_id() const {
+    if (!this->reference_connected()) return {};
+    const auto info = this->client_->get_server_information();
+    return info.has_value() ? info->server_id : std::string{};
+  }
   bool reference_paired_owner(const std::string &server_id) const {
     if (!this->reference_connected() || this->reference_trust_ != sendspin::ConnectionTrust::USER) return false;
     const auto info = this->client_->get_server_information();

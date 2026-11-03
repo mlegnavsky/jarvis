@@ -48,10 +48,10 @@ sequence identity, bounded PCM queue; DMA acknowledgement or explicit fault.
 - [x] Pin concrete upstream interfaces before implementing the endpoint.
 - [x] Write RED tests for late packets, overflow, clock restart, cancellation and
       discard-credit rejection. Implement smallest compatible endpoint.
-- [ ] Compile against exact ESPHome; run240s simulated timestamp/queue scenarios.
+- [x] Compile against exact ESPHome; run240s simulated timestamp/queue scenarios.
       Both fixtures and state tests pass. Frozen240s result remains false for
       clear-event criterion; separate clear-only proof passes. Physical proof pending.
-      Implementation commit/public CI pending.
+      Published54e9bce; all8CI jobs41646159996 passed. Physical proof pending.
 
 ## Task3: activation and measured proof
 
@@ -64,7 +64,9 @@ Interfaces: CAS firmware source/restore, existing native deploy and native API.
 - [x] Fresh whole-change review; one critical/important fix pass with regressions.
       Three Important and one Minor accepted; stock staging rejected, firmware
       rejection yields, HA interlock rechecked, actual overlays covered in CI.
-- [ ] Publish exact tree, CI/compile, backed-up CAS activation and real version/
-      source/timing readback. Perform a generated-only silent endpoint test.
+- [x] Publish exact tree and pass CI/compile:54e9bce, run41646159996 all8jobs.
+- [ ] Backed-up CAS activation and real version/source/timing readback. Perform
+      a generated-only silent endpoint test. Blocked by storage/explicit cleanup;
+      exact installed package compatibility remains required, stock unsupported.
 - [ ] Record receiver/microphone timing and acoustic acceptance separately; keep
       unproved interruption logic disabled and report remaining limitations.

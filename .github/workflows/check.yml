@@ -43,6 +43,8 @@ jobs:
           c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=undefined firmware/reference_bridge/tests/lease_test.cpp -o /tmp/reference-lease-test
           /tmp/reference-lease-test
           python firmware/reference_bridge/tests/audio_write_test.py
+          python firmware/reference_bridge/tests/stock_adapter_test.py
+          python firmware/reference_bridge/tests/hub_config_test.py
       - name: Check real overlay code generation
         run: python firmware/reference_bridge/tests/overlay_codegen_test.py
       - name: Compile exact ESP32-S3 endpoint

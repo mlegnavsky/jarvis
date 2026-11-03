@@ -1,7 +1,9 @@
 """Silent PCM reference endpoint; uses pinned ESPHome/Sendspin interfaces."""
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import audio, audio_dac, media_source, sendspin, speaker, switch
+import re
+from esphome.components import audio, audio_dac, sendspin, speaker, switch
+from esphome.components.sendspin.media_source import SendspinMediaSource
 from esphome.components.i2s_audio.speaker import I2SAudioSpeaker
 from esphome.const import CONF_ID
 
@@ -10,8 +12,14 @@ AUTO_LOAD = ['audio', 'speaker']
 ns = cg.esphome_ns.namespace('jarvis_reference')
 ReferenceSpeaker = ns.class_('ReferenceSpeaker', cg.Component, speaker.Speaker)
 
+def _reference_server_id(value):
+    value = cv.string_strict(value)
+    if not re.fullmatch(r'[A-Za-z0-9_-]{43}', value):
+        raise cv.Invalid('reference_server_id must be exactly 43 base64url characters')
+    return value
+
 def _limits(config):
-    audio.set_stream_limits(min_bits_per_sample=16, max_bits_per_sample=16,
+    audio.set_stream_limits(min_bits_per_sample=16, max_bits_per_sample=32,
         min_channels=2, max_channels=2, min_sample_rate=48000, max_sample_rate=48000)(config)
     return config
 
@@ -35,9 +43,10 @@ CONFIG_SCHEMA = cv.All(cv.Schema({
     cv.Required('dac_id'): cv.use_id(audio_dac.AudioDac),
     cv.Required('amplifier_id'): cv.use_id(switch.Switch),
     cv.Required('sendspin_id'): cv.use_id(sendspin.SendspinHub),
-    cv.Optional('existing_player'): cv.use_id(media_source.MediaSource),
+    cv.Required('reference_server_id'): _reference_server_id,
+    cv.Optional('existing_player'): cv.use_id(SendspinMediaSource),
     cv.Optional('sample_rate', default=48000): cv.one_of(48000, int=True),
-    cv.Optional('bits_per_sample', default=16): cv.one_of(16, int=True),
+    cv.Optional('bits_per_sample', default=32): cv.one_of(16, 24, 32, int=True),
     cv.Optional('num_channels', default=2): cv.one_of(2, int=True),
 }).extend(cv.COMPONENT_SCHEMA), cv.only_with_framework("esp-idf"), _player,
     _limits)
@@ -46,12 +55,14 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await speaker.register_speaker(var, config)
+    cg.add(var.set_reference_server_id(config['reference_server_id']))
     for key in ('output_speaker', 'dac_id', 'amplifier_id', 'sendspin_id'):
         value = await cg.get_variable(config[key])
         cg.add(getattr(var, 'set_' + key)(value))
     if 'existing_player' in config:
         # Codegen dependency: stock listener registration must complete first.
-        await cg.get_variable(config['existing_player'])
+        stock = await cg.get_variable(config['existing_player'])
+        cg.add(var.set_stock_listener(stock))
     hub = await cg.get_variable(config['sendspin_id'])
     cg.add(hub.set_listener(var))
     cg.add(hub.enable_reference_diagnostics())

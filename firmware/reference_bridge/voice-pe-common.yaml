@@ -10,17 +10,16 @@ external_components:
     components: [jarvis_reference, i2s_audio, sendspin]
 sendspin:
   id: sendspin_hub
-  unpaired_access: false
 jarvis_reference:
   id: jarvis_reference_gate
   output_speaker: i2s_audio_speaker
   dac_id: aic3204_dac
   amplifier_id: internal_speaker_amp
   sendspin_id: sendspin_hub
+  reference_server_id: ${jarvis_reference_server_id}
 speaker:
   - id: !extend mixing_speaker
     output_speaker: jarvis_reference_gate
-    bits_per_sample: 16
 api:
   actions:
     - action: jarvis_reference_status

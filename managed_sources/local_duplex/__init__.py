@@ -36,7 +36,7 @@ from .adapter import DELEGATE, install, native_session, operator_installed
 from .bridge import TurnBridge, response_facts
 from .control import read_control
 from .reference_native import NativeReferenceEndpoint
-from .reference_probe import GeneratedReferenceProbe, claim_probe
+from .reference_probe import GeneratedReferenceProbe, claim_probe, public_identity
 from .model_probe import audit_models
 from .playback_observer import PlaybackObserver
 from .waveform_observer import measure_waveform
@@ -466,6 +466,19 @@ class LocalDialogue:
                 self.calibration.finish(observer.capture)
                 await self.save()
 
+    async def reference_identity(self):
+        if self.probing or self.active is not None or self.room_isolated or self.lock.locked():return
+        self.probing=True
+        self.report['reference_identity']={'status':'running','microphone_opened':False,'network_opened':False}
+        try:
+            server_id=await self.hass.async_add_executor_job(public_identity,self.root)
+            self.report['reference_identity'].update(status='passed',server_id=server_id)
+        except Exception as exc:
+            self.report['reference_identity'].update(status='failed',error=type(exc).__name__)
+        finally:
+            self.probing=False
+            await self.save()
+
     async def reference_probe(self,nonce):
         if self.probing or self.active is not None or self.room_isolated or self.lock.locked():return
         self.probing=True;self.reference_probe_task=asyncio.current_task()
@@ -653,6 +666,7 @@ class LocalDialogue:
             elif request['action']=='capture_discard':handler=self.capture_discard
             elif request['action']=='room_test':handler=lambda:self.room_test(request['nonce'],request['expires_at'])
             elif request['action']=='reference_probe':handler=lambda:self.reference_probe(request['nonce'])
+            elif request['action']=='reference_identity':handler=self.reference_identity
             else:
                 handler={'probe':self.probe,'output_test':self.output_test,
                     'audio_recover':self.audio_recover,'voice_agent_probe':self.voice_agent_probe,

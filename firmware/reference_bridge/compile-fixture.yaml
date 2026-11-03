@@ -101,3 +101,4 @@ jarvis_reference:
   dac_id: reference_dac
   amplifier_id: reference_amp
   sendspin_id: reference_hub
+  reference_server_id: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA

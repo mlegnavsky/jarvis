@@ -1,7 +1,6 @@
-# UNSUPPORTED BUILD-ONLY EXPERIMENT: never stage or deploy this overlay.
-# Replacing the stock listener does not preserve audible stock Sendspin playback.
-# Keep upstream entity/action IDs but route Sendspin only to the silent endpoint.
-# Ordinary speaker/HTTP playback keeps using the ownership gate.
+# Retain the stock media source for normal servers and route only the configured
+# reference identity to the silent endpoint. Exact private target compile and
+# hardware acceptance remain required before installation.
 packages:
   jarvis_reference_common: !include voice-pe-common.yaml
 jarvis_reference:

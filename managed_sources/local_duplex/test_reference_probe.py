@@ -17,6 +17,17 @@ class ProbeTests(unittest.TestCase):
             path.write_bytes(b'bad')
             with self.assertRaises(ValueError):module.private_key(Path(root))
             self.assertEqual(path.read_bytes(),b'bad')
+    def test_public_identity_is_derived_from_private_key_without_a_device_connection(self):
+        from aiosendspin.noise.keys import Identity
+        from unittest.mock import patch
+        self.assertTrue(hasattr(module,'public_identity'),'public-only preparation missing')
+        with tempfile.TemporaryDirectory() as root, patch('socket.socket',side_effect=AssertionError('network forbidden')):
+            public=module.public_identity(root)
+            private=(Path(root)/'reference-private'/'identity.key').read_bytes()
+            self.assertEqual(public,Identity.from_private_bytes(private).peer_id)
+            self.assertRegex(public,r'^[A-Za-z0-9_-]{43}$')
+            self.assertEqual(module.public_identity(root),public)
+            self.assertEqual(len(private),32)
     def test_symlinks_never_read_as_private_identity(self):
         with tempfile.TemporaryDirectory() as root:
             p=Path(root);(p/'outside').write_bytes(b'x'*32)

@@ -27,7 +27,7 @@ class ReferenceConfigTests(unittest.TestCase):
         self.path.parent.mkdir();self.path.write_text(SOURCE)
         self.store=FirmwareStore(self.root,[TARGET])
     def args(self):
-        return dict(target=TARGET,source_sha='a'*40,profile='legacy',
+        return dict(target=TARGET,source_sha='a'*40,profile='legacy',reference_server_id='P'*43,
             expected_revision=hashlib.sha256(self.path.read_bytes()).hexdigest())
     def test_fixed_source_stage_preserves_secrets_and_every_original_byte(self):
         result=self.store.stage_reference(self.args())
@@ -36,6 +36,7 @@ class ReferenceConfigTests(unittest.TestCase):
         self.assertEqual(text[:a]+text[b:],SOURCE)
         self.assertIn('ref: '+ 'a'*40,text)
         self.assertIn('firmware/reference_bridge/voice-pe-legacy.yaml',text)
+        self.assertIn('jarvis_reference_server_id: "'+'P'*43+'"',text)
         self.assertNotIn('NEVER_EXPOSE',str(result))
     def test_stale_revision_and_unknown_profile_cannot_write(self):
         for overrides in ({'expected_revision':'0'*64},{'profile':'../secrets'},
@@ -43,10 +44,24 @@ class ReferenceConfigTests(unittest.TestCase):
             args=self.args();args.update(overrides)
             with self.assertRaises(APIError):self.store.stage_reference(args)
             self.assertEqual(self.path.read_text(),SOURCE)
-    def test_stock_sendspin_experiment_cannot_be_staged_or_silence_existing_player(self):
+    def test_stock_profile_requires_public_identity_and_preserves_original_configuration(self):
         args=self.args();args['profile']='stock_sendspin'
-        with self.assertRaises(APIError):self.store.stage_reference(args)
+        missing=dict(args);missing.pop('reference_server_id')
+        with self.assertRaises(APIError):self.store.stage_reference(missing)
         self.assertEqual(self.path.read_text(),SOURCE)
+        try:self.store.stage_reference(args)
+        except APIError as exc:self.fail(f'identity-pinned stock profile was refused: {exc}')
+        text=self.path.read_text();a=text.index('  jarvis_reference:');b=text.index('wifi:')
+        self.assertEqual(text[:a]+text[b:],SOURCE)
+        self.assertIn('voice-pe-stock-sendspin.yaml',text)
+        self.assertIn('jarvis_reference_server_id: "'+'P'*43+'"',text)
+    def test_missing_or_malformed_public_identity_cannot_write(self):
+        for identity in (None,'','X'*42,'X'*44,'X'*42+'=','X'*40+'\nhi'):
+            self.path.write_text(SOURCE)
+            args=self.args();args['reference_server_id']=identity
+            with self.subTest(identity=identity):
+                with self.assertRaises(APIError):self.store.stage_reference(args)
+                self.assertEqual(self.path.read_text(),SOURCE)
     def test_existing_overlay_or_ambiguous_yaml_cannot_be_overwritten(self):
         variants=[SOURCE.replace('packages:', 'packages: {a: b}\npackages:'),
             SOURCE.replace('  device:', '  jarvis_reference: already\n  device:'),
@@ -65,3 +80,15 @@ class ReferenceConfigTests(unittest.TestCase):
         value=self.store.metadata(TARGET)
         self.assertNotIn('PRIVATE',str(value))
         self.assertIsNone(value['reference_profile']['public_voice_package'])
+
+    def test_official_package_without_explicit_ref_is_recognized_and_preserved(self):
+        source=SOURCE.replace('@26.10.1','')
+        self.path.write_text(source)
+        meta=self.store.metadata(TARGET)
+        self.assertEqual(meta['reference_profile']['public_voice_package'],
+            {'repository':'esphome/home-assistant-voice-pe','path':'home-assistant-voice.yaml','ref':None})
+        args=self.args();args['expected_revision']=meta['revision']
+        self.store.stage_reference(args)
+        text=self.path.read_text();a=text.index('  jarvis_reference:');b=text.index('wifi:')
+        self.assertEqual(text[:a]+text[b:],source)
+        self.assertNotIn('NEVER_EXPOSE',str(meta))

@@ -48,6 +48,13 @@ def private_key(root):
     return data
 
 
+def public_identity(root):
+    """Provision locally; return only the stable public ID for firmware pinning."""
+    from aiosendspin.noise.keys import Identity
+    if version('aiosendspin')!='10.3.0':raise ValueError('reference_sendspin_version_changed')
+    return Identity.from_private_bytes(private_key(root)).peer_id
+
+
 def pin_peer(root, peer):
     path=private_dir(root)/'peer.id'
     if path.is_symlink():raise ValueError('reference_peer_path_invalid')

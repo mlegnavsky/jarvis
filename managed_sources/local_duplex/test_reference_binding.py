@@ -13,7 +13,7 @@ class ReferenceBindingTests(unittest.IsolatedAsyncioTestCase):
     def app(self, root, probe_class, endpoint):
         tree=ast.parse(Path(__file__).with_name('__init__.py').read_text())
         cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='LocalDialogue')
-        methods=[n for n in cls.body if isinstance(n,ast.AsyncFunctionDef) and n.name in ('reference_probe','handle')]
+        methods=[n for n in cls.body if isinstance(n,ast.AsyncFunctionDef) and n.name in ('reference_probe','reference_identity','handle')]
         async def native_session(value,handler):return await handler(value)
         scope=dict(asyncio=asyncio,time=time,claim_probe=claim_probe,
                    NativeReferenceEndpoint=endpoint,GeneratedReferenceProbe=probe_class,
@@ -29,7 +29,37 @@ class ReferenceBindingTests(unittest.IsolatedAsyncioTestCase):
         app.save=save
         app.run=lambda nonce:scope['reference_probe'](app,nonce)
         app.handle=lambda value:scope['handle'](app,value)
+        app.identity_scope=scope
+        app.prepare_identity=(lambda:scope['reference_identity'](app)) if 'reference_identity' in scope else None
         return app
+
+    async def test_identity_preparation_reports_only_public_id_without_endpoint_access(self):
+        def forbidden(*args,**kwargs):raise AssertionError('native endpoint must remain untouched')
+        with tempfile.TemporaryDirectory() as root:
+            app=self.app(root,forbidden,forbidden)
+            self.assertIsNotNone(app.prepare_identity,'local-only identity binding missing')
+            app.identity_scope['public_identity']=lambda path:'P'*43
+            app.player=forbidden
+            await app.prepare_identity()
+            self.assertEqual(app.report['reference_identity'],
+                {'status':'passed','server_id':'P'*43,'microphone_opened':False,'network_opened':False})
+            self.assertFalse(app.probing)
+            app.report={};await app.lock.acquire()
+            try:await app.prepare_identity()
+            finally:app.lock.release()
+            self.assertEqual(app.report,{})
+
+    async def test_identity_failure_never_exposes_private_material_and_releases_guard(self):
+        def failed(path):raise ValueError('sensitive private-key details')
+        with tempfile.TemporaryDirectory() as root:
+            app=self.app(root,object,object)
+            self.assertIsNotNone(app.prepare_identity,'local-only identity binding missing')
+            app.identity_scope['public_identity']=failed
+            await app.prepare_identity()
+            self.assertEqual(app.report['reference_identity']['status'],'failed')
+            self.assertEqual(app.report['reference_identity']['error'],'ValueError')
+            self.assertNotIn('sensitive',str(app.report))
+            self.assertFalse(app.probing)
 
     async def test_normal_input_waiting_for_initialization_or_lock_cannot_overlap_probe(self):
         for boundary in ('initialization','dialogue_lock'):

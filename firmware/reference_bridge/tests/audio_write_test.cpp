@@ -30,12 +30,21 @@ struct ReferenceSpeaker {
   int64_t checked_at_{6000000}, last_write_at_{0};
   Output output;
   Output *output_{&output};
+  enum class Route { NONE, NORMAL, REFERENCE, DROP };
+  Route route_{Route::NONE}; bool stream_open_{false}; uint32_t stock_callbacks_{0}, stock_writes_{0};
+  std::string stream_owner_{"reference"};
+  struct Hub { std::string reference_server_id() { return "reference"; } } hub;
+  Hub *hub_{&hub};
+  struct Listener { size_t on_audio_write(uint8_t *, size_t, uint32_t) { return 0; } } listener;
+  Listener *stock_listener_{&listener};
+  void stock_done_(bool audio_write = false) { --stock_callbacks_; if(audio_write)--stock_writes_; }
   void fail_(Fault fault) { lease_.fail(fault); }
   size_t on_audio_write(uint8_t *, size_t, uint32_t);
 };
 #include ADAPTER_WRITE_IMPL
 
 static void active(ReferenceSpeaker &s) {
+  s.route_ = ReferenceSpeaker::Route::REFERENCE; s.stream_open_ = true;
   assert(s.lease_.arm(1, now_us, 1000000, s.cached_));
   assert(s.lease_.start(now_us, s.cached_));
 }

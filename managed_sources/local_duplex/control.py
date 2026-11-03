@@ -11,8 +11,8 @@ def read_control(root,last_nonce,now):
         data=json.loads(path.read_text())
         if not isinstance(data,dict) or set(data)!={'action','nonce','expires_at'}:return None
         expiry=data['expires_at'];nonce=data['nonce']
-        if data['action'] not in ('probe','output_test','audio_recover','voice_agent_probe','audio_audit','suspend_interruptions','resume_interruptions','model_audit','capture_next','capture_discard','room_test','reference_probe') or not isinstance(nonce,str) or not re.fullmatch(r'[a-f0-9]{32}',nonce) or nonce==last_nonce:return None
+        if data['action'] not in ('probe','output_test','audio_recover','voice_agent_probe','audio_audit','suspend_interruptions','resume_interruptions','model_audit','capture_next','capture_discard','room_test','reference_probe','reference_identity') or not isinstance(nonce,str) or not re.fullmatch(r'[a-f0-9]{32}',nonce) or nonce==last_nonce:return None
         if type(expiry) not in (int,float) or not math.isfinite(expiry) or not now<expiry<=now+600:return None
-        if data['action'] in ('capture_next','capture_discard','room_test','reference_probe') and expiry>now+120:return None
+        if data['action'] in ('capture_next','capture_discard','room_test','reference_probe','reference_identity') and expiry>now+120:return None
         return data
     except (OSError,ValueError,TypeError):return None

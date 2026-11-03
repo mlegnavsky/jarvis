@@ -10,7 +10,7 @@ from .ha import UpstreamError
 from .firmware_reference import facts as reference_facts, staged_source
 
 ADDON='5c53de3b_esphome'
-FIELDS={'firmware_reference_stage':{'target','source_sha','profile','expected_revision'},'firmware_model_settings':{'target','model_id','probability_cutoff','expected_revision'},'firmware_compile':{'target','expected_revision'},'firmware_install':{'target','expected_revision'},
+FIELDS={'firmware_reference_stage':{'target','source_sha','profile','reference_server_id','expected_revision'},'firmware_model_settings':{'target','model_id','probability_cutoff','expected_revision'},'firmware_compile':{'target','expected_revision'},'firmware_install':{'target','expected_revision'},
         'firmware_config_restore':{'target','backup_id','expected_revision'},
         'firmware_model_install':{'target','model_id','model_base64','sha256','manifest','expected_revision'}}
 
@@ -48,7 +48,7 @@ class FirmwareStore(WorkspaceFiles):
   if data['revision']!=args.get('expected_revision'):raise APIError(409,'firmware_revision_conflict')
   candidate=staged_source(data['content'],args)
   result=self.write_raw(self.target(args['target']),candidate.encode(),args['expected_revision'],0o600)
-  return {**result,'activation_performed':False,'source_sha':args['source_sha'],'profile':args['profile']}
+  return {**result,'activation_performed':False,'source_sha':args['source_sha'],'profile':args['profile'],'reference_server_id':args['reference_server_id']}
  def local_model(self,node):
   manifest_path='esphome/'+node.value
   raw,_=self.raw(manifest_path)

@@ -1,27 +1,27 @@
 {
   "schema": 1,
-  "verified_at": "2026-11-03T13:37:19.125133+00:00",
+  "verified_at": "2026-11-03T14:05:49.966363+00:00",
   "esphome": "2026.10.1",
   "esp_idf": "5.5.6",
   "sendspin_cpp": "0.9.3",
   "target": "esp32s3",
-  "result": "compile_and_host_tests_passed_not_deployed",
+  "result": "stock_coexistence_host_and_all_three_compiles_passed_not_deployed",
   "inputs": {
-    "sha256_map_digest": "cccb6b8a2b00c9d763ce71598b4fcae8f8e21e6fe37496b84073d96ea33c2de3",
+    "sha256_map_digest": "a272ebf0acb097f3a60c0e257686648da2f2fd098f5bf21aa65ea552bda7c52b",
     "digest_encoding": "SHA256 of sorted compact JSON relative-path:SHA256 map, excluding build-proof.json and generated caches",
-    "file_count": 53,
+    "file_count": 56,
     "firmware_component_files": {
-      "components/jarvis_reference/__init__.py": "217e85310f96b619b268a6a98dab3682d10e8ba9c21e554d1bf8d6d3e0004815",
-      "components/jarvis_reference/jarvis_reference.cpp": "47e3c2a3f40d37668b858425864d191332ca5499a71c9fd41faa7f62d995e54b",
-      "components/jarvis_reference/jarvis_reference.h": "6d94dd5efb743a715540f81ff9714f5a9bfd426da57c1275dafc02a884236cd7",
-      "components/jarvis_reference/lease.h": "0c8feb0e5c5c7a0641de9b56987b04d9d6063f53812589c6d57ef4b3fa7f8e9a"
+      "components/jarvis_reference/__init__.py": "9319263816f509c675b6b532d23b9aba7a317782b0e8751d3d79d01bc5a95077",
+      "components/jarvis_reference/jarvis_reference.h": "24b8ae56f7a580ae4fe45b5c29996cd6bf2be90446a3d9262067a309f7a5731c",
+      "components/jarvis_reference/lease.h": "0c8feb0e5c5c7a0641de9b56987b04d9d6063f53812589c6d57ef4b3fa7f8e9a",
+      "components/jarvis_reference/jarvis_reference.cpp": "615bbf97b3c00c089f860aa01c6b034cec8da7d4b3d6069fb38f63aab6b87510"
     },
     "overlay_sha256": {
-      "voice-pe-common.yaml": "a6a31a5a82b92a87e9675f9c8ac652edb77fb5c7afdedeaf85c11d9c1b234ec8",
-      "voice-pe-legacy.yaml": "3d2bd1f4d20ec715b0d7daa6538811cf709fcbf56ac621a1334872f600c4455d",
-      "voice-pe-stock-sendspin.yaml": "caedab4a7d1009ecb7159ed51ab020276c8e76e98cc8e564d0bed28a0b42f776"
+      "voice-pe-legacy.yaml": "43ffa2986f3de29f1c45f030e45ebb85ddbef90e9220fd1299f1e57f3d2e7e3b",
+      "voice-pe-stock-sendspin.yaml": "1f874c109652c8c299947abadf24b8070737c22ce77b451747ee9b8cd1198b82",
+      "voice-pe-common.yaml": "cc4308dcced55a23d25570510c13b8923559b3f3757a94f5b49ed6fc55ddf8bd"
     },
-    "upstream_hooks_patch_sha256": "ba51665ccd46e8645108e80933b49d59f3e0cfb02ef689941a63dffa3d4de46e",
+    "upstream_hooks_patch_sha256": "1f7343c506d4408e1823924bcf0a2c3c7a39bf69a4e9a2f388cf2264962ad740",
     "upstream_manifest_sha256": "72c2c756ba18adeb65fb75a7ab5d9b0025487205e50717a49b2dfec6b4265c01",
     "original_upstream_files_verified": 36,
     "modified_upstream_file_count": 4
@@ -39,15 +39,15 @@
       "profiles": {
         "legacy": {
           "passed": true,
-          "fixture_sha256": "48ffac51a74425a3b35b6298e09f0e8d94937db72ad592edfc9af20aa24adbca",
-          "generated_cpp_sha256": "b87222ccfc2399e5effd292f98c60f7e7ff217d8c6a05499a691861f3df573b0",
+          "fixture_sha256": "9f38273093757d572e81111aea6ed97515b381bbfe918202d634a46ef36ca0d9",
+          "generated_cpp_sha256": "0beeb2015170015336990398b81bcde84949eb61df3dba77fa7cbe230032c1e1",
           "stock_listener_before_reference": false,
           "all_normal_output_through_gate": true
         },
         "stock-sendspin": {
           "passed": true,
-          "fixture_sha256": "5474612650765e1b47bd980ea6b67deeba45883c8bbe76735a5b59873ac106ec",
-          "generated_cpp_sha256": "8935f0f7529dc923f6e749f06a8b3c5c456e460c0211e4e61f0d6ffb573ac77e",
+          "fixture_sha256": "981682a0a7fdeaacce40f3a7a3ff0cf1eaa415b1a2826def6ec7e9a805b055a8",
+          "generated_cpp_sha256": "e97938619680fa6f00313fe6541476cc2391d3d07ce0fcc605654431e8a5803e",
           "stock_listener_before_reference": true,
           "all_normal_output_through_gate": true
         }
@@ -55,7 +55,7 @@
       "scope": "real overlay code generation against minimal hardware fixtures; no installed device package"
     },
     "overlay_command": "/tmp/refbridge-esphome-env/bin/python firmware/reference_bridge/tests/overlay_codegen_test.py",
-    "overlay_test_source_sha256": "99e4531cd774081f3cba12c152b86f9ff4b29ed4e1fbe86bc66b087fce535ca4",
+    "overlay_test_source_sha256": "c372d6a5150dac4caa2e6fc533cd7ceb6a36571dec5e77d8007cdaea50c0f071",
     "upstream_patch_applies_cleanly": true,
     "audio_write": {
       "passed": true,
@@ -73,48 +73,89 @@
       "lock_mutation_red_log_sha256": "1c52e7dd0c25e41f3e4e029ced0211c315962fe48ee10f347ad6f6a2db2ce66b",
       "green_log_sha256": "f6b8b229be899ba191b0d41bc3681f9e11288ad764c66c8954a4f96682d4da7d",
       "test_sha256": {
-        "audio_write_test.cpp": "f584180cf949e1fe25c562fb96d35a8392a8fc8cba322e9a1792c72bd6348baa",
+        "audio_write_test.cpp": "437d76620d64cb35331793e592cd708e100496aa13d3e9f7c05b22357f25729f",
         "audio_write_test.py": "837d450d39d3e0c5bbf38c6bd147774862441785074cb5ecd13e4f4cdc7e1463"
       }
+    },
+    "stock_adapter": {
+      "passed": true,
+      "command": "python3 firmware/reference_bridge/tests/stock_adapter_test.py",
+      "sanitizer": "undefined",
+      "production_methods": "actual complete adapter header and cpp compiled with host-only SDK/hardware boundaries; real mutex/lease and actual gate re-entry",
+      "cases": [
+        "normal lifecycle/PCM/volume/mute",
+        "otherwise valid reference arm blocked before physical normal playback and through delegated end",
+        "configured reference identity remains silent unarmed/reboot-like, after cancel/release and late packets",
+        "foreign stream during lease faults/drops until end",
+        "unknown identity fails closed",
+        "actually paired configured identity required to arm",
+        "strict PCM48k/stereo16",
+        "normal32bit format preserved",
+        "all stock callbacks outside mutex",
+        "concurrent write/end waits for callback before stock end",
+        "normal identity change still closes stock source lifecycle",
+        "main-loop callback reentrant teardown never waits on its own callback stack"
+      ],
+      "red_log_sha256": "e35140dab09ca3d9f5c74a0db49a9d7ccaa013f697c7af4863d9019f3a0a8a51",
+      "crossing_red_log_sha256": "93bccc4a12a56926e8e15029cb3b29228b00cbfb5f7069eacea4fd3cbe7328df",
+      "reentrant_end_red_log_sha256": "45bb86b52bc5539559fc92bf3e365027d97d45a4a001b1e3f5f5fb7bf0f680b7",
+      "green_log_sha256": "e6b1cf20d1438b42e62d16b8de12af90f5296cc0ac07b543ebb1b49085da2c12",
+      "test_sha256": {
+        "stock_adapter_test.cpp": "23dfe5a3e66318f3d6c2ec3cb1d36af1d2d4bbf68d8f0c12596d77442e6702a0",
+        "stock_adapter_test.py": "b4aaa850a3219b14ec7b81dae66fcbf63e131400257a5047e9c4c85a645da2ec"
+      }
+    },
+    "hub_config": {
+      "passed": true,
+      "command": "python3 firmware/reference_bridge/tests/hub_config_test.py",
+      "production_method": "actual hub setup prefix before SDK/hardware client constructor; runtime effects executed",
+      "preserved": [
+        "stock FLAC+PCM advertisement",
+        "mono support",
+        "480us DAC fixed delay"
+      ],
+      "red_original_HEAD_log_sha256": "852d6a5d336fcb19c05ffbf2f8214b10df01d69c5208b7d3d4b778a3d0e208b3",
+      "green_log_sha256": "53996e05e852c673fd801fa12e7247026ba59a5882b29e45655cf3cde4be91ff",
+      "test_source_sha256": "328b19101ea6652c6fe6e98f930a3c0a7c1327614a05102728bbc425d7879edb"
     }
   },
   "builds": {
     "legacy": {
       "passed": true,
       "exit_code": 0,
-      "command": "/tmp/refbridge-esphome-env/bin/esphome compile firmware/reference_bridge/compile-fixture.yaml",
-      "fixture_sha256": "e0a941b34d921bc9405ca422e3fe921703b128b51ff8ef05a01d5a8aab08541b",
-      "config_hash": "0x71fc91a2",
-      "generated_cpp_sha256": "dfd2c75139f53bdcfa0dc543821166ec91f2c86a792079e7f44699c8cbe21fa2",
+      "command": "/tmp/refbridge-esphome-env/bin/esphome compile /workspace/scratch/698c1908029a/jarvis-echo-measurement/firmware/reference_bridge/compile-fixture.yaml",
+      "fixture_sha256": "f3774f6a794aa06f4e7500a61cb4d1aa20dee653e12a0e4f3afd628024246092",
+      "config_hash": "0x728dd656",
+      "generated_cpp_sha256": "0984cb605f5ae5cb7c2dcdc011e806f3f52d4454b42c093a50802c91d1e36ddd",
       "dependencies_lock_sha256": "626b743d49abd4625b4f65eaf6322bed64a886d177afce93d05a76c3dace5b49",
       "compiled_source_files_verified": 7,
       "artifacts": {
         "firmware.elf": {
           "path": "/tmp/jarvis-reference-build/build/firmware.elf",
-          "sha256": "2ee740a703786f31a4062acc9220e99145a043c22631374276e2de9f3f75f430",
-          "bytes": 27181328
+          "sha256": "3a79af9cf501f732efac838d38aa336ecd47cb1d2379af20d8806cb98c6d1fee",
+          "bytes": 27223348
         },
         "firmware.ota.bin": {
           "path": "/tmp/jarvis-reference-build/build/firmware.ota.bin",
-          "sha256": "81b85e2382519be87ecdba31f53577b0059d1bd5f314a7bc1c3015998d0a0325",
-          "bytes": 1126944
+          "sha256": "b854cc6a118cd32d7a2dbb4dc26ec605cf06e5bc37a95549eaa46a86eba19392",
+          "bytes": 1128640
         },
         "firmware.factory.bin": {
           "path": "/tmp/jarvis-reference-build/build/firmware.factory.bin",
-          "sha256": "622d2df46cd0c5341f5c21d917ec972d899bbae675109f85d5e24e243c1c5252",
-          "bytes": 1192480
+          "sha256": "e8bc1a7adb3403c675ef70d1d45369f08d3be16f8d09b7dc00040ca53037fe6f",
+          "bytes": 1194176
         }
       },
       "static_memory": {
-        "ram_used_bytes": 112627,
+        "ram_used_bytes": 112691,
         "ram_total_bytes": 341760,
-        "flash_used_bytes": 1126823,
+        "flash_used_bytes": 1128531,
         "flash_total_bytes": 8126464
       },
       "listener_registration_lines": {
-        "reference_hub->set_listener(reference_gate);": 551
+        "reference_hub->set_listener(reference_gate);": 553
       },
-      "compile_log_sha256": "d63ee6c06195f974d06ec786ce5d2756c67c2bb79f55d31536d2b2ffb321c1d8",
+      "compile_log_sha256": "bf2518646a6a4020dcdc876ae7645c5eb93334f5e2571c66893af607c847adeb",
       "warnings": [
         "WARNING 'unpaired_access' is off but there is no pairing method (static_pairing_code or a dynamic pairing code), so no new server can pair with this device"
       ],
@@ -123,45 +164,89 @@
     "stock-sendspin": {
       "passed": true,
       "exit_code": 0,
-      "command": "/tmp/refbridge-esphome-env/bin/esphome compile firmware/reference_bridge/compile-fixture-stock.yaml",
-      "fixture_sha256": "bbcd41c3fd1f6d719f961f73d991c322239d56004c5fc750549592271445a0aa",
-      "config_hash": "0xf7bc1094",
-      "generated_cpp_sha256": "2b2466ab1ca890e2143ef3bd5d1eee9bef6d838c3fe3a3669b9bd1891237ab04",
+      "command": "/tmp/refbridge-esphome-env/bin/esphome compile /workspace/scratch/698c1908029a/jarvis-echo-measurement/firmware/reference_bridge/compile-fixture-stock.yaml",
+      "fixture_sha256": "7e28e69584e5f801acd470f8023867131406b109f49b2c939afddaa76a73ddd8",
+      "config_hash": "0x1ee90bd3",
+      "generated_cpp_sha256": "9dddee0c7dc3f962d93b7e8fcb5f057ce65682ebc191d81b41bc439a04478c84",
       "dependencies_lock_sha256": "626b743d49abd4625b4f65eaf6322bed64a886d177afce93d05a76c3dace5b49",
       "compiled_source_files_verified": 7,
       "artifacts": {
         "firmware.elf": {
           "path": "/tmp/jarvis-reference-stock-build/build/firmware.elf",
-          "sha256": "e587d4ea7a27b11882b79214e8d234981c9873e3ebce03386cb8d623c618139a",
-          "bytes": 27873108
+          "sha256": "f801020c3b3cdd6cef38f1883b298646432eaac30b867816f674e6699fd70907",
+          "bytes": 27919632
         },
         "firmware.ota.bin": {
           "path": "/tmp/jarvis-reference-stock-build/build/firmware.ota.bin",
-          "sha256": "f5b2671377f9a0bad78c49903a478fdd9ce182ddf3b42bea39d427a1ade23a9c",
-          "bytes": 1133936
+          "sha256": "da83d7173818ba16e40ddd3b8498c0e84da39b92b34e151375018c5a1b0a58b1",
+          "bytes": 1135744
         },
         "firmware.factory.bin": {
           "path": "/tmp/jarvis-reference-stock-build/build/firmware.factory.bin",
-          "sha256": "bf350fa51b98ae1c3424c231247e89e0c5ac5c5c098ed4cc1a3b4757adff4829",
-          "bytes": 1199472
+          "sha256": "c04ac01a8f2b8c7f62016345eb9306d9197cc1bcb67468b55a4414165ed8fb15",
+          "bytes": 1201280
         }
       },
       "static_memory": {
-        "ram_used_bytes": 112691,
+        "ram_used_bytes": 112755,
         "ram_total_bytes": 341760,
-        "flash_used_bytes": 1133827,
+        "flash_used_bytes": 1135635,
         "flash_total_bytes": 8126464
       },
       "listener_registration_lines": {
-        "reference_hub->set_listener(original_sendspin_source);": 582,
-        "reference_hub->set_listener(reference_gate);": 669
+        "reference_hub->set_listener(original_sendspin_source);": 584,
+        "reference_hub->set_listener(reference_gate);": 672
       },
-      "compile_log_sha256": "1ca7b57a2de30977ad827517271824716d7ff034e298705cc3e126fdd7f71e8f",
+      "compile_log_sha256": "b851fc48038f7bb3df308c3af53c93da9fc27205319ab05aa2a113cda87aeb47",
+      "warnings": [],
+      "freertos_tick_hz": 1000
+    },
+    "full-official-stock": {
+      "passed": true,
+      "state": "in_progress",
+      "log_path": "/tmp/reference-full-stock-build.log",
+      "exit_code": 0,
+      "command": "/tmp/refbridge-esphome-env/bin/esphome compile /tmp/reference-default-stock-compat/full-stock.yaml",
+      "fixture_sha256": "a7a63662a21130c1bcca195fd61659f6254677c27fd5a63346630784cec498ec",
+      "generated_cpp_sha256": "d8a8e68e07a01c1e342809d175d71cdfe1ced7a12423ac6ea520bebdcd6365a2",
+      "dependencies_lock_sha256": "68dcd7d3f7778560193a33177d25fc2dc923bc08a565e288fe03d31eb380cfcc",
+      "compile_log_sha256": "a29448368ca1ea98a74a21eb577973d61bb69d1ddabe1f31d69b76837a950e6f",
+      "config_hash": "0x91263d25",
+      "artifacts": {
+        "firmware.elf": {
+          "path": "/tmp/jarvis-reference-full-stock-build/build/firmware.elf",
+          "sha256": "1f6d8d8fd2835e37653c76d457327bf5bfd9234374bf5f57bb0f0f0bdd10ed7e",
+          "bytes": 47476212
+        },
+        "firmware.ota.bin": {
+          "path": "/tmp/jarvis-reference-full-stock-build/build/firmware.ota.bin",
+          "sha256": "911c8d2554482e277187990a4082d0dd387648cf014cc9064396eaaaabbeebfa",
+          "bytes": 2847536
+        },
+        "firmware.factory.bin": {
+          "path": "/tmp/jarvis-reference-full-stock-build/build/firmware.factory.bin",
+          "sha256": "e28bcaf42aecb7170190ab977265b989e25408f4ac7d77b31d0aab68c1ea2aa3",
+          "bytes": 2913072
+        }
+      },
+      "static_memory": {
+        "ram_used_bytes": 149883,
+        "ram_total_bytes": 341760,
+        "flash_used_bytes": 2847423,
+        "flash_total_bytes": 8126464
+      },
       "warnings": [
-        "WARNING 'unpaired_access' is off but there is no pairing method (static_pairing_code or a dynamic pairing code), so no new server can pair with this device"
+        "WARNING register_action('voice_kit.flash', ...) is missing the synchronous= parameter. Defaulting to synchronous=False (safe but prevents StringRef optimization). Check the C++ class: use synchronous=False if play_next_() is deferred to a callback, timer, or loop(); use synchronous=True if play_next_() always runs before the initial play/play_complex call returns",
+        "WARNING GPIO0 is a strapping pin and should only be used for I/O with care.",
+        "WARNING GPIO3 is a strapping pin and should only be used for I/O with care.",
+        "WARNING [esp32_rmt_led_strip] 'rgb_order' is deprecated, use 'channel_colors: GRB'. Will be removed in 2027.3.0",
+        "WARNING GPIO45 is a strapping pin and should only be used for I/O with care."
       ],
-      "freertos_tick_hz": 1000,
-      "unsupported_build_only_experiment": true
+      "listener_registration_lines": {
+        "sendspin_hub->set_listener(sendspin_media_source);": 4817,
+        "sendspin_hub->set_listener(jarvis_reference_gate);": 5492
+      },
+      "compiled_source_files_verified": 7
     }
   },
   "environment_workaround": {
@@ -173,13 +258,86 @@
     "runtime_firmware_modified_by_workaround": false
   },
   "limitations": [
-    "The compile fixtures are never-flashed, credential-free ESP32-S3 targets; they do not prove compatibility with the currently installed full Voice PE package.",
     "API encryption in fixtures is provisioning-only. Deployment must preserve the real encrypted API, existing pin assignments and all physical speaker consumers behind the gate.",
     "Memory figures are static link allocations, not measured runtime heap/PSRAM peaks or scheduler/DMA behavior.",
     "No firmware upload, microphone, live device, HomePod, room acoustics, latency or barge-in test was performed by this firmware verification.",
     "The 240 s lease scenario is accelerated host state simulation, not a 4-minute hardware/acoustic test.",
     "LeakSanitizer is unavailable in the restricted /proc environment. The final C++ host run used UBSAN only.",
     "Compiler pairing warning concerns absent static/dynamic display codes. The library always provisions pairing_psk; its token is exposed only by the native API action. Real-device pairing remains untested.",
-    "The stock-sendspin overlay is an unsupported build-only experiment: replacing the stock listener does not preserve audible stock Sendspin playback. It must not be staged or deployed."
-  ]
+    "Minimal credential-free fixtures and the pinned complete public default package are compile/adapter behavior evidence, not proof of the installed private target or acoustic compatibility. Exact private target/wake-model compile remains the Green installation gate.",
+    "Host stock callback substitutes exercise adapter routing, locking and physical gate behavior; no real device stock playback was measured.",
+    "The original official default YAML is hash verified; mutable dev references within that public YAML are frozen to the same immutable commit for official voice_kit and sound assets. Public wake model manifests/binaries are recorded by content hash.",
+    "Configured reference identity is a public server ID fixed at boot; a fresh actual paired encrypted connection is still required by native/host for arm. Stock 480us DAC delay remains diagnostic and is not reference-alignment proof."
+  ],
+  "full_public_package": {
+    "repo": "https://github.com/esphome/home-assistant-voice-pe",
+    "official_default_branch": "dev",
+    "source_commit": "d4e6fa43d6a1a7d342b7d4d403567e06516719de",
+    "original_package_sha256": "d4e7ab1da4f5b77d1683aa3b47a1ef5b2f1a230b94e37091faab0aa0855908dc",
+    "immutable_package_sha256": "d3fa629ee4ed8b87ea7da66f96b80ce2e353d0768322772982bfdc0702a6e12e",
+    "scratch_fixture_path": "/tmp/reference-default-stock-compat/full-stock.yaml",
+    "fixture_changes": [
+      "official package dev component/sound URLs frozen to immutable source_commit",
+      "external Jarvis component locator replaced only with local current component tree",
+      "only compile device name/build path and dummy Wi-Fi/API credentials/public identity supplied"
+    ],
+    "public_assets_sha256": {
+      "audio_file/.4e0ef61d.etag": "9e68ea76ba77593e66342a62aa711a1158387dc742ce802b0e0b9de477957e5a",
+      "audio_file/.98b21a2b.etag": "2008da1418faa140d1144c8403b08a28e8d131592445c0906d2dfe81a43efc14",
+      "audio_file/8d1ea0a7": "800be63f0f16b277c46b664f0896b87e0195d8cc9a927a7cdd6795036058dc44",
+      "audio_file/dcfa1d1e": "2cda3d78ccce5b522fb671092a9e07d29b224b6e861fb6c5fae2d555b6a77021",
+      "audio_file/.514f2e90.etag": "ffee6d53a83edc4fe53744c6d3bd333faf79593dbbef2870e391a3db4af61988",
+      "audio_file/.69ca2e6f.etag": "dc8dc7f6112c851f0ac82f246deede5ef88301a445b4dde1eebddc90183d92b0",
+      "audio_file/6984c0c1": "e9ddba38c4a993fd5a218ec7d04d7a2824b995a9dbb6cb0d8599d7a0ac6a56ee",
+      "audio_file/.f16e8ea9.etag": "b99716e1c425c8eca02e2f2e44dfc984d30615000710a132cc195608328502ad",
+      "audio_file/.76ddfe67.etag": "dbb59f89e92b12bc9ead044f1c47c4cd09cd0f274e2d315d5c6a22079263e7c4",
+      "audio_file/514f2e90": "b0ce950b316ad35ece4ffcba7a7978b1bb701f7f527d69e2d273e06a751642cc",
+      "audio_file/69c557ca": "a33ed44b29da0de31cbc8d503643a1a0c5f9f22df739562880ee7c5cf81da9c4",
+      "audio_file/.69c557ca.etag": "ae3614693ab58f50bd7f237c675db67e2ee0c49d078ab861c85e27fd41d04da9",
+      "audio_file/.aa0d5cc9.etag": "7362e09af6999a41eeaec3203ba5cf631e52a9ba114fd95bf0e28e86ed6e2b41",
+      "audio_file/76ddfe67": "7eb8baa6de8ed087bdea04fa23d989e5c4459120338f98929d4e8a20207f1f50",
+      "audio_file/8c6b03de": "ad187647a7686548fdb2d756012fee689fdeb97dc0bec8d1591c7a134148725f",
+      "audio_file/.fdf95894.etag": "d0eff5a39f98f294fb237602ae2876cab2a17876e896b847e4153228f3200f6f",
+      "audio_file/98b21a2b": "ac0bba5f82d002d5ffa84c1338a7748e6ad043a5a7dee01fef626b35cc093930",
+      "audio_file/69ca2e6f": "66d6186784b405958b8a7450365122cbd13996207d9d31f7d439d9f7fcd8cb9c",
+      "audio_file/f16e8ea9": "9ccb4a79a00509dc84e901565e42a510f02deef8082dd17da13a43d493014728",
+      "audio_file/d23b9ba1": "15328fcc94650b60f85fbc02b1e19e714f71468954c576597e4c9005ab06cba8",
+      "audio_file/.8d1ea0a7.etag": "a973faf8eddd760f4c419b89c022124891f3560dbf362cce56c9ef0e9e57faef",
+      "audio_file/.dcfa1d1e.etag": "805a9e411f63f1a2a3c0a09787ff9bf19749d9344a36d438ea5b0d04a59df1ee",
+      "audio_file/.6984c0c1.etag": "608517435ff95f6376246c63a5ed034cf03b76d0f2b476fc3530c121598fa8a3",
+      "audio_file/.8c6b03de.etag": "0fc2cda3272571e4bcedb85216541f31fbb6447c4ad8f9e74a8446c3865ecbcb",
+      "audio_file/ad4d732d": "536f3daa7e41ae0789f9309b42a980eb6cccb36a16f1b92d79112129579b9fde",
+      "audio_file/4e0ef61d": "0e9b50d9bd86f86d7afd379780d3c07cdd140d9b2e9bf812ee819c8a2e183eed",
+      "audio_file/.d23b9ba1.etag": "b17c3c98c6c9e257b49a558d4175a1c5afbd734908b723e77a98ba245c494f99",
+      "audio_file/.90fdeb48.etag": "d4652fba63a0eae0462f125939f34d367fa284be0b44fc9e83e7b8350bce7f88",
+      "audio_file/fdf95894": "5c26cad33931670f2b62db5d2ed35c562b162e819ade38e646680065ad1b055f",
+      "audio_file/90fdeb48": "59aeab603814a68acb6d9bca676a820858734fbd6c6725f68e0d708020e58be9",
+      "audio_file/.ad4d732d.etag": "5a8c53e23b4158d05d259a29c165c7e9187042b69cca0a25f6d8f6ec8982d5f5",
+      "audio_file/aa0d5cc9": "e9b0d1f62055f8713a1dd0d2f3e92142a7bee8e371b40cf0008e8e624e787ec8",
+      "micro_wake_word/67463ea1/.hey_mycroft.tflite.etag": "7b6bb1acc3d5ab52e4ada331d7f1973ceb9eef36f0eb1ae777565255db59fc43",
+      "micro_wake_word/67463ea1/manifest.json": "57b2b06fe5fdbbe834a242fabc7af31e4194a550fc382b2c88636a6d62d0d57e",
+      "micro_wake_word/67463ea1/.manifest.json.etag": "f92be1cf72ca3e53e08cb80441e01ad8b943f3ae14abd640c755c39799d5b22b",
+      "micro_wake_word/67463ea1/hey_mycroft.tflite": "c2a9b6ed51182db72e014781d5a4ece1929dc232a40b5b4be384f0295f0e1571",
+      "micro_wake_word/db6fafef/manifest.json": "b153867d818675d8abcc9dace474afe7f83551ae0d5a9b1d71a98681320185af",
+      "micro_wake_word/db6fafef/hey_jarvis.tflite": "21a7976add39ee24ec96c63d96b7aaa18e24d1d9824b963e451da8feb4b78b77",
+      "micro_wake_word/db6fafef/.manifest.json.etag": "c246e8740815b3841390b000d87524fe59da1562a03a85d16dbf9a4bd297c030",
+      "micro_wake_word/db6fafef/.hey_jarvis.tflite.etag": "2f8b53d5821966b1ecd38b471becf751af6e51daf61756a2387fbc2b1935f533",
+      "micro_wake_word/26089d69/.vad.tflite.etag": "8a272d680d6299bab5b4de8d4004db56995ce9c3d94562b9ea9eecf6d469e738",
+      "micro_wake_word/26089d69/manifest.json": "bd8c9cd4350814f761e651685ae5196e2a56521aaf5670071ba742927de58ed7",
+      "micro_wake_word/26089d69/.manifest.json.etag": "50c0f7b3587f8bedb60c0eda71bf18cba69a7c8fbefae4904d8cdd3c6c0c6335",
+      "micro_wake_word/26089d69/vad.tflite": "7aa4db6d5fb7c5358609f6931e7847d303c16a43d178638bc14104f50d7eff5f",
+      "micro_wake_word/38c58046/manifest.json": "f8026e2ce93a0855ca23483036fd2d74ee924a2588d9ea6a6c6c7478fbf4be57",
+      "micro_wake_word/38c58046/.manifest.json.etag": "5d718a05575644239a2cc04ba334e9c27735887837c6aeed44f4d2b386625bdc",
+      "micro_wake_word/38c58046/.okay_nabu.tflite.etag": "59871fffcdc94a5c0c61e5b6168479e5715cc1792e38ea4f537d0fb7a395f2a8",
+      "micro_wake_word/38c58046/okay_nabu.tflite": "d89128c4d16a72de429119fb2254ce46649553c2a24f5dd840175c80d7b9d094",
+      "micro_wake_word/7056d5e4/stop.tflite": "b5a18c4ad681a89950dfade31011e1631bdcb333e93c84519a1a63ff4f071146",
+      "micro_wake_word/7056d5e4/manifest.json": "bd13aeb1b83852649dc4fb6135cb160ff68716d14612b06f6a405342c57447aa",
+      "micro_wake_word/7056d5e4/.manifest.json.etag": "e368f4656e63dd84a909387932950df27b6df0b8b2bf35c5432f04cec457fd35",
+      "micro_wake_word/7056d5e4/.stop.tflite.etag": "2b9a3c2a5953c5114c6c62c30c103bde10b19d573bd70f95d9232130ee72ddd7",
+      "voice_kit/fba897b0": "11b563d6c51424f49f1e1d3585ba03a073e2802798e6aa067c6734d7ecb6935b",
+      "voice_kit/.fba897b0.etag": "a87a2b3ed29b0c410078002a58aee8938a7c223aa8f9d8354d77c5f31a821d84"
+    },
+    "generated_stock_contract_verified": true,
+    "private_target_package_used": false
+  }
 }

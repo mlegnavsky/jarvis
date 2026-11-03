@@ -41,7 +41,7 @@
  
  #include <cstring>
  #include <memory>
-@@ -119,6 +120,17 @@
+@@ -119,6 +120,12 @@
  
  void SendspinHub::setup() {
    auto config = this->build_client_config_();
@@ -50,16 +50,11 @@
 +    config.time_burst_interval_ms = 500;
 +    config.time_burst_response_timeout_ms = 500;
 +    config.liveness_timeout_ms = 2500;
-+#ifdef USE_SENDSPIN_PLAYER
-+    // The reference adapter has exactly one frame layout, never mono or compressed.
-+    this->player_config_.audio_formats = {{sendspin::SendspinCodecFormat::PCM, 2, 48000, 16}};
-+    this->player_config_.fixed_delay_us = 0;
-+#endif
 +  }
    this->client_ = std::make_unique<sendspin::SendspinClient>(std::move(config));
  
    // Set up persistence (preferences must be initialized before providers are added to the client). These key names
-@@ -164,6 +176,11 @@
+@@ -164,6 +171,11 @@
    }
  }
  
@@ -71,7 +66,7 @@
  void SendspinHub::loop() {
    if (this->enabled_.has_value() && this->unpaired_access_.has_value() &&
        this->enabled_.value() != this->client_->is_started() && !this->status_has_error()) {
-@@ -174,6 +191,10 @@
+@@ -174,6 +186,10 @@
      }
    }
    this->client_->loop();
@@ -84,7 +79,7 @@
    this->update_mdns_service_();
 --- a/sendspin/sendspin_hub.h
 +++ b/sendspin/sendspin_hub.h
-@@ -98,6 +98,20 @@
+@@ -98,6 +98,25 @@
   public:
    SendspinHub();
  
@@ -92,6 +87,11 @@
 +  // Kalman error is diagnostic only; it is NOT a physical clock uncertainty bound.
 +  void enable_reference_diagnostics() { this->reference_diagnostics_ = true; }
 +  bool reference_connected() const { return this->client_ && this->client_->is_connected(); }
++  std::string reference_server_id() const {
++    if (!this->reference_connected()) return {};
++    const auto info = this->client_->get_server_information();
++    return info.has_value() ? info->server_id : std::string{};
++  }
 +  bool reference_paired_owner(const std::string &server_id) const {
 +    if (!this->reference_connected() || this->reference_trust_ != sendspin::ConnectionTrust::USER) return false;
 +    const auto info = this->client_->get_server_information();
@@ -105,7 +105,7 @@
    float get_setup_priority() const override { return sendspin_priority::HUB; }
    void setup() override;
    void loop() override;
-@@ -306,6 +320,17 @@
+@@ -306,6 +325,17 @@
    /// @brief Keeps the `_sendspin` mDNS service advertised while the client is running.
    void update_mdns_service_();
  #endif

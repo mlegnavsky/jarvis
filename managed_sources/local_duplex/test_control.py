@@ -58,8 +58,9 @@ class ControlTests(unittest.TestCase):
             self.assertIsNone(self.read({**data,'duration':999999}))
 
     def test_reference_probe_is_fixed_generated_only_and_short_lived(self):
-        data={'action':'reference_probe','nonce':'a'*32,'expires_at':180}
-        self.assertEqual(self.read(data),data)
-        self.assertIsNone(self.read({**data,'expires_at':221}))
-        self.assertIsNone(self.read({**data,'text':'private phrase'}))
-        self.assertIsNone(self.read({**data,'target':'other-speaker'}))
+        for action in ('reference_probe','reference_identity'):
+            data={'action':action,'nonce':'a'*32,'expires_at':180}
+            self.assertEqual(self.read(data),data)
+            self.assertIsNone(self.read({**data,'expires_at':221}))
+            self.assertIsNone(self.read({**data,'text':'private phrase'}))
+            self.assertIsNone(self.read({**data,'target':'other-speaker'}))

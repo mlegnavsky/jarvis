@@ -125,11 +125,6 @@ void SendspinHub::setup() {
     config.time_burst_interval_ms = 500;
     config.time_burst_response_timeout_ms = 500;
     config.liveness_timeout_ms = 2500;
-#ifdef USE_SENDSPIN_PLAYER
-    // The reference adapter has exactly one frame layout, never mono or compressed.
-    this->player_config_.audio_formats = {{sendspin::SendspinCodecFormat::PCM, 2, 48000, 16}};
-    this->player_config_.fixed_delay_us = 0;
-#endif
   }
   this->client_ = std::make_unique<sendspin::SendspinClient>(std::move(config));
 

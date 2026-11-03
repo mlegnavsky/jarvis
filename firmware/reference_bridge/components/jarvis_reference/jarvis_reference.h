@@ -8,6 +8,7 @@
 #include "esphome/components/speaker/speaker.h"
 #include "esphome/components/switch/switch.h"
 #include <atomic>
+#include <condition_variable>
 #include <mutex>
 #include <string>
 
@@ -22,6 +23,8 @@ class ReferenceSpeaker final : public Component, public speaker::Speaker, public
   void set_dac_id(audio_dac::AudioDac *v) { dac_ = v; }
   void set_amplifier_id(switch_::Switch *v) { amp_ = v; }
   void set_sendspin_id(sendspin_::SendspinHub *v) { hub_ = v; }
+  void set_stock_listener(sendspin::PlayerRoleListener *v) { stock_listener_ = v; }
+  void set_reference_server_id(const std::string &v) { reference_server_id_ = v; }
   // Expose only through encrypted, target-scoped native API actions. Default idle.
   bool arm(uint32_t generation, const std::string &server_id, uint32_t duration_ms);
   bool cancel(uint32_t generation);
@@ -40,8 +43,8 @@ class ReferenceSpeaker final : public Component, public speaker::Speaker, public
   size_t on_audio_write(uint8_t *data, size_t length, uint32_t timeout_ms) override;
   void on_stream_start() override;
   void on_stream_end() override;
-  void on_volume_changed(uint8_t) override {} // Never unmute/change reference samples.
-  void on_mute_changed(bool) override {}
+  void on_volume_changed(uint8_t volume) override;
+  void on_mute_changed(bool muted) override;
   void on_output_delay_changed(uint16_t delay_ms) override;
  private:
   using Fault = ::jarvis_reference_core::Fault;
@@ -51,18 +54,26 @@ class ReferenceSpeaker final : public Component, public speaker::Speaker, public
   void restore_(); // only after physical stop and empty buffer
   void amp_off_();
   void dma_(uint32_t frames, int64_t when);
+  enum class Route : uint8_t { NONE, NORMAL, REFERENCE, DROP };
+  bool stock_metadata_(); // mutex held; reserves one callback if allowed
+  void stock_done_(bool audio_write = false); // after forwarded callback, outside mutex
   i2s_audio::I2SAudioSpeaker *output_{nullptr};
   audio_dac::AudioDac *dac_{nullptr};
   switch_::Switch *amp_{nullptr};
   sendspin_::SendspinHub *hub_{nullptr};
+  sendspin::PlayerRoleListener *stock_listener_{nullptr};
   mutable std::mutex mutex_;
+  std::condition_variable stock_idle_;
   ::jarvis_reference_core::Lease lease_;
   ::jarvis_reference_core::SignalCounters signal_;
   ::jarvis_reference_core::Proof cached_{};
   int64_t checked_at_{0}, last_write_at_{0};
   std::string owner_;
+  std::string reference_server_id_, stream_owner_;
+  Route route_{Route::NONE};
+  uint32_t stock_callbacks_{0}, stock_writes_{0};
   bool mute_confirmed_{false}, saved_amp_{false}, restore_amp_{false};
-  bool stop_requested_{false}, stream_open_{false};
+  bool stop_requested_{false}, stream_open_{false}, stock_stream_started_{false};
   uint32_t stream_generation_{0}, boot_id_{0};
   std::atomic<bool> changing_amp_{false};
 };

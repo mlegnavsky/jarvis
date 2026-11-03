@@ -4,11 +4,10 @@ import yaml
 from .policy import APIError
 
 TARGET='home-assistant-voice-0a8bde.yaml'
-# Stock overlay replaces the existing audible listener. Keep it build-only until
-# normal stock playback can be preserved; it must not be staged onto a device.
-PROFILES={'legacy':'voice-pe-legacy.yaml'}
+# Both overlays require the stable public identity compiled into the silent gate.
+PROFILES={'legacy':'voice-pe-legacy.yaml','stock_sendspin':'voice-pe-stock-sendspin.yaml'}
 REF=r'(?:main|dev|stable|v?\d{2,4}\.\d{1,2}\.\d{1,2}|[a-f0-9]{40})'
-PUBLIC=re.compile(r'github://(esphome/home-assistant-voice-pe)/(home-assistant-voice(?:\.factory)?\.yaml)@('+REF+r')')
+PUBLIC=re.compile(r'github://(esphome/home-assistant-voice-pe)/(home-assistant-voice(?:\.factory)?\.yaml)(?:@('+REF+r'))?')
 
 
 def mapping(node):
@@ -52,7 +51,9 @@ def facts(source):
 
 def staged_source(source, args):
     if (args.get('target')!=TARGET or args.get('profile') not in PROFILES or
-            not isinstance(args.get('source_sha'),str) or not re.fullmatch(r'[a-f0-9]{40}',args['source_sha'])):
+            not isinstance(args.get('source_sha'),str) or not re.fullmatch(r'[a-f0-9]{40}',args['source_sha']) or
+            not isinstance(args.get('reference_server_id'),str) or
+            not re.fullmatch(r'[A-Za-z0-9_-]{43}',args['reference_server_id'])):
         raise APIError(400,'invalid_firmware_reference_source')
     _,values=document(source);node=values.get('packages');packages=mapping(node)
     observed=facts(source)
@@ -70,7 +71,8 @@ def staged_source(source, args):
            '    files:\n'
            f'      - path: firmware/reference_bridge/{profile}\n'
            '        vars:\n'
-           f'          jarvis_reference_source_sha: {sha}\n')
+           f'          jarvis_reference_source_sha: {sha}\n'
+           f'          jarvis_reference_server_id: "{args["reference_server_id"]}"\n')
     offset=node.end_mark.index
     if offset and source[offset-1]!='\n':block='\n'+block
     candidate=source[:offset]+block+source[offset:]

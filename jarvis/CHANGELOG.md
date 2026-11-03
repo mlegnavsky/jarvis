@@ -1,3 +1,8 @@
+# 3.12.4
+
+- Recognize the official Voice PE package URL without an explicit Git ref, as used by the original device configuration. Preserve the original source bytes and report the absent ref as null.
+- Stage the compatible stock Sendspin overlay with the exact public reference-server identity; preserve the original configuration and require separate compilation/installation.
+
 # 3.12.3
 
 - Report allowlisted public Voice PE package metadata without exposing credentials.
