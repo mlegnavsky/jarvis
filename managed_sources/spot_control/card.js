@@ -1,4 +1,4 @@
-/* Jarvis Spoty 0.2.0: live preparation screen; deliberately no physical writes. */
+/* Jarvis Spoty 0.2.1: live preparation screen; deliberately no physical writes. */
 (() => {
 const esc=x=>String(x??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(x,n=1)=>Number.isFinite(x)?x.toLocaleString('cs-CZ',{maximumFractionDigits:n}):'—';
@@ -37,7 +37,7 @@ class JarvisSpotControlCard extends HTMLElement{
  }
  render(){if(!this.root||!this.h)return;const s=this.h.states,f=flow(s),ote=price(s),fresh=f.valid;
  const zero=s['select.inverter_work_mode']?.state==='Zero Export To CT'&&s['switch.inverter_export_surplus']?.state==='off';
- const w=x=>Number.isFinite(x)?fmt(x/1000,2)+' kW':'—';
+ const w=x=>Number.isFinite(x)?(Math.abs(x)<1000?fmt(x,0)+' W':fmt(x/1000,2)+' kW'):'—';
  const arrow=(d,p,color)=>`<path d="${d}" class="wire ${fresh&&Number.isFinite(p)&&Math.abs(p)>30?'moving':''}" style="--flow:${color};--duration:${Math.max(.5,3-Math.min(Math.abs(p||0),6000)/2400)}s"/>`;
  const bp=f.battery, gp=f.grid;
  const battText=bp===null?'Neaktuální měření':bp < -30?'Nabíjí se':bp>30?'Vybíjí se':'V klidu';
@@ -64,7 +64,7 @@ class JarvisSpotControlCard extends HTMLElement{
  <div class="box"><h3>Rezerva baterie</h3><p>Návrh: <b>vlastní minimum 60 %</b> nebo <b>určuje AI</b>. Zatím se neuplatňuje.</p></div>
  <div class="box" style="margin-top:16px"><h2>Prodej a nákup</h2><div class="tabs">${[['day','Den'],['week','Týden'],['month','Měsíc']].map(([id,t])=>`<button data-period="${id}" class="${this.period===id?'selected':''}">${t}</button>`).join('')}</div><div class="stats"><div class="stat">Prodáno<b>${fmt(exp,2)} kWh</b><small>Částka: zatím nedostupná</small></div><div class="stat">Nakoupeno<b>${fmt(imp,2)} kWh</b><small>Částka: zatím nedostupná</small></div><div class="stat">Finanční bilance<b>— Kč</b><small>Čeká na intervalové vyúčtování</small></div></div><small>${daily?'Dnešní čítače měniče.':'Součty za období zatím nejsou připojené.'} Archiv: ${esc(archive||'nedostupný')}. Historii neoceňujeme dnešní cenou.</small></div>
  <div class="restore"><button data-action="stop_restore" ${active&&!this.busy?"":"disabled"}>↶ Vrátit nastavení před testem</button><p><small>Vrací přesně hodnoty změněné tímto testem. Původní záloha z 4. 11. je uložená zvlášť; toto není úplná obnova všech nastavení měniče.</small></p></div>
- <details><summary>Ochrany a historie</summary><p>Po restartu Home Assistantu se rozpracovaný test obnoví do původních hodnot. Při výpadku samotného Home Assistantu nemůže běžet desetiminutový dohled; na měniči stále platí konec aktivního časového intervalu.</p><p>Prodej se připravuje pouze s kladnou čistou výkupní cenou. Neznámá cena, chybějící měření nebo nepotvrzené limity musí prodej blokovat. Při plné baterii a záporné ceně je nutné omezit přetoky.</p><p>Směr toku z baterie a sítě je měřený. Přesný podíl soláru a baterie na prodané energii zatím neurčujeme. Ztráty měniče: ${w(value(s,'sensor.inverter_power_losses',120))}.</p><p>Udávaná kapacita 23,5 kWh se liší od senzoru měniče (${fmt(value(s,'sensor.inverter_battery_capacity',null))} kWh). Odhad zbývajících kWh zatím nezobrazujeme jako jistotu.</p></details><div class="foot">Spoty 0.2.0 · ruční test · automatický prodej vypnutý</div>`;
+ <details><summary>Ochrany a historie</summary><p>Po restartu Home Assistantu se rozpracovaný test obnoví do původních hodnot. Při výpadku samotného Home Assistantu nemůže běžet desetiminutový dohled; na měniči stále platí konec aktivního časového intervalu.</p><p>Prodej se připravuje pouze s kladnou čistou výkupní cenou. Neznámá cena, chybějící měření nebo nepotvrzené limity musí prodej blokovat. Při plné baterii a záporné ceně je nutné omezit přetoky.</p><p>Směr toku z baterie a sítě je měřený. Přesný podíl soláru a baterie na prodané energii zatím neurčujeme. Ztráty měniče: ${w(value(s,'sensor.inverter_power_losses',120))}.</p><p>Udávaná kapacita 23,5 kWh se liší od senzoru měniče (${fmt(value(s,'sensor.inverter_battery_capacity',null))} kWh). Odhad zbývajících kWh zatím nezobrazujeme jako jistotu.</p></details><div class="foot">Spoty 0.2.1 · ruční test · automatický prodej vypnutý</div>`;
  this.root.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>this.command(b.dataset.action));
  this.root.querySelectorAll('[data-period]').forEach(b=>b.onclick=()=>{this.period=b.dataset.period;this.render();});this.root.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{this.day=Number(b.dataset.day);this.render();});
  }
