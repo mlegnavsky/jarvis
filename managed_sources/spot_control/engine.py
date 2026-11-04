@@ -10,7 +10,14 @@ def finite(v):
         return n if math.isfinite(n) else None
     except (ValueError,TypeError): return None
 
+def charge_limits_ok(states):
+    temp=finite(states.get('sensor.inverter_battery_temperature'))
+    cap=finite(states.get('number.inverter_battery_max_charging_current'))
+    # Conservative test cutoff, not the manufacturer's absolute temperature limit.
+    return temp is not None and 0<=temp<45 and cap is not None and cap>0
+
 def plan(states,minute):
+    if not charge_limits_ok(states):raise ValueError('Test vyžaduje teplotu baterie 0 až méně než 45 °C a známý nabíjecí limit.')
     if states.get('select.inverter_work_mode')!='Zero Export To CT' or states.get('switch.inverter_export_surplus')!='off':
         raise ValueError('Nejdřív musí být aktivní režim bez přetoků.')
     if states.get('select.inverter_time_of_use') not in ('Week','Enabled'):
@@ -32,7 +39,7 @@ def plan(states,minute):
     if amps is None or amps<=0 or oldsoc is None or states.get(SWITCH) not in ('on','off'):
         raise ValueError('Nastavení nabíjení není dostupné.')
     goal=min(90,math.floor(soc+5))
-    return [(CURRENT,str(min(20,amps))),(target,str(goal)),(SWITCH,'on'),(charge,'Grid')],goal,slot
+    return [(CURRENT,str(min(40,amps,float(states['number.inverter_battery_max_charging_current'])))),(target,str(goal)),(SWITCH,'on'),(charge,'Grid')],goal,slot
 
 def equal(a,b):
     x,y=finite(a),finite(b)
@@ -54,7 +61,7 @@ class Controller:
             try:
                 for e,v in steps:
                     live=self.read()
-                    if not self.healthy() or live.get('select.inverter_work_mode')!='Zero Export To CT' or live.get('switch.inverter_export_surplus')!='off':
+                    if not self.healthy() or not charge_limits_ok(live) or live.get('select.inverter_work_mode')!='Zero Export To CT' or live.get('switch.inverter_export_surplus')!='off':
                         raise ValueError('Měření nebo režim bez přetoků se změnil; test ukončuji.')
                     await self.write(e,v)
                 self.record['phase']='running';await self.save(self.record)
@@ -98,5 +105,5 @@ class Controller:
         grid=finite(s.get('sensor.inverter_grid_power'));batt=finite(s.get('sensor.inverter_battery_power'))
         if grid is not None and batt is not None and grid>100 and batt < -100:self.observed=True
         guard=s.get('select.inverter_work_mode')=='Zero Export To CT' and s.get('switch.inverter_export_surplus')=='off'
-        if not healthy or not guard or soc is None or soc>=self.record['target'] or self.clock()>=self.record['deadline'] or self.record['phase']=='restoring':
+        if not healthy or not charge_limits_ok(s) or not guard or soc is None or soc>=self.record['target'] or self.clock()>=self.record['deadline'] or self.record['phase']=='restoring':
             await self.stop()
