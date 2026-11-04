@@ -1,0 +1,7 @@
+# Cleanup and activation — 2026-11-04
+
+User authorized cleanup of obsolete disk data. Retention preview preserved latest three and all protected backups. Deleted nine unprotected candidates edab87e0,b2d3c700,b74d6651,c78936fb,0c880041,159dace5,76e09aae,0996fed9,4136623a with fresh revision CAS; all cleanup-old-SLUG jobs verified. Metadata sizes total 2392.72 MB. Host free space rose 1.9 -> 4.3 GiB. No history/config/voice data removed.
+
+Activation spot030-activate-restart verified 17:04:03 UTC: Core RUNNING 2026.6.4, valid config, backup44658f15. Final free space 3.5 GiB after new backup; net +1.6 GiB. Spot controller idle reporting again 17:04:38; no charging test started. Source 0.3.0 staged before this restart; browser rendering not inspected.
+
+IMPORTANT: WORK-MANIFEST and LAB-AND-RELEASES backup destination statements are stale. Fresh HA integration inventory shows loaded WebDAV entry01M64EPZBDHTCF31MJ18X46KVC titled jarvis-backup@laborator.odladeni.cz. Do not claim no server integration exists. Server copy of these manually created administration backups is not verified. Automatic backup sensor last success2026-10-29T04:34:33Z, last attempt2026-11-04T04:34:49Z; investigate delivery/status before assuring server backup health. The admin.backup routine POSTs Supervisor/backups/new/partial, not native Backup manager destination flow. Local copies consumed Green space. Current sources and live destination evidence must be reconciled before any retention policy automation.
