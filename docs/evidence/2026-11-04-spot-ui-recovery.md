@@ -1,0 +1,5 @@
+# Spot view compatibility recovery — 4 November 2026
+
+Owner screenshot confirms full-height Lovelace configuration error. Previous 80 A engine activation does not prove frontend functionality. Fresh controller code remains 0.3.1; dashboard still uses custom:jarvis-spot-control-card, frontend entry serves 0.3.0. Exact served JavaScript parses and renders in isolated real Chromium; browser-specific root cause remains unconfirmed. Cloudflare serves this URL with a 31-day cache; cache involvement is not proven.
+
+Recovery uses existing managed_sources/spot_control/native_view.py to replace only final Spoty view with built-in sections, markdown, grid, buttons, entities and picture-elements. Existing preceding dashboard bytes preserved. Native start_test/stop_restore services and live test_current_limit remain. No inverter write, charging test or restart. File CAS writes, readback and config_check required. Live owner-phone acceptance remains unverified. 14 charging tests and one-off recovery structural checks PASS.
