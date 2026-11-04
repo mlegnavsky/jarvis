@@ -2,6 +2,7 @@
 import asyncio
 import time
 import math
+TEST_CURRENT_LIMIT=80
 CURRENT='number.inverter_battery_grid_charging_current'
 SWITCH='switch.inverter_battery_grid_charging'
 def finite(v):
@@ -39,7 +40,7 @@ def plan(states,minute):
     if amps is None or amps<=0 or oldsoc is None or states.get(SWITCH) not in ('on','off'):
         raise ValueError('Nastavení nabíjení není dostupné.')
     goal=min(90,math.floor(soc+5))
-    return [(CURRENT,str(min(40,amps,float(states['number.inverter_battery_max_charging_current'])))),(target,str(goal)),(SWITCH,'on'),(charge,'Grid')],goal,slot
+    return [(CURRENT,str(min(TEST_CURRENT_LIMIT,float(states['number.inverter_battery_max_charging_current'])))),(target,str(goal)),(SWITCH,'on'),(charge,'Grid')],goal,slot
 
 def equal(a,b):
     x,y=finite(a),finite(b)

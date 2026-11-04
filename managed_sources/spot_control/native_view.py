@@ -33,7 +33,7 @@ Nabíjení spustíš tlačítkem níže. Automatický prodej je vypnutý.
 {% if state_attr('sensor.jarvis_spot_control','charging_observed') %}**Současně naměřen odběr ze sítě a nabíjení baterie.**{% endif %}
 """)
     limits=md("""### Krátký test nabíjení
-Nejvýše **10 minut**, cíl **+5 procentních bodů**, maximálně **90 %**. Proud nejvýše **20 A na straně baterie**.
+Nejvýše **10 minut**, cíl **+5 procentních bodů**, maximálně **90 %**. Proud nejvýše **{{ state_attr('sensor.jarvis_spot_control','test_current_limit') }} A na straně baterie**.
 
 **Zastavit a vrátit** ukončí test a obnoví hodnoty, které změnil. Není to úplná obnova všech nastavení měniče.
 
@@ -45,7 +45,7 @@ Při vypnutém Home Assistantu desetiminutový dohled neběží; na měniči pla
 
 Částky za den, týden a měsíc čekají na intervalové vyúčtování. Původní záloha nastavení je uložená; úplné obnovení zatím není připojené.
 
-Spoty 0.2.1 · ruční test · automatický prodej vypnutý
+Spoty 0.3.1 · ruční test · automatický prodej vypnutý
 """)
     view={'title':'Spoty','path':'spoty','icon':'mdi:lightning-bolt','type':'sections','max_columns':2,'sections':[{'type':'grid','cards':[status,modes,actions,limits]},{'type':'grid','cards':[house,prices,flows,history,more]}]}
     for section in view['sections']:

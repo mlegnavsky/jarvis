@@ -835,3 +835,7 @@ Owner approved screen design and TEST OTE pricing, no live operation change.
 New preparation view has live house/grid/battery flows and current OTE prices, preserving all previous views. Controls explicitly disabled pending controller implementation; no fake active AI.
 Private baseline: jarvis_workspace/spot-baseline-20261104.json (HA-exposed settings only; never publish household settings). Capture verified. Zero export offset confirmed20W. Numeric capacity sensor20kWh differs from owner23.5kWh; do not infer stored kWh without resolving.
 OPEN: physical action mapping/tests and rollback, configured export permission/limit, forecast-calibrated plan, interval settlement and week/month totals. Archive status retrying. TEST OTE authorized for simulation; actual contractual price to connect later. Browser QA blocked by missing Chromium download; source tests pass, no claim visual acceptance.
+
+
+## Charging button 80 A correction — 4 Nov 2026
+Owner requests80 A. Live grid charging setting already80 A; engine0.3.0 hardcoded min(40,previous,cap), resetting the button to40 A. Candidate0.3.1 uses min(80,inverter max) and reports the shared80 A constant. Existing guards/restoration retained. Regression14tests and JS card and manifest checks PASS. Full addon suite256tests:2environment import errors (test_home_voice missing jinja2; test_official_sdk_can_initialize_list_and_call missing mcp),20skips. Max charging remains100 A: battery80-max-current-20261104 rejected action_not_allowed; no bypass. Activation pending.

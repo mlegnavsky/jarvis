@@ -11,7 +11,7 @@ class Tests(unittest.IsolatedAsyncioTestCase):
   assert self.saved.get('before');self.calls.append((e,v));self.s[e]=v
  def controller(self,saved=None):return Controller(lambda:self.s,self.write,self.save,saved,clock=lambda:100)
  async def test_start_stop_exact(self):
-  c=self.controller();await c.start(16*60);self.assertEqual(float(self.s[CURRENT]),40);self.assertEqual(c.record['slot'],4)
+  c=self.controller();await c.start(16*60);self.assertEqual(float(self.s[CURRENT]),80);self.assertEqual(c.record['slot'],4)
   await c.stop();self.assertEqual(self.s,self.before);self.assertFalse(c.active)
  async def test_restart_restore(self):
   await self.controller().start(960);c=self.controller(self.saved);await c.stop();self.assertEqual(self.s,self.before)
@@ -45,7 +45,7 @@ class Tests(unittest.IsolatedAsyncioTestCase):
   async def fail(e,v):
    if e.startswith('select.') and v=='Disabled':raise RuntimeError('offline')
    await original(e,v)
-  c.write=fail;await c.stop();self.assertEqual(float(self.s[CURRENT]),40);self.assertTrue(c.active)
+  c.write=fail;await c.stop();self.assertEqual(float(self.s[CURRENT]),80);self.assertTrue(c.active)
  async def test_stop_attempts_hardware_despite_save_failure(self):
   c=self.controller();await c.start(960)
   async def fail(r):raise RuntimeError('disk')
@@ -62,6 +62,11 @@ class Tests(unittest.IsolatedAsyncioTestCase):
  async def test_temperature_stops_and_restores(self):
   c=self.controller();await c.start(960);self.s['sensor.inverter_battery_temperature']='45'
   await c.tick();self.assertFalse(c.active);self.assertEqual(self.s[CURRENT],self.before[CURRENT])
+ def test_button_requests_80_from_previous_settings(self):
+  for previous in ('20','40','80','100'):
+   with self.subTest(previous=previous):
+    self.s[CURRENT]=previous
+    self.assertEqual(float(plan(self.s,960)[0][0][1]),80)
  def test_charge_bounds(self):
   self.s['number.inverter_battery_max_charging_current']='25'
   self.assertEqual(float(plan(self.s,960)[0][0][1]),25)
