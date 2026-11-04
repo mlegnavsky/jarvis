@@ -44,7 +44,7 @@ class Tests(unittest.IsolatedAsyncioTestCase):
    async def complete(self,*args,**kwargs):raise AssertionError('never dispatch an acoustic hint before STT')
   speaker=Speaker()
   async def executor(fn,*args):return fn(*args)
-  hass=NS(data={'jarvis_speaker_identity':speaker},async_add_executor_job=executor,states=NS(get=lambda entity:NS(state=tv if 'televize_obyvak' in entity else 'off')))
+  hass=NS(data={'jarvis_speaker_identity':speaker},async_add_executor_job=executor,states=NS(get=lambda entity:NS(state='on' if entity.startswith('input_boolean.jarvis_povel_') else tv if 'televize_obyvak' in entity else 'off')))
   class Run(NS):pass
   Run._jarvis_voice_intent_guard=True;Run._jarvis_speaker_adapter=speaker
   class Input:
@@ -95,3 +95,17 @@ class Tests(unittest.IsolatedAsyncioTestCase):
   task=asyncio.create_task(self.execute(state));await entered.wait();task.cancel()
   with self.assertRaises(asyncio.CancelledError):await task
   self.assertEqual(state.intents,[]);self.assertEqual(state.events[-1],'run-end')
+
+ async def test_disabled_or_missing_command_does_not_start_stt(self):
+  for phrase in ('rozsviť','zhasni'):
+   for value in ('off','unknown','unavailable',None):
+    state=self.setup(phrase=phrase);old=state.hass.states.get
+    state.hass.states.get=lambda entity: (None if value is None else NS(state=value)) if entity.startswith('input_boolean.jarvis_povel_') else old(entity)
+    state.release.set();await self.execute(state)
+    self.assertEqual(state.intents,[])
+    self.assertEqual(state.report['last_blocked_reason'],'direct-command-disabled')
+ async def test_switches_are_independent(self):
+  state=self.setup(phrase='rozsviť');old=state.hass.states.get
+  state.hass.states.get=lambda entity:NS(state='off') if entity.endswith('_zhasni') else old(entity)
+  state.release.set();await self.execute(state)
+  self.assertEqual(len(state.intents),1)

@@ -3,6 +3,8 @@ import asyncio
 import time
 
 COMMANDS = frozenset(('rozsviť', 'zhasni'))
+COMMAND_SWITCHES = {'rozsviť': 'input_boolean.jarvis_povel_rozsvit',
+                    'zhasni': 'input_boolean.jarvis_povel_zhasni'}
 MEDIA=('media_player.obyvak_televize_obyvak','media_player.obyvaci_pokoj_obyvaci_pokoj',
        'media_player.55_qled_2','media_player.homepod_obyvak_homepod_obyvak')
 
@@ -15,7 +17,9 @@ def media_active(hass):
 
 
 def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, *, last_wakeups=None, cooldown=2., clock=time.monotonic):
-    report = {'status': 'unsupported_core', 'version': 5, 'commands': 0, 'blocked': 0,
+    report = {'status': 'unsupported_core', 'version': 6, 'commands': 0, 'blocked': 0,
+              'command_switches': dict(COMMAND_SWITCHES),
+              'switch_scope': 'new_direct_runs_only_not_firmware_detection',
               'scope': 'whole_light_utterance_after_acoustic_hint',
               'continuation_wait_s':.75,'television_policy':'explicit_Jarvis_required_while_media_active',
               'identity_inference': False, 'speech_to_text': True,
@@ -56,6 +60,10 @@ def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, 
                 and value.satellite_id == satellite_id
                 and run.start_stage == stages.STT and phrase in COMMANDS):
             return await original(value, validate=validate)
+        states = getattr(hass, 'states', None)
+        enabled = states.get(COMMAND_SWITCHES[phrase]) if states else None
+        if enabled is None or enabled.state != 'on':
+            return await blocked(value, 'direct-command-disabled')
         if media_active(hass):
             return await blocked(value, 'media-active-explicit-wake-required')
         speaker = hass.data.get('jarvis_speaker_identity')
