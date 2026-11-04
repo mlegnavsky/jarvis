@@ -37,6 +37,9 @@ class Session:
         self.confirmations=0;self.rejected_confirmations=0;self.confirmation_failures=0
         self.interruption_policy='completed_transcript_before_stop'
 
+    def input_is_suppressed(self):
+        return self.stage=='speaking' and not self.interruptions_enabled()
+
     def snapshot(self):
         return {key:getattr(self,key) for key in ('stage','frames','frames_during_output',
             'completed_turns','accepted_turns','interruptions','failures','last_error','truncated','reason',
@@ -169,7 +172,7 @@ class Session:
                     if self.done:return
                     self.frames+=1
                     if self.playback_active():self.frames_during_output+=1
-                    suppress_input=self.stage=='speaking' and not self.interruptions_enabled()
+                    suppress_input=self.input_is_suppressed()
                     if suppress_input and not self.input_suppressed:
                         self.segmenter=Segmenter(silence_seconds=self.segmenter.silence_seconds)
                     self.input_suppressed=suppress_input

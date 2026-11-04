@@ -38,20 +38,19 @@ from .control import read_control
 from .reference_native import NativeReferenceEndpoint
 from .reference_probe import GeneratedReferenceProbe, claim_probe, public_identity
 from .model_probe import audit_models
-from .playback_observer import PlaybackObserver
 from .waveform_observer import measure_waveform
 from .calibration import CalibrationManager
 from .room_measurement import RoomMeasurement, PASSAGE, reserved_marker
 from .room_native import NativeRoomLink, client_disconnected
 from .ha_io import (decode_reference, is_output_change, pcm_signal,
     prime_native_vad, reassert_output, recover_native_output, restart_allowed, restart_native, stop_announcement)
-from .session import Session
+from .half_duplex import HalfDuplexSession
 from .speech_file import SpeechFiles, create_owned_file, release_prepared
 from .speech_stream import open_speech_stream
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, play_homepod_stream, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.3.6'
+VERSION='1.3.7'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -80,7 +79,7 @@ class LocalDialogue:
         self.report={'runtime_version':VERSION,'core_version':CORE_VERSION,'mode':'local_microphone_homepod_speech',
             'speaker':HOME,'microphone':SATELLITE,'volume_policy':'homepod_raop_only_tv_pause_separate','cloud_audio':'completed_utterances_only',
             'raw_microphone_saved':False,'acoustic_acceptance_verified':False,
-            'interruption_policy':'completed_transcript_before_stop',
+            'interruption_policy':'half_duplex_discard_through_output_tail',
             'firmware_changed':False,'sessions':0,'last_session':None,'self_test':{'status':'not_run'},
             'homepod_startup':{'status':'pending','policy':'startup45_once_then_current_volume'}}
         self.calibration=CalibrationManager(self.root,hass.async_add_executor_job,
@@ -400,26 +399,17 @@ class LocalDialogue:
                 if guards.get(key) is input_allowed:guards.pop(key,None)
         television=self.television()
         output=self.make_output(pipeline)
-        observer=PlaybackObserver(lambda:output,run_executor=hass.async_add_executor_job)
         def input_allowed():return not session.done and not session.closed and television.input_safe()
-        def overlap(audio):return output.last_overlap_at is not None and time.monotonic()-output.last_overlap_at<len(audio)/32000+1
         bridge=TurnBridge(transcribe,hass.data['jarvis_speaker_identity'].complete,converse,
             context_factory=lambda:Context(parent_id=run.context.id),device_id=value.device_id,
             satellite_id=value.satellite_id,conversation_id=value.session.conversation_id,
             agent_id=AGENT,language=pipeline.stt_language or run.language,
-            extra_system_prompt=value.conversation_extra_system_prompt,playback_overlap=overlap,
-            transcript_filter=lambda text,audio,at:'' if output.is_own_transcript(text,audio,at) else text,
+            extra_system_prompt=value.conversation_extra_system_prompt,playback_overlap=lambda audio:False,
             input_allowed=input_allowed)
-        async def play_response(text):
-            return await observer.play(output.play,text,bridge.timings_ms,output.snapshot)
-        def captured(at):
-            bridge.set_capture_time(at)
-            observer.capture_call('mark_event',at)
-        session=Session(transcribe=bridge.transcribe,respond=bridge.respond,play=play_response,stop=output.stop,
-            gate=output.gate,silence_seconds=run.audio_settings.silence_seconds,on_interrupt=bridge.interrupted,
-            playback_active=output.playing,on_capture=captured,
-            interruptions_enabled=lambda:time.monotonic()>=self.interruptions_disabled_until)
-        self.active=session;self.output=output;self.observer=observer;self.active_run=str(run.id);self.report['sessions']+=1
+        session=HalfDuplexSession(transcribe=bridge.transcribe,respond=bridge.respond,
+            play=output.play,stop=output.stop,output_tail_until=lambda:output.tail_until,silence_seconds=run.audio_settings.silence_seconds,
+            playback_active=output.playing,on_capture=bridge.set_capture_time)
+        self.active=session;self.output=output;self.observer=None;self.active_run=str(run.id);self.report['sessions']+=1
         async def changed(event):
             state=event.data.get('new_state')
             if event.data['entity_id']==MUTE and (state is None or state.state!='off'):
@@ -438,7 +428,6 @@ class LocalDialogue:
             await television.acquire()
             if not television.input_safe():session.request_close('television_not_quiet')
             if session.done:return
-            observer.capture=self.calibration.attach(lambda:output)
             if not run.audio_settings.is_vad_enabled:
                 run.audio_settings=replace(run.audio_settings,is_vad_enabled=True)
                 run.audio_enhancer=MicroVadSpeexEnhancer(run.audio_settings.auto_gain_dbfs,
@@ -448,7 +437,7 @@ class LocalDialogue:
                 'engine':pipeline.stt_engine,'metadata':asdict(value.stt_metadata),
                 'audio_processing':asdict(run.stt_provider.audio_processing)}))
             await self.save()
-            await session.run(observer.enhanced_source(run.process_enhance_audio,value.stt_stream))
+            await session.run(session.enhanced_source(run.process_enhance_audio,value.stt_stream))
         finally:
             unsubscribe();unsubscribe_service()
             try:
@@ -460,10 +449,9 @@ class LocalDialogue:
                 self.report['last_session']={'run_id':str(run.id),**session.snapshot(),
                     'output':output.snapshot(),'television':television.snapshot(),
                     'agent_response':bridge.last_response,'input_blocked':bridge.input_blocked,
-                    'timings_ms':dict(bridge.timings_ms),'playback_diagnostics':observer.snapshot(),
+                    'timings_ms':dict(bridge.timings_ms),'playback_diagnostics':{'enabled':False,'reason':'half_duplex_no_echo_analysis'},
                     'endpoint_silence_ms':round(session.segmenter.silence_seconds*1000,1)}
                 self.active=None;self.output=None;self.observer=None;self.active_run=None
-                self.calibration.finish(observer.capture)
                 await self.save()
 
     async def reference_identity(self):
@@ -675,8 +663,9 @@ class LocalDialogue:
             self.hass.async_create_task(handler())
         report=dict(self.report)
         remaining=max(0.,self.interruptions_disabled_until-time.monotonic())
-        report['interruption_test']={'interruptions_enabled':remaining==0,'remaining_s':round(remaining,1),
-            'auto_restore_seconds':600,'input_during_speech':'normal' if remaining==0 else 'discarded'}
+        report['interruption_test']={'interruptions_enabled':False,'remaining_s':None,
+            'auto_restore_seconds':None,'input_during_speech':'discarded_before_vad',
+            'policy':'permanent_half_duplex','minimum_resume_after_output_ms':600,'respect_transport_tail':True}
         report.update(updated_at=dt_util.utcnow().isoformat(),adapter=getattr(self,'adapter','starting'),
             status='configured' if self.ready() and self.speech_ready() and getattr(self,'adapter',None)=='active' else 'waiting_for_speaker',
             active_run=self.active_run,active=self.active.snapshot() if self.active else None,
