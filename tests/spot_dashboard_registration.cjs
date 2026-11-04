@@ -1,0 +1,16 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const registry = new Map();
+const root = {innerHTML:'',querySelectorAll:()=>[]};
+const ctx = {HTMLElement:class{attachShadow(){return root;}},customElements:{get:n=>registry.get(n),define:(n,c)=>{assert(!registry.has(n));registry.set(n,c);}},setInterval:()=>1,clearInterval:()=>{}};
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(process.argv[2],'utf8'),ctx);
+assert(registry.has('jarvis-spot-dashboard'),'Configured frontend entry point must register Spoty');
+const Card=registry.get('jarvis-spot-dashboard');const card=new Card();
+card.setConfig({type:'custom:jarvis-spot-dashboard'});card.hass={states:{}};
+assert(root.innerHTML.includes('Spotové řízení'));
+assert(root.innerHTML.includes('ŘÍZENÍ NEAKTIVNÍ'));
+vm.runInContext(fs.readFileSync('managed_sources/spot_dashboard/card.js','utf8'),ctx);
+assert.equal(registry.get('jarvis-spot-dashboard'),Card,'Secondary module must not register twice');
+console.log('PASS: configured entry registers Spoty, renders missing telemetry, duplicate bundle is safe');
