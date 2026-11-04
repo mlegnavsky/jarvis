@@ -8,7 +8,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import HomeAssistantError
-from .engine import Controller,equal,finite
+from .engine import Controller,equal,finite,charge_limits_ok
 DOMAIN='jarvis_spot_control'
 CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_EXTRA)
 async def async_setup(hass,config):
@@ -17,11 +17,11 @@ async def async_setup(hass,config):
     def read():return {s.entity_id:s.state for s in hass.states.async_all() if '.inverter_' in s.entity_id}
     def healthy():
         now=dt_util.utcnow()
-        for e in ('sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_grid_power'):
+        for e in ('sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_grid_power','sensor.inverter_battery_temperature','number.inverter_battery_max_charging_current'):
             s=hass.states.get(e)
             t=getattr(s,'last_reported',None) or getattr(s,'last_updated',None)
             if s is None or finite(s.state) is None or t is None or (now-t).total_seconds()>120:return False
-        return True
+        return charge_limits_ok(read())
     async def write(entity,value):
         domain=entity.split('.')[0]
         if domain=='number':service='set_value';data={'value':float(value)}
@@ -39,9 +39,17 @@ async def async_setup(hass,config):
         raise HomeAssistantError('Měnič nepotvrdil nastavení '+entity)
     c=Controller(read,write,store.async_save,saved,healthy=healthy)
     ready=False
+    def telemetry():
+        result={}
+        for name in ('pv_power','load_power','grid_power','battery_power','battery','battery_temperature','battery_current','battery_voltage','temperature'):
+            state=hass.states.get('sensor.inverter_'+name)
+            if state is not None:
+                t=getattr(state,'last_reported',None) or state.last_updated
+                result['sensor.inverter_'+name]={'state':state.state,'last_reported':t.isoformat()}
+        return result
     def report():
         phase=c.record.get('phase','idle')
-        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.2.0','ready':ready,'active':c.active,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
+        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.3.0','test_current_limit':40,'telemetry':telemetry(),'ready':ready,'active':c.active,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
     async def start(call):
         if not ready or not healthy():raise HomeAssistantError('Čekám na aktuální měření měniče.')
         now=dt_util.now()
