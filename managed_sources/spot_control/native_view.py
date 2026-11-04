@@ -23,7 +23,7 @@ def build(text):
 {% endif %}
 Nabíjení spustíš tlačítkem níže. Automatický prodej je vypnutý.
 """)
-    prices={'type':'grid','columns':2,'square':False,'cards':[md('### '+label+"\n## {{ states('sensor.jarvis_spot_ote') | float(0) | round(3) if is_number(states('sensor.jarvis_spot_ote')) else '—' }} Kč/kWh\nTest OTE · bez DPH a poplatků") for label in ['Nákup nyní','Prodej nyní']]}
+    prices={'type':'grid','columns':2,'square':False,'cards':[md('### Nákup · ČEZ\n## 5 Kč/kWh\nPevná sazba zadaná majitelem'), md("### Prodej nyní\n## {{ states('sensor.jarvis_spot_ote') | float(0) | round(3) if is_number(states('sensor.jarvis_spot_ote')) else '—' }} Kč/kWh\nTest OTE · bez DPH a poplatků")]}
     flows=md("""### Co se právě děje
 {% set b=states('sensor.inverter_battery_power') %}{% set g=states('sensor.inverter_grid_power') %}
 🔋 **Baterie:** {% if not is_number(b) %}měření nedostupné{% elif b|float < -30 %}nabíjí se{% elif b|float > 30 %}vybíjí se{% else %}v klidu{% endif %} · {{ b }} W
