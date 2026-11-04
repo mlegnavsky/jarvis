@@ -11,6 +11,15 @@ native=types.ModuleType('homeassistant.components.assist_pipeline.pipeline')
 native.PipelineEvent=Event;native.PipelineEventType=EventType
 
 class Tests(unittest.IsolatedAsyncioTestCase):
+ async def test_direct_activation_has_bounded_reason_and_native_hint(self):
+  state=self.setup(phrase='rozsviť',tv='playing');state.release.set()
+  for _ in range(30):await self.execute(state)
+  recent=state.report['recent_activations']
+  self.assertEqual(len(recent),16)
+  self.assertEqual(recent[-1]['wake_word'],'rozsviť')
+  self.assertEqual(recent[-1]['reason'],'media-active-explicit-wake-required')
+  self.assertEqual(recent[-1]['outcome'],'blocked')
+  self.assertEqual(state.intents,[])
  @classmethod
  def setUpClass(cls):
   compiler=shutil.which('g++')

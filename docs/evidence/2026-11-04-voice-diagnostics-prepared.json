@@ -1,0 +1,66 @@
+{
+  "scope": "approved_step_1_runtime_diagnostics",
+  "date": "2026-11-04",
+  "source_commit": "4e9cb7960a2398a2e4f869c27c4dc98a7cee2937",
+  "deployment_state": "blocked_before_publication",
+  "active_version_unchanged": "1.3.7",
+  "candidate_versions": {
+    "local_duplex": "1.3.8",
+    "voice_diagnostics": "1.1.3"
+  },
+  "verification": {
+    "local_duplex": {
+      "tests": 332,
+      "skipped": 5,
+      "result": "OK"
+    },
+    "voice_diagnostics": {
+      "tests": 33,
+      "result": "OK"
+    },
+    "addon": {
+      "tests": 263,
+      "skipped": 20,
+      "result": "OK"
+    },
+    "manifest": "passed",
+    "diff_check": "passed"
+  },
+  "review": {
+    "critical": 0,
+    "important": 2,
+    "fixed": [
+      "observer failure isolation and cleanup",
+      "identity errors mislabeled as agent"
+    ],
+    "regressions": "RED to GREEN; actual dialogue and real bridge executed",
+    "additional_scope": "native wake hint and bounded direct-wake reason/continuation metadata"
+  },
+  "privacy": {
+    "raw_microphone_saved": false,
+    "private_transcripts_published": false,
+    "reply_text_persisted": false,
+    "transcript_limit": 240,
+    "run_limit": 8,
+    "events_per_run": 48,
+    "direct_activation_limit": 16
+  },
+  "preflight": {
+    "free_gib": 4.2,
+    "backup_minimum_gib": 2,
+    "lease_locked": false,
+    "live_baseline_files_match_git": true
+  },
+  "blocker": {
+    "automatic_approval_rejected": "Publishing source and mutating repository branch requires explicit destination/source authorization. Both lease-bound and normal push rejected. No further retry, connector bypass, deployment or restart performed.",
+    "approval_needed": "Publish diagnostic source to public mlegnavsky/jarvis branch feat/jarvis-addon, then backed-up CAS activation on existing Green."
+  },
+  "pending": [
+    "explicit publication approval",
+    "publish exact candidate",
+    "prepare/apply backed-up CAS bundle",
+    "verify file readbacks and active runtime",
+    "run existing generated-only native readiness probe",
+    "controlled household test later; microphone remains muted"
+  ]
+}

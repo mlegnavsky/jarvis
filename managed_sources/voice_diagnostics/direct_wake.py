@@ -17,13 +17,13 @@ def media_active(hass):
 
 
 def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, *, last_wakeups=None, cooldown=2., clock=time.monotonic):
-    report = {'status': 'unsupported_core', 'version': 6, 'commands': 0, 'blocked': 0,
+    report = {'status': 'unsupported_core', 'version': 7, 'commands': 0, 'blocked': 0,
               'command_switches': dict(COMMAND_SWITCHES),
               'switch_scope': 'new_direct_runs_only_not_firmware_detection',
               'scope': 'whole_light_utterance_after_acoustic_hint',
               'continuation_wait_s':.75,'television_policy':'explicit_Jarvis_required_while_media_active',
               'identity_inference': False, 'speech_to_text': True,
-              'commands_count_handoffs_not_physical_confirmation': True}
+              'commands_count_handoffs_not_physical_confirmation': True, 'recent_activations': []}
     if core_version != '2026.6.4':
         return report
     if '_jarvis_direct_wake' in input_class.__dict__:
@@ -33,10 +33,17 @@ def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, 
     # here or Core would reject this very run as a duplicate.
     last_hints = {}
 
+    def record(value, outcome, **facts):
+        entry={'at_epoch':time.time(),'run_id':str(getattr(value.run,'id','unknown')),
+            'wake_word':value.wake_word_phrase,'outcome':outcome,**facts}
+        report['recent_activations']=(report['recent_activations']+[entry])[-16:]
+        return entry
+
     async def blocked(value, code):
         run = value.run
         report['blocked'] += 1
         report['last_blocked_reason'] = code
+        record(value,'blocked',reason=code)
         run._jarvis_suppressed_activation=True
         try:
             # No TTS is going to follow: do not advertise a deleted stream URL.
@@ -108,6 +115,7 @@ def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, 
         run._jarvis_command_wait_s=.75
         run._jarvis_direct_continuation_started=False
         run._jarvis_initial_silence_expired=False
+        activation=record(value,'handoff',continuation_wait_s=.75)
         try:
             report['commands'] += 1
             report['last_phrase'] = phrase
@@ -121,8 +129,12 @@ def install(hass, input_class, stages, core_version, pipeline_id, satellite_id, 
         finally:
             discard_pending()
             report['last_handoff_ms'] = round((clock()-now)*1000, 1)
+            activation.update(duration_ms=report['last_handoff_ms'],
+                continuation_started=run._jarvis_direct_continuation_started,
+                initial_silence_expired=run._jarvis_initial_silence_expired)
             if hasattr(run,'_jarvis_direct_effective_text'):
                 report['last_effective_command']=run._jarvis_direct_effective_text
+                activation['transcript']=str(run._jarvis_direct_effective_text)[:240]
             run.start = native_start
             run.process_event=native_event
             for name in ('_jarvis_direct_command_prefix','_jarvis_command_wait_s','_jarvis_direct_continuation_started','_jarvis_direct_effective_text','_jarvis_initial_silence_expired'):

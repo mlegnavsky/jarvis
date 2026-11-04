@@ -1,5 +1,6 @@
 """Target-scoped local continuous capture with existing Jarvis voice authority."""
 import asyncio
+from collections import deque
 from dataclasses import asdict, replace
 from datetime import timedelta
 from functools import partial
@@ -34,6 +35,7 @@ from .tv_session import TVSession
 from custom_components.jarvis_voice_diagnostics.turn_taking import spoken_name
 from .adapter import DELEGATE, install, native_session, operator_installed
 from .bridge import TurnBridge, response_facts
+from .runtime_diagnostics import RuntimeTrace, notify
 from .control import read_control
 from .reference_native import NativeReferenceEndpoint
 from .reference_probe import GeneratedReferenceProbe, claim_probe, public_identity
@@ -50,7 +52,7 @@ from .speech_stream import open_speech_stream
 from .homepod_io import HOME, HomePodNotReady, HomePodOutput, homepod_state, homepod_timing, play_homepod_file, play_homepod_stream, prime_homepod
 
 DOMAIN='jarvis_local_duplex'
-VERSION='1.3.7'
+VERSION='1.3.8'
 PIPELINE='01kw4sat65taw1y72xzrv2xyj4'
 SATELLITE='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
 PLAYER='media_player.home_assistant_voice_0a8bde_media_player'
@@ -76,6 +78,7 @@ class LocalDialogue:
         self.reference_probe_task=None
         self.homepod_init_task=None
         self.homepod_initializing=False
+        self.runtime_traces=deque(maxlen=8)
         self.report={'runtime_version':VERSION,'core_version':CORE_VERSION,'mode':'local_microphone_homepod_speech',
             'speaker':HOME,'microphone':SATELLITE,'volume_policy':'homepod_raop_only_tv_pause_separate','cloud_audio':'completed_utterances_only',
             'raw_microphone_saved':False,'acoustic_acceptance_verified':False,
@@ -382,6 +385,12 @@ class LocalDialogue:
         if getattr(run.intent_agent,'id',None)!=AGENT:
             raise ValueError('voice_authorized_agent_required')
         pipeline=run.pipeline
+        trace=RuntimeTrace(run.id,wake_word=getattr(value,'wake_word_phrase',None))
+        emit=lambda event,**facts:notify(trace.emit,event,**facts)
+        self.runtime_traces.append(trace)
+        def emit_snapshot(event,component):
+            try:emit(event,**component.snapshot())
+            except Exception:pass
         async def transcribe(pcm):
             from homeassistant.components.stt import SpeechResultState
             async def chunks():
@@ -399,6 +408,13 @@ class LocalDialogue:
                 if guards.get(key) is input_allowed:guards.pop(key,None)
         television=self.television()
         output=self.make_output(pipeline)
+        async def play_with_metrics(text):
+            try:return await output.play(text)
+            finally:
+                try:
+                    emit('output_metrics',**{k:v for k,v in output.snapshot().items()
+                        if k in ('tts_generation_ms','first_audio_wait_ms','last_reference_duration_s','transport')})
+                except Exception:pass  # Diagnostics cannot prevent output/session cleanup.
         def input_allowed():return not session.done and not session.closed and television.input_safe()
         bridge=TurnBridge(transcribe,hass.data['jarvis_speaker_identity'].complete,converse,
             context_factory=lambda:Context(parent_id=run.context.id),device_id=value.device_id,
@@ -406,9 +422,10 @@ class LocalDialogue:
             agent_id=AGENT,language=pipeline.stt_language or run.language,
             extra_system_prompt=value.conversation_extra_system_prompt,playback_overlap=lambda audio:False,
             input_allowed=input_allowed)
+        bridge.on_event=emit
         session=HalfDuplexSession(transcribe=bridge.transcribe,respond=bridge.respond,
-            play=output.play,stop=output.stop,output_tail_until=lambda:output.tail_until,silence_seconds=run.audio_settings.silence_seconds,
-            playback_active=output.playing,on_capture=bridge.set_capture_time)
+            play=play_with_metrics,stop=output.stop,output_tail_until=lambda:output.tail_until,silence_seconds=run.audio_settings.silence_seconds,
+            playback_active=output.playing,on_capture=bridge.set_capture_time,on_event=emit)
         self.active=session;self.output=output;self.observer=None;self.active_run=str(run.id);self.report['sessions']+=1
         async def changed(event):
             state=event.data.get('new_state')
@@ -425,7 +442,9 @@ class LocalDialogue:
         unsubscribe=async_track_state_change_event(hass,[MUTE,TELEVISION],changed)
         unsubscribe_service=hass.bus.async_listen(EVENT_CALL_SERVICE,service_called)
         try:
+            emit('tv_acquire_start')
             await television.acquire()
+            emit_snapshot('tv_acquire_end',television)
             if not television.input_safe():session.request_close('television_not_quiet')
             if session.done:return
             if not run.audio_settings.is_vad_enabled:
@@ -445,6 +464,7 @@ class LocalDialogue:
                 finally:
                     bridge.clear()
                     await television.release()
+                    emit_snapshot('tv_release_end',television)
             finally:
                 self.report['last_session']={'run_id':str(run.id),**session.snapshot(),
                     'output':output.snapshot(),'television':television.snapshot(),
@@ -662,6 +682,9 @@ class LocalDialogue:
                     'resume_interruptions':self.resume_interruptions,'model_audit':self.model_audit}[request['action']]
             self.hass.async_create_task(handler())
         report=dict(self.report)
+        report['runtime_diagnostics']={'schema':1,'scope':'actual_local_dialogue',
+            'raw_microphone_saved':False,'max_sessions':8,'max_events_per_session':48,
+            'transcript_characters':240,'runs':[trace.snapshot() for trace in getattr(self,'runtime_traces',())]}
         remaining=max(0.,self.interruptions_disabled_until-time.monotonic())
         report['interruption_test']={'interruptions_enabled':False,'remaining_s':None,
             'auto_restore_seconds':None,'input_during_speech':'discarded_before_vad',

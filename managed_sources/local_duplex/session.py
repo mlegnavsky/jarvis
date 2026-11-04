@@ -5,19 +5,22 @@ import time
 
 if __package__:
     from .segmenter import Segmenter
+    from .runtime_diagnostics import notify
 else:
     from segmenter import Segmenter
+    from runtime_diagnostics import notify
 
 
 class Session:
     def __init__(self, *, transcribe, respond, play, stop, idle_seconds=8,
                  clock=time.monotonic, gate=None, silence_seconds=.7,
                  max_seconds=240, max_turns=24,on_interrupt=None,input_timeout_seconds=5,playback_active=None,
-                 on_capture=None,interruptions_enabled=None):
+                 on_capture=None,interruptions_enabled=None,on_event=None):
         self.transcribe=transcribe;self.respond=respond;self.play=play;self.stop=stop
         self.clock=clock;self.gate=gate;self.idle_seconds=idle_seconds
         self.on_interrupt=on_interrupt
         self.on_capture=on_capture
+        self.on_event=on_event
         self.interruptions_enabled=interruptions_enabled or (lambda:True)
         self.input_suppressed=False;self.suppressed_frames=0
         self.playback_active=playback_active or (lambda:self.stage=='speaking')
@@ -48,6 +51,7 @@ class Session:
             'session_budget_policy')}
 
     def request_close(self, reason):
+        notify(self.on_event,'session_end',reason=reason)
         self.reason=reason;self.done=True;self._pending=None;self.finished.set()
 
     async def interrupt(self):
@@ -74,6 +78,7 @@ class Session:
         if self.stage=='speaking' and not self.interruptions_enabled():return
         captured_until=self.clock() if captured_until is None else captured_until
         if truncated:
+            notify(self.on_event,'capture_rejected',reason='truncated')
             self.truncated+=1;self.idle_at=self.clock();return
         confirming=self.confirmation_task is not None and not self.confirmation_task.done()
         busy=self.task is not None and not self.task.done()
@@ -124,10 +129,13 @@ class Session:
             self.confirmation_failures+=1;self.last_error=type(exc).__name__
 
     async def _turn(self, generation, audio, voiced,captured_until=None,*,text=None):
+        phase='capture'
         try:
             if self.closed or self.done:return
             if text is None:
                 self.stage='transcribing'
+                phase='stt'
+                notify(self.on_event,'capture_end',voiced_s=voiced,audio_s=len(audio)/32000)
                 if self.on_capture:self.on_capture(self.clock() if captured_until is None else captured_until)
                 async with asyncio.timeout(30):text=await self.transcribe(audio,voiced,False)
             if generation!=self.generation or self.closed or self.done or not text:return
@@ -136,20 +144,27 @@ class Session:
             self.accepted_turns+=1
             self.activity_at=self.clock()
             self.stage='thinking'
+            phase='response'
             async with asyncio.timeout(60):result=await self.respond(text)
             if generation!=self.generation or self.closed or self.done:return
             if result.speech:
                 self.stage='speaking'
+                phase='output'
+                notify(self.on_event,'output_start')
                 async with asyncio.timeout(100):await self.play(result.speech)
+                notify(self.on_event,'output_end')
             if generation!=self.generation or self.closed or self.done:return
             self.completed_turns+=1
+            notify(self.on_event,'turn_end',turn=self.completed_turns,continuing=result.continuing)
             if self.completed_turns>=self.max_turns or self.accepted_turns>=self.max_turns:
                 self.request_close('turn_limit')
             elif not result.continuing and not result.speech and self._pending is None:
                 self.request_close('conversation_finished')
         except asyncio.CancelledError:
+            notify(self.on_event,'turn_cancelled',stage=phase)
             raise
         except Exception as exc:
+            notify(self.on_event,'stage_error',stage=phase,error_type=type(exc).__name__)
             self.failures+=1;self.last_error=type(exc).__name__
             if self.failures>=2:self.request_close('repeated_provider_failure')
         finally:
@@ -181,6 +196,7 @@ class Session:
                     else:qualified=self.gate(frame,self) if self.gate else [(frame.audio,frame.speech_probability)]
                     for audio,probability in qualified:
                         for event in self.segmenter.feed(audio,probability or 0):
+                            if event.kind=='onset':notify(self.on_event,'speech_onset')
                             if event.kind!='onset':
                                 await self.submit(event.audio,event.voiced_s,event.truncated)
                     busy=any(task is not None and not task.done() for task in (self.task,self.confirmation_task))
@@ -211,6 +227,7 @@ class Session:
 
     async def close(self):
         if self.closed:return
+        if self.reason is None:notify(self.on_event,'session_end',reason='closed')
         self.closed=True;self.generation+=1;self._pending=None;self.finished.set()
         pending=[t for t in (self.confirmation_task,self.task) if t and not t.done()]
         for task in pending:task.cancel()
