@@ -95,3 +95,7 @@ Výcvik kandidátů Aničko/zamkni/odemkni: training/anicko-20261101. Modely nej
 
 ## Energetika — povinný rozcestník (4.11.2026)
 Před prací s baterií, historií grafu nebo spoty přečti [ENERGY-DATA-MAP.md](ENERGY-DATA-MAP.md). Obsahuje přesné entity a znaménka, REST/WS zdroje grafu, soukromý 10s archiv a odesílací frontu, dohledaný model Felicity FLA48460-EU, výrobní limity a ověřený průběh ručního testu. Průběžně doplňuj nové údaje s datem a důkazem. Chybějící historická operace v konektoru neznamená, že historie neexistuje. Historické maximum nabíjení ze soláru ještě není vypočtené; nejdřív načti skutečné body a ověř současný tok ze sítě. Hodinový průměr není špička, nastavený proud není hodnota fyzické pojistky.
+
+
+## Backup destination correction — 2026-11-04
+This supersedes earlier statements that no private server destination is connected: live HA inventory confirms the WebDAV integration for jarvis-backup@laborator.odladeni.cz is loaded. SFTP was not the final connection. Delivery of individual administration backups to that server is not verified; current admin backups are created through Supervisor and leave local Green copies. Automatic backup last-success sensor is 2026-10-29, latest attempt 2026-11-04. Investigate upload health before asserting recovery coverage. See docs/evidence/2026-11-04-cleanup-activation.md for verified cleanup and activation evidence.
