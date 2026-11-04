@@ -33,7 +33,7 @@ class JarvisSpotDashboard extends HTMLElement{
  }
  render(){if(!this.root||!this.h)return;const s=this.h.states,f=flow(s),ote=price(s),fresh=f.valid;
  const zero=s['select.inverter_work_mode']?.state==='Zero Export To CT'&&s['switch.inverter_export_surplus']?.state==='off';
- const w=x=>Number.isFinite(x)?fmt(x/1000,2)+' kW':'—';
+ const w=x=>Number.isFinite(x)?(Math.abs(x)<1000?fmt(x,0)+' W':fmt(x/1000,2)+' kW'):'—';
  const arrow=(d,p,color)=>`<path d="${d}" class="wire ${fresh&&Number.isFinite(p)&&Math.abs(p)>30?'moving':''}" style="--flow:${color};--duration:${Math.max(.5,3-Math.min(Math.abs(p||0),6000)/2400)}s"/>`;
  const bp=f.battery, gp=f.grid;
  const battText=bp===null?'Neaktuální měření':bp < -30?'Nabíjí se':bp>30?'Vybíjí se':'V klidu';
