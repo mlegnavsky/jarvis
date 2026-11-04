@@ -829,3 +829,9 @@ HomePod output passed, zero stops/errors/cleanup pending. Lease released.
 Full proof docs/evidence/2026-11-04-half-duplex.json. CI41797390703 all8jobs
 success. Household wake reliability/audibility and provider latency remain
 unverified; no remote microphone test performed.
+
+## Spoty preparation — 4 November 2026
+Owner approved screen design and TEST OTE pricing, no live operation change.
+New preparation view has live house/grid/battery flows and current OTE prices, preserving all previous views. Controls explicitly disabled pending controller implementation; no fake active AI.
+Private baseline: jarvis_workspace/spot-baseline-20261104.json (HA-exposed settings only; never publish household settings). Capture verified. Zero export offset confirmed20W. Numeric capacity sensor20kWh differs from owner23.5kWh; do not infer stored kWh without resolving.
+OPEN: physical action mapping/tests and rollback, configured export permission/limit, forecast-calibrated plan, interval settlement and week/month totals. Archive status retrying. TEST OTE authorized for simulation; actual contractual price to connect later. Browser QA blocked by missing Chromium download; source tests pass, no claim visual acceptance.
