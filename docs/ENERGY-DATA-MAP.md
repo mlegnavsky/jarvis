@@ -52,3 +52,8 @@ Desetiminutový časovač závisí na běžícím HA; při jeho výpadku nelze s
 
 ## Co udržovat
 Při každém novém nálezu aktualizovat tento dokument a odkazy z WORK-MANIFEST. Pro implementované API aktualizovat zdrojový generátor operations-manifest, nikoli do generovaného kontraktu připsat neexistující operaci. Do OPEN-WORK patří konkrétní nevyřešené kroky; přístupy, tajemství a historická tvrzení nesmí být domýšleny.
+
+
+## Nákup a zobrazení — upřesnění vlastníka 4.11.2026
+Nákup elektřiny probíhá přes ČEZ za PEVNOU sazbu 5 Kč/kWh (výslovně sděleno Martinem). OTE není nákupní cena. OTE zatím zůstává testovací cenou prodeje; vlastní výkupní sazba bude dopojena. Rozpad DPH, poplatků a stálých plateb nebyl specifikován — nic automaticky nepřičítat ani netvrdit, že uvedených 5 Kč je bez DPH. Pro proměnnou cenu nákupu použít 5 Kč/kWh, stálé platby nejsou součástí výpočtu kWh × sazba.
+Jednotky okamžitého výkonu: abs(W)<1000 zobrazit celé W, jinak kW na max. dvě desetinná místa; kWh a Kč/kWh zůstávají. Opraveno ve zdrojích obou spotových karet, regresní příklady tests/power_units.cjs. Živě 17:10:38: síť odběr 11 W, zero_export_power 20 W, Zero Export To CT, export_surplus off, grid_charging_current zpět 40 A. Nastavený cíl 20 W neznamená přesně 20 W v každém vzorku.
