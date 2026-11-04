@@ -91,3 +91,7 @@ Výcvik kandidátů Aničko/zamkni/odemkni: training/anicko-20261101. Modely nej
 
 ### Hlas 1.1.0 — ověřené nasazení 1.11.2026
 Čti také jarvis_workspace/voice-deployment-receipt.json. Původní job voice11-apply-20261101 skončil runtime_check_failed při startu, ale následné čerstvé ověření potvrdilo 28/28 souborů, report runtime1.1.0/ready, native_intent_guard=true, jeden autorizovaný profil a zachované kotvy. Žádný zápis nebyl opakován. Neopakovat apply pod novým klíčem. Manifest jarvis_workspace/voice-system-manifest.json se sám obnovuje; jeho hashe popisují soubory na disku, nikoli nezávislý důkaz aktivace. Skutečná domácí přesnost a wake modely zůstávají neověřené; detailní meze a výcvikový běh jsou v účtence.
+
+
+## Energetika — povinný rozcestník (4.11.2026)
+Před prací s baterií, historií grafu nebo spoty přečti [ENERGY-DATA-MAP.md](ENERGY-DATA-MAP.md). Obsahuje přesné entity a znaménka, REST/WS zdroje grafu, soukromý 10s archiv a odesílací frontu, dohledaný model Felicity FLA48460-EU, výrobní limity a ověřený průběh ručního testu. Průběžně doplňuj nové údaje s datem a důkazem. Chybějící historická operace v konektoru neznamená, že historie neexistuje. Historické maximum nabíjení ze soláru ještě není vypočtené; nejdřív načti skutečné body a ověř současný tok ze sítě. Hodinový průměr není špička, nastavený proud není hodnota fyzické pojistky.
