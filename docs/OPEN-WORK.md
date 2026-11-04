@@ -1,3 +1,8 @@
+# Latest: 4 November 2026 — half duplex 1.3.7 ACTIVE
+
+Owner chose no barge-in. See final section below and docs/experiments/2026-11-04-half-duplex.md.
+Do not resume archived AEC/reference experiments without a new request.
+
 # Stav práce — 29.10.2026, po nasazení3.12.0
 
 ## Dokončeno a živě ověřeno
@@ -812,3 +817,15 @@ PublicHEADstill54e9bce (all8CI41646159996passed,labpublished); localHEAD2e7041d 
 Next: finishcounterfix/fullbuild/targetedreview, finaladdonchecks/manifest/diff, commitallownedchangespluspublicproof, GitCASpublish against54e9bce (exacttree), waitCI; updateaddon3.12.4once/newrequestid andverify. Thennative1.3.6 viaexistinglease/bundle/core_restart andfreshfile/hash/runtime/nativeproof; runreference_identity(nohardware) toobtainPUBLICserverid; freshmetadata/sourceCASstageSTOCKoverlaywithexactpublishedSHA+publicid; compileprivateGreentarget, onlythenbackedupinstall/hashreadback; silentreference_probeonfreshnonce. No oldroommicrophone grant replay/clearing. Acousticmeasurement/fastbarge and1sgoal remainunproved.
 
 Stock compatibility candidate complete for publication:317duplex and249addon(20optional skips) testsPASS. Bothminimalfixtures andFULLimmutableofficialVoicePEpackage compile PASS onfinalsources, includingreentrantcounterfix. All7compiledcomponentfiles byte-match inall3builds. Fullconfig91263d25/RAM149883/flash2847423; finalproofdigestda75271e24914d56a473972dcf245d03bc8bc96f0f6856829d4cf0e01b9833c3. Focusedintegratedreview0Critical/0Important, counterdeltaaccepted; allreviewlimitsretained. New3.12.4/1.3.6 source ready, NOTactiveyet. Nativepublicidentity mustbe preparedbeforestockstage. Existing3123active/0996fed9backup,6.6GiBfree. No furtherdeletionneeded; userfreehandsauthorizationpersists.
+
+## 4 November 2026: owner chooses permanent half duplex
+
+Archive branch archive/homepod-duplex-experiments-20261104 preserves 129149e2.
+Native 1.3.7 candidate uses HalfDuplexSession and removes echo observer/classifier
+from ordinary dialogue. No firmware changes. Details and failed paths:
+docs/experiments/2026-11-04-half-duplex.md. DEPLOYED: half137-apply-20261104 verified/active_verified at 08:15:42 UTC,
+backup b74d6651, native 1.3.7. Exact 4 files read back; native probe and16.416s
+HomePod output passed, zero stops/errors/cleanup pending. Lease released.
+Full proof docs/evidence/2026-11-04-half-duplex.json. CI41797390703 all8jobs
+success. Household wake reliability/audibility and provider latency remain
+unverified; no remote microphone test performed.
