@@ -94,6 +94,18 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   return self.hass.data[self.module.KEY]
  async def service(self,name,data):
   handler,schema=self.services[name];await handler(types.SimpleNamespace(data=schema(data)))
+ async def test_native_clock_is_read_after_slow_configuration_requests(self):
+  from zoneinfo import ZoneInfo
+  data=await self.setup();now=[time.time()]
+  async def execute(code,address,count=1):
+   if address==142:now[0]+=10
+   if address==62:
+    d=datetime.fromtimestamp(now[0],ZoneInfo('Europe/Prague'))
+    return [((d.year-2000)<<8)|d.month,(d.day<<8)|d.hour,(d.minute<<8)|d.second]
+   return [0]*count
+  self.hass.config_entries.async_entries('solarman')[0].runtime_data.device.execute=execute
+  result=await data['window'].native_read()
+  self.assertLess(abs(result['clock'].timestamp()-now[0]),1)
  async def test_explicit_stop_cancels_pending_commissioning_before_first_tick(self):
   data=await self.setup(True);await self.service('stop_sale',{})
   await self.ticks[0]()

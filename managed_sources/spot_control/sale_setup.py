@@ -18,7 +18,7 @@ from .native_window import NativeWindow,WRITABLE
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.5.0'
+VERSION='0.5.1'
 AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -118,9 +118,9 @@ async def async_setup_sales(hass,config,charge_controller):
    if len(entries)!=1:raise ValueError('Ambiguous inverter')
    device=entries[0].runtime_data.device
    async with asyncio.timeout(20):
-    clock=await device.execute(3,62,count=3)
     program=await device.execute(3,146,count=32)
     pv=await device.execute(3,340,count=1)
+    clock=await device.execute(3,62,count=3)
    if len(clock)!=3 or len(program)!=32 or len(pv)!=1:raise ValueError('Incomplete native read')
    date=datetime(2000+(clock[0]>>8),clock[0]&255,clock[1]>>8,clock[1]&255,clock[2]>>8,clock[2]&255,tzinfo=ZoneInfo('Europe/Prague'))
    native_program={'captured_at':datetime.now(timezone.utc).isoformat(),'clock_local':date.isoformat(),'clock_error_seconds':date.timestamp()-time.time(),'clock_registers':clock,'registers_146_177':program,'max_pv_power_raw':pv[0]}
@@ -151,7 +151,7 @@ async def async_setup_sales(hass,config,charge_controller):
  async def native_test_read():
   device=native_device();registers={}
   async with asyncio.timeout(25):
-   for address,count in ((0,1),(62,3),(98,14),(130,1),(142,36),(219,1)):
+   for address,count in ((0,1),(98,14),(130,1),(142,36),(219,1),(62,3)):
     raw=await device.execute(3,address,count=count)
     if not isinstance(raw,list) or len(raw)!=count or any(type(v) is not int for v in raw):raise ValueError('Incomplete native register snapshot')
     registers.update({address+i:v for i,v in enumerate(raw)})

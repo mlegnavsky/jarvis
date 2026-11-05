@@ -243,3 +243,19 @@ buffer is3minutes. Additional restoration regression observedRED→GREEN;70targe
 testsPASS. DelayedHAstates showed mixed95/30/current20 after priorcleanup; this
 is an observed mismatch, not proof of its cause. Newbootnative snapshot will
 separate staleHAstates from persistenthardwareparameters before nextpilot.
+
+## 17:36local — clock sampling defect reproduced and corrected in0.5.1
+0.5.0activatedverified17:28:30local, backup3e805320. Fresh native snapshot
+confirmed residualSOC95at slots1/3/6; supported number services restored those
+to30 and maxdischarge175. Whole nativeprogram17:29:44 confirmedall6SOC30,
+ordinarytimes,allflags0. Both native0.5.0pilotintents were blocked BEFORE any
+write by strictclockcheck; no failedclockintent is an actualexporttrial.
+Readclock-first followed by other queuedModbusrequests adds theirduration to
+clockerror. Reproduced in adapter regression:10sconfigurationdelay made an
+accurateclock look10.6s old.0.5.1 readsclockLAST in both diagnostic and trial
+snapshots, preservingthe5stolerance and alldeadline/health checks.41targeted
+testsPASS after observedRED→GREEN. Clock synchronization attempted through a
+boundedone-shot; subsequent directread timedout, so no claimofconfirmedclock
+sync underthatintent. Temporary rulewasremoved and originalthree rulesrestored
+andreloaded. AutoOFF, productionFALSE; nextpilotmustwaitfor0.5.1runtime/fresh
+actualclockconfirmation. Calibratedhouseforecast/productionoutagepolicy remainopen.
