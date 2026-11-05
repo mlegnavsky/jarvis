@@ -42,7 +42,9 @@ class NativeWindow:
   now=self.clock()
   if valid_until is not None and now>valid_until:raise ValueError('Test command expired')
   if native.tzinfo is None or abs(native.timestamp()-now)>5:raise ValueError('Inverter clock is not verified')
-  if r.get(0)!=0x0500 or r.get(98)!=1 or r.get(111)!=1 or r.get(130)!=0:raise ValueError('Requires LV lithium Capacity mode with grid charging off')
+  # The installed deye_p3 profile explicitly maps both 0x0005 and0x0500 to LV.
+  if r.get(0) not in (5,0x0500) or r.get(98)!=1 or r.get(111)!=1 or r.get(130)!=0:
+   raise ValueError(f"Requires LV lithium Capacity mode with grid charging off: type={r.get(0)}, control={r.get(98)}, operation={r.get(111)}, grid_charge={r.get(130)}")
   if r.get(142)!=2 or r.get(145)!=0 or r.get(146)!=255:raise ValueError('Requires ordinary Zero CT weekly house mode')
   socs=[r.get(166+i) for i in range(6)];powers=[r.get(154+i) for i in range(6)]
   if len(set(socs))!=1 or socs[0] is None or not 0<socs[0]<60 or len(set(powers))!=1 or powers[0] is None or powers[0]<500:

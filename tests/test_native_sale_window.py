@@ -29,6 +29,10 @@ class NativeWindowTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual([self.reg[172+i] for i in range(6)],[0,32,0,0,0,0])
   self.assertEqual([self.reg[166+i] for i in range(6)],[30,95,30,30,30,30])
   self.assertEqual(self.writes[-1],(173,32));self.assertEqual(self.reg[146],255)
+ async def test_legacy_lv_device_code_in_active_profile_can_be_commissioned(self):
+  self.reg[0]=5
+  await self.window.start()
+  self.assertEqual(self.reg[173],32)
  async def test_native_expiry_is_observed_before_any_stop_write(self):
   await self.window.start();record=dict(self.window.record);arm_count=len(self.writes)
   self.now=record['start']
