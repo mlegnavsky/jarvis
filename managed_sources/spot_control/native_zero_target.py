@@ -22,7 +22,7 @@ async def set_zero_target(device,ready,event,now=time.time,sleep=asyncio.sleep):
  ready() must prove healthy measurements and exclusive inactive controller
  ownership. The caller holds its application lock for the entire operation.
  """
- result={'supported':False,'verified':False,'before_w':None,'actual_w':None,'reads':[],'error':None}
+ result={'supported':False,'verified':False,'before_w':None,'actual_w':None,'reads':[],'read_shapes':[],'error':None}
  modbus=getattr(device,'modbus',None);semaphore=getattr(modbus,'_semaphore',None);response=getattr(modbus,'get_response',None)
  if semaphore is None or not callable(response) or not callable(getattr(device,'execute',None)):
   result['error']='Unsupported native zero-target transport';return result
@@ -40,8 +40,13 @@ async def set_zero_target(device,ready,event,now=time.time,sleep=asyncio.sleep):
     result['reads'].append(_value(await response(3,104,count=1),1)[0])
    for delay in (3,5):
     await sleep(delay)
-    result['reads'].append(_value(await device.execute(3,104,count=1),1)[0])
-   result['actual_w']=result['reads'][-1]
+    async with semaphore:
+     first=_value(await response(3,104,count=1),1)[0]
+     bulk=_value(await response(3,98,count=14),14)[6]
+     last=_value(await response(3,104,count=1),1)[0]
+    result['read_shapes'].append({'captured_at':now(),'single_before':first,'bulk':bulk,'single_after':last})
+    result['reads'].extend((first,bulk,last))
+    result['actual_w']=bulk
    result['verified']=all(v==0 for v in result['reads']) and ready() is True
    result['error']=None if result['verified'] else 'Native zero target did not remain confirmed'
    result['captured_at']=now()

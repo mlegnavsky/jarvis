@@ -91,7 +91,8 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
    return {'verified':False,'actual_w':20}
   with patch.object(self.module,'set_zero_target',side_effect=helper):
    with self.assertRaises(ValueError):await data['zero_import_target'](deadline)
-  self.assertEqual(data['settings']['native_grid_target_w'],20)
+  self.assertIsNone(data['settings']['native_grid_target_w'])
+  self.assertEqual(data['settings']['zero_target_proof']['actual_w'],20)
   self.assertFalse(data['settings']['zero_target_proof']['verified'])
  async def test_zero_target_cannot_run_during_native_battery_sale(self):
   data=await self.setup();data['battery_controller'].record={'before':{'143':9300},'phase':'armed'}

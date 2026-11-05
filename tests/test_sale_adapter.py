@@ -146,7 +146,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    controllers['busy']=lambda:False
    controllers['clock_sync_active']=True
    self.assertFalse(charge.healthy(),'RTC synchronization owns control')
-   self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.3')
+  self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.4')
  async def test_active_owner_conflict_latches_automatic_off_before_cleanup_finishes(self):
   from unittest.mock import AsyncMock
   data=await self.setup();await self.ticks[0]()
@@ -247,11 +247,18 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    with self.subTest(address=address),self.assertRaisesRegex(ValueError,'bulk|hromad'):
     await data['window'].native_write(address,value)
 
- async def test_single_register_readback_is_still_required_before_bulk_read(self):
+ async def test_single_register_confirmation_is_required_even_when_bulk_matches(self):
   data=await self.setup();self.device_reject=True
-  with self.assertRaisesRegex(RuntimeError,'109'):
+  device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device;original=device.execute
+  async def optimistic_bulk(code,address,count=1,**kwargs):
+   raw=await original(code,address,count=count,**kwargs)
+   if code==3 and address==98 and count==14:raw[11]=60
+   return raw
+  device.execute=optimistic_bulk
+  with self.assertRaisesRegex(ValueError,'109'):
    await data['window'].native_write(109,60)
-  self.assertNotIn((3,98,14),self.device_reads)
+  self.assertIn((3,98,14),self.device_reads)
+  self.assertEqual(self.writes.count(('number.inverter_battery_max_discharging_current',60)),1)
 
  async def test_malformed_bulk_read_cannot_confirm_ha_current_write(self):
   data=await self.setup();device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device
@@ -264,10 +271,87 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    await data['window'].native_write(109,60)
   self.assertEqual(self.device_registers[109],60)
 
+ async def test_delayed_bulk_confirmation_is_reread_without_reissuing_ha_write(self):
+  data=await self.setup();device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device
+  original=device.execute;bulk_reads=[]
+  async def delayed(code,address,count=1,**kwargs):
+   raw=await original(code,address,count=count,**kwargs)
+   if code==3 and address==98 and count==14:
+    bulk_reads.append(True)
+    if len(bulk_reads)==1:raw[11]=175
+   return raw
+  device.execute=delayed
+  await data['window'].native_write(109,60)
+  self.assertEqual(len(bulk_reads),2)
+  self.assertEqual(self.writes.count(('number.inverter_battery_max_discharging_current',60)),1)
+  self.assertEqual(self.raw_writes,[])
+
+ async def test_initial_stale_single_read_can_be_confirmed_by_later_bulk_and_single(self):
+  data=await self.setup();device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device
+  original=device.execute;single_reads=[]
+  async def delayed(code,address,count=1,**kwargs):
+   if code==3 and address==166 and count==1:
+    single_reads.append(True)
+    if len(single_reads)==1:return [30]
+   return await original(code,address,count=count,**kwargs)
+  device.execute=delayed
+  await data['window'].native_write(166,100)
+  self.assertGreaterEqual(len(single_reads),2)
+  self.assertEqual(self.writes.count(('number.inverter_program_1_soc',100)),1)
+
+ async def test_pending_confirmation_cannot_outlive_native_arming_deadline(self):
+  data=await self.setup();owner=data['battery_controller'];record={'id':'pending','before':{'109':175},'phase':'preparing',
+   'arm_until':time.time()-1,'pending':{'109':{'value':60,'previous':[175]}},'conflicts':{}}
+  owner.record=record
+  with self.assertRaisesRegex(ValueError,'deadline|arming|vypršel'):
+   await owner.native_write(109,60)
+  self.assertLessEqual(self.writes.count(('number.inverter_battery_max_discharging_current',60)),1)
+
+ async def test_cleanup_confirmation_uses_fresh_stop_not_expired_start_deadline(self):
+  data=await self.setup();owner=data['battery_controller']
+  owner.record={'id':'cleanup','before':{'109':175},'phase':'stopping','stop_issued':time.time()-1,
+   'arm_until':time.time()-3600,'pending':{'109':{'value':175,'previous':[60]}},'conflicts':{}}
+  self.device_registers[109]=60
+  await owner.native_write(109,175)
+  self.assertEqual(self.device_registers[109],175)
+  self.assertEqual(self.writes.count(('number.inverter_battery_max_discharging_current',175)),1)
+
+ async def test_confirmation_rechecks_owner_after_awaited_readback_audit(self):
+  data=await self.setup();owner=data['battery_controller']
+  owner.record={'id':'pending-owner','before':{'109':175},'phase':'preparing','arm_until':time.time()+120,
+   'plan':{'minimum_soc':60},'pending':{'109':{'value':60,'previous':[175]}},'conflicts':{}}
+  append=data['journal'].append
+  def changed(kind,*args):
+   if kind=='native_bulk_readback':owner.record['phase']='stopping'
+   return append(kind,*args)
+  data['journal'].append=changed
+  with self.assertRaisesRegex(ValueError,'owner changed'):await owner.native_write(109,60)
+  self.assertEqual(self.writes.count(('number.inverter_battery_max_discharging_current',60)),1)
+
+ async def test_failed_zero_target_proof_cannot_show_confirmed_after_zero_bulk(self):
+  data=await self.setup();await self.ticks[0]()
+  async def unverified(*args,**kwargs):return {'verified':False,'actual_w':0,'error':'single20 disagrees'}
+  self.module.set_zero_target=unverified
+  with self.assertRaises(ValueError):await data['zero_import_target']()
+  self.assertIsNone(data['settings']['native_grid_target_w'])
+  self.assertEqual(data['settings']['zero_target_proof']['actual_w'],0)
+  data['settings']['native_grid_target_w']=0
+  await data['report']()
+  self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
+
  async def test_other_native_register_routes_still_use_raw_write(self):
   data=await self.setup();await data['window'].native_write(143,500)
   self.assertEqual(self.raw_writes,[(143,[500])])
   self.assertNotIn(('number.inverter_export_surplus_power',500),self.writes)
+
+ async def test_legacy_single_only_zero_proof_is_not_shape_confirmation(self):
+  data=await self.setup();data['settings']['native_grid_target_w']=0
+  data['settings']['zero_target_proof']={'verified':True,'actual_w':0,'reads':[0,0,0]}
+  await data['report']()
+  self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
+  data['settings']['zero_target_proof']['read_shapes']=[{'single_before':0,'bulk':0,'single_after':0}]*2
+  await data['report']()
+  self.assertTrue(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
 
  async def test_shared_native_clock_range_admits_eleven_second_lag_without_sync(self):
   from test_simple_sale_adapter import FakeBattery

@@ -35,6 +35,15 @@ class ZeroTargetTests(unittest.IsolatedAsyncioTestCase):
  async def test_ignored_write_reports_actual_twenty_without_fake_success(self):
   _,r=await self.run_probe(Device(ignore=True))
   self.assertFalse(r['verified']);self.assertEqual(r['actual_w'],20)
+ async def test_single_read_echo_cannot_hide_disagreeing_bulk_read(self):
+  class ShapeDependent(Device):
+   async def get_response(self,code,address,count=1,data=None):
+    result=await super().get_response(code,address,count,data)
+    if code==3 and address==98 and count==14:result[6]=20
+    return result
+  _,r=await self.run_probe(ShapeDependent())
+  self.assertFalse(r['verified']);self.assertEqual(r['actual_w'],20)
+  self.assertTrue(any(p['single_before']==0 and p['bulk']==20 and p['single_after']==0 for p in r['read_shapes']))
  async def test_active_unhealthy_or_changed_native_program_never_writes(self):
   for change in ({142:0},{145:1},{130:1},{166:60},{172:1},{0:6}):
    d=Device();d.r.update(change);_,r=await self.run_probe(d)

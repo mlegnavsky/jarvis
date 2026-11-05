@@ -24,7 +24,7 @@ from .native_zero_target import set_zero_target
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.6.3'
+VERSION='0.6.4'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -166,6 +166,7 @@ async def async_setup_sales(hass,config,charge_controller):
   await event('native_register_readback',{'entity':entity,'address':address,'expected':expected,'actual':actual,'sale_id':c.record.get('id')})
   if entity=='number.inverter_zero_export_power':prefs['native_grid_target_w']=(actual-offset)*scale if actual is not None else None
   if required and actual!=expected:raise RuntimeError(f'Měnič nepotvrdil registr {address}: požadováno {expected}, naměřeno {actual}.')
+  return actual
  async def verify_baseline():
   await native_readback('select.inverter_work_mode','Zero Export To CT')
   await native_readback('switch.inverter_export_surplus','off')
@@ -188,7 +189,7 @@ async def async_setup_sales(hass,config,charge_controller):
     'register_104':controls[6],'register_109':controls[11],'native_grid_target_w':controls[6],'configured_discharge_current_a':controls[11]}
    prefs['native_grid_target_w']=controls[6]
   except Exception as exc:native_program={'error':type(exc).__name__+': '+str(exc)[:120]}
- async def write(entity,value):
+ async def write(entity,value,readback_required=True):
   domain=entity.split('.')[0]
   if domain=='number':service='set_value';data={'value':float(value)}
   elif domain=='select':service='select_option';data={'option':value}
@@ -202,7 +203,7 @@ async def async_setup_sales(hass,config,charge_controller):
    reported=(getattr(state,'last_reported',None) or state.last_updated) if state else None
    same=state is not None and (state.state==str(value) or number(state.state) is not None and number(state.state)==number(value))
    if same and reported is not None and reported>issued:
-    await native_readback(entity,value);return
+    return await native_readback(entity,value,required=readback_required)
   raise RuntimeError('Měnič nepotvrdil '+entity)
  c=SaleController(read,write,save_record,event,healthy=healthy,price=lambda:(current_price() or {}).get('net'),saved=saved.get('transaction'),reported=reported)
  def native_device():
@@ -226,15 +227,32 @@ async def async_setup_sales(hass,config,charge_controller):
   device=native_device()
   if address==109 or 166<=address<=171:
    entity='number.inverter_battery_max_discharging_current' if address==109 else f'number.inverter_program_{address-165}_soc'
-   await write(entity,value)
+   record=battery.record if battery and battery.active and battery.record.get('pending',{}).get(str(address),{}).get('value')==value else None
+   phase=record.get('phase') if record else None
+   conflicts=json.dumps(record.get('conflicts',{}),sort_keys=True) if record else None
+   def confirmation_guard():
+    if record is None:return
+    if battery.record is not record or not battery.active or record.get('phase')!=phase or record.get('pending',{}).get(str(address),{}).get('value')!=value or json.dumps(record.get('conflicts',{}),sort_keys=True)!=conflicts:
+     raise ValueError('Native numeric confirmation owner changed')
+    if phase=='preparing':
+     if time.time()>=record['arm_until']:raise ValueError('Native numeric confirmation arming deadline expired')
+     battery._sample()
+    elif phase=='stopping' and not battery._stopped():raise ValueError('Native cleanup confirmation needs fresh stopped grid')
+   confirmation_guard()
+   # Exactly one HA write. Later attempts only read; never overwrite a possible
+   # owner change while waiting for the inverter's delayed physical update.
+   await write(entity,value,readback_required=False)
    bulk_start,count=(98,14) if address==109 else (166,6)
-   async with asyncio.timeout(20):
-    await asyncio.sleep(2)
-    raw=await device.execute(3,bulk_start,count=count)
-   actual=raw[address-bulk_start] if isinstance(raw,list) and len(raw)==count and all(type(v) is int for v in raw) else None
-   await event('native_bulk_readback',{'entity':entity,'address':address,'bulk_start':bulk_start,'count':count,'expected':value,'actual':actual})
-   if actual!=value:raise ValueError(f'Native bulk register {address} did not confirm {value}; actual={actual}')
-   return
+   async with asyncio.timeout(25):
+    for attempt,delay in enumerate((2,3,5),1):
+     await asyncio.sleep(delay);confirmation_guard()
+     raw=await device.execute(3,bulk_start,count=count)
+     actual=raw[address-bulk_start] if isinstance(raw,list) and len(raw)==count and all(type(v) is int for v in raw) else None
+     single=await native_readback(entity,value,required=False)
+     await event('native_bulk_readback',{'entity':entity,'address':address,'bulk_start':bulk_start,'count':count,'expected':value,'actual':actual,'single_actual':single,'confirmation_attempt':attempt})
+     confirmation_guard()
+     if actual==value and single==value:return
+   raise ValueError(f'Native bulk/single register {address} did not confirm {value}; bulk={actual}, single={single}')
   async with asyncio.timeout(20):
    await device.execute(16,address,data=[value])
    await asyncio.sleep(1) # Give the inverter configuration write time to settle.
@@ -288,7 +306,7 @@ async def async_setup_sales(hass,config,charge_controller):
     return ready and not active() and not charge_controller.active and healthy() and not hass.data.get(KEY,{}).get('clock_sync_active') and (valid_until is None or time.time()<=valid_until)
    if not admission():raise ValueError('Nulový cíl vyžaduje čerstvá měření a neaktivní řízení.')
    result=await set_zero_target(native_device(),admission,event)
-   prefs['zero_target_proof']=result;prefs['native_grid_target_w']=result.get('actual_w')
+   prefs['zero_target_proof']=result;prefs['native_grid_target_w']=result.get('actual_w') if result.get('verified') is True else None
    await persist_settings();await event('native_zero_target_result',result)
    if result.get('verified') is not True:raise ValueError('Měnič nativně nepotvrdil nulový cíl odběru: '+str(result.get('actual_w'))+' W.')
  async def commission_window(valid_until=None,solar_sell=False,selling_first=False):
@@ -379,7 +397,7 @@ async def async_setup_sales(hass,config,charge_controller):
    'battery_sale':{k:v for k,v in battery.record.items() if k not in ('before','expected','pending')},'battery_sale_error':battery.error,'native_start':battery.record.get('start'),'selected_block':prefs.get('selected_block'),'sale_policy':'simple_daily_block','sale_floor_soc':60,
    'settings':dict(prefs),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or battery.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else battery.error if battery.active else c.error or runtime_error,'price':p,
    'mode':'battery_commission' if window.active else 'battery' if battery.active else c.record.get('mode'),'power_w':500 if window.active else battery.record.get('power_w') if battery.active else c.record.get('power_w'),'deadline':window.record.get('end') if window.active else battery.record.get('end') if battery.active else c.record.get('deadline'),
-   'grid_target_w':0,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('native_grid_target_w')==0,'grid_import_policy':'Cíl běžného odběru 0 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_EXPORT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
+   'grid_target_w':0,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('zero_target_proof',{}).get('verified') is True and len(prefs.get('zero_target_proof',{}).get('read_shapes',[]))==2 and prefs.get('native_grid_target_w')==0,'grid_import_policy':'Cíl běžného odběru 0 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_EXPORT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'planning':home_plan(),'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)
