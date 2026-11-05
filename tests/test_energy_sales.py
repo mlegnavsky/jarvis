@@ -96,6 +96,23 @@ class JournalTests(unittest.TestCase):
    self.assertEqual([x['kind'] for x in q.after(a,100)],['b','c'])
 
 class AutomaticPauseTests(unittest.TestCase):
+ def test_owner_conflict_never_promotes_or_restarts_after_normal_deadline(self):
+  proof={'id':'owner','reason':'deadline','purpose':'commission','mode':'pv','observed':True,'stop_verified':True,'sustained':True,'promote_auto':True,'conflicts':{'soc':{'actual':45}}}
+  result=sales.after_stop({'automatic':True},proof)
+  self.assertFalse(result['automatic']);self.assertTrue(result['inhibited'])
+  self.assertFalse(result.get('pv_verified',False))
+
+ def test_no_surplus_pauses_for_five_minutes_without_disabling_automatic(self):
+  from unittest.mock import patch
+  with patch.object(sales.time,'time',return_value=1000):
+   result=sales.after_stop({'automatic':True},{'id':'cloud','reason':'no_surplus','mode':'pv','stop_verified':True})
+  self.assertTrue(result['automatic']);self.assertFalse(result.get('inhibited',False))
+  self.assertEqual(result['cooldown_until'],1300)
+ def test_unverified_no_surplus_and_owner_override_cannot_keep_automatic_enabled(self):
+  for reason in ('no_surplus','external_override'):
+   result=sales.after_stop({'automatic':True},{'id':'blocked','reason':reason,'mode':'pv','stop_verified':False})
+   self.assertFalse(result['automatic']);self.assertTrue(result['inhibited'])
+
  def test_market_and_reserve_pause_do_not_disable_the_owners_automatic_mode(self):
   for reason in ('price','reserve','recovery'):
    result=sales.after_stop({'automatic':True},{'id':'pause','reason':reason,'purpose':'automatic','stop_verified':True})

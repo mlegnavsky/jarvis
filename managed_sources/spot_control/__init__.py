@@ -1,4 +1,4 @@
-"""Manual test only; durable recovery. No export or automatic trading services."""
+"""Scoped charging and sales controllers with mutual exclusion and durable recovery."""
 import asyncio
 from datetime import timedelta
 import voluptuous as vol
@@ -16,10 +16,13 @@ async def async_setup(hass,config):
     saved=await store.async_load() or {}
     def read():return {s.entity_id:s.state for s in hass.states.async_all() if '.inverter_' in s.entity_id}
     def healthy():
-        sales=hass.data.get(DOMAIN+'_sales',{}).get('controller')
-        if sales is not None and sales.active:return False
-        window=hass.data.get(DOMAIN+'_sales',{}).get('window')
-        if window is not None and window.active:return False
+        sales=hass.data.get(DOMAIN+'_sales',{})
+        controllers=list(sales.get('controllers') or [])
+        controllers.extend(sales.get(key) for key in ('controller','window','battery_controller','battery_sale'))
+        if any(getattr(controller,'active',False) for controller in controllers):return False
+        if sales.get('clock_sync_active'):return False
+        busy=sales.get('busy')
+        if callable(busy) and busy():return False
         now=dt_util.utcnow()
         for e in ('sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_grid_power','sensor.inverter_battery_temperature','number.inverter_battery_max_charging_current'):
             s=hass.states.get(e)
@@ -53,7 +56,7 @@ async def async_setup(hass,config):
         return result
     def report():
         phase=c.record.get('phase','idle')
-        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.5.3','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'active':c.active,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
+        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.6.0','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'active':c.active,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
     async def start(call):
         if not ready or not healthy():raise HomeAssistantError('Čekám na aktuální měření měniče.')
         now=dt_util.now()

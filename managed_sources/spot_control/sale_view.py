@@ -7,17 +7,45 @@ def tile(name,icon,service,color):
   'tap_action':{'action':'perform-action','perform_action':'jarvis_spot_control.'+service},
   'icon_tap_action':{'action':'perform-action','perform_action':'jarvis_spot_control.'+service}}
 def conditional(phase,card):return {'type':'conditional','conditions':[{'condition':'state','entity':'sensor.jarvis_energy_sales','state':phase}], 'card':card}
+def daily_block_card():
+ return md("""### Denní plán baterie · 2 hodiny
+{% set b=state_attr('sensor.jarvis_energy_sales','selected_block') or {} %}
+{% if b.get('start') and b.get('end') %}
+**{{ b.get('day','') }} · {{ b.start | timestamp_custom('%H:%M',true) }}–{{ b.end | timestamp_custom('%H:%M',true) }}**
+{% set price=b.get('average_net',b.get('net')) %}
+{% if price is not none %}Průměrný výkup po poplatku: **{{ price | round(3) }} Kč/kWh**.{% endif %}
+{% else %}
+Úplný dvouhodinový blok zatím není dostupný. Čekám na souvislé zveřejněné kladné ceny pro zbývající část dne.
+{% endif %}
+Každý den vybírám nejvýhodnější zbývající souvislý blok. Prodejní rezerva je pevně **60 %**; výkon vychází z aktuální energie nad rezervou po odečtení odhadu spotřeby domu a ztrát. Budoucí výrobu panelů do dostupné energie nepřičítám.
+Při dosažení rezervy, neplatné ceně nebo poruše skončí prodej dříve.
+""")
+def battery_sale_card():
+ return md("""{% set b=state_attr('sensor.jarvis_energy_sales','battery_sale') or {} %}
+{% if b %}
+### Prodej z baterie
+{% if b.get('phase')=='armed' %}🟠 **Čekám na začátek bateriového prodeje.**
+{% elif b.get('phase')=='stopping' %}🟠 **Ukončuji prodej a obnovuji domácí nastavení.**
+{% elif b.get('phase')=='expiry_observed' %}**Nativní konec bateriového vybíjení byl potvrzen.** Obnovuji domácí nastavení.
+{% elif b.get('observed') %}🔵 **Prodej běží · dodávka potvrzena měřením.**
+{% else %}🟠 **Připravuji prodej · čekám na naměřenou dodávku.**{% endif %}
+{% if b.get('start') and b.get('end') %}Okno **{{ b.start | timestamp_custom('%H:%M',true) }}–{{ b.end | timestamp_custom('%H:%M',true) }}**.{% endif %}
+{% if b.get('power_w') %}Výkonový strop: **{{ b.power_w | round(0) }} W**.{% endif %}
+{% endif %}
+{% if state_attr('sensor.jarvis_energy_sales','battery_sale_error') %}⚠️ {{ state_attr('sensor.jarvis_energy_sales','battery_sale_error') }}{% endif %}
+""")
 def planning_card():
- return md("""### Rezerva pro dům
+ return md("""### Informační výhled pro dům
 {% set p=state_attr('sensor.jarvis_energy_sales','planning') or {} %}
 {% if not p or p.get('quality')=='insufficient' %}
 {{ p.get('reason','Načítám historii spotřeby a předpověď.') }}
 {% else %}
-**Doporučená rezerva: {{ p.required_soc }} %** · základ nejméně 60 %.
+Odhad potřebné zásoby pro dům: **{{ p.required_soc }} %**.
 Výhled spotřeby na 24 hodin: **{{ p.estimated_house_kwh | round(1) }} kWh**.
 {% if p.get('quality')=='energy_only' %}Časový průběh není úplný; solární výrobu nezapočítávám.{% elif p.get('pv_forecast_known') %}Využitelný solár podle kalibrované předpovědi: přibližně {{ p.credited_pv_kwh | round(1) }} kWh.{% else %}Neznámou nebo nedoloženou výrobu nezapočítávám.{% endif %}
 {% endif %}
 {% if p.get('history_error') %}{{ p.history_error }}{% endif %}
+Tento výhled nemění pevnou prodejní rezervu 60 % ani výběr denního bloku.
 """)
 def summary_cards():
  return [md('''## Prodej elektřiny
@@ -30,11 +58,14 @@ def summary_cards():
 
 Rezerva pro prodej **60 %** · maximální provozní strop **9,3 kW**.
 
-Automatický prodej je nyní omezen na úvodních **3 kW**. Baterie se automaticky neprodává, dokud není ověřeno její časové ukončení.
+Automatika vybírá denní dvouhodinový blok pro baterii a prodává dostupné přebytky panelů. Aktivace baterie vyžaduje ověřené ochrany.
 '''),
+ daily_block_card(),
+ battery_sale_card(),
  verification_card(),
  planning_card(),
  conditional('native_test',tile('Zastavit ověřovací test','mdi:stop-circle','stop_sale','red')),
+ *[conditional(phase,tile('Zastavit bateriový prodej','mdi:stop-circle','stop_sale','red')) for phase in ('armed','measuring','expiry_observed','stopping')],
  {'type':'tile','entity':'switch.jarvis_sale_automatic','name':'Automatický prodej','icon':'mdi:solar-power','color':'green'},
  {'type':'tile','entity':'sensor.jarvis_energy_sales','name':'Vlastní prodej','icon':'mdi:transmission-tower-export','color':'green','hide_state':True,
   'tap_action':{'action':'navigate','navigation_path':'/hlavni-prehled/vlastni-prodej'},
@@ -46,8 +77,9 @@ def view():
 {% set p=state_attr('sensor.jarvis_energy_sales','price') %}
 **Výkup po odečtení 0,30 Kč/kWh:** {% if p %}{{ p.net | round(3) }} Kč/kWh{% else %}nedostupný{% endif %}
 
-Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na dostupné energii. Baterie zůstane nejméně na 60 %.
+Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na dostupné energii. Prodejní rezerva baterie je pevně 60 %. U baterie nastav nejméně 5 minut; nativní začátek je na následující pětiminutové hranici.
 '''),
+ daily_block_card(),battery_sale_card(),
  {'type':'entities','title':'Nastavení vlastního prodeje','show_header_toggle':False,'entities':[
   {'entity':'select.jarvis_sale_source','name':'Co prodávat'},
   {'entity':'number.jarvis_sale_power_w','name':'Maximální výkon do sítě (W)'},
@@ -56,6 +88,8 @@ Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na do
   {'condition':'state','entity':'binary_sensor.jarvis_sales_ready','state':'on'}],
   'card':tile('Spustit prodej','mdi:play-circle','start_sale','green')},
  conditional('starting',md('🟠 **Připravuji prodej · čekám na potvrzení měniče.**')),
+ conditional('preparing',md('🟠 **Připravuji nativní časové okno baterie.**')),
+ conditional('armed',md('🟠 **Čekám na začátek bateriového prodeje.**')),
  conditional('awaiting_power',md('🟠 **Prodej povolen · čekám na naměřenou dodávku.**')),
  conditional('running',tile('Prodej běží','mdi:transmission-tower-export','stop_sale','blue')),
  conditional('awaiting_surplus',md('🟠 **Čekám na přebytky panelů · prodej je povolen, právě není potvrzená dodávka.**')),
@@ -68,7 +102,9 @@ Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na do
 
 {% if state_attr('sensor.jarvis_energy_sales','error') %}⚠️ {{ state_attr('sensor.jarvis_energy_sales','error') }}{% endif %}
 
-Časové ukončení vyžaduje běžící Home Assistant a spojení s měničem. Při výpadku řízení může dodávka z panelů pokračovat pod nativním výkonovým limitem. Prodej z baterie se zpřístupní po ověření jeho ochran.
+U panelů vyžaduje časové ukončení běžící Home Assistant a spojení s měničem; při výpadku může PV export pokračovat pod nativním limitem.
+
+Bateriové okno používá nativní SOC a časový program. Mimo něj dočasných 100 % omezuje také běžné vybíjení pro dům; při výpadku řízení dům využije dostupnou síť do obnovení domácího nastavení. PV export a opakování uloženého rozvrhu tím nejsou jednorázově ukončeny.
 '''),
  md('''### Historie
 Měření se ukládá do soukromého energetického archivu. Rozhodnutí a změny prodeje se zaznamenávají ihned a trvale.
@@ -84,13 +120,20 @@ def augment_spot(spot):
  import copy
  result=copy.deepcopy(spot)
  left=result['sections'][0]['cards'];right=result['sections'][1]['cards']
- if any(c.get('name')=='Vlastní prodej' for c in left):return result
- if len(left)!=5 or len(right)!=5:raise ValueError('Spot dashboard layout changed; refusing blind overwrite')
- result['sections'][0]['cards']=summary_cards()+[left[1],left[3],left[4]]
+ owned=any(c.get('name')=='Vlastní prodej' for c in left)
+ if len(right)!=5:raise ValueError('Spot dashboard layout changed; refusing blind overwrite')
+ if owned:
+  if len(left) not in (10,len(summary_cards())+3) or not left[0].get('content','').startswith('## Prodej elektřiny'):
+   raise ValueError('Sales overview layout changed; refusing blind overwrite')
+  retained=left[-3:]
+ else:
+  if len(left)!=5:raise ValueError('Spot dashboard layout changed; refusing blind overwrite')
+  retained=[left[1],left[3],left[4]]
+ result['sections'][0]['cards']=summary_cards()+retained
  right[1]={'type':'grid','columns':2,'square':False,'cards':[
   md('### Nákup · ČEZ\n## 5 Kč/kWh\nVčetně poplatků · sazba zadaná majitelem'),
   md("### Výkup · EnerSpot\n{% set p=state_attr('sensor.jarvis_energy_sales','price') %}\n## {{ p.net | round(3) if p else '—' }} Kč/kWh\nPo odečtení 0,30 Kč/kWh · konečné vyúčtování dle smlouvy")]}
- right[4]=md('### Řízení a historie\nAutomatika prodává dostupné přebytky panelů při kladné ceně. Prodej z baterie se zpřístupní po ověření ochran. Rezerva pro prodej je nejméně **60 %**, celková dodávka nejvýše **9,3 kW**.\n\nRozhodnutí a změny se zaznamenávají trvale. Stav archivu: **{{ states("sensor.jarvis_energy_archive") }}**.')
+ right[4]=md('### Řízení a historie\nAutomatika vybírá denní dvouhodinový blok s kladným výkupem. Prodejní rezerva je pevně **60 %**, celková dodávka nejvýše **9,3 kW**. Výhled počasí a historie je informační. Aktivace baterie vyžaduje ověřené ochrany.\n\nRozhodnutí a změny se zaznamenávají trvale. Stav archivu: **{{ states("sensor.jarvis_energy_archive") }}**.')
  for section in result['sections']:
   for card in section['cards']:card['grid_options']={'columns':'full'}
  return result

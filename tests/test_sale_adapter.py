@@ -36,9 +36,16 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   (path/'.storage').mkdir()
   self.services={};self.writes=[];self.tasks=[];self.ticks=[]
   self.hass=types.SimpleNamespace(data={},is_running=False,states=States(),config=types.SimpleNamespace(path=lambda *parts:str(path.joinpath(*parts))))
-  self.device_registers={143:9990,142:2,145:0,104:0};self.device_reads=[];self.device_reject=False
+  self.device_registers={143:9990,142:2,145:0,104:0,0:5,98:1,111:1,130:0,219:175,109:175,146:255};self.device_reads=[];self.device_reject=False
+  for i in range(6):
+   self.device_registers.update({148+i:i*400,154+i:12000,166+i:30,172+i:0})
   async def execute(code,address,count=1):
-   self.device_reads.append((code,address,count));return [self.device_registers[address]]
+   self.device_reads.append((code,address,count))
+   if address==62:
+    from zoneinfo import ZoneInfo
+    d=datetime.now(ZoneInfo('Europe/Prague'))
+    return [((d.year-2000)<<8)|d.month,(d.day<<8)|d.hour,(d.minute<<8)|d.second][:count]
+   return [self.device_registers.get(a,0) for a in range(address,address+count)]
   entry=types.SimpleNamespace(runtime_data=types.SimpleNamespace(device=types.SimpleNamespace(execute=execute)))
   self.hass.config_entries=types.SimpleNamespace(async_entries=lambda domain:[entry] if domain=='solarman' else [])
   self.hass.http=types.SimpleNamespace(register_view=lambda view:None)
@@ -51,6 +58,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    entity=data['entity_id'];value=data.get('value',data.get('option','on' if service=='turn_on' else 'off'))
    self.writes.append((entity,value));self.hass.states.async_set(entity,value)
    mapping={'number.inverter_export_surplus_power':143,'select.inverter_work_mode':142,'switch.inverter_export_surplus':145,'number.inverter_zero_export_power':104}
+   mapping.update({f'number.inverter_program_{i}_soc':165+i for i in range(1,7)})
    if entity in mapping and not self.device_reject:self.device_registers[mapping[entity]]={'Zero Export To CT':2,'Export First':0,'on':1,'off':0}.get(value,value)
    if entity=='number.inverter_export_surplus_power' and value==0:self.hass.states.async_set('sensor.inverter_grid_power',20)
    self.poll()
@@ -78,7 +86,13 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    'number.inverter_export_surplus_power':9990,'number.inverter_zero_export_power':0,'sensor.inverter_battery':99,'sensor.inverter_battery_power':-50,
    'sensor.inverter_grid_power':20,'sensor.inverter_pv_power':400,'sensor.inverter_battery_temperature':20,
    'sensor.inverter_device_state':'Normal','sensor.inverter_device_alarm':'OK','sensor.inverter_device_fault':'OK',
-   'binary_sensor.inverter_battery_alarm':'off','binary_sensor.inverter_battery_fault':'off'}
+   'binary_sensor.inverter_battery_alarm':'off','binary_sensor.inverter_battery_fault':'off',
+   'select.inverter_time_of_use':'Week','number.inverter_battery_max_charging_current':175,
+   'number.inverter_battery_max_discharging_current':175,'sensor.inverter_battery_voltage':53.7,
+   'sensor.inverter_battery_current':0,'sensor.inverter_load_power':450}
+  for i in range(1,7):
+   values.update({f'number.inverter_program_{i}_soc':30,f'number.inverter_program_{i}_power':12000,
+    f'select.inverter_program_{i}_charging':'Disabled',f'time.inverter_program_{i}_time':f'{(i-1)*4:02}:00:00'})
   for key,value in values.items():self.hass.states.async_set(key,value)
   now=time.time();start=datetime.fromtimestamp(now-now%900,timezone.utc).isoformat()
   self.hass.states.async_set('sensor.jarvis_spot_ote',5,{'fetched_at':datetime.now(timezone.utc).isoformat(),'rate':25,'rows':[{'time':start,'eur_mwh':240}]})
@@ -94,6 +108,48 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   return self.hass.data[self.module.KEY]
  async def service(self,name,data):
   handler,schema=self.services[name];await handler(types.SimpleNamespace(data=schema(data)))
+ async def test_charge_refuses_every_active_sale_controller_and_reports_new_version(self):
+  modules={}
+  for name in ('homeassistant.const','homeassistant.util','homeassistant.util.dt','homeassistant.exceptions'):
+   modules[name]=types.ModuleType(name)
+  modules['homeassistant.const'].EVENT_HOMEASSISTANT_STARTED='started'
+  modules['homeassistant.util.dt'].utcnow=lambda:datetime.now(timezone.utc)
+  modules['homeassistant.util.dt'].now=lambda:datetime.now(timezone.utc)
+  modules['homeassistant.util'].dt=modules['homeassistant.util.dt']
+  modules['homeassistant.exceptions'].HomeAssistantError=RuntimeError
+  sales=types.ModuleType('sales_adapter_test.sale_setup')
+  async def setup_sales(hass,config,controller):
+   hass.data['jarvis_spot_control_sales']={key:types.SimpleNamespace(active=False) for key in ('controller','window','battery_controller')}
+  sales.async_setup_sales=setup_sales;modules[sales.__name__]=sales
+  finance=types.ModuleType('sales_adapter_test.finance_setup')
+  async def setup_finance(hass):pass
+  finance.async_setup_finance=setup_finance;modules[finance.__name__]=finance
+  with patch.dict(sys.modules,modules):
+   spec=importlib.util.spec_from_file_location('sales_adapter_test.integration',pathlib.Path('managed_sources/spot_control/__init__.py'))
+   spec.submodule_search_locations=None
+   integration=importlib.util.module_from_spec(spec);spec.loader.exec_module(integration)
+   await integration.async_setup(self.hass,{})
+   charge=self.hass.data['jarvis_spot_control'];controllers=self.hass.data['jarvis_spot_control_sales']
+   self.assertTrue(charge.healthy())
+   for key in ('controller','window','battery_controller'):
+    controllers[key].active=True
+    self.assertFalse(charge.healthy(),key)
+    controllers[key].active=False
+   controllers['busy']=lambda:True
+   self.assertFalse(charge.healthy(),'sale preparation owns control before active record exists')
+   controllers['busy']=lambda:False
+   controllers['clock_sync_active']=True
+   self.assertFalse(charge.healthy(),'RTC synchronization owns control')
+   self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.0')
+ async def test_active_owner_conflict_latches_automatic_off_before_cleanup_finishes(self):
+  from unittest.mock import AsyncMock
+  data=await self.setup();await self.ticks[0]()
+  data['settings']['automatic']=True
+  c=data['controller'];c.record={'before':{'number.inverter_export_surplus_power':9300},'phase':'stopping','inhibited':True}
+  c.tick=AsyncMock()
+  await self.ticks[0]()
+  self.assertTrue(c.active)
+  self.assertFalse(data['settings']['automatic']);self.assertTrue(data['settings']['inhibited'])
  async def test_native_clock_is_read_after_slow_configuration_requests(self):
   from zoneinfo import ZoneInfo
   data=await self.setup();now=[time.time()]

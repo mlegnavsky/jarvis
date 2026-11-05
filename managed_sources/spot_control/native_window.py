@@ -16,7 +16,7 @@ WRITABLE={109,142,143,145,146,*range(148,160),*range(166,178)}
 class NativeWindow:
  def __init__(self,native_read,native_write,telemetry,save,event,clock=time.time,saved=None):
   self.native_read,self.native_write,self.telemetry,self.save,self.event=native_read,native_write,telemetry,save,event
-  self.clock=clock;self.record=copy.deepcopy(saved or {});self.error=''
+  self.clock=clock;self.record=copy.deepcopy(saved or {});self.error='';self.last_stop=None
  @property
  def active(self):return bool(self.record.get('before'))
  async def _set(self,address,value,protective=False):
@@ -137,6 +137,6 @@ class NativeWindow:
    if any(snapshot.get(a)!=v for a,v in expected.items()):raise ValueError('Full native snapshot does not confirm restoration')
    proof={k:self.record.get(k) for k in ('id','observed','native_expiry_observed','production_verified','start','end','solar_sell','selling_first','stop_context')}
    proof.update(reason=self.record['stop_reason'],stop_verified=True)
-   await self.event('native_window_stop',proof);await self.save({});self.record={};self.error=''
+   await self.event('native_window_stop',proof);await self.save({});self.last_stop=copy.deepcopy(proof);self.record={};self.error=''
   except Exception as exc:
    self.error='Native restoration awaits retry: '+type(exc).__name__;await self.save(copy.deepcopy(self.record))

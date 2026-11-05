@@ -9,6 +9,10 @@ MODE='select.inverter_work_mode'
 ENABLE='switch.inverter_export_surplus'
 CAP='number.inverter_export_surplus_power'
 
+def same_setting(actual,expected):
+ a,b=number(actual),number(expected)
+ return a==b if a is not None and b is not None else actual==expected
+
 class SaleController:
  def __init__(self,read,write,save,event,clock=time.time,healthy=lambda:True,price=lambda:None,saved=None,reported=None):
   self.read,self.write,self.save,self.event=read,write,save,event
@@ -21,16 +25,79 @@ class SaleController:
   price=number(self.price())
   if not self.healthy() or price is None or price<=0:raise ValueError('Chybí aktuální měření nebo kladná výkupní cena.')
   if self.clock()>=self.record['deadline']:raise ValueError('Příprava překročila časové okno prodeje.')
- async def _set(self,entity,value,guard=True):
+ async def _persist_write(self,guard):
+  try:await self.save(copy.deepcopy(self.record))
+  except Exception:
+   if guard:raise
+ def _conflicts(self,states):
+  conflicts=self.record.setdefault('conflicts',{})
+  expected=self.record.get('expected',{})
+  pending=self.record.get('pending',{})
+  for entity,value in list(expected.items()):
+   actual=states.get(entity)
+   if entity in pending and same_setting(actual,pending[entity]):
+    expected[entity]=pending.pop(entity);continue
+   if not same_setting(actual,value):
+    conflicts[entity]={'expected':value,'actual':actual}
+    if entity==CAP:
+     cap=number(actual)
+     if cap is not None and cap>=0:self.record['restore_cap']=min(self.record.get('restore_cap',EXPORT_LIMIT),cap,EXPORT_LIMIT)
+  return conflicts
+ def _restore_safe(self,issued=None):
+  states=self.read();changed=False
+  for entity,value in ((MODE,'Zero Export To CT'),(ENABLE,'off')):
+   if not same_setting(states.get(entity),value):
+    self.record.setdefault('conflicts',{})[entity]={'expected':value,'actual':states.get(entity)}
+    changed=True
+  if changed:
+   self.record['protection_conflict']=True
+   self.record['inhibited']=True
+   self.record['stop_reason']='external_override'
+   raise ValueError('Ochranný režim se během obnovy změnil; znovu ukončuji dodávku.')
+  grid=number(states.get('sensor.inverter_grid_power'));stamp=number(self.reported())
+  issued=self.record.get('stop_issued',float('inf')) if issued is None else issued
+  if grid is None or grid<-100 or stamp is None or stamp<=issued or not 0<=self.clock()-stamp<30:
+   raise ValueError('Obnova vyžaduje čerstvé měření zastavené dodávky.')
+ async def _confirm_stopped(self,issued):
+  for attempt in range(20):
+   try:
+    self._restore_safe(issued)
+    return
+   except ValueError:
+    if self.record.get('protection_conflict') or attempt==19:raise
+   await asyncio.sleep(1)
+ async def _set(self,entity,value,guard=True,owned=False):
+  previous=self.record.get('expected',{}).get(entity)
+  previous_pending=self.record.get('pending',{}).get(entity)
   if guard:self._validate_write()
   try:await self.event('write_intent',{'entity':entity,'before':self.read().get(entity),'value':value,'sale_id':self.record.get('id')})
   except Exception:
    if guard:raise
    self.error='Historie je nedostupná; provádím bezpečné ukončení.'
   if guard:self._validate_write()
+  self.record.setdefault('pending',{})[entity]=value
+  await self._persist_write(guard)
+  if guard:self._validate_write()
+  if guard and ((entity==ENABLE and value=='on') or (entity==MODE and value=='Export First')):
+   # Audit/storage awaits may admit an owner edit after preflight. Never enable
+   # export over a changed mode, SOC floor, charging flag or other owned setting.
+   if self._conflicts(self.read()):
+    self.record['stop_reason']='external_override'
+    raise ValueError('Nastavení měniče změnil jiný držitel řízení; prodej nespouštím.')
+  if owned:self._restore_safe()
+  if owned and previous is not None:
+   actual=self.read().get(entity)
+   if not same_setting(actual,previous) and not (previous_pending is not None and same_setting(actual,previous_pending)):
+    self.record.setdefault('conflicts',{})[entity]={'expected':previous,'actual':actual}
+    self.record['pending'].pop(entity,None)
+    await self._persist_write(False)
+    return
   try:await self.write(entity,value)
   except Exception as exc:
    await self.event('write_failed',{'entity':entity,'error':str(exc),'sale_id':self.record.get('id')});raise
+  self.record.setdefault('expected',{})[entity]=value
+  self.record['pending'].pop(entity,None)
+  await self._persist_write(guard)
   try:await self.event('write_confirmed',{'entity':entity,'value':self.read().get(entity),'sale_id':self.record.get('id')})
   except Exception:
    if guard:raise
@@ -46,6 +113,9 @@ class SaleController:
    keys=[CAP,ENABLE,MODE];steps=[(CAP,int(power))]
    soc=number(states.get('sensor.inverter_battery'))
    if soc is None:raise ValueError('Nabití baterie je nedostupné.')
+   if states.get('select.inverter_time_of_use') not in ('Week','Enabled'):raise ValueError('Vyžaduji ověřený aktivní týdenní program.')
+   for i in range(1,7):
+    if states.get(f'select.inverter_program_{i}_charging')!='Disabled':raise ValueError('Současně je povolené nabíjení v časovém programu.')
    if mode=='battery':
     if soc<=floor:raise ValueError('Baterie je na rezervě pro prodej.')
     if states.get('select.inverter_time_of_use') not in ('Week','Enabled'):raise ValueError('Vyžaduji ověřený aktivní týdenní program.')
@@ -54,11 +124,16 @@ class SaleController:
      if states.get(charge)!='Disabled':raise ValueError('Současně je povolené nabíjení v časovém programu.')
      keys.extend((target,p));steps.extend(((target,floor),(p,int(power))))
     steps.append((MODE,'Export First'))
-   else:steps.append((ENABLE,'on'))
+   else:
+    for i in range(1,7):
+     target=f'number.inverter_program_{i}_soc';keys.append(target);steps.append((target,100))
+    steps.append((ENABLE,'on'))
    if any(states.get(k) in (None,'unknown','unavailable') for k in keys):raise ValueError('Nastavení měniče není dostupné.')
    self.record={'id':str(time.time_ns()),'before':{k:states[k] for k in keys},'mode':mode,'power_w':int(power),'purpose':purpose,'promote_auto':bool(promote_auto),
     'baseline_export_w':max(0,-(number(states.get('sensor.inverter_grid_power')) or 0)),
-    'minimum_soc':floor,'started':self.clock(),'deadline':self.clock()+minutes*60,'phase':'starting'}
+    'minimum_soc':floor,'started':self.clock(),'deadline':self.clock()+minutes*60,'phase':'starting',
+    'expected':{k:v for k,v in states.items() if k in keys or k=='select.inverter_time_of_use' or k.startswith(('time.inverter_program_','select.inverter_program_','number.inverter_program_')) or k in ('number.inverter_battery_max_discharging_current','number.inverter_battery_max_charging_current')},
+    'restore_cap':min(number(states.get(CAP)),EXPORT_LIMIT),'conflicts':{},'pending':{}}
    await self.save(copy.deepcopy(self.record))
    try:
     await self.event('sale_start',dict(self.record))
@@ -71,44 +146,72 @@ class SaleController:
   async with self.lock:await self._stop(reason)
  async def _stop(self,reason='manual'):
   if not self.active:return
+  if number(self.reported()) is not None and number(self.reported())>self.record.get('enabled_at',float('inf')):
+   self._conflicts(self.read())
   self.record.setdefault('stop_reason',reason)
   self.record['phase']='stopping'
+  self.record['protection_conflict']=False
   try:await self.save(copy.deepcopy(self.record))
   except Exception:pass # still attempt physical safe stop with original durable record
-  issued=self.clock();failures=[];ack={}
+  issued=self.clock();self.record['stop_issued']=issued;failures=[];ack={}
   # Attempt independent protective commands even if the preceding write failed.
   for entity,value in ((CAP,0),(MODE,'Zero Export To CT'),(ENABLE,'off')):
    try:await self._set(entity,value,False);ack[entity]=True
    except Exception as exc:failures.append(entity+': '+str(exc));ack[entity]=False
   try:
    if not ack.get(MODE) or not ack.get(ENABLE):raise RuntimeError('; '.join(failures))
-   stopped=False
-   for _ in range(20):
-    grid=number(self.read().get('sensor.inverter_grid_power'));stamp=number(self.reported())
-    if grid is not None and grid>=-100 and stamp is not None and stamp>issued:
-     stopped=True;break
-    await asyncio.sleep(1)
-   if not stopped:raise RuntimeError('Čekám na čerstvé měření zastavené dodávky.')
+   await self._confirm_stopped(issued)
    for entity,value in self.record['before'].items():
-    if entity not in (CAP,MODE,ENABLE):await self._set(entity,value,False)
-   await self._set(CAP,EXPORT_LIMIT,False)
+    if entity in (CAP,MODE,ENABLE) or entity in self.record.get('conflicts',{}):continue
+    # Compare each field again immediately before restoring it. A durable expected
+    # value follows our own partial restores, including restart/retry recovery.
+    expected=self.record.get('expected',{}).get(entity)
+    pending=self.record.get('pending',{}).get(entity)
+    actual=self.read().get(entity)
+    if expected is not None and not same_setting(actual,expected) and not (pending is not None and same_setting(actual,pending)):
+     self.record.setdefault('conflicts',{})[entity]={'expected':expected,'actual':actual};continue
+    await self._set(entity,value,False,owned=True)
+   await self._set(CAP,self.record.get('restore_cap',EXPORT_LIMIT),False,owned=True)
+   # Re-acknowledge both native protections after every SOC/CAP restoration.
+   # The write callback must confirm the physical device, not optimistic HA state.
+   final_issued=self.clock()
+   await self._set(MODE,'Zero Export To CT',False)
+   await self._set(ENABLE,'off',False)
+   await self._confirm_stopped(final_issued)
    proof={'id':self.record.get('id'),'mode':self.record.get('mode'),'purpose':self.record.get('purpose'),
     'promote_auto':self.record.get('promote_auto',False),'reason':'stop_recovery' if failures or self.record.get('stop_attempt_failed') else self.record['stop_reason'],
     'observed':self.observed,'stop_verified':True,
     'sustained':self.record.get('export_count',0)>=3 and self.record.get('export_last',0)-self.record.get('export_first',0)>=20,
-    'error':self.error,'failures':failures,'context':self.record.get('stop_context')}
+    'error':self.error,'failures':failures,'context':self.record.get('stop_context'),'conflicts':copy.deepcopy(self.record.get('conflicts',{}))}
    await self.event('sale_stop',proof)
+   self._restore_safe(final_issued)
    await self.save({})
+   self._restore_safe(final_issued)
    self.record={};self.observed=False;self.last_stop=proof
   except Exception as exc:
    self.record['stop_attempt_failed']=True
    self.error='Ukončení prodeje není potvrzené: '+str(exc)
+   if self.record.get('protection_conflict'):
+    # A competing writer invalidates restoration. Keep cleanup latched and
+    # independently reapply protections; no SOC restore or CAP increase follows.
+    for entity,value in ((CAP,0),(MODE,'Zero Export To CT'),(ENABLE,'off')):
+     try:await self._set(entity,value,False)
+     except Exception:pass
    try:await self.save(copy.deepcopy(self.record))
    except Exception:pass
  async def tick(self):
   if not self.active or self.lock.locked():return
   states=self.read();grid=number(states.get('sensor.inverter_grid_power'));batt=number(states.get('sensor.inverter_battery_power'));soc=number(states.get('sensor.inverter_battery'))
   price=number(self.price());mode=self.record['mode']
+  stamp=number(self.reported());fresh=stamp is not None and stamp>self.record.get('enabled_at',float('inf'))
+  conflicts=self._conflicts(states) if fresh and self.record.get('phase')!='stopping' and self.healthy() else self.record.get('conflicts',{})
+  no_surplus=False
+  if mode=='pv' and fresh and self.healthy() and stamp>self.record.get('deficit_last',0):
+   self.record['deficit_last']=stamp
+   if grid is not None and grid>50:
+    self.record.setdefault('deficit_first',stamp)
+    no_surplus=stamp-self.record['deficit_first']>=5
+   else:self.record.pop('deficit_first',None)
   wrong_mode=states.get(MODE)!=('Export First' if mode=='battery' else 'Zero Export To CT')
   triggers=[]
   if not self.healthy():triggers.append('measurement_or_health')
@@ -119,14 +222,14 @@ class SaleController:
   if grid is not None and -grid>self.record['power_w']+300:triggers.append('export_limit')
   deadline=self.clock()>=self.record['deadline']
   reserve=soc is not None and (mode=='battery' and soc<=self.record['minimum_soc'] or mode=='pv' and self.record.get('purpose')=='automatic' and soc<98)
-  if triggers or deadline or reserve or self.record.get('phase')=='stopping':
+  if triggers or conflicts or no_surplus or deadline or reserve or self.record.get('phase')=='stopping':
    self.record.setdefault('stop_context',{'triggers':triggers,'grid_w':grid,'battery_w':batt,'soc':soc,
     'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w'],
     'reported_at':number(self.reported()),'price_net':price,'captured_at':self.clock()})
    if 'export_limit' in triggers:self.error=f"Dodávka {-grid:g} W překročila nastavených {self.record['power_w']} W a ochrannou odchylku 300 W."
    elif triggers:self.error='Ochrana prodeje: '+', '.join(triggers)
-   reason='price' if triggers==['price'] and price is not None else 'guard' if triggers else 'deadline' if deadline else 'reserve'
-   if reason=='price':self.error=''
+   reason='external_override' if conflicts else 'price' if triggers==['price'] and price is not None else 'guard' if triggers else 'no_surplus' if no_surplus else 'deadline' if deadline else 'reserve'
+   if reason in ('price','no_surplus'):self.error=''
    await self.stop(reason);return
   stamp=number(self.reported())
   if stamp is not None and stamp>self.record.get('sample_last',0):

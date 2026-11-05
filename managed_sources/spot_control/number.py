@@ -14,6 +14,8 @@ class SaleNumber(NumberEntity):
   self._attr_unique_id='jarvis_sale_'+key;self._attr_name=name
   self._attr_native_min_value=minimum;self._attr_native_max_value=maximum;self._attr_native_step=step;self._attr_native_unit_of_measurement=unit
  @property
+ def native_min_value(self):return 5 if self.key=='minutes' and self.data['settings']['source']=='battery' else self._attr_native_min_value
+ @property
  def native_value(self):return self.data['settings'][self.key]
  @callback
  def _settings_changed(self,_event):self.async_write_ha_state()

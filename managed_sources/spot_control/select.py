@@ -19,5 +19,7 @@ class SaleSource(SelectEntity):
   self.async_on_remove(self.hass.bus.async_listen('jarvis_sales_settings',self._settings_changed))
  async def async_select_option(self,option):
   if option not in self.options:raise ValueError('Neplatný zdroj prodeje.')
-  await self.data['configure']({'source':'battery' if option==self.options[1] else 'pv'})
+  changes={'source':'battery' if option==self.options[1] else 'pv'}
+  if changes['source']=='battery':changes['minutes']=max(5,self.data['settings']['minutes'])
+  await self.data['configure'](changes)
   self.async_write_ha_state();await self.data['report']()

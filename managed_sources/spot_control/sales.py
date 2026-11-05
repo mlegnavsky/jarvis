@@ -1,6 +1,7 @@
 """Deterministic sales policy. Power targets never claim unmeasured PV headroom."""
 from datetime import datetime
 import math
+import time
 
 EXPORT_LIMIT=9300
 CONTRACT_LIMIT=9500
@@ -10,12 +11,15 @@ def after_stop(settings,outcome):
  result=dict(settings)
  result['handled_stop_id']=outcome.get('id')
  reason=outcome.get('reason')
- normal=reason in ('deadline','manual','price','reserve') or reason=='recovery' and outcome.get('purpose')=='automatic' and outcome.get('stop_verified')
+ no_surplus=reason=='no_surplus' and outcome.get('mode')=='pv' and outcome.get('stop_verified')
+ if no_surplus:result['cooldown_until']=time.time()+300
+ normal=no_surplus or reason in ('deadline','manual','price','reserve') or reason=='recovery' and outcome.get('purpose')=='automatic' and outcome.get('stop_verified')
+ if outcome.get('conflicts'):normal=False
  if not normal:
   result.update(automatic=False,inhibited=True)
  if reason=='manual':result.update(automatic=False,commission_cancelled=True)
  complete=(reason=='deadline' and outcome.get('purpose')=='commission' and outcome.get('mode')=='pv'
-  and outcome.get('observed') and outcome.get('sustained') and outcome.get('stop_verified') and not result.get('commission_cancelled'))
+  and not outcome.get('conflicts') and outcome.get('observed') and outcome.get('sustained') and outcome.get('stop_verified') and not result.get('commission_cancelled'))
  if complete:
   result['pv_verified']=True
   if outcome.get('promote_auto'):result['automatic']=True

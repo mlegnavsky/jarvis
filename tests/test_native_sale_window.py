@@ -148,6 +148,9 @@ class NativeWindowTests(unittest.IsolatedAsyncioTestCase):
   proof=[p for k,p in self.events if k=='native_window_stop'][-1]
   self.assertTrue(proof['observed']);self.assertTrue(proof['native_expiry_observed'])
   self.assertFalse(proof['production_verified'])
+  self.assertEqual(self.window.last_stop,proof)
+  proof['observed']=False
+  self.assertTrue(self.window.last_stop['observed'])
  async def test_export_ending_minutes_early_cannot_prove_clock_expiry(self):
   await self.window.start(solar_sell=True);self.now=self.window.record['start'];await self.advance(1)
   for _ in range(5):await self.advance(5,grid_w=-450,battery_w=500,pv_w=100)

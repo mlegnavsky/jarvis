@@ -1,0 +1,42 @@
+start_test:
+  name: Dobít baterii ze sítě
+  description: Spustí omezený nabíjecí test a ověří skutečné nabíjení.
+stop_restore:
+  name: Ukončit nabíjecí test
+  description: Ukončí test a obnoví potvrzené původní nastavení.
+start_sale:
+  name: Spustit vlastní prodej
+  description: Spustí prodej z vybraného zdroje s ověřenými limity.
+  fields:
+    mode:
+      name: Zdroj
+      selector:
+        select:
+          options:
+            - pv
+            - battery
+    power_w:
+      name: Maximální výkon do sítě
+      selector:
+        number:
+          min: 100
+          max: 9300
+          unit_of_measurement: W
+    duration_minutes:
+      name: Délka
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: min
+stop_sale:
+  name: Zastavit prodej i automatiku
+  description: Ukončí prodej, ověří zastavení a obnoví domácí nastavení.
+set_sales_automatic:
+  name: Automatický prodej
+  fields:
+    enabled:
+      name: Zapnuto
+      required: true
+      selector:
+        boolean:

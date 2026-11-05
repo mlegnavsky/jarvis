@@ -1,7 +1,9 @@
 import sys
 import unittest
+from datetime import datetime
+from zoneinfo import ZoneInfo
 sys.path.insert(0,'managed_sources/spot_control')
-try:from sale_view import view,summary_cards
+try:from sale_view import view,summary_cards,augment_spot
 except ImportError:view=summary_cards=None
 
 def walk(x):
@@ -13,6 +15,52 @@ def walk(x):
 
 class ViewTests(unittest.TestCase):
  def setUp(self):self.assertIsNotNone(view,'native sales form is not implemented')
+ def render(self,content,attrs):
+  import jinja2
+  env=jinja2.Environment()
+  env.filters['timestamp_custom']=lambda value,fmt,local:datetime.fromtimestamp(value,ZoneInfo('Europe/Prague')).strftime(fmt)
+  return env.from_string(content).render(state_attr=lambda entity,key:attrs.get(key),states=lambda entity:'ready')
+ def markdown(self,cards,attrs):
+  return '\n'.join(self.render(x['content'],attrs) for x in walk(cards) if x.get('type')=='markdown')
+ def test_daily_block_shows_local_times_price_and_fixed_sale_reserve(self):
+  attrs={'settings':{'battery_verified':True},'selected_block':{
+   'start':datetime.fromisoformat('2026-11-06T17:00:00+00:00').timestamp(),
+   'end':datetime.fromisoformat('2026-11-06T19:00:00+00:00').timestamp(),
+   'average_net':2.5,'day':'2026-11-06','block_minutes':120}}
+  text=self.markdown(summary_cards(),attrs)
+  self.assertIn('18:00',text);self.assertIn('20:00',text);self.assertIn('2.5',text)
+  self.assertIn('2 hodiny',text);self.assertIn('60 %',text)
+ def test_history_forecast_is_informational_and_does_not_replace_fixed_reserve(self):
+  text=self.markdown(summary_cards(),{'planning':{'quality':'conservative','required_soc':94,'estimated_house_kwh':7.2}})
+  self.assertIn('Informační',text);self.assertIn('94 %',text)
+  self.assertIn('prodejní rezervu 60 %',text)
+  self.assertNotIn('Doporučená rezerva:',text)
+ def test_missing_daily_block_is_visible_even_if_forecast_is_available(self):
+  text=self.markdown(summary_cards(),{'planning':{'quality':'calibrated','required_soc':60,'estimated_house_kwh':5}})
+  self.assertIn('Úplný dvouhodinový blok zatím není dostupný',text)
+ def test_armed_battery_sale_does_not_claim_measured_export(self):
+  attrs={'battery_sale':{'phase':'armed','observed':False,'start':1800000000,'end':1800007200,'power_w':500}}
+  text=self.markdown(summary_cards(),attrs)
+  self.assertIn('Čekám na začátek bateriového prodeje',text)
+  self.assertNotIn('Prodej běží · dodávka potvrzena',text)
+  attrs['battery_sale'].update(phase='measuring',observed=True)
+  text=self.markdown(summary_cards(),attrs)
+  self.assertIn('Prodej běží · dodávka potvrzena',text)
+ def test_native_battery_phases_offer_stop_on_overview(self):
+  for phase in ('armed','measuring','expiry_observed','stopping'):
+   cards=[x for x in walk(summary_cards()) if x.get('type')=='conditional' and {'condition':'state','entity':'sensor.jarvis_energy_sales','state':phase} in x.get('conditions',[])]
+   self.assertTrue(any(x['card'].get('tap_action',{}).get('perform_action')=='jarvis_spot_control.stop_sale' for x in cards),phase)
+ def test_existing_sales_overview_is_upgraded_without_losing_original_cards(self):
+  retained=[{'type':'picture','image':'/local/house.png'},{'type':'entities','entities':['sensor.home']},{'type':'markdown','content':'Domácí historie'}]
+  old=[{'type':'markdown','content':'## Prodej elektřiny\nStaré řízení'},
+   {'type':'tile','name':'Vlastní prodej','entity':'sensor.jarvis_energy_sales'},
+   *[{'type':'markdown','content':'Starý stav'} for _ in range(5)],*retained]
+  original={'sections':[{'cards':old},{'cards':[{'type':'markdown','content':'Původní'} for _ in range(5)]}]}
+  upgraded=augment_spot(original)
+  self.assertIn('Denní plán baterie',self.markdown(upgraded,{}))
+  self.assertEqual([c.get('image') for c in upgraded['sections'][0]['cards'] if c.get('type')=='picture'],['/local/house.png'])
+  self.assertEqual(original['sections'][0]['cards'][0]['content'],'## Prodej elektřiny\nStaré řízení')
+  self.assertEqual(augment_spot(upgraded),upgraded)
  def test_navigation_does_not_start_export(self):
   cards=summary_cards();nav=next(x for x in walk(cards) if x.get('name')=='Vlastní prodej')
   self.assertEqual(nav['tap_action'],{'action':'navigate','navigation_path':'/hlavni-prehled/vlastni-prodej'})
