@@ -1,0 +1,17 @@
+# Automatic sale: interrupted preparation, not production acceptance
+
+Observed 5 November 2026, times Europe/Prague unless explicitly UTC.
+
+The owner requested completing automatic sales after earlier successful physical export tests. No production code was changed in this investigation. A temporary diagnostic changed inactive Program 4 SOC from30 to100 at22:04:33UTC. Independent native whole-program snapshot22:05:23UTC confirmed100. It was restored to30 and native snapshot22:06:24UTC confirmed all six slots30. This does not explain the earlier transient disagreement (bulk100, single30) during automatic preparation; do not remove independent readback guards on this evidence.
+
+A new automatic preparation transaction1793916399492830113 was observed starting22:06:39UTC for23:10–23:40local, initially4025W and minimumSOC60. Native bulk/single verification of Program4 SOC100 succeeded. Preparation later reached an armed/native-audited state. At22:07:33UTC settings_changed events2335–2337 recorded automatic true→false→false→true; a manual stop followed. Native register146 conflicted: expected17, actual255. Origin of these requests is not identified; do not attribute them to the owner or an external service without request-context evidence. The controls are not proven to have completed a new sale.
+
+A command-file attempt owner-auto-sales-20261105-2307 had a180-second lifetime, while read_command accepts at most120 seconds. It was NOT consumed; runtime command receipt remained the older zero_import_target command. Do not interpret verified file_write as executed enable. The expired command was removed by restoring the exact prior command file using CAS; cleanup job autosale-remove-expired-command-20261105-2339 verified revision22659d76ce1f5a6e0ecdbe1efcce1d132cfa68a93fc2bb9ac10f1be602a97ab4. Both restored commands are expired and cannot execute.
+
+Final runtime22:38:38UTC: idle, active=false, automatic=false, inhibited=true. Stop proof2478 confirms restoration, reason manual, conflict146 retained. Native snapshot22:37:48UTC: ordinary times01:00/05:00/09:00/13:00/17:00/21:00, sixSOC30, sixchargeflags0, weekmask255, ZeroExport target20W. Actual grid8W and batterySOC72. A legacy runtime_error still contains the prior169 confirmation failure; it is not a new active transaction. Automatic sales remain incomplete.
+
+HA audit: one Solarman integration, scripts.yaml empty, polling path reads values; no20W restoration writer found in inspected HA automation/charge/sale paths. Jarvis Core is a speaker embedding service and does not write inverter settings. The ordinary0W automation has recorded write failures accompanying Solarman timeouts. This does not establish who returns register104 to20. User says there is no additional external controller; prioritize request-source tracing within HA.
+
+Validation:78 targeted existing controller/planning/spot tests passed after setting the correct PYTHONPATH. No regression test or code fix was added because a root cause was not established. No HA Core/OS upgrade or restart. Storage reported1.4GiB free, below2GiB backup preflight; do not attempt a restart deployment requiring backup without resolving capacity.
+
+Next work: capture HA service caller context for automatic switch/stop and native writes; establish a single uninterrupted control window; address any reproduced fault with a regression test; verify actual scheduled start and stop. Earlier physical export tests are not full automatic production acceptance.
