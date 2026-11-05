@@ -62,7 +62,7 @@ Výhled spotřeby na 24 hodin: **{{ p.estimated_house_kwh | round(1) }} kWh**.
 Tento výhled nemění pevnou prodejní rezervu 60 % ani výběr denního bloku.
 """)
 def summary_cards():
- return [md('''## Prodej elektřiny
+ return [grid_target_card(),md('''## Prodej elektřiny
 {% set p=state_attr('sensor.jarvis_energy_sales','price') %}
 {% if p %}**Výkup po poplatku: {{ p.net | round(3) }} Kč/kWh**{% else %}Výkupní cena není dostupná.{% endif %}
 
@@ -81,20 +81,19 @@ Automatika vybírá denní dvouhodinový blok pro baterii a prodává dostupné 
  conditional('native_test',tile('Zastavit ověřovací test','mdi:stop-circle','stop_sale','red')),
  *[conditional(phase,tile('Zastavit bateriový prodej','mdi:stop-circle','stop_sale','red')) for phase in ('armed','measuring','expiry_observed','stopping')],
  {'type':'tile','entity':'switch.jarvis_sale_automatic','name':'Automatický prodej','icon':'mdi:solar-power','color':'green'},
- grid_target_card(),
  {'type':'tile','entity':'sensor.jarvis_energy_sales','name':'Vlastní prodej','icon':'mdi:transmission-tower-export','color':'green','hide_state':True,
   'tap_action':{'action':'navigate','navigation_path':'/hlavni-prehled/vlastni-prodej'},
   'icon_tap_action':{'action':'navigate','navigation_path':'/hlavni-prehled/vlastni-prodej'}},
  conditional('running',tile('Prodej běží · zastavit','mdi:transmission-tower-export','stop_sale','blue'))]
 
 def view():
- cards=[md('''## Vlastní prodej
+ cards=[grid_target_card(),md('''## Vlastní prodej
 {% set p=state_attr('sensor.jarvis_energy_sales','price') %}
 **Výkup po odečtení 0,30 Kč/kWh:** {% if p %}{{ p.net | round(3) }} Kč/kWh{% else %}nedostupný{% endif %}
 
 Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na dostupné energii. Prodejní rezerva baterie je pevně 60 %. U baterie nastav nejméně 5 minut; nativní začátek je na následující pětiminutové hranici.
 '''),
- daily_block_card(),battery_sale_card(),grid_target_card(),
+ daily_block_card(),battery_sale_card(),
  {'type':'entities','title':'Nastavení vlastního prodeje','show_header_toggle':False,'entities':[
   {'entity':'select.jarvis_sale_source','name':'Co prodávat'},
   {'entity':'number.jarvis_sale_power_w','name':'Maximální výkon do sítě (W)'},
@@ -138,7 +137,9 @@ def augment_spot(spot):
  owned=any(c.get('name')=='Vlastní prodej' for c in left)
  if len(right)!=5:raise ValueError('Spot dashboard layout changed; refusing blind overwrite')
  if owned:
-  if len(left) not in (10,len(summary_cards())+2,len(summary_cards())+3) or not left[0].get('content','').startswith('## Prodej elektřiny'):
+  title_first=left[0].get('content','').startswith('## Prodej elektřiny')
+  button_first=left[0]==grid_target_card() and len(left)>1 and left[1].get('content','').startswith('## Prodej elektřiny')
+  if len(left) not in (10,len(summary_cards())+2,len(summary_cards())+3) or not (title_first or button_first):
    raise ValueError('Sales overview layout changed; refusing blind overwrite')
   retained=left[-3:]
  else:
