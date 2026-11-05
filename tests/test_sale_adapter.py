@@ -151,6 +151,22 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   data['window'].record={'before':{'109':175},'phase':'armed','end':time.time()+300}
   with self.assertRaises(ValueError):await self.service('start_sale',{'mode':'pv','power_w':500,'duration_minutes':3})
   self.assertEqual(self.writes,[])
+ async def test_native_stop_status_stays_visible_while_device_ack_is_pending(self):
+  data=await self.setup();await self.ticks[0]()
+  window=data['window'];window.record={'id':'pending-stop','before':{'109':175},'phase':'armed','end':time.time()+300}
+  entered=asyncio.Event();release=asyncio.Event()
+  async def blocked(address,value):
+   if address==143 and not entered.is_set():entered.set();await release.wait()
+  window.native_write=blocked
+  task=asyncio.create_task(data['stop']());await entered.wait()
+  try:
+   self.assertGreaterEqual(len(self.ticks),2,'Status updates need an independent timer')
+   await self.ticks[1]()
+   state=self.hass.states.get('sensor.jarvis_energy_sales')
+   self.assertEqual(state.attributes['native_test']['phase'],'stopping')
+  finally:
+   release.set()
+   with self.assertRaises(ValueError):await task
 
  async def test_expiring_file_start_is_durable_and_not_repeated(self):
   import json
@@ -216,13 +232,13 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
  async def test_protective_stop_still_runs_when_command_database_claim_fails(self):
   import json
   for action,body in [('stop',{}),('automatic',{'enabled':False})]:
-   data=await self.setup();await self.ticks[-1]()
+   data=await self.setup();tick=next(fn for fn in reversed(self.ticks) if fn.__name__=='tick');await tick()
    await self.service('start_sale',{'power_w':500,'duration_minutes':3})
    def fail(_body):raise OSError('database full')
    data['journal'].claim_command=fail
    now=time.time();path=pathlib.Path(self.hass.config.path('jarvis_workspace','sales-command.json'));path.parent.mkdir(exist_ok=True)
    path.write_text(json.dumps({'id':'stop-'+action,'issued_at':now,'expires_at':now+60,'action':action,'data':body}))
-   await self.ticks[-1]()
+   await tick()
    self.assertFalse(data['controller'].active)
    self.assertEqual(self.hass.states.get('switch.inverter_export_surplus').state,'off')
 

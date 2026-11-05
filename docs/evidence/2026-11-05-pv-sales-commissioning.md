@@ -111,3 +111,71 @@ findings have watched failing regression tests and focused clean re-review.
 isolated environment; real PHP archive/WebDAV tests included (no skips). Earlier
 base-runtime MCP1.29 import error and newly-unskipped missing aiowebdav2 were
 environment mismatches; no production SDK/source changes were made to hide them.
+
+## Actual administrative bootstrap and native window armed16:26local
+
+New administration writes stopped before reservation at exactly1000 historical
+jobs. Jarvis3.12.5 was installed through the independentUpdater, job
+5259b31de04f4cbe8a7607c740852519 verified/backupf3854248. First read, before any
+new mutation, returnedtotal1000/limit10000/remaining9000. The exact cause is thus
+confirmed; receipts and deduplication were retained. Previously unperformed
+cleanup/UI intents were reconciled and then completed under their original keys.
+
+Original inverter clock was~94s behind. Supported datetime.set_value was used in
+bounded one-shot HA automations; direct FC03 clock readback was logged, without
+exposing credentials. Final native snapshot16:24:10 shows16:24:08, delta-2.35s.
+All temporary clock/read-only diagnostic rules were removed and the original
+three-rule automations.yaml content restored byte-for-byte; originalSHA256
+851e4d072ed07f897f2e809b7f7e5faca8811c22d556ce15bf37a94a17ef5fcb.
+The installed Solarman read_holding_registers service uses address-or-register
+and mishandles0; do not repeat that unsupported diagnostic request. Native internal
+execute(3,0) works. Raw98=1/111=1/130=0 were confirmed16:13:45. The installed
+profile maps BOTH5 and0x0500 to LV; the initial exact1280-only preflight falsely
+rejected legacy5. Release0.4.7 accepts only those two documented profile values,
+keeping all other commissioning guards. Watched failing legacy test passes.
+
+Release0.4.7 sourcee4c482bea457a09f9e96f21e780673c6301a5280/locald8ad0fd,
+treebd3b2d4132b32e7f67de995a58991209aff70c99, appliedverified15:24:15UTC via
+sales-native-lv-apply-20261105/backupe0debf77. Four exact file readbacks and both
+runtime0.4.7 checks passed. Automatic remainsOFF.
+
+NativeWindow1793892335790385341 is now ARMED, NOT passed:16:30–16:35local,
+500W globalcap/current20A/nativeSOC95, original ordinary house slots30%/12000W,
+SolarSellOFF/ZeroCT. Every write was independently read back, arm register173=32
+last at15:25:41UTC. At16:26:21 SOC98%, PV21W, grid8Wimport, battery96W supplying
+house, inverter38.3C/battery18C. No claimed battery sale yet; must measure at
+start and prove native boundary before any connected stop write. Never restart
+while this durable native transaction is active. Production battery remainsgated;
+daily recurrence and calibrated forecast planning remain OPEN.
+
+Mobile Spoty now has a live verification card and a direct red native-test Stop;
+final file revisioncd625068ba87be7f2b0789ebae46c78893099dfd1323de55a0a8739f899b21b7.
+The reusable generator renders armed as waiting rather than claiming measured
+export; real Jinja regression and Stop action tests pass.351full local tests
+passed with pinned dependencies and realPHP, no skips. No visual mobile-browser
+acceptance or full-production claim follows from these tests alone.
+
+## First native-window physical result16:35local
+NativeWindow1793892335790385341 did NOT prove export: SolarSellOFF/ZeroCT/Sell32
+slot500W produced only ordinary battery-to-house~100–122W, PV~8–21W and small
+grid import. No positive battery-sale claim. At16:34:15 Solarman logged a timeout;
+measurement freshness was lost during the test. Cleanup eventually completed
+16:35:34local with all native settings/current175A restored, MaxSell9300,
+SolarSellOFF and no active transaction. Old proof reason saysretry because the
+initial stop reason was not retained; this diagnostic defect is fixed in0.4.8.
+No native clock-expiry acceptance follows from this unsuccessful test.
+
+0.4.8 adds a second FIXED commissioning variant, not production: optionally
+SolarSellON only once the test clock window is open, with all six native SOC
+floors95% from preparation until restoration. This bounds battery withdrawal
+if communication fails across the boundary. Cap500W/currentmin20A/prior/BMS,
+5minute same-day window and all price/health/native acknowledgement guards stay.
+Positive enable rechecks health/time after audit and is refused afterend-10s.
+Expiry proof requires actual prior battery export including a fresh sample in
+last15s before end; old or never-observed export is not a clock proof. Regressions
+cover both false-positive cases. Stop retains first reason/context across retry.
+A separate serialized5s report callback keeps mobile stopping/health state live
+while an actuator acknowledgement is pending. No permanent trading gate is lifted.
+
+Own temporary backupa12886b5 was deletedverified after fresh metadata read under
+prior local-cleanup authorization; newer/protected and all remote backups retained.

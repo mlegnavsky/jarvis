@@ -27,6 +27,9 @@ class NativeWindow:
   if address==173 and value==32:
    self._valid()
    if self.clock()>=self.record['arm_until']:raise ValueError('Native arming window or command expired')
+  if address==145 and value==1:
+   self._valid()
+   if not self.record['start']<=self.clock()<self.record['end']-10:raise ValueError('Solar Sell enabling window expired')
   await self.native_write(address,value)
   try:await self.event('native_window_write_confirmed',{'address':address,'value':value,'id':self.record.get('id')})
   except Exception:
@@ -36,8 +39,9 @@ class NativeWindow:
   if not s.get('healthy') or t is None or not 0<=self.clock()-t<30 or soc is None or soc<97 or price is None or price<=0:
    raise ValueError('Native test needs fresh healthy measurements, SOC97% and positive price')
   return s
- async def start(self,valid_until=None):
+ async def start(self,valid_until=None,solar_sell=False):
   if self.active:raise ValueError('Native test is already active')
+  if type(solar_sell) is not bool:raise ValueError('Invalid commissioning variant')
   self._valid();data=await self.native_read();self._valid();r=data['registers'];native=data['clock']
   now=self.clock()
   if valid_until is not None and now>valid_until:raise ValueError('Test command expired')
@@ -59,7 +63,7 @@ class NativeWindow:
   start=day+timedelta(minutes=minute);end=start+timedelta(minutes=5)
   if end.timestamp()-start.timestamp()!=300:raise ValueError('Ambiguous clock boundary')
   before={str(a):r[a] for a in WRITABLE}
-  self.record={'id':str(time.time_ns()),'before':before,'start':start.timestamp(),'end':end.timestamp(),'arm_until':min(start.timestamp()-10,valid_until if valid_until is not None else start.timestamp()-10),'phase':'preparing','observed':False,'native_expiry_observed':False,'power_w':500,'minimum_soc':95,'production_verified':False,'notice':'Commissioning only. Daily slot can recur during an HA outage; production remains blocked.'}
+  self.record={'id':str(time.time_ns()),'before':before,'start':start.timestamp(),'end':end.timestamp(),'arm_until':min(start.timestamp()-10,valid_until if valid_until is not None else start.timestamp()-10),'phase':'preparing','observed':False,'native_expiry_observed':False,'power_w':500,'minimum_soc':95,'solar_sell':solar_sell,'production_verified':False,'notice':'Commissioning only. Daily slot can recur during an HA outage; production remains blocked.'+(' All six SOC floors remain95% until restoration.' if solar_sell else '')}
   await self.save(copy.deepcopy(self.record))
   try:
    await self.event('native_window_start',copy.deepcopy(self.record))
@@ -68,7 +72,7 @@ class NativeWindow:
    for i,m in enumerate((0,minute,minute+5,minute+10,minute+15,1435)):
     await self._set(148+i,(m//60)*100+m%60)
     await self._set(154+i,500 if i==1 else powers[0])
-    await self._set(166+i,95 if i==1 else socs[0])
+    await self._set(166+i,95 if solar_sell or i==1 else socs[0])
    self._valid()
    if self.clock()>=start.timestamp()-10 or valid_until is not None and self.clock()>valid_until:raise ValueError('Preparation window expired')
    await self._set(173,32) # arm last, no grid/generator charge bits
@@ -85,24 +89,30 @@ class NativeWindow:
   if now<self.record['start']:
    if grid<-100:await self.stop('early_export')
    return
+  if self.record.get('solar_sell') and not self.record.get('sell_enabled_at'):
+   try:
+    await self._set(145,1);self.record['sell_enabled_at']=self.clock();self.record['phase']='awaiting_power';await self.save(copy.deepcopy(self.record))
+   except Exception as exc:self.error=str(exc);await self.stop('enable_failed')
+   return
   await self.event('native_window_measurement',{'id':self.record['id'],'t':stamp,'grid_w':grid,'battery_w':batt,'pv_w':pv,'soc':soc})
   if now<self.record['end']:
    self.record['phase']='measuring'
-   if grid<-100 and batt>100 and -grid>pv+100 and stamp>self.record.get('last_export',0):
+   if grid<-100 and batt>100 and -grid>pv+100 and stamp>max(self.record.get('last_export',0),self.record.get('sell_enabled_at',0)):
     self.record.setdefault('first_export',stamp);self.record['last_export']=stamp;self.record['count']=self.record.get('count',0)+1
     self.record['observed']=self.record['count']>=3 and stamp-self.record['first_export']>=20
   elif grid>=-100 and stamp>=self.record['end']:
    # Read hardware clock/program after the boundary, before any stop write.
-   if not self.record['native_expiry_observed']:
+   if self.record['observed'] and self.record.get('last_export',0)>=self.record['end']-15 and not self.record['native_expiry_observed']:
     native=await self.native_read();r=native['registers']
-    if native['clock'].timestamp()>=self.record['end'] and r.get(142)==2 and r.get(145)==0 and r.get(174)==0:
+    if native['clock'].timestamp()>=self.record['end'] and r.get(142)==2 and r.get(145)==(1 if self.record.get('solar_sell') else 0) and r.get(174)==0:
      self.record['native_expiry_observed']=True;self.record['phase']='expiry_observed'
      await self.event('native_window_expiry',{'id':self.record['id'],'clock':native['clock'].isoformat(),'grid_w':grid,'battery_w':batt,'soc':soc,'next_soc':r.get(168)})
   if now>=self.record['end']+20:await self.stop('deadline');return
   await self.save(copy.deepcopy(self.record))
  async def stop(self,reason='manual'):
   if not self.active:return
-  self.record['phase']='stopping';self.record.setdefault('stop_issued',self.clock())
+  self.record['phase']='stopping';self.record.setdefault('stop_issued',self.clock());self.record.setdefault('stop_reason',reason)
+  self.record.setdefault('stop_context',{'captured_at':self.clock(),**self.telemetry()})
   try:await self.save(copy.deepcopy(self.record))
   except Exception:pass
   failures=[]
@@ -117,8 +127,8 @@ class NativeWindow:
    before=self.record['before']
    for a in sorted(WRITABLE-{142,143,145,146,109}):await self._set(a,int(before[str(a)]))
    await self._set(146,int(before['146']));await self._set(109,int(before['109']));await self._set(143,9300)
-   proof={k:self.record.get(k) for k in ('id','observed','native_expiry_observed','production_verified','start','end')}
-   proof.update(reason=reason,stop_verified=True)
+   proof={k:self.record.get(k) for k in ('id','observed','native_expiry_observed','production_verified','start','end','solar_sell','stop_context')}
+   proof.update(reason=self.record['stop_reason'],stop_verified=True)
    await self.event('native_window_stop',proof);await self.save({});self.record={};self.error=''
   except Exception as exc:
    self.error='Native restoration awaits retry: '+type(exc).__name__;await self.save(copy.deepcopy(self.record))

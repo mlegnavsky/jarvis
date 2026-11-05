@@ -29,5 +29,17 @@ class ViewTests(unittest.TestCase):
   start=next(x for x in nodes if x.get('perform_action')=='jarvis_spot_control.start_sale')
   conditional=next(x for x in nodes if x.get('type')=='conditional' and start in list(walk(x)))
   self.assertIn({'condition':'state','entity':'sensor.jarvis_energy_sales','state':'idle'},conditional['conditions'])
+ def test_armed_native_test_is_waiting_instead_of_claiming_measured_export(self):
+  import jinja2
+  cards=[x for x in walk(summary_cards()) if x.get('type')=='markdown' and 'Stav ověřování' in x.get('content','')]
+  self.assertEqual(len(cards),1)
+  attrs={'settings':{'battery_verified':False},'native_test':{'phase':'armed','start':1000,'end':1300,'observed':False}}
+  env=jinja2.Environment();env.filters['timestamp_custom']=lambda value,fmt,local:str(value)
+  text=env.from_string(cards[0]['content']).render(state_attr=lambda entity,key:attrs.get(key))
+  self.assertIn('čekám na začátek',text);self.assertIn('95 %',text);self.assertNotIn('Prodej běží',text)
+ def test_native_commissioning_has_a_direct_stop_on_spot_overview(self):
+  cards=[x for x in walk(summary_cards()) if x.get('type')=='conditional' and {'condition':'state','entity':'sensor.jarvis_energy_sales','state':'native_test'} in x.get('conditions',[])]
+  self.assertEqual(len(cards),1)
+  self.assertEqual(cards[0]['card']['tap_action']['perform_action'],'jarvis_spot_control.stop_sale')
 
 if __name__=='__main__':unittest.main()

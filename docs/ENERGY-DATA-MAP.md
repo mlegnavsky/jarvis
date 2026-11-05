@@ -77,3 +77,33 @@ register104; existing native charge/sale controllers do not include it in their
 restore lists. Audited live automations.yaml (three household automations), empty
 scripts.yaml, configuration.yaml and managed sales/charge/heating sources: no
 periodic writer restoring20W found. The only observed source was the native bias.
+
+## 5 November15:31local — physical bias and daily cash evidence
+Native register104 remains20 after two requested0W writes and a1W probe;
+optimistic HA0/1 state is not physical confirmation. No scale/offset was found
+in the resolved active profile. Do not assert firmware hard minimum without
+manufacturer confirmation, and do not write negative/unsigned wrapped values.
+The owner's desired normal target remains0W, not yet achieved. Main grid-charge
+switch was explicitly turnedOFF; manual charging can still temporarily enable
+and restore it. Audit found no recurring writer that restores20W.
+Finance now samples fresh signed grid measurements every5s, anchors purchase to
+the daily meter at5CZK/kWh, integrates export at each dated quarter's OTE minus
+0.30CZK/kWh, and reconciles the private10s archive every60s. At15:31local,
+archive_loaded=true/history_error empty, purchase~24.85CZK/sale~0.39CZK estimates,
+~0.0753kWh integrated export. Gaps remain gaps and coarse counters are not exact
+interval billing. Existing daily history is preserved. Both desktop/mobile Domov
+and Energie use the two live monetary sensors. Physical PV-only500W test passed;
+later low-PV operation triggered a battery-discharge guard, so stable automatic
+PV behavior is not fully accepted. See commissioning evidence for current gate.
+
+## 5 November16:26local — actual native commissioning state
+Jarvis administration cap1000 was reached exactly; independentUpdater installed
+3.12.5 while preserving all1000 receipts. New capacity10000/read-only count and
+409 full-journal error are active. New writes verified again. Native spot0.4.7
+recognizes installed profile's LV device codes5/1280; other guards unchanged.
+Actual native clock16:24:08 at capture16:24:10 is within2.35s after synchronization.
+Native500W/5min window ARMED for16:30–16:35local, SOC floor95/current20A,
+ZeroCT/SolarSellOFF, normal other house SOC30/power12000 retained. Do not restart
+or claim success until actual export, native expiry and restoration are verified.
+Production battery automation still blocked. Daily-recurrence and forecast gates
+remain open. See freshest sales-runtime.json, not old93.7s clock snapshot.

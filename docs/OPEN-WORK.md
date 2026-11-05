@@ -875,3 +875,37 @@ Owner explicitly requested fixing permissions from here. Supported self addon_op
 
 ## Owner-selected charge/discharge 175 A — 5 November 2026
 Owner requests175 A for both directions. Existing authority to manage relevant inverter permissions used for supported self addon_options: ONLY number.inverter_battery_max_discharging_current added; no removals/services/credentials changed, verified charge175-grant-discharge-20261105/backupc86411d8. Maxcharge, gridcharge and maxdischarge175 A accepted and independently confirmed after restart06:25UTC. Native0.3.4 source1d37fb166eaf920f7a69a06cb44fa31c1778b07c requests min(175,inverter max), existing guards/timeouts/recovery preserved. charge175-apply-20261105 verified active_verified06:24:56UTC/backup301b8bf3, exact3file readbacks/runtimeidle. No physical175 A test started. Charging14/JS/manifest/diff pass; local263tests existingSDKimport error20skips; CI41979616549 tests job passed, unrelatedenergy-chart browser installation failed. Proof docs/evidence/2026-11-05-charging-discharging-175a.json. Supersedes150/100settings, no automatic trading enabled.
+
+## Energy sales current checkpoint — 5 November15:44local
+Read docs/evidence/2026-11-05-pv-sales-commissioning.md and fresh native runtime.
+0.4.5/finance/archive1.2.2 active verified; live daily cash and historical backfill
+work. 0.4.6 native battery timing commissioning source is published and backed-up
+activation is pending (sales-native-window-apply-20261105); do not repeat unknown.
+PV500W export/stop physically passed, but later low-sun PV automatic triggered
+battery_discharge protection. Production battery_verified=false. Native0Wbias
+not confirmed (raw104 still20). Forecast-calibrated battery scheduling remains
+OPEN. No full-automation completion claim. Repository-pinned isolated test runtime
+plus realPHP:346tests passed, no skips; current native readback/stop/source evidence
+required before further activation or any success claim.
+
+## Energy live16:26local — ACTIVE NATIVE TEST, no restart
+0.4.7 activeverified15:24:15UTC/backupe0debf77/sourcee4c482b; owner-native-lv-window-
+commission-20261105 accepted. NativeWindow1793892335790385341 armed16:30–16:35local,
+cap500W/current20A/floor95. Await physical start, native boundary and cleanup.
+AutomaticOFF, productionbatteryfalse. Read current sales-runtime.json before any
+mutation. No passed test exists yet. Jarvis3.12.5 bootstrap verified, count1000
+proved old administration cap; newcap10000/history preserved, writes restored.
+Clock sync actualdelta-2.35s; temporaryrulesremoved/original3automationsrestored.
+Reusablemobileverification/Stop generator implemented; privateUIalreadywritten.
+351localtestsPASSwithpinneddeps+realPHP. Source and evidence remain separate from
+physical acceptance. Forecast calibration/house-budget adapter and battery
+recurrence protection still OPEN; do not report full automation complete.
+
+## Energy16:50local — first native test failed, safe restoration complete
+First nativeWindow1793892335790385341 did not export. Radio/Modbus timeout during
+window; all beforeimages/current175A restored at16:35:34local, noactive transaction.
+0.4.8second commissioning variant prepared: SolarSellON ONLYwithin native5min
+window, ALLsixSOCfloors95untilcleanup, fixed500W/current20A, no productionunlock.
+Clock proof requires observed export in last15s before end; never/long-agoexport
+cannotpass. Mobile independentstatus timer prevents frozenstoppingdisplay.
+Originalstopreason/context retained. Read current runtime before any restart.

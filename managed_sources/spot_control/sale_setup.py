@@ -18,14 +18,14 @@ from .native_window import NativeWindow,WRITABLE
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.4.7'
+VERSION='0.4.8'
 AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):
  store=Store(hass,1,KEY);saved=await store.async_load() or {}
  prefs={'automatic':False,'power_w':500,'minutes':3,'source':'pv','pv_verified':False,'battery_verified':False,**saved.get('settings',{})}
  journal=await hass.async_add_executor_job(Journal,Path(hass.config.path('.storage','jarvis_energy_sales.sqlite')))
- lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={};window=None;last_native_read=0
+ lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();report_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={};window=None;last_native_read=0
  archive_error='';runtime_error='';commission_requested=bool((config.get(DOMAIN) or {}).get('commission_pv_test',False))
  async def save_record(record):
   await store.async_save({'settings':dict(prefs),'transaction':record,'native_window':window.record if window else saved.get('native_window',{})})
@@ -170,11 +170,11 @@ async def async_setup_sales(hass,config,charge_controller):
   states=read()
   return {'soc':number(states.get('sensor.inverter_battery')),'grid_w':number(states.get('sensor.inverter_grid_power')),'battery_w':number(states.get('sensor.inverter_battery_power')),'pv_w':number(states.get('sensor.inverter_pv_power')),'healthy':healthy(),'reported_at':reported(),'net_price':(current_price() or {}).get('net')}
  window=NativeWindow(native_test_read,native_test_write,window_telemetry,save_window,event,saved=saved.get('native_window'))
- async def commission_window(valid_until=None):
+ async def commission_window(valid_until=None,solar_sell=False):
   async with lock:
    if not ready or c.active or window.active or charge_controller.active:raise ValueError('Nejprve ukonči současný test nebo prodej.')
    prefs.update(automatic=False,commission_cancelled=True,inhibited=False);await persist_settings()
-   await window.start(valid_until)
+   await window.start(valid_until,solar_sell=solar_sell)
  async def handle_stop():
   if c.active or not c.last_stop or prefs.get('handled_stop_id')==c.last_stop['id']:return
   result=after_stop(prefs,c.last_stop);prefs.clear();prefs.update(result);await persist_settings()
@@ -222,22 +222,24 @@ async def async_setup_sales(hass,config,charge_controller):
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)
   temp=path.with_suffix('.tmp');temp.write_text(json.dumps(body,ensure_ascii=False,allow_nan=False));temp.replace(path)
- async def report():
+ async def report(_now=None):
   nonlocal last_report
-  body=snapshot();hass.states.async_set('sensor.jarvis_energy_sales',body['phase'],{'friendly_name':'Prodej elektřiny',**body})
-  states=read();source_ok=prefs['source']=='pv' or prefs['battery_verified']
-  base_ok=states.get('select.inverter_work_mode')=='Zero Export To CT' and states.get('switch.inverter_export_surplus')=='off' and number(states.get('number.inverter_export_surplus_power')) is not None
-  hass.states.async_set('binary_sensor.jarvis_sales_ready','on' if ready and not c.active and not window.active and healthy() and source_ok and base_ok and current_price() and current_price()['net']>0 else 'off',{'friendly_name':'Prodej připraven'})
-  hass.bus.async_fire('jarvis_sales_settings')
-  if time.time()-last_report>=10:
-   telemetry={}
-   for entity_id in ('sensor.inverter_pv_power','sensor.inverter_grid_power','sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_battery_current','sensor.inverter_temperature','sensor.inverter_battery_temperature','sensor.inverter_total_energy_export','number.inverter_zero_export_power'):
-    state=hass.states.get(entity_id)
-    if state:telemetry[entity_id]={'state':state.state,'source_reported':(getattr(state,'last_reported',None) or state.last_updated).isoformat()}
-   recent=await hass.async_add_executor_job(journal.recent,80)
-   try:await hass.async_add_executor_job(write_report,{'captured_at':datetime.now(timezone.utc).isoformat(),**body,'telemetry':telemetry,'events':recent})
-   except OSError:pass
-   last_report=time.time()
+  if report_lock.locked():return
+  async with report_lock:
+   body=snapshot();hass.states.async_set('sensor.jarvis_energy_sales',body['phase'],{'friendly_name':'Prodej elektřiny',**body})
+   states=read();source_ok=prefs['source']=='pv' or prefs['battery_verified']
+   base_ok=states.get('select.inverter_work_mode')=='Zero Export To CT' and states.get('switch.inverter_export_surplus')=='off' and number(states.get('number.inverter_export_surplus_power')) is not None
+   hass.states.async_set('binary_sensor.jarvis_sales_ready','on' if ready and not c.active and not window.active and healthy() and source_ok and base_ok and current_price() and current_price()['net']>0 else 'off',{'friendly_name':'Prodej připraven'})
+   hass.bus.async_fire('jarvis_sales_settings')
+   if time.time()-last_report>=10:
+    telemetry={}
+    for entity_id in ('sensor.inverter_pv_power','sensor.inverter_grid_power','sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_battery_current','sensor.inverter_temperature','sensor.inverter_battery_temperature','sensor.inverter_total_energy_export','number.inverter_zero_export_power'):
+     state=hass.states.get(entity_id)
+     if state:telemetry[entity_id]={'state':state.state,'source_reported':(getattr(state,'last_reported',None) or state.last_updated).isoformat()}
+    recent=await hass.async_add_executor_job(journal.recent,80)
+    try:await hass.async_add_executor_job(write_report,{'captured_at':datetime.now(timezone.utc).isoformat(),**body,'telemetry':telemetry,'events':recent})
+    except OSError:pass
+    last_report=time.time()
  def read_command():
   path=Path(hass.config.path('jarvis_workspace','sales-command.json'))
   if not path.exists():return None
@@ -253,7 +255,7 @@ async def async_setup_sales(hass,config,charge_controller):
    if issued<=previous.get('issued_at',0):return None
    schemas={
     'start':vol.Schema({vol.Optional('mode'):vol.In(['pv','battery']),vol.Optional('power_w'):vol.All(vol.Coerce(float),vol.Range(min=100,max=9300)),vol.Optional('duration_minutes'):vol.All(vol.Coerce(float),vol.Range(min=1,max=60))}),
-    'stop':vol.Schema({}), 'automatic':vol.Schema({vol.Required('enabled'):bool}),'commission_window':vol.Schema({})}
+    'stop':vol.Schema({}), 'automatic':vol.Schema({vol.Required('enabled'):bool}),'commission_window':vol.Schema({vol.Optional('solar_sell',default=False):bool})}
    if body['action'] not in schemas:return None
    body['data']=schemas[body['action']](body['data']);return body
   except (ValueError,TypeError,vol.Invalid):return None
@@ -281,7 +283,7 @@ async def async_setup_sales(hass,config,charge_controller):
     await event('command_claimed',receipt)
     if time.time()>body['expires_at']:raise ValueError('Povel před provedením vypršel.')
     if body['action']=='start':await start_sale(body['data'],body['expires_at'])
-    elif body['action']=='commission_window':await commission_window(body['expires_at'])
+    elif body['action']=='commission_window':await commission_window(body['expires_at'],body['data']['solar_sell'])
     elif body['action']=='stop':await stop_sale()
     elif body['data']['enabled']:await configure({'automatic':True,'inhibited':False,'commission_cancelled':False,'commission_attempted':False if not prefs['pv_verified'] else True},body['expires_at'])
     else:await stop_sale()
@@ -363,6 +365,7 @@ async def async_setup_sales(hass,config,charge_controller):
  hass.data[KEY]={'controller':c,'window':window,'settings':prefs,'configure':configure,'report':report,'journal':journal,'start':start_sale,'stop':stop_sale}
  for platform in ('number','select','switch'):hass.async_create_task(discovery.async_load_platform(hass,platform,DOMAIN,{},config))
  async_track_time_interval(hass,tick,timedelta(seconds=5))
+ async_track_time_interval(hass,report,timedelta(seconds=5))
  if hass.is_running:hass.async_create_task(tick())
  else:hass.bus.async_listen_once('homeassistant_started',tick)
  await report()

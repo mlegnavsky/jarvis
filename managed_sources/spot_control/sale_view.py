@@ -1,5 +1,7 @@
 """Native mobile form: navigation is inert; Start is an explicit separate action."""
 def md(content):return {'type':'markdown','content':content}
+def verification_card():
+ return md("### Stav ověřování\n{% set s=state_attr('sensor.jarvis_energy_sales','settings') or {} %}\n{% set c=s.get('command',{}) %}\n{% set t=state_attr('sensor.jarvis_energy_sales','native_test') or {} %}\n{% if t %}\n**Test baterie: {{ {'preparing':'příprava','armed':'čekám na začátek','measuring':'měřím průběh','expiry_observed':'nativní konec ověřen','stopping':'ukončuji a vracím nastavení'}.get(t.get('phase'),'ověřování') }} · nejvýše 500 W**\nZačátek: **{{ t.get('start') | timestamp_custom('%H:%M:%S',true) }}**, konec: **{{ t.get('end') | timestamp_custom('%H:%M:%S',true) }}**.\nRezerva při testu **95 %**.\n{% elif c.get('status')=='failed' %}\n**Test se nespustil.** {{ c.get('error') }}\n{% else %}\nČekám na další ověřovací krok.\n{% endif %}\nBateriová automatika: **{{ 'ověřená' if s.get('battery_verified') else 'dosud neověřená' }}**.\n")
 def tile(name,icon,service,color):
  return {'type':'tile','entity':'sensor.jarvis_energy_sales','name':name,'icon':icon,'color':color,'hide_state':True,
   'tap_action':{'action':'perform-action','perform_action':'jarvis_spot_control.'+service},
@@ -18,6 +20,8 @@ Rezerva pro prodej **60 %** · maximální provozní strop **9,3 kW**.
 
 Automatický prodej je nyní omezen na úvodních **3 kW**. Baterie se automaticky neprodává, dokud není ověřeno její časové ukončení.
 '''),
+ verification_card(),
+ conditional('native_test',tile('Zastavit ověřovací test','mdi:stop-circle','stop_sale','red')),
  {'type':'tile','entity':'switch.jarvis_sale_automatic','name':'Automatický prodej','icon':'mdi:solar-power','color':'green'},
  {'type':'tile','entity':'sensor.jarvis_energy_sales','name':'Vlastní prodej','icon':'mdi:transmission-tower-export','color':'green','hide_state':True,
   'tap_action':{'action':'navigate','navigation_path':'/hlavni-prehled/vlastni-prodej'},

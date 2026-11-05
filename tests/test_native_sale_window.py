@@ -33,11 +33,42 @@ class NativeWindowTests(unittest.IsolatedAsyncioTestCase):
   self.reg[0]=5
   await self.window.start()
   self.assertEqual(self.reg[173],32)
+ async def test_solar_sell_variant_protects_all_slots_and_enables_only_inside_window(self):
+  await self.window.start(solar_sell=True)
+  self.assertEqual([self.reg[166+i] for i in range(6)],[95]*6)
+  self.assertEqual(self.reg[145],0)
+  self.now=self.window.record['start'];await self.advance(1)
+  self.assertEqual(self.reg[145],1)
+  self.assertFalse(self.window.record['observed'])
+  self.assertTrue(self.window.record['solar_sell'])
+ async def test_no_export_cannot_be_misreported_as_verified_native_expiry(self):
+  await self.window.start();self.now=self.window.record['end']
+  await self.advance(5,grid_w=10,battery_w=110)
+  self.assertFalse(self.window.record['native_expiry_observed'])
+ async def test_failed_guard_reason_survives_later_cleanup_retry(self):
+  await self.window.start();self.states['healthy']=False
+  await self.advance(1)
+  self.assertTrue(self.window.active)
+  self.states['healthy']=True;await self.advance(5,grid_w=10)
+  proof=[p for k,p in self.events if k=='native_window_stop'][-1]
+  self.assertEqual(proof['reason'],'guard')
+ async def test_delayed_enable_intent_cannot_start_solar_sell_after_window(self):
+  await self.window.start(solar_sell=True);event=self.window.event
+  async def delayed(kind,payload):
+   if kind=='native_window_write_intent' and payload.get('address')==145 and payload.get('value')==1:
+    self.now=self.window.record['end']+1;self.states['reported_at']=self.now
+   await event(kind,payload)
+  self.window.event=delayed
+  self.now=self.window.record['start']
+  await self.advance(1)
+  self.assertNotIn((145,1),self.writes)
  async def test_native_expiry_is_observed_before_any_stop_write(self):
   await self.window.start();record=dict(self.window.record);arm_count=len(self.writes)
   self.now=record['start']
   for _ in range(5):await self.advance(5,grid_w=-450,battery_w=500,pv_w=100)
   self.assertEqual(len(self.writes),arm_count)
+  self.now=record['end']-30
+  for _ in range(5):await self.advance(5,grid_w=-450,battery_w=500,pv_w=100)
   self.now=record['end'];await self.advance(5,grid_w=10,battery_w=-50)
   self.assertTrue(self.window.record['native_expiry_observed']);self.assertEqual(len(self.writes),arm_count)
   await self.advance(20,grid_w=10)
@@ -48,6 +79,13 @@ class NativeWindowTests(unittest.IsolatedAsyncioTestCase):
   proof=[p for k,p in self.events if k=='native_window_stop'][-1]
   self.assertTrue(proof['observed']);self.assertTrue(proof['native_expiry_observed'])
   self.assertFalse(proof['production_verified'])
+ async def test_export_ending_minutes_early_cannot_prove_clock_expiry(self):
+  await self.window.start(solar_sell=True);self.now=self.window.record['start'];await self.advance(1)
+  for _ in range(5):await self.advance(5,grid_w=-450,battery_w=500,pv_w=100)
+  self.assertTrue(self.window.record['observed'])
+  for _ in range(50):await self.advance(5,grid_w=10,battery_w=-50)
+  self.now=self.window.record['end'];await self.advance(1,grid_w=10)
+  self.assertFalse(self.window.record['native_expiry_observed'])
  async def test_old_or_skewed_native_clock_cannot_arm_export(self):
   self.window.native_read=lambda:asyncio.sleep(0,result={'clock':datetime.fromtimestamp(self.now-60,ZoneInfo('Europe/Prague')),'registers':self.reg})
   with self.assertRaises(ValueError):await self.window.start()
