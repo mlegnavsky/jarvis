@@ -146,7 +146,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    controllers['busy']=lambda:False
    controllers['clock_sync_active']=True
    self.assertFalse(charge.healthy(),'RTC synchronization owns control')
-  self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.5')
+  self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.6')
  async def test_active_owner_conflict_latches_automatic_off_before_cleanup_finishes(self):
   from unittest.mock import AsyncMock
   data=await self.setup();await self.ticks[0]()
@@ -351,6 +351,11 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
   data['settings']['zero_target_proof']['read_shapes']=[{'single_before':0,'bulk':0,'single_after':0}]*2
   await data['report']()
+  self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
+  data['settings']['native_grid_target_w']=5
+  data['settings']['zero_target_proof']={'verified':True,'actual_w':5,'reads':[5]*7,'read_shapes':[{'single_before':5,'bulk':5,'single_after':5}]*2}
+  await data['report']()
+  self.assertEqual(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_w'],5)
   self.assertTrue(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
 
  async def test_shared_native_clock_range_admits_eleven_second_lag_without_sync(self):

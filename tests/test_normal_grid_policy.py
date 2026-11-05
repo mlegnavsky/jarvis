@@ -1,4 +1,4 @@
-"""The normal grid policy may only remove bias after verified idle control."""
+"""The normal grid policy applies the owner's5W bias only after verified idle control."""
 from pathlib import Path
 import unittest
 import yaml
@@ -12,10 +12,10 @@ class NormalGridPolicyTests(unittest.TestCase):
  def guard(self):
   env=Environment();env.globals.update(states=lambda key:self.states.get(key,'unknown'),is_state=lambda key,value:self.states.get(key)==value,state_attr=lambda key,name:self.attrs.get(key,{}).get(name))
   return env.from_string(self.policy['triggers'][1]['value_template']).render().strip()=='True'
- def test_healthy_idle_house_allows_zero_only_and_preserves_enabled_state(self):
+ def test_healthy_idle_house_allows_five_watts_only_and_preserves_enabled_state(self):
   self.assertTrue(self.guard());self.assertNotIn('initial_state',self.policy)
   actions=[a for a in self.policy['actions'] if 'action' in a]
-  self.assertEqual(actions,[{'action':'solarman.write_multiple_registers','data':{'device':"{{ device_id('number.inverter_zero_export_power') }}",'address':104,'values':[0]}}])
+  self.assertEqual(actions,[{'action':'solarman.write_multiple_registers','data':{'device':"{{ device_id('number.inverter_zero_export_power') }}",'address':104,'values':[5]}}])
  def test_running_sale_charge_fault_unknown_mode_and_preparation_all_block(self):
   for field in ('active','ready','healthy'):
    saved=self.attrs['sensor.jarvis_energy_sales'][field]
