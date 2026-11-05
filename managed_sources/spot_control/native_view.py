@@ -61,5 +61,8 @@ Ruční test · automatický prodej vypnutý
     assert text.count(marker)==1
     prefix,old=text.split(marker)
     assert '\n- title:' not in old
-    return (prefix+"\n- !include 'spot-control-view.yaml'\n- !include 'spot-device-details.yaml'\n",
+    try:from .sale_view import augment_spot
+    except ImportError:from sale_view import augment_spot
+    view=augment_spot(view)
+    return (prefix+"\n- !include 'spot-control-view.yaml'\n- !include 'spot-device-details.yaml'\n- !include 'spot-sales-view.yaml'\n",
             json.dumps(view,ensure_ascii=False,separators=(',',':'))+'\n')

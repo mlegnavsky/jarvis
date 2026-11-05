@@ -10,12 +10,14 @@ from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import HomeAssistantError
 from .engine import Controller,equal,finite,charge_limits_ok,TEST_CURRENT_LIMIT
 DOMAIN='jarvis_spot_control'
-CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_EXTRA)
+CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({vol.Optional('commission_pv_test',default=False):bool})},extra=vol.ALLOW_EXTRA)
 async def async_setup(hass,config):
     store=Store(hass,1,DOMAIN+'.transaction')
     saved=await store.async_load() or {}
     def read():return {s.entity_id:s.state for s in hass.states.async_all() if '.inverter_' in s.entity_id}
     def healthy():
+        sales=hass.data.get(DOMAIN+'_sales',{}).get('controller')
+        if sales is not None and sales.active:return False
         now=dt_util.utcnow()
         for e in ('sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_grid_power','sensor.inverter_battery_temperature','number.inverter_battery_max_charging_current'):
             s=hass.states.get(e)
@@ -49,7 +51,7 @@ async def async_setup(hass,config):
         return result
     def report():
         phase=c.record.get('phase','idle')
-        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.3.4','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'active':c.active,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
+        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.4.0','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'active':c.active,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
     async def start(call):
         if not ready or not healthy():raise HomeAssistantError('Čekám na aktuální měření měniče.')
         now=dt_util.now()
@@ -76,5 +78,7 @@ async def async_setup(hass,config):
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED,started)
     async_track_time_interval(hass,tick,timedelta(seconds=15))
     hass.data[DOMAIN]=c
+    from .sale_setup import async_setup_sales
+    await async_setup_sales(hass,config,c)
     report()
     return True
