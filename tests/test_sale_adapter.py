@@ -201,4 +201,21 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    self.assertFalse(data['controller'].active)
    self.assertEqual(self.hass.states.get('switch.inverter_export_surplus').state,'off')
 
+ async def test_initial_automatic_pv_operation_stays_within_three_kw_pilot(self):
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
+  await self.ticks[0]()
+  self.assertTrue(data['controller'].active)
+  self.assertLessEqual(data['controller'].record['power_w'],3000)
+
+ async def test_command_expiring_during_native_reads_cannot_enable_export(self):
+  data=await self.setup();await self.ticks[0]()
+  device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device
+  original=device.execute
+  async def delayed(*args,**kwargs):
+   await self.real_sleep(.02);return await original(*args,**kwargs)
+  device.execute=delayed
+  with self.assertRaisesRegex(ValueError,'vypršel'):
+   await data['start']({'power_w':500,'duration_minutes':3},valid_until=time.time()+.01)
+  self.assertEqual(self.writes,[])
+
 if __name__=='__main__':unittest.main()

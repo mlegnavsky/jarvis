@@ -1,3 +1,4 @@
+from homeassistant.core import callback
 from homeassistant.components.number import NumberEntity,NumberMode
 from .sale_setup import KEY
 
@@ -14,8 +15,10 @@ class SaleNumber(NumberEntity):
   self._attr_native_min_value=minimum;self._attr_native_max_value=maximum;self._attr_native_step=step;self._attr_native_unit_of_measurement=unit
  @property
  def native_value(self):return self.data['settings'][self.key]
+ @callback
+ def _settings_changed(self,_event):self.async_write_ha_state()
  async def async_added_to_hass(self):
-  self.async_on_remove(self.hass.bus.async_listen('jarvis_sales_settings',lambda _event:self.async_write_ha_state()))
+  self.async_on_remove(self.hass.bus.async_listen('jarvis_sales_settings',self._settings_changed))
  async def async_set_native_value(self,value):
   if not self.native_min_value<=value<=self.native_max_value:raise ValueError('Hodnota je mimo povolený rozsah.')
   await self.data['configure']({self.key:float(value)})

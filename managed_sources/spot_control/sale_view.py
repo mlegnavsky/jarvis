@@ -14,7 +14,9 @@ def summary_cards():
 
 {% if state_attr('sensor.jarvis_energy_sales','error') %}⚠️ {{ state_attr('sensor.jarvis_energy_sales','error') }}{% endif %}
 
-Rezerva pro prodej **60 %** · provozní strop **9,3 kW**.
+Rezerva pro prodej **60 %** · maximální provozní strop **9,3 kW**.
+
+Automatický prodej je nyní omezen na úvodních **3 kW**. Baterie se automaticky neprodává, dokud není ověřeno její časové ukončení.
 '''),
  {'type':'tile','entity':'switch.jarvis_sale_automatic','name':'Automatický prodej','icon':'mdi:solar-power','color':'green'},
  {'type':'tile','entity':'sensor.jarvis_energy_sales','name':'Vlastní prodej','icon':'mdi:transmission-tower-export','color':'green','hide_state':True,

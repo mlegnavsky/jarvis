@@ -1,3 +1,4 @@
+from homeassistant.core import callback
 from homeassistant.components.select import SelectEntity
 from .sale_setup import KEY
 
@@ -12,8 +13,10 @@ class SaleSource(SelectEntity):
  def __init__(self,hass):self.data=hass.data[KEY];self.entity_id='select.jarvis_sale_source'
  @property
  def current_option(self):return self.options[1 if self.data['settings']['source']=='battery' else 0]
+ @callback
+ def _settings_changed(self,_event):self.async_write_ha_state()
  async def async_added_to_hass(self):
-  self.async_on_remove(self.hass.bus.async_listen('jarvis_sales_settings',lambda _event:self.async_write_ha_state()))
+  self.async_on_remove(self.hass.bus.async_listen('jarvis_sales_settings',self._settings_changed))
  async def async_select_option(self,option):
   if option not in self.options:raise ValueError('Neplatný zdroj prodeje.')
   await self.data['configure']({'source':'battery' if option==self.options[1] else 'pv'})

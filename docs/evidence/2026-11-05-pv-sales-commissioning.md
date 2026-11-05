@@ -31,3 +31,9 @@ Contractual whole-grid reserved export9500W; operating upper bound9300W. Existin
 Connected time/price supervision requires functioning HA and inverter communication. PV export can continue under the native cap during a controller outage. This is disclosed in the view. Battery sale remains blocked until native timed expiry and reserve behavior are physically verified. Full forecast-driven battery scheduling and settlement are not yet complete.
 
 Validation0.4.1:49targeted sales tests pass. Full suite is run separately; known unrelated test_official_sdk_can_initialize_list_and_call cannot import ClientSession from the installed MCP SDK. Do not report the full suite green.
+
+## Second physical test and UI correction
+
+Release0.4.1 physically repeated500W/3min at13:58:06local. Native143=500 and145=1 were independently read. Fresh exports typically416–547W, battery continued charging~500W, SOC99%. Deadline shutdown started14:01:11, native143=0/142=2/145=0 readback confirmed, fresh grid19W import by14:01:37. Stop proof recorded14:01:28, reason deadline, sustained=true, stop_verified=true, nofailures. PV commissioning passed; automatic remained deliberately off. The coarse energy counter crossing5.1→5.2kWh does not imply this0.5kWtest sold0.1kWh. Original931Wexcursion remains a captured abnormal event; no threshold was relaxed.
+
+Live HA logs exposed a UI listener running in an executor and calling event-loop-only async_write_ha_state. Release0.4.2 marks all three platform listeners with HAcallback; a real dispatch-semantics test reproduces the old failure and passes the corrected controls. Initial automatic PV output is conservatively capped3000W; contractual9500W and absolute operating upper9300W stay distinct. Native mode/enable baseline is independently checked before enabling. Expiring commands are checked again after the two native reads. Battery automation remains gated.52sales tests pass.

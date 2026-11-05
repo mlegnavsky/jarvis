@@ -16,7 +16,8 @@ from .journal import Journal
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.4.1'
+VERSION='0.4.2'
+AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):
  store=Store(hass,1,KEY);saved=await store.async_load() or {}
@@ -95,6 +96,9 @@ async def async_setup_sales(hass,config,charge_controller):
   actual=raw[0] if isinstance(raw,list) and len(raw)==1 else None
   await event('native_register_readback',{'entity':entity,'address':address,'expected':expected,'actual':actual,'sale_id':c.record.get('id')})
   if actual!=expected:raise RuntimeError(f'Měnič nepotvrdil registr {address}: požadováno {expected}, naměřeno {actual}.')
+ async def verify_baseline():
+  await native_readback('select.inverter_work_mode','Zero Export To CT')
+  await native_readback('switch.inverter_export_surplus','off')
  async def write(entity,value):
   domain=entity.split('.')[0]
   if domain=='number':service='set_value';data={'value':float(value)}
@@ -136,6 +140,8 @@ async def async_setup_sales(hass,config,charge_controller):
     if mode!='pv' or power>500 or minutes>3:raise ValueError('Nejprve ověřovací prodej panelů: nejvýše 500 W a 3 minuty.')
     purpose='commission'
    prefs['inhibited']=False
+   await verify_baseline()
+   if valid_until is not None and time.time()>valid_until:raise ValueError('Povel před provedením vypršel.')
    await c.start(mode,power,minutes,purpose=purpose)
    last_reason='Ruční prodej · čekám na potvrzení dodávky.'
  async def stop_sale():
@@ -149,7 +155,7 @@ async def async_setup_sales(hass,config,charge_controller):
   return {'version':VERSION,'ready':ready,'active':c.active,'observed':c.observed,'phase':c.record.get('phase','idle'),
    'settings':dict(prefs),'reason':('Automatika pozastavena po zásahu ochrany. '+(c.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':c.error or runtime_error,'price':p,
    'mode':c.record.get('mode'),'power_w':c.record.get('power_w'),'deadline':c.record.get('deadline'),
-   'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
+   'automatic_limit_w':AUTO_PILOT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)
@@ -246,6 +252,7 @@ async def async_setup_sales(hass,config,charge_controller):
      last_reason=decision['reason']
      if commission_requested and not prefs.get('commission_cancelled') and not prefs.get('inhibited') and not prefs.get('commission_attempted') and p and p['net']>0 and soc is not None and soc>=98:
       prefs['commission_attempted']=True;await persist_settings()
+      await verify_baseline()
       await c.start('pv',500,3,purpose='commission',promote_auto=True)
       last_reason='První ověřovací prodej přebytků · nejvýše 500 W / 3 minuty.'
      elif prefs['automatic'] and not prefs.get('inhibited') and prefs['pv_verified'] and decision['mode'] in ('pv','battery'):
@@ -253,7 +260,9 @@ async def async_setup_sales(hass,config,charge_controller):
       mode=decision['mode'] if prefs['battery_verified'] else 'pv'
       if decision['mode']=='battery' and not prefs['battery_verified']:last_reason='Výhodná cena · zatím prodávám přebytky panelů; baterie čeká na ověření.'
       if mode=='pv' and soc<98:last_reason='Baterii ponechávám; čekám na přebytky panelů.'
-      else:await c.start(mode,decision['power_w'],15,decision['minimum_soc'])
+      else:
+       await verify_baseline()
+       await c.start(mode,min(AUTO_PILOT_LIMIT,decision['power_w']),15,decision['minimum_soc'])
    except Exception as exc:
     runtime_error=str(exc)
     try:await event('controller_error',{'error':runtime_error})
