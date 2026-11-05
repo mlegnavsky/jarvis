@@ -2,6 +2,38 @@ const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 let Card;const ctx={HTMLElement:class{},customElements:{get:()=>false,define:(n,c)=>Card=c},Intl,Date,Math,Set,Number};
 vm.runInNewContext(fs.readFileSync('managed_sources/energy_weather/power-sun.js','utf8'),ctx);
 const c=new Card();
+require('./day_energy_chart_gestures.cjs');
+{
+ const card=new Card(),raw='sensor.inverter_load_power',fixed='sensor.jarvis_spotreba_domu',cut=Date.parse('2026-11-05T19:55:03Z');
+ const rows={[raw]:[{t:cut-60000,v:88},{t:cut,v:0},{t:cut+60000,v:0}],[fixed]:[{t:cut+900000,v:91},{t:cut+960000,v:null}]};
+ card.h={states:{}};assert.equal(card.houseHistory(rows).length,3,'original installations retain raw load history');
+ card.h.states[fixed]={state:'unavailable',attributes:{native_unreliable_since:'2026-11-05T19:55:03+00:00'}};
+ const ps=card.houseHistory(rows);assert.equal(ps[0].v,88);assert.equal(card.reading(ps,cut+30000,cut+2000000),null,'unreliable native zeros stay a gap before corrected readings');
+ assert.equal(card.reading(ps,cut+920000,cut+2000000),91);
+ assert.equal(card.reading(ps,cut+1000000,cut+2000000),null,'corrected unavailable must not fall back to native zero');
+ assert(card.historyIds().includes(fixed),'both measurement IDs are requested from recorder');
+ assert.equal(card.liveId(raw),fixed,'current values use the canonical house sensor even when unavailable');
+ console.log('Canonical house history preserves pre-cutover data and later gaps');
+}
+{
+ const card=new Card(),day={start:0,end:86400000};
+ assert.equal(card.chartBounds(day).end,86400000,'new days start at full width');
+ card.setChartWindow(day,36000000,39600000);
+ assert.equal(card.chartBounds(day).start,36000000);
+ assert.equal(card.chartBounds(day).end,39600000);
+ card.setChartWindow(day,-1800000,1800000);
+ assert.equal(card.chartBounds(day).start,0,'panning stops at midnight');
+ assert.equal(card.chartBounds(day).end,3600000,'clamping preserves zoom');
+ card.setChartWindow(day,85000000,88600000);
+ assert.equal(card.chartBounds(day).start,82800000);
+ assert.equal(card.chartBounds(day).end,86400000);
+ card.setChartWindow(day,36000000,36000001);
+ assert.equal(card.chartBounds(day).end-card.chartBounds(day).start,900000,'detail stops at fifteen minutes');
+ assert.equal(card.chartBounds({start:86400000,end:172800000}).start,86400000,'another day does not inherit a time window');
+ card.setChartWindow(day,-86400000,172800000);
+ assert.equal(card.chartBounds(day).start,0);assert.equal(card.chartBounds(day).end,86400000);
+ console.log('Time zoom preserves span at day boundaries and resets for another day');
+}
 {
  const card=new Card();let painted=0;card.h={};card.period='week';
  card.shadowRoot={activeElement:{matches:s=>s==='input[type=date]'}};
