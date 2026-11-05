@@ -23,8 +23,8 @@ from .native_zero_target import set_zero_target
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.6.1'
-AUTO_PILOT_LIMIT=3000
+VERSION='0.6.2'
+AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
  store=Store(hass,1,KEY);saved=await store.async_load() or {}
@@ -103,8 +103,8 @@ async def async_setup_sales(hass,config,charge_controller):
    prefs['selected_block']=selected;await persist_settings()
    await event('daily_block_selected',{'selected_block':selected,'policy':'simple_120_minutes','minimum_soc':60})
   return selected
- def battery_size(block,maximum_power_w=AUTO_PILOT_LIMIT):
-  return size_sale(fresh_number('sensor.inverter_battery'),23.5,block['start'],block['end'],time.time(),fresh_number('sensor.inverter_load_power'),max_export_w=min(AUTO_PILOT_LIMIT,maximum_power_w),minimum_soc=60)
+ def battery_size(block,maximum_power_w=AUTO_EXPORT_LIMIT):
+  return size_sale(fresh_number('sensor.inverter_battery'),23.5,block['start'],block['end'],time.time(),fresh_number('sensor.inverter_load_power'),max_export_w=min(AUTO_EXPORT_LIMIT,maximum_power_w),minimum_soc=60)
  def automatic_window_end(block):
   now=time.time();local=datetime.fromtimestamp(now,ZoneInfo('Europe/Prague'))
   cutoff=local.replace(hour=23,minute=40,second=0,microsecond=0).timestamp()
@@ -331,11 +331,11 @@ async def async_setup_sales(hass,config,charge_controller):
    if mode=='battery':
     if number(minutes) is None or not 5<=float(minutes)<=60:raise ValueError('Bateriový segment vyžaduje5 až60 minut.')
     end=time.time()+float(minutes)*60
-    sizing=size_sale(fresh_number('sensor.inverter_battery'),23.5,time.time(),end,time.time(),fresh_number('sensor.inverter_load_power'),max_export_w=min(AUTO_PILOT_LIMIT,float(power)),minimum_soc=60)
+    sizing=size_sale(fresh_number('sensor.inverter_battery'),23.5,time.time(),end,time.time(),fresh_number('sensor.inverter_load_power'),max_export_w=min(AUTO_EXPORT_LIMIT,float(power)),minimum_soc=60)
     if sizing['power_w']<100:raise ValueError(sizing['reason'])
     await verify_baseline();await ensure_native_clock()
     prefs['inhibited']=False
-    await battery.start(sizing['power_w'],float(minutes),60,quotes(),valid_until=valid_until,purpose='manual',maximum_power_w=min(AUTO_PILOT_LIMIT,float(power)))
+    await battery.start(sizing['power_w'],float(minutes),60,quotes(),valid_until=valid_until,purpose='manual',maximum_power_w=min(AUTO_EXPORT_LIMIT,float(power)))
     last_reason='Ruční bateriový prodej čeká na nativní začátek.'
     return
    purpose='manual'
@@ -363,7 +363,7 @@ async def async_setup_sales(hass,config,charge_controller):
    'battery_sale':{k:v for k,v in battery.record.items() if k not in ('before','expected','pending')},'battery_sale_error':battery.error,'native_start':battery.record.get('start'),'selected_block':prefs.get('selected_block'),'sale_policy':'simple_daily_block','sale_floor_soc':60,
    'settings':dict(prefs),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or battery.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else battery.error if battery.active else c.error or runtime_error,'price':p,
    'mode':'battery_commission' if window.active else 'battery' if battery.active else c.record.get('mode'),'power_w':500 if window.active else battery.record.get('power_w') if battery.active else c.record.get('power_w'),'deadline':window.record.get('end') if window.active else battery.record.get('end') if battery.active else c.record.get('deadline'),
-   'grid_target_w':0,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('native_grid_target_w')==0,'grid_import_policy':'Cíl běžného odběru 0 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_PILOT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
+   'grid_target_w':0,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('native_grid_target_w')==0,'grid_import_policy':'Cíl běžného odběru 0 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_EXPORT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'planning':home_plan(),'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)
@@ -492,7 +492,7 @@ async def async_setup_sales(hass,config,charge_controller):
       if prefs['battery_verified'] and block and block['start']-180<=time.time()<=block['end']-360 and automatic_window_end(block) is not None:
        decision={**battery_size(block),'mode':'battery','reason':'Vybraný cenový blok · výkon z aktuální energie nad60 %.'}
       elif soc>=98 and daylight_pv(pv) and time.time()>=float(prefs.get('cooldown_until',0)):
-       decision={'mode':'pv','power_w':AUTO_PILOT_LIMIT,'minimum_soc':60,'reason':'Baterie je téměř plná a panely vyrábějí · dostupné přebytky.'}
+       decision={'mode':'pv','power_w':AUTO_EXPORT_LIMIT,'minimum_soc':60,'reason':'Baterie je téměř plná a panely vyrábějí · dostupné přebytky.'}
      signature=(decision['mode'],decision['reason'],p['start'] if p else None,prefs['automatic'],block['start'] if block else None)
      if signature!=last_decision:
       await event('decision',{'decision':decision,'price':p,'automatic':prefs['automatic'],'selected_block':block,'policy':'simple_daily_block','forecast_is_informational':True});last_decision=signature
@@ -508,11 +508,11 @@ async def async_setup_sales(hass,config,charge_controller):
        sizing=battery_size(block)
        operating_end=automatic_window_end(block)
        if sizing['power_w']>=100 and operating_end is not None:
-        await battery.start(sizing['power_w'],min(60,(operating_end-time.time())/60),60,quotes(),purpose='automatic',window_end=operating_end,maximum_power_w=AUTO_PILOT_LIMIT)
+        await battery.start(sizing['power_w'],min(60,(operating_end-time.time())/60),60,quotes(),purpose='automatic',window_end=operating_end,maximum_power_w=AUTO_EXPORT_LIMIT)
         last_reason='Bateriový segment připraven; skutečný nativní začátek může následovat po začátku cenového bloku.'
        elif operating_end is None:last_reason='Před půlnocí již nelze bezpečně dokončit další bateriový segment; automatika čeká.'
       elif decision['mode']=='pv' and prefs['pv_verified']:
-       await verify_baseline();await c.start('pv',AUTO_PILOT_LIMIT,15,minimum_soc=60,purpose='automatic')
+       await verify_baseline();await c.start('pv',AUTO_EXPORT_LIMIT,15,minimum_soc=60,purpose='automatic')
    except Exception as exc:
     runtime_error=str(exc)
     try:await event('controller_error',{'error':runtime_error})

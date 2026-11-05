@@ -106,7 +106,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   await self.service('start_sale',{'mode':'battery','power_w':9300,'duration_minutes':30})
   self.assertTrue(data['battery_controller'].active)
   self.assertFalse(data['controller'].active)
-  self.assertLessEqual(data['battery_controller'].starts[0][0],3000)
+  self.assertLessEqual(data['battery_controller'].starts[0][0],9300)
   self.assertEqual(data['battery_controller'].starts[0][2],60)
   self.assertIn('battery_sale',self.storage.data)
 
@@ -126,10 +126,10 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.refresh();await self.ticks[0]()
   controller=data['battery_controller'];self.assertTrue(controller.active)
   power,minutes,floor,quotes,options=controller.starts[0]
-  self.assertLessEqual(power,3000);self.assertGreater(power,0)
+  self.assertLessEqual(power,9300);self.assertGreater(power,0)
   self.assertLessEqual(minutes,60);self.assertEqual(floor,60)
   self.assertEqual(options['window_end'],data['settings']['selected_block']['end'])
-  self.assertEqual(options['maximum_power_w'],3000)
+  self.assertEqual(options['maximum_power_w'],9300)
   attrs=self.hass.states.get('sensor.jarvis_energy_sales').attributes
   self.assertEqual(attrs['mode'],'battery');self.assertTrue(attrs['active'])
   self.assertFalse(attrs['observed']);self.assertEqual(attrs['sale_floor_soc'],60)

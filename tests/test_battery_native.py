@@ -510,11 +510,29 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         await self.finish_stop()
         self.assertEqual(self.reg[109], 50)
 
+    async def test_commission_allows_the_normal_house_load_under_three_kw(self):
+        self.states.update(soc=94,battery_w=1923,current_a=36.12)
+        await self.start(power_w=500, minimum_soc=90, purpose='commission', maximum_power_w=500)
+        self.assertEqual(self.reg[109],60)
+        self.assertEqual(self.reg[155],3000)
+        self.assertEqual(self.reg[143],500)
+        self.assertEqual(self.reg[167],90)
+
+    async def test_commission_respects_lower_bms_current_and_rejects_excess_house_load(self):
+        self.reg[213]=35;self.states['soc']=94
+        await self.start(power_w=500, minimum_soc=90, purpose='commission', maximum_power_w=500)
+        self.assertEqual(self.reg[109],35)
+        self.assertLessEqual(self.reg[155],35*55)
+        await self.controller.stop('manual');await self.finish_stop()
+        self.reg[213]=200;self.states.update(battery_w=4000,current_a=75)
+        with self.assertRaises(ValueError):
+            await self.start(power_w=500, minimum_soc=90, purpose='commission', maximum_power_w=500)
+
     async def test_commission_is_fixed_bounded_and_proof_identifies_actual_limits(self):
         self.states['soc'] = 96
         await self.start(power_w=500, minimum_soc=90, purpose='commission', maximum_power_w=500)
-        self.assertEqual(self.reg[109], 20)
-        self.assertEqual(self.reg[155], 1000)
+        self.assertEqual(self.reg[109], 60)
+        self.assertEqual(self.reg[155], 3000)
         await self.enable()
         await self.controller.stop('manual')
         await self.finish_stop()

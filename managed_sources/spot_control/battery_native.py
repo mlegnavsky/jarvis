@@ -251,8 +251,8 @@ class BatterySaleController:
                     or len(set(powers)) != 1 or powers[0] < 500
                     or any(r[172 + i] != 0 for i in range(6))):
                 raise ValueError('Requires a uniform ordinary house program without charge/sell flags')
-            current = min(20, r[109]) if purpose == 'commission' else r[109]
-            house_power = min(1000, powers[0]) if purpose == 'commission' else powers[0]
+            current = min(60, r[109]) if purpose == 'commission' else r[109]
+            house_power = min(3000, powers[0]) if purpose == 'commission' else powers[0]
             plan = battery_window_plan(data['clock'], self.clock(), power_w, duration_minutes,
                                        minimum_soc, s['voltage_v'], _bms_limit(r), current, house_power,
                                        quotes, valid_until=valid_until, window_end=window_end)

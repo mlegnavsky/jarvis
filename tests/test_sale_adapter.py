@@ -140,7 +140,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    controllers['busy']=lambda:False
    controllers['clock_sync_active']=True
    self.assertFalse(charge.healthy(),'RTC synchronization owns control')
-   self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.1')
+   self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.2')
  async def test_active_owner_conflict_latches_automatic_off_before_cleanup_finishes(self):
   from unittest.mock import AsyncMock
   data=await self.setup();await self.ticks[0]()
@@ -337,11 +337,11 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    self.assertFalse(data['controller'].active)
    self.assertEqual(self.hass.states.get('switch.inverter_export_surplus').state,'off')
 
- async def test_initial_automatic_pv_operation_stays_within_three_kw_pilot(self):
+ async def test_automatic_pv_operation_stays_within_nine_point_three_kw_operating_limit(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
   await self.ticks[0]()
   self.assertTrue(data['controller'].active)
-  self.assertLessEqual(data['controller'].record['power_w'],3000)
+  self.assertLessEqual(data['controller'].record['power_w'],9300)
 
  async def test_command_expiring_during_native_reads_cannot_enable_export(self):
   data=await self.setup();await self.ticks[0]()
