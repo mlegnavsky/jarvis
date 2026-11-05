@@ -2,42 +2,12 @@
 import copy, json, yaml
 class Loader(yaml.SafeLoader): pass
 Loader.add_constructor('!include', lambda l,n: {'include':l.construct_scalar(n)})
-DEVICE_DETAILS="""<details>
-<summary><strong>🌡 Měnič a baterie · rozbalit</strong></summary>
+DEVICE_DETAILS="## Měnič a baterie\n\n{% macro reading(id, unit, absolute=false) -%}\n{% set v=states(id) %}{% if is_number(v) %}{{ ((v|float|abs) if absolute else (v|float))|round(2) }} {{ unit }}{% else %}nedostupné{% endif %}\n{%- endmacro %}\n### Baterie · Felicity FLA48460-EU\n{% set b=states('sensor.inverter_battery_power') %}\n**Stav:** {% if not is_number(b) %}měření nedostupné{% elif b|float < -30 %}nabíjí se{% elif b|float > 30 %}vybíjí se{% else %}v klidu{% endif %}\n\n**Nabití SOC (0–100 %):** {{ reading('sensor.inverter_battery','%') }}\n\n**Kondice SOH:** {{ reading('sensor.inverter_battery_soh','%') }} (odhad BMS; nejde o aktuální nabití)\n\n**Teplota baterie (nabíjení 0–55 °C; vybíjení −20–55 °C):** {{ reading('sensor.inverter_battery_temperature','°C') }}\n\n**Napětí (provozní rozsah 44,8–57,6 V):** {{ reading('sensor.inverter_battery_voltage','V') }}\n\n**Proud baterie (max. 200 A trvale):** {{ reading('sensor.inverter_battery_current','A',true) }} · směr podle stavu výše\n\n**Výkon baterie (max. 10 kW):** {% if is_number(b) %}{{ (b|float|abs/1000)|round(2) }} kW{% else %}nedostupné{% endif %}\n\n**Celkový nabíjecí limit:** {{ reading('number.inverter_battery_max_charging_current','A') }}\n\n**Limit nabíjení ze sítě:** {{ reading('number.inverter_battery_grid_charging_current','A') }}\n\n**Hlášení baterie:** {% if is_state('binary_sensor.inverter_battery_alarm','on') or is_state('binary_sensor.inverter_battery_fault','on') %}⚠️ Hlášen alarm nebo porucha{% elif is_state('binary_sensor.inverter_battery_alarm','off') and is_state('binary_sensor.inverter_battery_fault','off') %}Bez hlášeného alarmu a poruchy{% else %}Údaje o alarmu a poruše nejsou dostupné{% endif %}\n\n### Měnič · DEYE SUN-12K-SG05LP3-EU-SM2\n**Teplota měniče (vnitřní čidlo):** {{ reading('sensor.inverter_temperature','°C') }}\n\n**Hlášené ztráty:** {{ reading('sensor.inverter_power_losses','W') }}\n\n**Pracovní režim:** {% if states('select.inverter_work_mode') in ['unknown','unavailable'] %}nedostupný{% elif is_state('select.inverter_work_mode','Zero Export To CT') %}Bez přetoků podle CT{% else %}{{ states('select.inverter_work_mode') }}{% endif %}\n\n**Nabíjecí test:** {% if is_state('sensor.jarvis_spot_control','running') %}běží{% elif is_state('sensor.jarvis_spot_control','idle') %}neběží{% elif is_state('sensor.jarvis_spot_control','restoring') %}obnovuje nastavení{% else %}{{ states('sensor.jarvis_spot_control') }}{% endif %}\n\n\nVýrobní maximum proudu závisí na teplotě a nabití; aktuální limity měniče a BMS mohou být nižší.\n\n**Provozní teplota okolí DEYE (−40 až +60 °C; nad 45 °C omezení výkonu).** Není to limit vnitřního čidla zobrazeného výše. Teplotu okolí u měniče zde neměříme.\n\n**Proč přibližně 5,3 kW při limitu 100 A?** Výkon = skutečný proud × napětí. Například 96,9 A × 54,96 V ≈ 5,33 kW. Limit 100 A není záruka přesně 100 A.\n\n[Manuál baterie](https://doc.felicitysolar.com/Manual-lang/2.FR/FR-Manual_FLA48460-EU%20Guide%20utilisateur%20-%20Fran%C3%A7ais.pdf) · [Manuál DEYE](https://www.deyeinverter.com/deyeinverter/2024/08/13/instructions_sun-3-12k-sg05lp3-eu-sm2_240813_en.pdf)\n"
+DEVICE_LINK=json.loads("{\"type\":\"tile\",\"entity\":\"sensor.inverter_battery_soh\",\"name\":\"Měnič a baterie · otevřít detail\",\"icon\":\"mdi:information-outline\",\"color\":\"blue\",\"hide_state\":true,\"tap_action\":{\"action\":\"navigate\",\"navigation_path\":\"/hlavni-prehled/menic-baterie\"},\"icon_tap_action\":{\"action\":\"navigate\",\"navigation_path\":\"/hlavni-prehled/menic-baterie\"},\"hold_action\":{\"action\":\"none\"},\"grid_options\":{\"columns\":\"full\"}}")
+def device_view():
+    """Deploy this sidecar as spot-device-details.yaml together with build outputs."""
+    return json.loads("{\"title\":\"Měnič a baterie\",\"path\":\"menic-baterie\",\"subview\":true,\"type\":\"sections\",\"max_columns\":1,\"sections\":[{\"type\":\"grid\",\"cards\":[{\"type\":\"button\",\"name\":\"Zpět do Spoty\",\"icon\":\"mdi:arrow-left\",\"tap_action\":{\"action\":\"navigate\",\"navigation_path\":\"/hlavni-prehled/spoty\"},\"grid_options\":{\"columns\":\"full\"}},{\"type\":\"markdown\",\"content\":\"## Měnič a baterie\\n\\n{% macro reading(id, unit, absolute=false) -%}\\n{% set v=states(id) %}{% if is_number(v) %}{{ ((v|float|abs) if absolute else (v|float))|round(2) }} {{ unit }}{% else %}nedostupné{% endif %}\\n{%- endmacro %}\\n### Baterie · Felicity FLA48460-EU\\n{% set b=states('sensor.inverter_battery_power') %}\\n**Stav:** {% if not is_number(b) %}měření nedostupné{% elif b|float < -30 %}nabíjí se{% elif b|float > 30 %}vybíjí se{% else %}v klidu{% endif %}\\n\\n**Nabití SOC (0–100 %):** {{ reading('sensor.inverter_battery','%') }}\\n\\n**Kondice SOH:** {{ reading('sensor.inverter_battery_soh','%') }} (odhad BMS; nejde o aktuální nabití)\\n\\n**Teplota baterie (nabíjení 0–55 °C; vybíjení −20–55 °C):** {{ reading('sensor.inverter_battery_temperature','°C') }}\\n\\n**Napětí (provozní rozsah 44,8–57,6 V):** {{ reading('sensor.inverter_battery_voltage','V') }}\\n\\n**Proud baterie (max. 200 A trvale):** {{ reading('sensor.inverter_battery_current','A',true) }} · směr podle stavu výše\\n\\n**Výkon baterie (max. 10 kW):** {% if is_number(b) %}{{ (b|float|abs/1000)|round(2) }} kW{% else %}nedostupné{% endif %}\\n\\n**Celkový nabíjecí limit:** {{ reading('number.inverter_battery_max_charging_current','A') }}\\n\\n**Limit nabíjení ze sítě:** {{ reading('number.inverter_battery_grid_charging_current','A') }}\\n\\n**Hlášení baterie:** {% if is_state('binary_sensor.inverter_battery_alarm','on') or is_state('binary_sensor.inverter_battery_fault','on') %}⚠️ Hlášen alarm nebo porucha{% elif is_state('binary_sensor.inverter_battery_alarm','off') and is_state('binary_sensor.inverter_battery_fault','off') %}Bez hlášeného alarmu a poruchy{% else %}Údaje o alarmu a poruše nejsou dostupné{% endif %}\\n\\n### Měnič · DEYE SUN-12K-SG05LP3-EU-SM2\\n**Teplota měniče (vnitřní čidlo):** {{ reading('sensor.inverter_temperature','°C') }}\\n\\n**Hlášené ztráty:** {{ reading('sensor.inverter_power_losses','W') }}\\n\\n**Pracovní režim:** {% if states('select.inverter_work_mode') in ['unknown','unavailable'] %}nedostupný{% elif is_state('select.inverter_work_mode','Zero Export To CT') %}Bez přetoků podle CT{% else %}{{ states('select.inverter_work_mode') }}{% endif %}\\n\\n**Nabíjecí test:** {% if is_state('sensor.jarvis_spot_control','running') %}běží{% elif is_state('sensor.jarvis_spot_control','idle') %}neběží{% elif is_state('sensor.jarvis_spot_control','restoring') %}obnovuje nastavení{% else %}{{ states('sensor.jarvis_spot_control') }}{% endif %}\\n\\n\\nVýrobní maximum proudu závisí na teplotě a nabití; aktuální limity měniče a BMS mohou být nižší.\\n\\n**Provozní teplota okolí DEYE (−40 až +60 °C; nad 45 °C omezení výkonu).** Není to limit vnitřního čidla zobrazeného výše. Teplotu okolí u měniče zde neměříme.\\n\\n**Proč přibližně 5,3 kW při limitu 100 A?** Výkon = skutečný proud × napětí. Například 96,9 A × 54,96 V ≈ 5,33 kW. Limit 100 A není záruka přesně 100 A.\\n\\n[Manuál baterie](https://doc.felicitysolar.com/Manual-lang/2.FR/FR-Manual_FLA48460-EU%20Guide%20utilisateur%20-%20Fran%C3%A7ais.pdf) · [Manuál DEYE](https://www.deyeinverter.com/deyeinverter/2024/08/13/instructions_sun-3-12k-sg05lp3-eu-sm2_240813_en.pdf)\\n\",\"grid_options\":{\"columns\":\"full\"}}]}]}")
 
-{% macro reading(id, unit, absolute=false) -%}
-{% set v=states(id) %}{% if is_number(v) %}{{ ((v|float|abs) if absolute else (v|float))|round(2) }} {{ unit }}{% else %}nedostupné{% endif %}
-{%- endmacro %}
-### Baterie · Felicity FLA48460-EU
-{% set b=states('sensor.inverter_battery_power') %}
-**Stav:** {% if not is_number(b) %}měření nedostupné{% elif b|float < -30 %}nabíjí se{% elif b|float > 30 %}vybíjí se{% else %}v klidu{% endif %}
-
-**Nabití:** {{ reading('sensor.inverter_battery','%') }}
-
-**Teplota baterie:** {{ reading('sensor.inverter_battery_temperature','°C') }}
-
-**Napětí:** {{ reading('sensor.inverter_battery_voltage','V') }}
-
-**Proud baterie:** {{ reading('sensor.inverter_battery_current','A',true) }} · směr podle stavu výše
-
-**Výkon baterie:** {% if is_number(b) %}{{ (b|float|abs/1000)|round(2) }} kW{% else %}nedostupné{% endif %}
-
-**Celkový nabíjecí limit:** {{ reading('number.inverter_battery_max_charging_current','A') }}
-
-**Limit nabíjení ze sítě:** {{ reading('number.inverter_battery_grid_charging_current','A') }}
-
-**Hlášení baterie:** {% if is_state('binary_sensor.inverter_battery_alarm','on') or is_state('binary_sensor.inverter_battery_fault','on') %}⚠️ Hlášen alarm nebo porucha{% elif is_state('binary_sensor.inverter_battery_alarm','off') and is_state('binary_sensor.inverter_battery_fault','off') %}Bez hlášeného alarmu a poruchy{% else %}Údaje o alarmu a poruše nejsou dostupné{% endif %}
-
-### Měnič · DEYE SUN-12K-SG05LP3-EU-SM2
-**Teplota měniče:** {{ reading('sensor.inverter_temperature','°C') }}
-
-**Hlášené ztráty:** {{ reading('sensor.inverter_power_losses','W') }}
-
-**Pracovní režim:** {% if states('select.inverter_work_mode') in ['unknown','unavailable'] %}nedostupný{% elif is_state('select.inverter_work_mode','Zero Export To CT') %}Bez přetoků podle CT{% else %}{{ states('select.inverter_work_mode') }}{% endif %}
-
-**Nabíjecí test:** {% if is_state('sensor.jarvis_spot_control','running') %}běží{% elif is_state('sensor.jarvis_spot_control','idle') %}neběží{% elif is_state('sensor.jarvis_spot_control','restoring') %}obnovuje nastavení{% else %}{{ states('sensor.jarvis_spot_control') }}{% endif %}
-
-</details>"""
 def build(text):
     doc=yaml.load(text,Loader=Loader)
     home=next(v for v in doc['views'] if v.get('path')=='domov')
@@ -84,12 +54,12 @@ Při vypnutém Home Assistantu desetiminutový dohled neběží; na měniči pla
 
 Ruční test · automatický prodej vypnutý
 """)
-    view={'title':'Spoty','path':'spoty','icon':'mdi:lightning-bolt','type':'sections','max_columns':2,'sections':[{'type':'grid','cards':[status,md(DEVICE_DETAILS),modes,actions,limits]},{'type':'grid','cards':[house,prices,flows,history,more]}]}
+    view={'title':'Spoty','path':'spoty','icon':'mdi:lightning-bolt','type':'sections','max_columns':2,'sections':[{'type':'grid','cards':[status,copy.deepcopy(DEVICE_LINK),modes,actions,limits]},{'type':'grid','cards':[house,prices,flows,history,more]}]}
     for section in view['sections']:
         for c in section['cards']: c['grid_options']={'columns':'full'}
     marker='\n- title: Spoty\n'
     assert text.count(marker)==1
     prefix,old=text.split(marker)
     assert '\n- title:' not in old
-    return (prefix+"\n- !include 'spot-control-view.yaml'\n",
+    return (prefix+"\n- !include 'spot-control-view.yaml'\n- !include 'spot-device-details.yaml'\n",
             json.dumps(view,ensure_ascii=False,separators=(',',':'))+'\n')
