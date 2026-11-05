@@ -84,7 +84,7 @@ Při vypnutém Home Assistantu desetiminutový dohled neběží; na měniči pla
 
 Ruční test · automatický prodej vypnutý
 """)
-    view={'title':'Spoty','path':'spoty','icon':'mdi:lightning-bolt','type':'sections','max_columns':2,'sections':[{'type':'grid','cards':[status,modes,actions,limits,md(DEVICE_DETAILS)]},{'type':'grid','cards':[house,prices,flows,history,more]}]}
+    view={'title':'Spoty','path':'spoty','icon':'mdi:lightning-bolt','type':'sections','max_columns':2,'sections':[{'type':'grid','cards':[status,md(DEVICE_DETAILS),modes,actions,limits]},{'type':'grid','cards':[house,prices,flows,history,more]}]}
     for section in view['sections']:
         for c in section['cards']: c['grid_options']={'columns':'full'}
     marker='\n- title: Spoty\n'
