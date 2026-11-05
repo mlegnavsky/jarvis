@@ -1,0 +1,9 @@
+# Shared5W restore button — 6 November2026
+
+Owner requested a button that applies the common5W setting. Source2e4516198c9f2919d08f6ca8208e6f0119703e7b adds grid_target_card to sale_view.py and includes it in Spoty and Vlastní prodej. The button calls registered HA automation.trigger with target automation.jarvis_bezny_odber_0_w and skip_condition=false. This is the existing shared5W restoration automation; guarded actions wait for healthy inactive normal control and recheck after15s before writing only104=5. No second control service, new independent writer, export-mode switch or Core restart was introduced. All known target/restoration paths were already set5 by0.6.6.
+
+The card displays requested target and last independently read native register104, with language explicitly tied to the last reading. It does not claim the inverter will retain5; the preceding5→20 failure remains unresolved. Pressing during a sale does not disable the sale and must wait for the existing guard/timeout.
+
+Deployment grid5button-plan-20261106/grid5button-apply-20261106 verified file_written, activation none. Both live YAML files exactly matched submitted bytes on readback. Existing unrelated cards were compared after removing the insertion and remained semantically identical; root dashboard includes both paths.14 existing view/policy tests and diff check pass. The HA automation.trigger service and existing enabled automation entity were verified available. No authenticated browser rendering or physical button click was performed; source wiring/readback is verified, not visual or physical acceptance. User may need to reload dashboard to fetch YAML. Lease grid5button-release-20261106 verified.
+
+Locations: jarvis_workspace/spot-control-view.yaml and jarvis_workspace/spot-sales-view.yaml. Label: Nastavit všude5W (rendered with normal spaces). Backend remains0.6.6; automatic-sale setting unchanged.
