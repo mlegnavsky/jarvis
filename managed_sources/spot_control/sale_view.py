@@ -1,5 +1,19 @@
 """Native mobile form: navigation is inert; Start is an explicit separate action."""
 def md(content):return {'type':'markdown','content':content}
+def grid_target_card():
+ action={'action':'perform-action','perform_action':'automation.trigger',
+         'target':{'entity_id':'automation.jarvis_bezny_odber_0_w'},'data':{'skip_condition':False}}
+ return {'type':'vertical-stack','grid_options':{'columns':'full'},'cards':[
+  {'type':'tile','entity':'number.inverter_zero_export_power','name':'Nastavit všude 5 W',
+   'icon':'mdi:transmission-tower','color':'blue','hide_state':True,
+   'tap_action':action,'icon_tap_action':dict(action),'hold_action':{'action':'none'}},
+  md("""{% set target=state_attr('sensor.jarvis_energy_sales','grid_target_w') %}
+{% set program=state_attr('sensor.jarvis_energy_sales','native_program') or {} %}
+{% set actual=program.get('register_104') %}
+**Požadováno: {{ target if target is not none else '—' }} W · měnič: {{ actual if actual is not none else '—' }} W**
+{% if actual==5 %}Měnič při posledním načtení potvrdil 5 W.{% elif actual is not none %}Měnič zatím 5 W nepotvrdil.{% else %}Čekám na čtení měniče.{% endif %}
+Tlačítko obnoví společné nastavení 5 W při běžném provozu. Stav se aktualizuje po načtení měniče.
+""")]}
 def verification_card():
  return md("### Stav ověřování\n{% set s=state_attr('sensor.jarvis_energy_sales','settings') or {} %}\n{% set c=s.get('command',{}) %}\n{% set t=state_attr('sensor.jarvis_energy_sales','native_test') or {} %}\n{% if t %}\n**Test baterie: {{ {'preparing':'příprava','armed':'čekám na začátek','measuring':'měřím průběh','expiry_observed':'nativní konec ověřen','stopping':'ukončuji a vracím nastavení'}.get(t.get('phase'),'ověřování') }} · nejvýše 500 W**\nZačátek: **{{ t.get('start') | timestamp_custom('%H:%M:%S',true) }}**, konec: **{{ t.get('end') | timestamp_custom('%H:%M:%S',true) }}**.\nRezerva při testu **{{ t.get('minimum_soc',95) }} %**.\n{% if t.get(\'selling_first\') %}Doběh regulace sleduji nejvýše 60 s po konci při stejném výkonovém stropu. Režim Selling First · mimo okno je dočasně nastaveno 100 %. Dům může odebírat ze sítě, dokud neobnovím běžné nastavení.{% endif %}\n{% elif c.get('status')=='failed' %}\n**Test se nespustil.** {{ c.get('error') }}\n{% else %}\nČekám na další ověřovací krok.\n{% endif %}\nBateriová automatika: **{{ 'ověřená' if s.get('battery_verified') else 'dosud neověřená' }}**.\n")
 def tile(name,icon,service,color):
@@ -67,6 +81,7 @@ Automatika vybírá denní dvouhodinový blok pro baterii a prodává dostupné 
  conditional('native_test',tile('Zastavit ověřovací test','mdi:stop-circle','stop_sale','red')),
  *[conditional(phase,tile('Zastavit bateriový prodej','mdi:stop-circle','stop_sale','red')) for phase in ('armed','measuring','expiry_observed','stopping')],
  {'type':'tile','entity':'switch.jarvis_sale_automatic','name':'Automatický prodej','icon':'mdi:solar-power','color':'green'},
+ grid_target_card(),
  {'type':'tile','entity':'sensor.jarvis_energy_sales','name':'Vlastní prodej','icon':'mdi:transmission-tower-export','color':'green','hide_state':True,
   'tap_action':{'action':'navigate','navigation_path':'/hlavni-prehled/vlastni-prodej'},
   'icon_tap_action':{'action':'navigate','navigation_path':'/hlavni-prehled/vlastni-prodej'}},
@@ -79,7 +94,7 @@ def view():
 
 Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na dostupné energii. Prodejní rezerva baterie je pevně 60 %. U baterie nastav nejméně 5 minut; nativní začátek je na následující pětiminutové hranici.
 '''),
- daily_block_card(),battery_sale_card(),
+ daily_block_card(),battery_sale_card(),grid_target_card(),
  {'type':'entities','title':'Nastavení vlastního prodeje','show_header_toggle':False,'entities':[
   {'entity':'select.jarvis_sale_source','name':'Co prodávat'},
   {'entity':'number.jarvis_sale_power_w','name':'Maximální výkon do sítě (W)'},
@@ -123,7 +138,7 @@ def augment_spot(spot):
  owned=any(c.get('name')=='Vlastní prodej' for c in left)
  if len(right)!=5:raise ValueError('Spot dashboard layout changed; refusing blind overwrite')
  if owned:
-  if len(left) not in (10,len(summary_cards())+3) or not left[0].get('content','').startswith('## Prodej elektřiny'):
+  if len(left) not in (10,len(summary_cards())+2,len(summary_cards())+3) or not left[0].get('content','').startswith('## Prodej elektřiny'):
    raise ValueError('Sales overview layout changed; refusing blind overwrite')
   retained=left[-3:]
  else:
