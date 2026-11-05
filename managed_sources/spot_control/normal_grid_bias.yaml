@@ -1,0 +1,32 @@
+id: jarvis_bezny_odber_0_w
+alias: Jarvis – běžný odběr 0 W
+description: Obnoví cíl odběru 0 W po startu nebo návratu do klidu; nezasahuje do probíhajícího prodeje ani nabíjení.
+triggers:
+  - trigger: homeassistant
+    event: start
+  - trigger: template
+    value_template: &normal_guard >-
+      {{ is_state('sensor.jarvis_energy_sales', 'idle')
+         and state_attr('sensor.jarvis_energy_sales', 'ready') == true
+         and state_attr('sensor.jarvis_energy_sales', 'healthy') == true
+         and state_attr('sensor.jarvis_energy_sales', 'active') == false
+         and state_attr('sensor.jarvis_spot_control', 'active') == false
+         and is_state('select.inverter_work_mode', 'Zero Export To CT')
+         and is_state('switch.inverter_export_surplus', 'off')
+         and states('number.inverter_zero_export_power') not in ['unknown', 'unavailable'] }}
+actions:
+  - wait_template: *normal_guard
+    timeout: '00:02:00'
+    continue_on_timeout: false
+  - delay: '00:00:15'
+  - condition: template
+    value_template: *normal_guard
+  - condition: template
+    value_template: "{{ states('number.inverter_zero_export_power') | float(0) != 0 }}"
+  - action: number.set_value
+    target:
+      entity_id: number.inverter_zero_export_power
+    data:
+      value: 0
+mode: single
+max_exceeded: silent
