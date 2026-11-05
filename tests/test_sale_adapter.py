@@ -33,14 +33,22 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   (path/'.storage').mkdir()
   self.services={};self.writes=[];self.tasks=[];self.ticks=[]
   self.hass=types.SimpleNamespace(data={},is_running=False,states=States(),config=types.SimpleNamespace(path=lambda *parts:str(path.joinpath(*parts))))
+  self.device_registers={143:9990,142:2,145:0};self.device_reads=[];self.device_reject=False
+  async def execute(code,address,count=1):
+   self.device_reads.append((code,address,count));return [self.device_registers[address]]
+  entry=types.SimpleNamespace(runtime_data=types.SimpleNamespace(device=types.SimpleNamespace(execute=execute)))
+  self.hass.config_entries=types.SimpleNamespace(async_entries=lambda domain:[entry] if domain=='solarman' else [])
   self.hass.http=types.SimpleNamespace(register_view=lambda view:None)
   self.hass.bus=types.SimpleNamespace(async_fire=lambda *a:None,async_listen_once=lambda *a:None)
   self.hass.async_create_task=lambda coro:self.tasks.append(asyncio.create_task(coro))
-  async def executor(fn,*args):return fn(*args)
+  async def executor(fn,*args):
+   await asyncio.sleep(0);return fn(*args)
   self.hass.async_add_executor_job=executor
   async def call(domain,service,data,blocking=False):
    entity=data['entity_id'];value=data.get('value',data.get('option','on' if service=='turn_on' else 'off'))
    self.writes.append((entity,value));self.hass.states.async_set(entity,value)
+   mapping={'number.inverter_export_surplus_power':143,'select.inverter_work_mode':142,'switch.inverter_export_surplus':145}
+   if entity in mapping and not self.device_reject:self.device_registers[mapping[entity]]={'Zero Export To CT':2,'Export First':0,'on':1,'off':0}.get(value,value)
    if entity=='number.inverter_export_surplus_power' and value==0:self.hass.states.async_set('sensor.inverter_grid_power',20)
    self.poll()
   self.hass.services=types.SimpleNamespace(async_call=call)
@@ -108,5 +116,89 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   self.hass.states.get('sensor.inverter_device_alarm').last_reported=datetime.fromtimestamp(time.time()-120,timezone.utc)
   with self.assertRaises(ValueError):await self.service('start_sale',{'power_w':500,'duration_minutes':3})
   self.assertEqual(self.writes,[])
+
+ async def test_optimistic_ha_value_does_not_prove_device_accepted_cap(self):
+  data=await self.setup();await self.ticks[0]();self.device_reject=True
+  with self.assertRaisesRegex(RuntimeError,'registr'):
+   await self.service('start_sale',{'power_w':500,'duration_minutes':3})
+  self.assertNotIn(('switch.inverter_export_surplus','on'),self.writes)
+ async def test_start_reads_native_cap_register_before_enabling(self):
+  data=await self.setup();await self.ticks[0]()
+  await self.service('start_sale',{'power_w':500,'duration_minutes':3})
+  self.assertIn((3,143,1),self.device_reads)
+
+ async def test_expiring_file_start_is_durable_and_not_repeated(self):
+  import json
+  data=await self.setup();await self.ticks[0]()
+  now=time.time();path=pathlib.Path(self.hass.config.path('jarvis_workspace','sales-command.json'))
+  path.parent.mkdir(exist_ok=True)
+  path.write_text(json.dumps({'id':'test-1','issued_at':now,'expires_at':now+60,'action':'start','data':{'mode':'pv','power_w':500,'duration_minutes':3}}))
+  await self.ticks[0]()
+  self.assertTrue(data['controller'].active)
+  count=len(self.writes);await self.ticks[0]()
+  self.assertEqual(len(self.writes),count)
+  self.assertEqual(data['settings']['command']['status'],'confirmed')
+ async def test_expired_file_command_cannot_start_sale(self):
+  import json
+  data=await self.setup();await self.ticks[0]()
+  now=time.time();path=pathlib.Path(self.hass.config.path('jarvis_workspace','sales-command.json'))
+  path.parent.mkdir(exist_ok=True)
+  path.write_text(json.dumps({'id':'old','issued_at':now-100,'expires_at':now-1,'action':'start','data':{'power_w':500}}))
+  await self.ticks[0]()
+  self.assertFalse(data['controller'].active);self.assertEqual(self.writes,[])
+ async def test_file_command_does_not_expose_arbitrary_services(self):
+  import json
+  data=await self.setup();await self.ticks[0]()
+  now=time.time();path=pathlib.Path(self.hass.config.path('jarvis_workspace','sales-command.json'))
+  path.parent.mkdir(exist_ok=True)
+  path.write_text(json.dumps({'id':'bad','issued_at':now,'expires_at':now+60,'action':'service','data':{'service':'switch.turn_off'}}))
+  await self.ticks[0]()
+  self.assertEqual(self.writes,[])
+
+ async def test_unreadable_inbox_does_not_disable_export_guard(self):
+  data=await self.setup();await self.ticks[0]()
+  await self.service('start_sale',{'power_w':500,'duration_minutes':3})
+  path=pathlib.Path(self.hass.config.path('jarvis_workspace','sales-command.json'));path.mkdir()
+  self.hass.states.async_set('sensor.inverter_grid_power',-931);self.poll()
+  await self.ticks[0]()
+  self.assertFalse(data['controller'].active)
+ async def test_overlapping_ticks_claim_command_only_once(self):
+  import json
+  data=await self.setup();await self.ticks[0]()
+  now=time.time();path=pathlib.Path(self.hass.config.path('jarvis_workspace','sales-command.json'));path.parent.mkdir(exist_ok=True)
+  path.write_text(json.dumps({'id':'concurrent','issued_at':now,'expires_at':now+60,'action':'start','data':{'power_w':500,'duration_minutes':3}}))
+  await asyncio.gather(self.ticks[0](),self.ticks[0]())
+  self.assertTrue(data['controller'].active)
+  self.assertEqual(sum(e=='switch.inverter_export_surplus' and v=='on' for e,v in self.writes),1)
+  self.assertEqual(data['settings']['command']['status'],'confirmed')
+
+ async def test_reused_id_with_new_timestamp_cannot_start_again(self):
+  import json
+  data=await self.setup();await self.ticks[0]()
+  path=pathlib.Path(self.hass.config.path('jarvis_workspace','sales-command.json'));path.parent.mkdir(exist_ok=True)
+  async def send():
+   now=time.time();path.write_text(json.dumps({'id':'same-id','issued_at':now,'expires_at':now+60,'action':'start','data':{'power_w':500,'duration_minutes':3}}));await self.ticks[0]()
+  await send();await self.service('stop_sale',{});await send()
+  self.assertFalse(data['controller'].active)
+  self.assertEqual(sum(e=='switch.inverter_export_surplus' and v=='on' for e,v in self.writes),1)
+
+ async def test_start_rechecks_expiry_inside_control_lock(self):
+  data=await self.setup();await self.ticks[0]()
+  with self.assertRaisesRegex(ValueError,'vypršel'):
+   await data['start']({'power_w':500,'duration_minutes':3},valid_until=time.time()-1)
+  self.assertEqual(self.writes,[])
+
+ async def test_protective_stop_still_runs_when_command_database_claim_fails(self):
+  import json
+  for action,body in [('stop',{}),('automatic',{'enabled':False})]:
+   data=await self.setup();await self.ticks[-1]()
+   await self.service('start_sale',{'power_w':500,'duration_minutes':3})
+   def fail(_body):raise OSError('database full')
+   data['journal'].claim_command=fail
+   now=time.time();path=pathlib.Path(self.hass.config.path('jarvis_workspace','sales-command.json'));path.parent.mkdir(exist_ok=True)
+   path.write_text(json.dumps({'id':'stop-'+action,'issued_at':now,'expires_at':now+60,'action':action,'data':body}))
+   await self.ticks[-1]()
+   self.assertFalse(data['controller'].active)
+   self.assertEqual(self.hass.states.get('switch.inverter_export_surplus').state,'off')
 
 if __name__=='__main__':unittest.main()

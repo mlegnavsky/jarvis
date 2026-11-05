@@ -14,6 +14,7 @@ class Journal:
    db.execute('PRAGMA journal_mode=WAL')
    db.execute('CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY, t REAL NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL)')
    db.execute('CREATE INDEX IF NOT EXISTS events_time ON events(t)')
+   db.execute('CREATE TABLE IF NOT EXISTS commands(id TEXT PRIMARY KEY, body TEXT NOT NULL)')
   os.chmod(self.path,0o600)
  @contextmanager
  def db(self):
@@ -40,3 +41,9 @@ class Journal:
   if type(cursor) is not int or cursor<0 or type(limit) is not int or not 1<=limit<=1000:raise ValueError('Invalid history cursor')
   with self.db() as db:rows=db.execute('SELECT id,t,kind,payload FROM events WHERE id>? ORDER BY id LIMIT ?',(cursor,limit)).fetchall()
   return [{'id':r[0],'t':r[1],'kind':r[2],'payload':json.loads(r[3])} for r in rows]
+
+ def claim_command(self,body):
+  key=body['id'];encoded=json.dumps(body,sort_keys=True,allow_nan=False)
+  with self.db() as db:
+   cursor=db.execute('INSERT OR IGNORE INTO commands(id,body) VALUES(?,?)',(key,encoded))
+   return cursor.rowcount==1

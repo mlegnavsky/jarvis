@@ -16,13 +16,13 @@ from .journal import Journal
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.4.0'
+VERSION='0.4.1'
 
 async def async_setup_sales(hass,config,charge_controller):
  store=Store(hass,1,KEY);saved=await store.async_load() or {}
  prefs={'automatic':False,'power_w':500,'minutes':3,'source':'pv','pv_verified':False,'battery_verified':False,**saved.get('settings',{})}
  journal=await hass.async_add_executor_job(Journal,Path(hass.config.path('.storage','jarvis_energy_sales.sqlite')))
- lock=asyncio.Lock();history_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0
+ lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0
  archive_error='';runtime_error='';commission_requested=bool((config.get(DOMAIN) or {}).get('commission_pv_test',False))
  async def save_record(record):
   await store.async_save({'settings':dict(prefs),'transaction':record})
@@ -80,6 +80,21 @@ async def async_setup_sales(hass,config,charge_controller):
    if state is None:return None
    stamps.append((getattr(state,'last_reported',None) or state.last_updated).timestamp())
   return min(stamps) if max(stamps)-min(stamps)<=10 else None
+ async def native_readback(entity,value):
+  # This installation uses the verified deye_p3 register map. Never treat the
+  # Solarman optimistic HA update as a physical setting readback.
+  mapping={'number.inverter_export_surplus_power':(143,1),
+   'select.inverter_work_mode':(142,1),'switch.inverter_export_surplus':(145,1)}
+  if entity not in mapping:return
+  entries=hass.config_entries.async_entries('solarman')
+  if len(entries)!=1:raise RuntimeError('Nelze jednoznačně ověřit registr měniče.')
+  device=entries[0].runtime_data.device;address,scale=mapping[entity]
+  expected={'Zero Export To CT':2,'Export First':0,'Zero Export To Load':1,'on':1,'off':0}.get(value,value)
+  expected=int(float(expected)/scale)
+  async with asyncio.timeout(15):raw=await device.execute(3,address,count=1)
+  actual=raw[0] if isinstance(raw,list) and len(raw)==1 else None
+  await event('native_register_readback',{'entity':entity,'address':address,'expected':expected,'actual':actual,'sale_id':c.record.get('id')})
+  if actual!=expected:raise RuntimeError(f'Měnič nepotvrdil registr {address}: požadováno {expected}, naměřeno {actual}.')
  async def write(entity,value):
   domain=entity.split('.')[0]
   if domain=='number':service='set_value';data={'value':float(value)}
@@ -93,20 +108,23 @@ async def async_setup_sales(hass,config,charge_controller):
    state=hass.states.get(entity)
    reported=(getattr(state,'last_reported',None) or state.last_updated) if state else None
    same=state is not None and (state.state==str(value) or number(state.state) is not None and number(state.state)==number(value))
-   if same and reported is not None and reported>issued:return
+   if same and reported is not None and reported>issued:
+    await native_readback(entity,value);return
   raise RuntimeError('Měnič nepotvrdil '+entity)
  c=SaleController(read,write,save_record,event,healthy=healthy,price=lambda:(current_price() or {}).get('net'),saved=saved.get('transaction'),reported=reported)
  async def handle_stop():
   if c.active or not c.last_stop or prefs.get('handled_stop_id')==c.last_stop['id']:return
   result=after_stop(prefs,c.last_stop);prefs.clear();prefs.update(result);await persist_settings()
- async def configure(changes):
+ async def configure(changes,valid_until=None):
   async with lock:
+   if valid_until is not None and time.time()>valid_until:raise ValueError('Povel před provedením vypršel.')
    before=dict(prefs);prefs.update(changes)
    try:await persist_settings();await event('settings_changed',{'before':before,'after':dict(prefs)})
    except Exception:prefs.clear();prefs.update(before);raise
- async def start_sale(data):
+ async def start_sale(data,valid_until=None):
   nonlocal last_reason
   async with lock:
+   if valid_until is not None and time.time()>valid_until:raise ValueError('Povel před provedením vypršel.')
    if not ready:raise ValueError('Čekám na obnovu řízení.')
    mode=data.get('mode',prefs['source'])
    if mode=='battery' and not prefs['battery_verified']:
@@ -129,7 +147,7 @@ async def async_setup_sales(hass,config,charge_controller):
  def snapshot():
   p=current_price();entity=hass.states.get('sensor.inverter_battery')
   return {'version':VERSION,'ready':ready,'active':c.active,'observed':c.observed,'phase':c.record.get('phase','idle'),
-   'settings':dict(prefs),'reason':last_reason,'error':c.error or runtime_error,'price':p,
+   'settings':dict(prefs),'reason':('Automatika pozastavena po zásahu ochrany. '+(c.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':c.error or runtime_error,'price':p,
    'mode':c.record.get('mode'),'power_w':c.record.get('power_w'),'deadline':c.record.get('deadline'),
    'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
@@ -152,9 +170,63 @@ async def async_setup_sales(hass,config,charge_controller):
    try:await hass.async_add_executor_job(write_report,{'captured_at':datetime.now(timezone.utc).isoformat(),**body,'telemetry':telemetry,'events':recent})
    except OSError:pass
    last_report=time.time()
+ def read_command():
+  path=Path(hass.config.path('jarvis_workspace','sales-command.json'))
+  if not path.exists():return None
+  with path.open('rb') as stream:raw=stream.read(4097)
+  if len(raw)>4096:return None
+  try:
+   body=json.loads(raw)
+   if not isinstance(body,dict) or set(body)!={'id','issued_at','expires_at','action','data'}:return None
+   if not isinstance(body['id'],str) or not 1<=len(body['id'])<=80:return None
+   issued=number(body['issued_at']);expires=number(body['expires_at']);now=time.time()
+   previous=prefs.get('command',{})
+   if issued is None or expires is None or not issued<=now<=expires<=issued+120:return None
+   if issued<=previous.get('issued_at',0):return None
+   schemas={
+    'start':vol.Schema({vol.Optional('mode'):vol.In(['pv','battery']),vol.Optional('power_w'):vol.All(vol.Coerce(float),vol.Range(min=100,max=9300)),vol.Optional('duration_minutes'):vol.All(vol.Coerce(float),vol.Range(min=1,max=60))}),
+    'stop':vol.Schema({}), 'automatic':vol.Schema({vol.Required('enabled'):bool})}
+   if body['action'] not in schemas:return None
+   body['data']=schemas[body['action']](body['data']);return body
+  except (ValueError,TypeError,vol.Invalid):return None
+ async def process_command():
+  if command_lock.locked():return
+  async with command_lock:
+   body=await hass.async_add_executor_job(read_command)
+   if not body:return
+   protective=body['action']=='stop' or body['action']=='automatic' and not body['data']['enabled']
+   try:
+    if not await hass.async_add_executor_job(journal.claim_command,body):return
+   except Exception:
+    if protective:await stop_sale()
+    raise
+   receipt={'id':body['id'],'issued_at':body['issued_at'],'action':body['action'],'status':'claimed'}
+   # A persisted claim is consumed even if journaling or the action later fails.
+   previous=prefs.get('command');prefs['command']=receipt
+   try:await persist_settings()
+   except Exception:
+    if previous is None:prefs.pop('command',None)
+    else:prefs['command']=previous
+    if protective:await stop_sale()
+    raise
+   try:
+    await event('command_claimed',receipt)
+    if time.time()>body['expires_at']:raise ValueError('Povel před provedením vypršel.')
+    if body['action']=='start':await start_sale(body['data'],body['expires_at'])
+    elif body['action']=='stop':await stop_sale()
+    elif body['data']['enabled']:await configure({'automatic':True,'inhibited':False,'commission_cancelled':False,'commission_attempted':False if not prefs['pv_verified'] else True},body['expires_at'])
+    else:await stop_sale()
+    receipt={**receipt,'status':'confirmed'}
+   except Exception as exc:
+    if protective:await stop_sale()
+    receipt={**receipt,'status':'failed','error':str(exc)}
+   prefs['command']=receipt;await persist_settings();await event('command_result',receipt)
  async def tick(_now=None):
   nonlocal ready,last_reason,last_decision,runtime_error
   if lock.locked() or c.lock.locked():return
+  if ready:
+   try:await process_command()
+   except Exception as exc:runtime_error='Povel nelze zpracovat: '+str(exc)
   async with lock:
    try:
     if not ready:

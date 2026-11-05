@@ -68,6 +68,7 @@ class SaleController:
   async with self.lock:await self._stop(reason)
  async def _stop(self,reason='manual'):
   if not self.active:return
+  self.record.setdefault('stop_reason',reason)
   self.record['phase']='stopping'
   try:await self.save(copy.deepcopy(self.record))
   except Exception:pass # still attempt physical safe stop with original durable record
@@ -89,14 +90,15 @@ class SaleController:
     if entity not in (CAP,MODE,ENABLE):await self._set(entity,value,False)
    await self._set(CAP,EXPORT_LIMIT,False)
    proof={'id':self.record.get('id'),'mode':self.record.get('mode'),'purpose':self.record.get('purpose'),
-    'promote_auto':self.record.get('promote_auto',False),'reason':'stop_recovery' if failures else reason,
+    'promote_auto':self.record.get('promote_auto',False),'reason':'stop_recovery' if failures or self.record.get('stop_attempt_failed') else self.record['stop_reason'],
     'observed':self.observed,'stop_verified':True,
     'sustained':self.record.get('export_count',0)>=3 and self.record.get('export_last',0)-self.record.get('export_first',0)>=20,
-    'error':self.error,'failures':failures}
+    'error':self.error,'failures':failures,'context':self.record.get('stop_context')}
    await self.event('sale_stop',proof)
    await self.save({})
    self.record={};self.observed=False;self.last_stop=proof
   except Exception as exc:
+   self.record['stop_attempt_failed']=True
    self.error='Ukončení prodeje není potvrzené: '+str(exc)
    try:await self.save(copy.deepcopy(self.record))
    except Exception:pass
@@ -105,18 +107,27 @@ class SaleController:
   states=self.read();grid=number(states.get('sensor.inverter_grid_power'));batt=number(states.get('sensor.inverter_battery_power'));soc=number(states.get('sensor.inverter_battery'))
   price=number(self.price());mode=self.record['mode']
   wrong_mode=states.get(MODE)!=('Export First' if mode=='battery' else 'Zero Export To CT')
-  stop=(self.record.get('phase')=='stopping' or not self.healthy() or price is None or price<=0 or self.clock()>=self.record['deadline'] or grid is None or soc is None or wrong_mode)
-  if mode=='battery' and soc is not None and soc<=self.record['minimum_soc']:stop=True
-  # PV-only must not quietly become a battery sale; allow a small meter/noise margin.
-  if mode=='pv' and grid is not None and grid< -100 and batt is not None and batt>200:stop=True
-  if grid is not None and -grid>self.record['power_w']+300:stop=True
-  if stop:
-   abnormal=(not self.healthy() or price is None or price<=0 or grid is None or soc is None or wrong_mode
-    or grid is not None and -grid>self.record['power_w']+300
-    or mode=='pv' and grid is not None and grid<-100 and batt is not None and batt>200)
-   reason='guard' if abnormal else 'deadline' if self.clock()>=self.record['deadline'] else 'reserve'
+  triggers=[]
+  if not self.healthy():triggers.append('measurement_or_health')
+  if price is None or price<=0:triggers.append('price')
+  if grid is None or soc is None:triggers.append('missing_measurement')
+  if wrong_mode:triggers.append('mode_changed')
+  if mode=='pv' and grid is not None and grid<-100 and batt is not None and batt>200:triggers.append('battery_discharge')
+  if grid is not None and -grid>self.record['power_w']+300:triggers.append('export_limit')
+  deadline=self.clock()>=self.record['deadline']
+  reserve=mode=='battery' and soc is not None and soc<=self.record['minimum_soc']
+  if triggers or deadline or reserve or self.record.get('phase')=='stopping':
+   self.record.setdefault('stop_context',{'triggers':triggers,'grid_w':grid,'battery_w':batt,'soc':soc,
+    'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w'],
+    'reported_at':number(self.reported()),'price_net':price,'captured_at':self.clock()})
+   if 'export_limit' in triggers:self.error=f"Dodávka {-grid:g} W překročila nastavených {self.record['power_w']} W a ochrannou odchylku 300 W."
+   elif triggers:self.error='Ochrana prodeje: '+', '.join(triggers)
+   reason='guard' if triggers else 'deadline' if deadline else 'reserve'
    await self.stop(reason);return
   stamp=number(self.reported())
+  if stamp is not None and stamp>self.record.get('sample_last',0):
+   await self.event('sale_measurement',{'sale_id':self.record.get('id'),'source_t':stamp,'grid_w':grid,'battery_w':batt,'soc':soc,'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w']})
+   self.record['sample_last']=stamp
   threshold=max(100,self.record.get('baseline_export_w',0)+100)
   if grid is not None and grid < -threshold and stamp is not None and stamp>self.record.get('enabled_at',float('inf')):
    if stamp>self.record.get('export_last',0):

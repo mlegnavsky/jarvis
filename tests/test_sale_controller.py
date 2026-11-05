@@ -110,4 +110,29 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   c=self.c();await c.start('pv',500,3);await c.tick()
   self.assertFalse(c.observed)
 
+ async def test_guard_records_exact_trigger_measurements(self):
+  c=self.c();await c.start('pv',500,3)
+  self.states['sensor.inverter_grid_power']='-931';self.states['sensor.inverter_pv_power']='1865'
+  await c.tick()
+  proof=c.last_stop
+  self.assertIn('context',proof)
+  self.assertEqual(proof['context']['grid_w'],-931)
+  self.assertEqual(proof['context']['requested_w'],500)
+  self.assertIn('export_limit',proof['context']['triggers'])
+  self.assertIn('931',proof['error'])
+
+ async def test_failed_guard_stop_cannot_later_become_successful_commission(self):
+  c=self.c();await c.start('pv',500,3,purpose='commission',promote_auto=True)
+  c.observed=True;c.record.update(export_count=4,export_first=105,export_last=130)
+  self.states['sensor.inverter_grid_power']='-931';real=c.write;fail=True
+  async def once(e,v):
+   nonlocal fail
+   if e=='switch.inverter_export_surplus' and v=='off' and fail:
+    fail=False;raise RuntimeError('lost acknowledgment')
+   await real(e,v)
+  c.write=once;await c.tick();self.assertTrue(c.active)
+  self.now=500;self.states['sensor.inverter_grid_power']='20';await c.tick()
+  self.assertFalse(c.active);self.assertNotEqual(c.last_stop['reason'],'deadline')
+  self.assertIn('export_limit',c.last_stop['context']['triggers'])
+
 if __name__=='__main__':unittest.main()
