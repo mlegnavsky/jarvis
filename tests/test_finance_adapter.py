@@ -3,11 +3,27 @@ import importlib.util
 import pathlib
 import time
 import unittest
+from unittest.mock import patch
 import test_sale_adapter as fixtures
 
 class FinanceAdapterTests(unittest.IsolatedAsyncioTestCase):
- asyncSetUp=fixtures.AdapterTests.asyncSetUp
- asyncTearDown=fixtures.AdapterTests.asyncTearDown
+ async def asyncSetUp(self):
+  await fixtures.AdapterTests.asyncSetUp(self)
+  # Counters are deliberately untrusted during the midnight reset window.
+  # These accounting tests require a stable daytime clock and fresh telemetry.
+  now=dt.datetime.now(dt.timezone.utc).replace(hour=12,minute=5,second=0,microsecond=0).timestamp()
+  class ClockDateTime(dt.datetime):
+   @classmethod
+   def now(cls,tz=None):return cls.fromtimestamp(now,tz)
+  self.clock_patch=patch.object(time,'time',return_value=now);self.clock_patch.start()
+  self.datetime_patch=patch.object(fixtures,'datetime',ClockDateTime);self.datetime_patch.start()
+  for state in self.hass.states.items.values():
+   state.last_changed=state.last_updated=state.last_reported=ClockDateTime.now(dt.timezone.utc)
+  start=ClockDateTime.fromtimestamp(now-now%900,dt.timezone.utc).isoformat()
+  self.hass.states.async_set('sensor.jarvis_spot_ote',5,{'fetched_at':start,'rate':25,'rows':[{'time':start,'eur_mwh':240}]})
+ async def asyncTearDown(self):
+  try:await fixtures.AdapterTests.asyncTearDown(self)
+  finally:self.datetime_patch.stop();self.clock_patch.stop()
  async def setup_finance(self):
   spec=importlib.util.spec_from_file_location('sales_adapter_test.finance_setup',pathlib.Path('managed_sources/spot_control/finance_setup.py'))
   module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);self.finance_module=module

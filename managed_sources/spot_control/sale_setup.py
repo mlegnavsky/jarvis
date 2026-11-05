@@ -24,7 +24,7 @@ from .native_zero_target import set_zero_target
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.6.4'
+VERSION='0.6.5'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -344,12 +344,16 @@ async def async_setup_sales(hass,config,charge_controller):
    prefs.update(automatic=False,inhibited=True);await persist_settings()
   if c.active or not c.last_stop or prefs.get('handled_stop_id')==c.last_stop['id']:return
   result=after_stop(prefs,c.last_stop);prefs.clear();prefs.update(result);await persist_settings()
+ async def _configure_locked(changes,valid_until=None):
+  if valid_until is not None and time.time()>valid_until:raise ValueError('Povel před provedením vypršel.')
+  if changes.get('automatic') is True and any(getattr(controller,'active',False) and getattr(controller,'record',{}).get('phase')=='stopping' for controller in (window,battery,c)):
+   raise ValueError('Čekám na potvrzené ukončení předchozího prodeje.')
+  before=dict(prefs);prefs.update(changes)
+  try:await persist_settings();await event('settings_changed',{'before':before,'after':dict(prefs)})
+  except Exception:prefs.clear();prefs.update(before);raise
  async def configure(changes,valid_until=None):
   async with lock:
-   if valid_until is not None and time.time()>valid_until:raise ValueError('Povel před provedením vypršel.')
-   before=dict(prefs);prefs.update(changes)
-   try:await persist_settings();await event('settings_changed',{'before':before,'after':dict(prefs)})
-   except Exception:prefs.clear();prefs.update(before);raise
+   await _configure_locked(changes,valid_until)
  async def start_sale(data,valid_until=None):
   nonlocal last_reason
   async with lock:
@@ -383,9 +387,11 @@ async def async_setup_sales(hass,config,charge_controller):
    last_reason='Ruční prodej · čekám na potvrzení dodávky.'
  async def stop_sale():
   changes={'automatic':False,'commission_cancelled':True,'commission_attempted':True}
-  try:await configure(changes)
-  except Exception:prefs.update(changes)
   async with lock:
+   # Keep the disable and the physical cleanup in one control transaction.
+   # A newer enable must not overtake an older stop waiting for this lock.
+   try:await _configure_locked(changes)
+   except Exception:prefs.update(changes)
    if window.active:await window.stop('manual')
    if battery.active:await battery.stop('manual')
    await c.stop('manual');await handle_stop()
