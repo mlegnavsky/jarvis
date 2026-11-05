@@ -1000,3 +1000,9 @@ liveplannerresultsbeforeactivation/backfill. Nominalcapacity23.5kWhisexplicit
 policybasis,notmeasuredSOH. ProductionbatteryverificationstillFALSE; native
 productionactuator/outagepolicyandPV-onlybatteryassiststillpending.0Wtarget
 remainsunconfirmednative20. No new liveexportstartedwhileworksourcechanges.
+
+
+## Appliance reading and mobile chart — 5 November 2026
+Owner clarified that zero applies only to deliberate grid import, never appliance consumption. Native Deye Load becomes0 in ExportFirst, including the vendor app. Added separate canonical template sensor sensor.jarvis_spotreba_domu with AC-output+external-grid balance in ExportFirst and native Load otherwise; source health/coherence/negative checks and5s heartbeat. Live configuration validated; template reload and canonical nonzero state confirmed without Core restart or inverter writes. Main/Spoty/device views now use canonical sensor. Normal-grid0 policy is unchanged and separate.
+
+Published source and exact liveJS readback: mobile full-width chart, pinch time zoom/pan, reset,+/−, persistent window, canonical history cutover gaps. Source unit and synthetic gesture checks pass; pinned Python suite577testsPASS. Actual iPhone/browser acceptance remains unverified (Chromium launch sandbox and CUA local-file policy blocked preview). A client reload may be needed for the updated static asset. HARecorder and long-term statistics include the new house entity; adding it to the private10s archive IDS remains a separate activation task. Do not fabricate old house readings or claim native vendor-app0 fixed. Batteryautomatic export stayed active/healthy throughout; no Core/OS upgrade or restart.

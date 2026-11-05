@@ -18,7 +18,8 @@ Ověřeno 4. 11. 2026. Tento dokument čti před dotazy na historii, baterii a s
 | Entita | Veličina / znaménko |
 |---|---|
 | sensor.inverter_pv_power | Výkon panelů W |
-| sensor.inverter_load_power | Spotřeba domu W |
+| sensor.inverter_load_power | Nativní údaj Load W; při Export First byl pozorován chybný údaj 0, neplést s cílem sítě |
+| sensor.jarvis_spotreba_domu | Spotřeba spotřebičů W: při Export First bilance AC výstupu a externí sítě, jinak nativní Load; nedostupné zdroje nejsou nula |
 | sensor.inverter_grid_power | Síť W; + odběr, − dodávka |
 | sensor.inverter_battery | SOC baterie %; není nabíjecí výkon |
 | sensor.inverter_battery_power | Výkon baterie W; při živém nabíjení záporný |
@@ -116,3 +117,11 @@ includingdelayedreadback.0.5.3sourceadds60sboundedobserverandconservative
 history/forecastplan; see freshestcommissioningevidence/source vsruntime.
 Plannerusesrolling24hcounterenvelopewhenpowerhistoryhasgapsandcreditsnoPV
 inthatmode; missingplanprotects100%anddoesnotbreakcontrol.0Wstillnative20.
+
+
+## Spotřeba domu a mobilní graf — 5 November 2026
+Nový zdroj managed_sources/energy_weather/house-power.yaml je samostatný template senzor. Nemění nastavení měniče ani síťový cíl. V Export First používá signed AC Output Power + External Power; v ostatních známých režimech nativní Load Power. DC výkon baterie se nepoužívá, aby ztráty nebyly vydávány za spotřebiče. Šablona ověřuje numerické údaje, stáří a souběh zdrojů, přepočítává se při změně i každých5s. Chybějící/stará/nesouhlasná záporná bilance vede k nedostupnosti, nikoli falešné nule.
+
+Hlavní dashboard, Spoty a detail baterie nyní odkazují na kanonickou spotřebu. Denní graf si žádá oba load IDs; atribut native_unreliable_since vymezuje přechod. Nativní nuly po známém přechodu se nesmí doplňovat za chybějící opravená měření. Soukromý starý archiv zůstává čitelný; nový senzor je v Recorderu a dlouhodobých statistikách, desetisekundový archiv zatím obsahuje původní IDS. Nepřepisovat minulost odhadem.
+
+Mobilní SVG má kompaktní stupnice nad kresbou, výšku240px a využívá přibližně86%šířky pro data. Dvouprstové přiblížení a vodorovný posun drží časový výřez přes HA aktualizace. Dostupné jsou také +/−/Celýden, jezdec a klávesnice. Syntetické handlery a geometrie testovány; skutečný iPhone/browser test nebyl proveden kvůli omezení prostředí. Po změně statickéhoJS musí klient znovu načíst přehled.
