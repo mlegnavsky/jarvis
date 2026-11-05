@@ -1011,3 +1011,8 @@ Published source and exact liveJS readback: mobile full-width chart, pinch time 
 ## 6 November 2026 — sales0.6.5 active, automatic enabled
 
 See docs/evidence/2026-11-06-automatic-sales-enabled.md. Stop/enable race reproduced and fixed without weakening protections;580 tests pass,20skipped. Deployment auto065-apply-20261106 verified active_verified, backup63defc01, Core2026.6.4 unchanged. Runtime automatic=true/inhibited=false/healthy=true/error empty confirmed twice at00:13local. Selected block6November15:45–17:45Europe/Prague, reserve60%. It is waiting, not currently exporting. Future whole-cycle acceptance remains unobserved. Native20W import target remains a separate unresolved issue. Do not rerun an enable or commissioning command unnecessarily; preserve current owner setting and guards.
+
+
+## 6 November2026 — owner5W experiment deployed, native persistence failed
+
+See docs/evidence/2026-11-06-grid-target-5w.md. Source27f4256, runtime0.6.6, combined deploymentgrid5066-apply-20261106 active_verified, backup263a3f4e. Normal target/restoration/status all5W, ordinary automation on, automatic sales still on. Requested5 was briefly read four times, then native single/bulk/single all returned20; independent delayed snapshot also20. Do not claim5W persists or overwrite it with0. Future investigation must identify the actual reversion mechanism. Full suite580tests passes,20skipped; reserve/physical guards preserved.
