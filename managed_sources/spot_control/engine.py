@@ -2,7 +2,7 @@
 import asyncio
 import time
 import math
-TEST_CURRENT_LIMIT=100
+TEST_CURRENT_LIMIT=150
 CURRENT='number.inverter_battery_grid_charging_current'
 SWITCH='switch.inverter_battery_grid_charging'
 def finite(v):
