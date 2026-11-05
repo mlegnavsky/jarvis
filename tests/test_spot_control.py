@@ -3,7 +3,7 @@ sys.path.insert(0,'managed_sources/spot_control')
 from engine import Controller,plan,CURRENT,SWITCH
 class Tests(unittest.IsolatedAsyncioTestCase):
  def setUp(self):
-  self.s={'select.inverter_work_mode':'Zero Export To CT','switch.inverter_export_surplus':'off','select.inverter_time_of_use':'Week','sensor.inverter_battery':'44',CURRENT:'40',SWITCH:'on','sensor.inverter_battery_temperature':'13.5','number.inverter_battery_max_charging_current':'150'}
+  self.s={'select.inverter_work_mode':'Zero Export To CT','switch.inverter_export_surplus':'off','select.inverter_time_of_use':'Week','sensor.inverter_battery':'44',CURRENT:'40',SWITCH:'on','sensor.inverter_battery_temperature':'13.5','number.inverter_battery_max_charging_current':'175'}
   for i,h in enumerate([1,5,9,13,17,21],1):self.s.update({f'time.inverter_program_{i}_time':f'{h:02}:00:00',f'select.inverter_program_{i}_charging':'Disabled',f'number.inverter_program_{i}_soc':'30'})
   self.before=copy.deepcopy(self.s);self.saved={};self.calls=[]
  async def save(self,r):self.saved=copy.deepcopy(r)
@@ -11,7 +11,7 @@ class Tests(unittest.IsolatedAsyncioTestCase):
   assert self.saved.get('before');self.calls.append((e,v));self.s[e]=v
  def controller(self,saved=None):return Controller(lambda:self.s,self.write,self.save,saved,clock=lambda:100)
  async def test_start_stop_exact(self):
-  c=self.controller();await c.start(16*60);self.assertEqual(float(self.s[CURRENT]),150);self.assertEqual(c.record['slot'],4)
+  c=self.controller();await c.start(16*60);self.assertEqual(float(self.s[CURRENT]),175);self.assertEqual(c.record['slot'],4)
   await c.stop();self.assertEqual(self.s,self.before);self.assertFalse(c.active)
  async def test_restart_restore(self):
   await self.controller().start(960);c=self.controller(self.saved);await c.stop();self.assertEqual(self.s,self.before)
@@ -45,7 +45,7 @@ class Tests(unittest.IsolatedAsyncioTestCase):
   async def fail(e,v):
    if e.startswith('select.') and v=='Disabled':raise RuntimeError('offline')
    await original(e,v)
-  c.write=fail;await c.stop();self.assertEqual(float(self.s[CURRENT]),150);self.assertTrue(c.active)
+  c.write=fail;await c.stop();self.assertEqual(float(self.s[CURRENT]),175);self.assertTrue(c.active)
  async def test_stop_attempts_hardware_despite_save_failure(self):
   c=self.controller();await c.start(960)
   async def fail(r):raise RuntimeError('disk')
@@ -62,15 +62,15 @@ class Tests(unittest.IsolatedAsyncioTestCase):
  async def test_temperature_stops_and_restores(self):
   c=self.controller();await c.start(960);self.s['sensor.inverter_battery_temperature']='45'
   await c.tick();self.assertFalse(c.active);self.assertEqual(self.s[CURRENT],self.before[CURRENT])
- def test_button_requests_150_from_previous_settings(self):
-  for previous in ('20','40','80','100','150'):
+ def test_button_requests_175_from_previous_settings(self):
+  for previous in ('20','40','80','100','150','175'):
    with self.subTest(previous=previous):
     self.s[CURRENT]=previous
-    self.assertEqual(float(plan(self.s,960)[0][0][1]),150)
+    self.assertEqual(float(plan(self.s,960)[0][0][1]),175)
  def test_charge_bounds(self):
   self.s['number.inverter_battery_max_charging_current']='25'
   self.assertEqual(float(plan(self.s,960)[0][0][1]),25)
-  for cap,expected in ((100,100),(200,150)):
+  for cap,expected in ((100,100),(150,150),(200,175)):
    self.s['number.inverter_battery_max_charging_current']=str(cap)
    self.assertEqual(float(plan(self.s,960)[0][0][1]),expected)
   self.s['sensor.inverter_battery_temperature']='unavailable'
