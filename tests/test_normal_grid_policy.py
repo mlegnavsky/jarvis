@@ -15,7 +15,7 @@ class NormalGridPolicyTests(unittest.TestCase):
  def test_healthy_idle_house_allows_zero_only_and_preserves_enabled_state(self):
   self.assertTrue(self.guard());self.assertNotIn('initial_state',self.policy)
   actions=[a for a in self.policy['actions'] if 'action' in a]
-  self.assertEqual(actions,[{'action':'number.set_value','target':{'entity_id':'number.inverter_zero_export_power'},'data':{'value':0}}])
+  self.assertEqual(actions,[{'action':'solarman.write_multiple_registers','data':{'device':"{{ device_id('number.inverter_zero_export_power') }}",'address':104,'values':[0]}}])
  def test_running_sale_charge_fault_unknown_mode_and_preparation_all_block(self):
   for field in ('active','ready','healthy'):
    saved=self.attrs['sensor.jarvis_energy_sales'][field]
@@ -28,3 +28,5 @@ class NormalGridPolicyTests(unittest.TestCase):
   self.assertEqual(self.policy['actions'][2]['value_template'],self.policy['triggers'][1]['value_template'])
   self.assertEqual(self.policy['actions'][1]['delay'],'00:00:15')
   self.assertNotIn('time_pattern',[t['trigger'] for t in self.policy['triggers']])
+  self.assertEqual(len([a for a in self.policy['actions'] if 'condition' in a]),1)
+  self.states['number.inverter_zero_export_power']='0';self.assertTrue(self.guard())

@@ -21,12 +21,10 @@ actions:
   - delay: '00:00:15'
   - condition: template
     value_template: *normal_guard
-  - condition: template
-    value_template: "{{ states('number.inverter_zero_export_power') | float(0) != 0 }}"
-  - action: number.set_value
-    target:
-      entity_id: number.inverter_zero_export_power
+  - action: solarman.write_multiple_registers
     data:
-      value: 0
+      device: "{{ device_id('number.inverter_zero_export_power') }}"
+      address: 104
+      values: [0]
 mode: single
 max_exceeded: silent
