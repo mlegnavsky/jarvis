@@ -99,6 +99,28 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(APIError):
             await self.worker.start('addon_install', {'slug': 'core_new', 'expected_version': 'different'}, 'install')
 
+    async def test_thousand_existing_receipts_do_not_block_necessary_maintenance(self):
+        args={'path':'groups.yaml','content':'{}\n','expected_revision':'missing'}
+        old=await self.complete('file_write',args,'original')
+        with self.worker.db() as db:
+            db.executemany('INSERT INTO jobs (key,fingerprint,operation,arguments,state,result,created_at,summary) SELECT ?,fingerprint,operation,arguments,state,result,created_at,summary FROM jobs WHERE key=?',[(f'old-{i}','original') for i in range(999)])
+        current=self.worker.files.read('groups.yaml')
+        result=await self.complete('file_write',{'path':'groups.yaml','content':'test: true\n','expected_revision':current['revision']},'after-thousand')
+        self.assertEqual(result['state'],'verified')
+        self.assertEqual(await self.worker.start('file_write',args,'original'),old)
+        self.assertEqual(self.worker.files.read('groups.yaml')['content'],'test: true\n')
+        stats=await self.worker.read('jobs')
+        self.assertEqual(stats['total'],1001);self.assertEqual(stats['limit'],10000);self.assertEqual(stats['remaining'],8999)
+
+    async def test_full_admin_journal_reports_capacity_as_explicit_conflict(self):
+        with self.worker.db() as db:
+            db.executemany('INSERT INTO jobs (key,fingerprint,operation,arguments,state,result,summary) VALUES (?,?,?,?,?,?,?)',[(f'old-{i}','fingerprint','file_write','{}','verified','{}','{}') for i in range(10000)])
+        with self.assertRaises(APIError) as error:
+            await self.worker.start('file_write',{'path':'groups.yaml','content':'{}','expected_revision':'missing'},'full-new')
+        self.assertEqual(error.exception.status,409);self.assertEqual(error.exception.code,'admin_journal_full')
+        stats=await self.worker.read('jobs')
+        self.assertEqual(stats['total'],10000);self.assertEqual(stats['remaining'],0)
+
     async def test_device_metadata_revision_and_verified_readback_without_replay(self):
         device = {'id': 'dev1', 'area_id': 'hall', 'name_by_user': None}
         async def registry(kind):

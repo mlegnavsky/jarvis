@@ -1,3 +1,10 @@
+# 3.12.5
+
+- Preserve all administration receipts and idempotency while allowing up to 10000 historical jobs instead of1000.
+- Report used/limit/remaining capacity in the existing read-only jobs response.
+- Report a full journal as an explicit conflict, so the gateway does not mislabel the local limit as an unknown upstream outage.
+- No permission, credential, Home Assistant Core, or inverter setting changes.
+
 # 3.12.4
 
 - Recognize the official Voice PE package URL without an explicit Git ref, as used by the original device configuration. Preserve the original source bytes and report the absent ref as null.

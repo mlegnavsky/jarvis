@@ -195,8 +195,9 @@ class Admin:
             return self.job(target)
         if query == 'jobs':
             with self.db() as db:
+                total = db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0]
                 keys = [r[0] for r in db.execute('SELECT key FROM jobs ORDER BY rowid DESC LIMIT 100')]
-            return {'items': [self.job(key) for key in keys]}
+            return {'items': [self.job(key) for key in keys], 'total': total, 'limit': 10000, 'remaining': max(0,10000-total)}
         if query == 'config_check':
             await self.sup.request('POST', '/core/check', {})
             return {'valid': True}
@@ -285,8 +286,8 @@ class Admin:
                 if row[0] != fingerprint:
                     raise APIError(409, 'idempotency_conflict')
             else:
-                if db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0] >= 1000:
-                    raise APIError(503, 'admin_journal_full')
+                if db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0] >= 10000:
+                    raise APIError(409, 'admin_journal_full')
                 summary = {'operation': operation, 'target': args.get('slug', args.get('path', args.get('target', args.get('repository_url')))),
                            'changed_fields': sorted(args.get('changes', {})),
                            'expected_version': args.get('expected_version'), 'restore_from': args.get('backup_id')}
