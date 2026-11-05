@@ -34,13 +34,18 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
  async def asyncSetUp(self):
   self.temp=tempfile.TemporaryDirectory();path=pathlib.Path(self.temp.name)
   (path/'.storage').mkdir()
-  self.services={};self.writes=[];self.tasks=[];self.ticks=[]
+  self.services={};self.writes=[];self.raw_writes=[];self.tasks=[];self.ticks=[]
   self.hass=types.SimpleNamespace(data={},is_running=False,states=States(),config=types.SimpleNamespace(path=lambda *parts:str(path.joinpath(*parts))))
   self.device_registers={143:9990,142:2,145:0,104:0,0:5,98:1,111:1,130:0,219:175,109:175,146:255};self.device_reads=[];self.device_reject=False
   for i in range(6):
    self.device_registers.update({148+i:i*400,154+i:12000,166+i:30,172+i:0})
-  async def execute(code,address,count=1):
+  async def execute(code,address,count=1,**kwargs):
    self.device_reads.append((code,address,count))
+   if code==16:
+    self.raw_writes.append((address,list(kwargs['data'])))
+    if not self.device_reject:
+     for offset,value in enumerate(kwargs['data']):self.device_registers[address+offset]=value
+    return list(kwargs['data'])
    if address==62:
     from zoneinfo import ZoneInfo
     d=datetime.now(ZoneInfo('Europe/Prague'))
@@ -58,8 +63,9 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    entity=data['entity_id'];value=data.get('value',data.get('option','on' if service=='turn_on' else 'off'))
    self.writes.append((entity,value));self.hass.states.async_set(entity,value)
    mapping={'number.inverter_export_surplus_power':143,'select.inverter_work_mode':142,'switch.inverter_export_surplus':145,'number.inverter_zero_export_power':104}
+   mapping['number.inverter_battery_max_discharging_current']=109
    mapping.update({f'number.inverter_program_{i}_soc':165+i for i in range(1,7)})
-   if entity in mapping and not self.device_reject:self.device_registers[mapping[entity]]={'Zero Export To CT':2,'Export First':0,'on':1,'off':0}.get(value,value)
+   if entity in mapping and not self.device_reject:self.device_registers[mapping[entity]]=int({'Zero Export To CT':2,'Export First':0,'on':1,'off':0}.get(value,value))
    if entity=='number.inverter_export_surplus_power' and value==0:self.hass.states.async_set('sensor.inverter_grid_power',20)
    self.poll()
   self.hass.services=types.SimpleNamespace(async_call=call)
@@ -140,7 +146,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    controllers['busy']=lambda:False
    controllers['clock_sync_active']=True
    self.assertFalse(charge.healthy(),'RTC synchronization owns control')
-   self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.2')
+   self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.3')
  async def test_active_owner_conflict_latches_automatic_off_before_cleanup_finishes(self):
   from unittest.mock import AsyncMock
   data=await self.setup();await self.ticks[0]()
@@ -217,6 +223,66 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   with self.assertRaisesRegex(RuntimeError,'registr'):
    await self.service('start_sale',{'power_w':500,'duration_minutes':3})
   self.assertNotIn(('switch.inverter_export_surplus','on'),self.writes)
+
+ async def test_native_current_and_all_soc_writes_use_ha_then_single_and_bulk_readback(self):
+  data=await self.setup()
+  await data['window'].native_write(109,60)
+  self.assertIn(('number.inverter_battery_max_discharging_current',60),self.writes)
+  self.assertIn((3,109,1),self.device_reads);self.assertIn((3,98,14),self.device_reads)
+  for i in range(1,7):
+   await data['window'].native_write(165+i,90)
+   self.assertIn((f'number.inverter_program_{i}_soc',90),self.writes)
+   self.assertIn((3,165+i,1),self.device_reads)
+  self.assertIn((3,166,6),self.device_reads)
+  self.assertFalse(any(address==109 or 166<=address<=171 for address,_ in self.raw_writes))
+
+ async def test_optimistic_ha_and_single_register_ack_cannot_replace_bulk_confirmation(self):
+  data=await self.setup();device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device
+  original=device.execute;self.device_reject=True
+  async def optimistic(code,address,count=1,**kwargs):
+   if code==3 and count==1 and address in (109,166):return [60 if address==109 else 90]
+   return await original(code,address,count=count,**kwargs)
+  device.execute=optimistic
+  for address,value in ((109,60),(166,90)):
+   with self.subTest(address=address),self.assertRaisesRegex(ValueError,'bulk|hromad'):
+    await data['window'].native_write(address,value)
+
+ async def test_single_register_readback_is_still_required_before_bulk_read(self):
+  data=await self.setup();self.device_reject=True
+  with self.assertRaisesRegex(RuntimeError,'109'):
+   await data['window'].native_write(109,60)
+  self.assertNotIn((3,98,14),self.device_reads)
+
+ async def test_malformed_bulk_read_cannot_confirm_ha_current_write(self):
+  data=await self.setup();device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device
+  original=device.execute
+  async def malformed(code,address,count=1,**kwargs):
+   if code==3 and address==98 and count==14:return [0]*13
+   return await original(code,address,count=count,**kwargs)
+  device.execute=malformed
+  with self.assertRaisesRegex(ValueError,'bulk'):
+   await data['window'].native_write(109,60)
+  self.assertEqual(self.device_registers[109],60)
+
+ async def test_other_native_register_routes_still_use_raw_write(self):
+  data=await self.setup();await data['window'].native_write(143,500)
+  self.assertEqual(self.raw_writes,[(143,[500])])
+  self.assertNotIn(('number.inverter_export_surplus_power',500),self.writes)
+
+ async def test_shared_native_clock_range_admits_eleven_second_lag_without_sync(self):
+  from test_simple_sale_adapter import FakeBattery
+  from unittest.mock import AsyncMock
+  from zoneinfo import ZoneInfo
+  with patch.object(self.module,'BatterySaleController',FakeBattery):data=await self.setup()
+  device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device;original=device.execute
+  async def lagged(code,address,count=1,**kwargs):
+   if address==62:
+    dt=datetime.fromtimestamp(time.time()-11,ZoneInfo('Europe/Prague'))
+    return [((dt.year-2000)<<8)|dt.month,(dt.day<<8)|dt.hour,(dt.minute<<8)|dt.second]
+   return await original(code,address,count=count,**kwargs)
+  device.execute=lagged;self.module.sync_native_clock=AsyncMock(side_effect=AssertionError('Unnecessary RTC write'))
+  await self.ticks[0]();await data['commission_battery']()
+  self.module.sync_native_clock.assert_not_awaited()
  async def test_start_reads_native_cap_register_before_enabling(self):
   data=await self.setup();await self.ticks[0]()
   await self.service('start_sale',{'power_w':500,'duration_minutes':3})
@@ -230,6 +296,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    if address==146:return [255,0]+[0]*30
    if address==340:return [12000]
    if address==212:return [200,50,94,460,5,0,300,300]
+   if address==98:return [0]*6+[20]+[0]*4+[175]+[0]*2
    raise ValueError(address)
   entry.runtime_data.device.execute=execute
   data=await self.setup();await self.ticks[0]()
@@ -238,6 +305,9 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(len(snapshot['registers_146_177']),32)
   self.assertEqual(snapshot['bms_discharge_limit_a'],50)
   self.assertEqual(snapshot['bms_max_discharge_limit_a'],300)
+  self.assertEqual(snapshot['register_104'],20)
+  self.assertEqual(snapshot['register_109'],175)
+  self.assertEqual(data['settings']['native_grid_target_w'],20)
   self.assertEqual(self.writes,[])
 
  async def test_native_window_blocks_ordinary_sale_and_charge_conflict(self):

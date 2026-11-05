@@ -11,9 +11,9 @@ import math
 import time
 
 try:
-    from .native_plan import battery_window_plan
+    from .native_plan import battery_window_plan,native_clock_acceptable
 except ImportError:
-    from native_plan import battery_window_plan
+    from native_plan import battery_window_plan,native_clock_acceptable
 
 WRITABLE = {109, 142, 143, 145, 146, *range(148, 160), *range(166, 178)}
 PROFILE = {0, 98, 111, 130, 213, 219}
@@ -157,7 +157,7 @@ class BatterySaleController:
             raise _Guard('native_conflict')
         if not self._profile_ok(r):
             raise _Guard('profile_changed')
-        if abs(data['clock'].timestamp() - self.clock()) > 5:
+        if not native_clock_acceptable(data['clock'], self.clock()):
             raise _Guard('native_clock')
         if r[109] > _bms_limit(r):
             raise _Guard('current_limit')

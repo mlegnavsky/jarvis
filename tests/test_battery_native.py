@@ -510,6 +510,18 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         await self.finish_stop()
         self.assertEqual(self.reg[109], 50)
 
+    async def test_measured_eleven_second_clock_lag_does_not_abort_before_export_enable(self):
+        from datetime import timedelta
+        self.states['soc']=94
+        await self.start(power_w=500, minimum_soc=90, purpose='commission', maximum_power_w=500)
+        read=self.controller.native_read
+        async def delayed_clock():
+            result=await read();result['clock']-=timedelta(seconds=11);return result
+        self.controller.native_read=delayed_clock
+        await self.enable()
+        self.assertEqual(self.reg[142],0)
+        self.assertEqual(self.controller.record['phase'],'measuring')
+
     async def test_commission_allows_the_normal_house_load_under_three_kw(self):
         self.states.update(soc=94,battery_w=1923,current_a=36.12)
         await self.start(power_w=500, minimum_soc=90, purpose='commission', maximum_power_w=500)

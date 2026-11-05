@@ -25,6 +25,21 @@ def _finite(name, value):
     return number
 
 
+def native_clock_acceptable(native_clock, now):
+    """Bound measured clock lag; observer/positive-price coverage stays60s.
+
+    A sampled register may trail host receipt. Ahead tolerance remains5s;
+    up to20s behind is contained by SOC100 outside and the existing observer.
+    This does not claim that measured lag is RTC drift rather than I/O latency.
+    """
+    try:
+        return (isinstance(native_clock, datetime) and native_clock.tzinfo is not None
+                and native_clock.utcoffset() is not None
+                and -20 <= native_clock.timestamp() - _finite('now', now) <= 5)
+    except (TypeError, ValueError, OverflowError, OSError):
+        return False
+
+
 def _unambiguous(local):
     """Reject both gaps and repeated Prague wall times, including either fold."""
     wall = local.replace(tzinfo=None)
@@ -116,8 +131,8 @@ def battery_window_plan(native_clock, now, power_w, duration_minutes, minimum_so
         raise ValueError('Native inverter clock must be timezone aware')
     local = native_clock.astimezone(TZ)
     _unambiguous(local)
-    if abs(native_clock.timestamp() - now) > 5:
-        raise ValueError('Native inverter clock differs from now by more than 5 seconds')
+    if not native_clock_acceptable(native_clock, now):
+        raise ValueError('Native inverter clock is outside the measured -20..+5 second bound')
 
     minute = math.ceil((local.hour * 60 + local.minute + 1) / 5) * 5
     day = local.replace(hour=0, minute=0, second=0, microsecond=0, fold=0)

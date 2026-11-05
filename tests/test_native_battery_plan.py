@@ -125,9 +125,18 @@ class NativeBatteryPlanTests(unittest.TestCase):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 self.plan(**changes)
 
+    def test_bounded_measured_clock_lag_keeps_a_future_native_window(self):
+        host=self.clock.replace(minute=41)
+        for lag in (0,5.01,11,20):
+            result=self.plan(native_clock=host-timedelta(seconds=lag),now=host.timestamp())
+            self.assertGreater(result['start'],host.timestamp())
+        for delta in (-20.01,5.01):
+            with self.assertRaisesRegex(ValueError,'clock'):
+                self.plan(native_clock=host+timedelta(seconds=delta),now=host.timestamp())
+
     def test_stale_or_naive_inverter_clock_is_rejected(self):
         for clock in [self.clock.replace(tzinfo=None), self.clock + timedelta(seconds=5.01),
-                      self.clock - timedelta(seconds=5.01)]:
+                      self.clock - timedelta(seconds=20.01)]:
             with self.subTest(clock=clock), self.assertRaises(ValueError):
                 self.plan(native_clock=clock)
         # Keep a future arming boundary: a clock just behind15:40 would select

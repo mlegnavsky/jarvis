@@ -19,11 +19,12 @@ from .planning_setup import async_setup_planning
 from .simple_sales import choose_daily_block,size_sale
 from .battery_native import BatterySaleController,WRITABLE as BATTERY_WRITABLE
 from .native_clock import sync_native_clock
+from .native_plan import native_clock_acceptable
 from .native_zero_target import set_zero_target
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.6.2'
+VERSION='0.6.3'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -143,7 +144,8 @@ async def async_setup_sales(hass,config,charge_controller):
   # This installation uses the verified deye_p3 register map. Never treat the
   # Solarman optimistic HA update as a physical setting readback.
   mapping={'number.inverter_export_surplus_power':(143,1),
-   'select.inverter_work_mode':(142,1),'switch.inverter_export_surplus':(145,1),'number.inverter_zero_export_power':(104,1)}
+   'select.inverter_work_mode':(142,1),'switch.inverter_export_surplus':(145,1),'number.inverter_zero_export_power':(104,1),
+   'number.inverter_battery_max_discharging_current':(109,1)}
   mapping.update({f'number.inverter_program_{i}_soc':(165+i,1) for i in range(1,7)})
   if entity not in mapping:return
   entries=hass.config_entries.async_entries('solarman')
@@ -178,10 +180,13 @@ async def async_setup_sales(hass,config,charge_controller):
     program=await device.execute(3,146,count=32)
     pv=await device.execute(3,340,count=1)
     bms=await device.execute(3,212,count=8)
+    controls=await device.execute(3,98,count=14)
     clock=await device.execute(3,62,count=3)
-   if len(clock)!=3 or len(program)!=32 or len(pv)!=1 or len(bms)!=8:raise ValueError('Incomplete native read')
+   if len(clock)!=3 or len(program)!=32 or len(pv)!=1 or len(bms)!=8 or not isinstance(controls,list) or len(controls)!=14 or any(type(v) is not int for v in controls):raise ValueError('Incomplete native read')
    date=datetime(2000+(clock[0]>>8),clock[0]&255,clock[1]>>8,clock[1]&255,clock[2]>>8,clock[2]&255,tzinfo=ZoneInfo('Europe/Prague'))
-   native_program={'captured_at':datetime.now(timezone.utc).isoformat(),'clock_local':date.isoformat(),'clock_error_seconds':date.timestamp()-time.time(),'clock_registers':clock,'registers_146_177':program,'max_pv_power_raw':pv[0],'bms_discharge_limit_a':bms[1],'bms_max_discharge_limit_a':bms[7]}
+   native_program={'captured_at':datetime.now(timezone.utc).isoformat(),'clock_local':date.isoformat(),'clock_error_seconds':date.timestamp()-time.time(),'clock_registers':clock,'registers_146_177':program,'max_pv_power_raw':pv[0],'bms_discharge_limit_a':bms[1],'bms_max_discharge_limit_a':bms[7],
+    'register_104':controls[6],'register_109':controls[11],'native_grid_target_w':controls[6],'configured_discharge_current_a':controls[11]}
+   prefs['native_grid_target_w']=controls[6]
   except Exception as exc:native_program={'error':type(exc).__name__+': '+str(exc)[:120]}
  async def write(entity,value):
   domain=entity.split('.')[0]
@@ -219,6 +224,17 @@ async def async_setup_sales(hass,config,charge_controller):
  async def native_test_write(address,value):
   if address not in WRITABLE|BATTERY_WRITABLE:raise ValueError('Native register is outside commissioning scope')
   device=native_device()
+  if address==109 or 166<=address<=171:
+   entity='number.inverter_battery_max_discharging_current' if address==109 else f'number.inverter_program_{address-165}_soc'
+   await write(entity,value)
+   bulk_start,count=(98,14) if address==109 else (166,6)
+   async with asyncio.timeout(20):
+    await asyncio.sleep(2)
+    raw=await device.execute(3,bulk_start,count=count)
+   actual=raw[address-bulk_start] if isinstance(raw,list) and len(raw)==count and all(type(v) is int for v in raw) else None
+   await event('native_bulk_readback',{'entity':entity,'address':address,'bulk_start':bulk_start,'count':count,'expected':value,'actual':actual})
+   if actual!=value:raise ValueError(f'Native bulk register {address} did not confirm {value}; actual={actual}')
+   return
   async with asyncio.timeout(20):
    await device.execute(16,address,data=[value])
    await asyncio.sleep(1) # Give the inverter configuration write time to settle.
@@ -252,7 +268,7 @@ async def async_setup_sales(hass,config,charge_controller):
   return clock_idle_profile(registers)
  async def ensure_native_clock():
   data=await native_test_read()
-  if abs(data['clock'].timestamp()-time.time())<=5:return
+  if native_clock_acceptable(data['clock'],time.time()):return
   if time.time()-float(prefs.get('clock_sync_attempt_at',0))<60:raise ValueError('Synchronizace hodin čeká na další povolený pokus.')
   clock_idle_profile(data['registers'])
   prefs['clock_sync_attempt_at']=time.time();await persist_settings()
@@ -265,7 +281,7 @@ async def async_setup_sales(hass,config,charge_controller):
   prefs['native_clock_sync']=result;await persist_settings();await event('native_clock_sync_result',result)
   if result.get('verified') is not True:raise ValueError('Hodiny měniče nejsou po údržbě ověřené.')
   fresh=await native_test_read()
-  if abs(fresh['clock'].timestamp()-time.time())>5:raise ValueError('Čerstvé hodiny měniče překračují odchylku5 sekund.')
+  if not native_clock_acceptable(fresh['clock'],time.time()):raise ValueError('Čerstvé hodiny měniče překračují povolenou provozní odchylku.')
  async def zero_import_target(valid_until=None):
   async with lock:
    def admission():
