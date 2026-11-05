@@ -145,6 +145,13 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(len(snapshot['registers_146_177']),32)
   self.assertEqual(self.writes,[])
 
+ async def test_native_window_blocks_ordinary_sale_and_charge_conflict(self):
+  data=await self.setup();await self.ticks[0]()
+  self.assertIn('window',data)
+  data['window'].record={'before':{'109':175},'phase':'armed','end':time.time()+300}
+  with self.assertRaises(ValueError):await self.service('start_sale',{'mode':'pv','power_w':500,'duration_minutes':3})
+  self.assertEqual(self.writes,[])
+
  async def test_expiring_file_start_is_durable_and_not_repeated(self):
   import json
   data=await self.setup();await self.ticks[0]()
