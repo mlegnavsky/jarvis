@@ -259,3 +259,20 @@ boundedone-shot; subsequent directread timedout, so no claimofconfirmedclock
 sync underthatintent. Temporary rulewasremoved and originalthree rulesrestored
 andreloaded. AutoOFF, productionFALSE; nextpilotmustwaitfor0.5.1runtime/fresh
 actualclockconfirmation. Calibratedhouseforecast/productionoutagepolicy remainopen.
+
+## 17:46local — version0.5.1 verified, bounded pilot adapts to currentSOC96
+0.5.1activatedverified17:42:18local,backup7674d66f. ExactthreefileSHAreadbacks
+matchsourceb4f7263669b5aad74d2cfe2a9b57aed035150059. ClockLASTsnapshot
+17:41:56.915 shows17:41:55 (−1.915s), all6SOC30/ordinarytimes/flags0;
+healthy/readyTRUE. The originalclockorderingdefect is corrected without
+weakening5stolerance. No ExportFirstphysicalpilot has startedyet.
+Batteryhasnaturallyfallen96whilepoweringhouse. OwnerapprovedsaleSOCfloor60;
+previous95commissioningfloorwasourinternalconservativebound. Source0.5.2
+changesONLYSellingFirstpilot tofixed90floor/preflight93, outside100, still
+500WGRIDcap/5min/currentmin20A/prior/BMS. ZeroCTvariantskeep95/97. NativeTOU
+powerlimitsBATTERYincludinghouse, so SellingFirstactiveTOUpowerismin1000W/
+priorhousepowerwhileglobalgridMaxSellstays500W; no increaseofgridexportcap.
+UIandruntime showactualminimumSOC. Explicitlyexplainedownerbeforeimplementation.
+ObservedRED96start/floor90/battery1000tests→GREEN48targetedtests.
+ProductionbatteryverificationstaysFALSEandfullautomationOFF. Nativeclock/
+health/price/freshness/expiry/fullrestorationguardsunchanged.

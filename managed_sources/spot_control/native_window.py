@@ -34,15 +34,17 @@ class NativeWindow:
   try:await self.event('native_window_write_confirmed',{'address':address,'value':value,'id':self.record.get('id')})
   except Exception:
    if not protective:raise
- def _valid(self):
+ def _valid(self,minimum_soc=None):
   s=self.telemetry();t=number(s.get('reported_at'));soc=number(s.get('soc'));price=number(s.get('net_price'))
-  if not s.get('healthy') or t is None or not 0<=self.clock()-t<30 or soc is None or soc<97 or price is None or price<=0:
-   raise ValueError('Native test needs fresh healthy measurements, SOC97% and positive price')
+  minimum_soc=self.record.get('preflight_soc',97) if minimum_soc is None else minimum_soc
+  if not s.get('healthy') or t is None or not 0<=self.clock()-t<30 or soc is None or soc<minimum_soc or price is None or price<=0:
+   raise ValueError(f'Native test needs fresh healthy measurements, SOC{minimum_soc}% and positive price')
   return s
  async def start(self,valid_until=None,solar_sell=False,selling_first=False):
   if self.active:raise ValueError('Native test is already active')
   if type(solar_sell) is not bool or type(selling_first) is not bool or solar_sell and selling_first:raise ValueError('Invalid commissioning variant')
-  self._valid();data=await self.native_read();self._valid();r=data['registers'];native=data['clock']
+  floor=90 if selling_first else 95;preflight=93 if selling_first else 97
+  self._valid(preflight);data=await self.native_read();self._valid(preflight);r=data['registers'];native=data['clock']
   now=self.clock()
   if valid_until is not None and now>valid_until:raise ValueError('Test command expired')
   if native.tzinfo is None or abs(native.timestamp()-now)>5:raise ValueError('Inverter clock is not verified')
@@ -63,7 +65,7 @@ class NativeWindow:
   start=day+timedelta(minutes=minute);end=start+timedelta(minutes=5)
   if end.timestamp()-start.timestamp()!=300:raise ValueError('Ambiguous clock boundary')
   before={str(a):r[a] for a in WRITABLE}
-  self.record={'id':str(time.time_ns()),'before':before,'start':start.timestamp(),'end':end.timestamp(),'arm_until':min(start.timestamp()-10,valid_until if valid_until is not None else start.timestamp()-10),'phase':'preparing','observed':False,'native_expiry_observed':False,'power_w':500,'minimum_soc':95,'solar_sell':solar_sell,'selling_first':selling_first,'production_verified':False,'notice':'Commissioning only. Daily slot can recur during an HA outage; production remains blocked.'+(' Outside-slot SOC100 blocks ordinary house battery use; grid supplies house until restoration. PV export may continue.' if selling_first else ' All six SOC floors remain95% until restoration.' if solar_sell else '')}
+  self.record={'id':str(time.time_ns()),'before':before,'start':start.timestamp(),'end':end.timestamp(),'arm_until':min(start.timestamp()-10,valid_until if valid_until is not None else start.timestamp()-10),'phase':'preparing','observed':False,'native_expiry_observed':False,'power_w':500,'minimum_soc':floor,'preflight_soc':preflight,'solar_sell':solar_sell,'selling_first':selling_first,'production_verified':False,'notice':'Commissioning only. Daily slot can recur during an HA outage; production remains blocked.'+(' Outside-slot SOC100 blocks ordinary house battery use; grid supplies house until restoration. PV export may continue.' if selling_first else ' All six SOC floors remain95% until restoration.' if solar_sell else '')}
   await self.save(copy.deepcopy(self.record))
   try:
    await self.event('native_window_start',copy.deepcopy(self.record))
@@ -71,8 +73,8 @@ class NativeWindow:
    # All flags remain clear while all six safe slots are prepared.
    for i,m in enumerate((0,minute,minute+5,minute+10,minute+15,1435)):
     await self._set(148+i,(m//60)*100+m%60)
-    await self._set(154+i,500 if i==1 else powers[0])
-    await self._set(166+i,95 if i==1 or solar_sell else 100 if selling_first else socs[0])
+    await self._set(154+i,min(1000 if selling_first else 500,powers[0]) if i==1 else powers[0])
+    await self._set(166+i,floor if i==1 or solar_sell else 100 if selling_first else socs[0])
    self._valid()
    if self.clock()>=start.timestamp()-10 or valid_until is not None and self.clock()>valid_until:raise ValueError('Preparation window expired')
    if not selling_first:await self._set(173,32) # arm last, no grid/generator charge bits
@@ -84,7 +86,7 @@ class NativeWindow:
   if self.record.get('phase')=='stopping':await self.stop('retry');return
   now=self.clock();s=self.telemetry();stamp=number(s.get('reported_at'));grid=number(s.get('grid_w'));batt=number(s.get('battery_w'));pv=number(s.get('pv_w'));soc=number(s.get('soc'));price=number(s.get('net_price'))
   fresh=stamp is not None and 0<=now-stamp<30
-  if not s.get('healthy') or not fresh or grid is None or batt is None or pv is None or soc is None or price is None or price<=0 or soc<=95 or grid<-800:
+  if not s.get('healthy') or not fresh or grid is None or batt is None or pv is None or soc is None or price is None or price<=0 or soc<=self.record['minimum_soc'] or grid<-800:
    await self.stop('guard');return
   if now<self.record['start']:
    if grid<-100:await self.stop('early_export')

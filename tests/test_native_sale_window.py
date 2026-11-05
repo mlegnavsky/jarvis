@@ -35,12 +35,21 @@ class NativeWindowTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(self.reg[173],32)
  async def test_selling_first_uses_native_full_soc_outside_window_and_delayed_mode_switch(self):
   await self.window.start(selling_first=True)
-  self.assertEqual([self.reg[166+i] for i in range(6)],[100,95,100,100,100,100])
+  self.assertEqual([self.reg[166+i] for i in range(6)],[100,90,100,100,100,100])
+  self.assertEqual(self.reg[155],1000);self.assertEqual(self.reg[143],500)
   self.assertEqual([self.reg[172+i] for i in range(6)],[0]*6)
   self.assertEqual(self.reg[142],2);self.assertEqual(self.reg[145],0)
   self.now=self.window.record['start'];await self.advance(1)
   self.assertEqual(self.reg[142],0);self.assertEqual(self.reg[145],0)
   self.assertFalse(self.window.record['production_verified'])
+ async def test_selling_first_can_be_commissioned_at96_with_native90_floor(self):
+  self.states['soc']=96;await self.window.start(selling_first=True)
+  self.assertEqual(self.window.record['minimum_soc'],90)
+  self.assertEqual(self.reg[109],20)
+ async def test_selling_first_low_soc_is_rejected_before_any_write(self):
+  self.states['soc']=92
+  with self.assertRaises(ValueError):await self.window.start(selling_first=True)
+  self.assertEqual(self.writes,[])
  async def test_selling_first_clock_expiry_requires_full_soc_next_slot_and_no_stop_write(self):
   await self.window.start(selling_first=True);self.now=self.window.record['start'];await self.advance(1)
   count=len(self.writes)

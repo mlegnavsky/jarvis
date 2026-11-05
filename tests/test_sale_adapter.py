@@ -106,6 +106,11 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   self.hass.config_entries.async_entries('solarman')[0].runtime_data.device.execute=execute
   result=await data['window'].native_read()
   self.assertLess(abs(result['clock'].timestamp()-now[0]),1)
+ async def test_native_report_shows_actual_commissioning_soc_floor(self):
+  data=await self.setup()
+  data['window'].record={'before':{'109':175},'phase':'armed','minimum_soc':90,'end':time.time()+300}
+  await data['report']()
+  self.assertIn('90 %',self.hass.states.get('sensor.jarvis_energy_sales').attributes['reason'])
  async def test_explicit_stop_cancels_pending_commissioning_before_first_tick(self):
   data=await self.setup(True);await self.service('stop_sale',{})
   await self.ticks[0]()

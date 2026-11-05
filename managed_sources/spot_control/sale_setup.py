@@ -18,7 +18,7 @@ from .native_window import NativeWindow,WRITABLE
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.5.1'
+VERSION='0.5.2'
 AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -216,7 +216,7 @@ async def async_setup_sales(hass,config,charge_controller):
  def snapshot():
   p=current_price();entity=hass.states.get('sensor.inverter_battery')
   return {'version':VERSION,'ready':ready,'active':c.active or window.active,'observed':c.observed or bool(window.record.get('observed')),'phase':'native_test' if window.active else c.record.get('phase','idle'),'native_program':native_program,'native_test':{k:v for k,v in window.record.items() if k!='before'},'native_test_error':window.error,
-   'settings':dict(prefs),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+' · 500 W / 5 minut / rezerva 95 %.' if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else c.error or runtime_error,'price':p,
+   'settings':dict(prefs),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else c.error or runtime_error,'price':p,
    'mode':'battery_commission' if window.active else c.record.get('mode'),'power_w':500 if window.active else c.record.get('power_w'),'deadline':window.record.get('end') if window.active else c.record.get('deadline'),
    'grid_target_w':0,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('native_grid_target_w')==0,'grid_import_policy':'Cíl běžného odběru 0 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_PILOT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
@@ -309,7 +309,7 @@ async def async_setup_sales(hass,config,charge_controller):
     if healthy() and not c.active and not window.active and time.time()-last_native_read>=60:
      last_native_read=time.time();await read_native_program()
     if window.active:
-     await window.tick();last_reason='Ověřuji nativní časové ukončení baterie · 500 W / 5 minut / rezerva 95 %.';return
+     await window.tick();last_reason=f"Ověřuji nativní časové ukončení baterie · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %.";return
     was_active=c.active
     if c.active:await c.tick();await handle_stop()
     if was_active:return
