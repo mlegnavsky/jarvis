@@ -22,3 +22,15 @@ class PagingTests(unittest.IsolatedAsyncioTestCase):
   with self.assertRaises(ValueError):await module.fetch_day(read,100,20000)
 
 if __name__=='__main__':unittest.main()
+
+class BoundedWindowTests(unittest.IsolatedAsyncioTestCase):
+ async def test_full_day_uses_small_bounded_queries_without_losing_samples(self):
+  from paging import fetch_window
+  calls=[]
+  async def read(start,end):
+   self.assertLessEqual(end-start,900);calls.append((start,end))
+   return {'samples':[{'t':start+1,'values':{}}],'publications':{'spot':{'issued_at':str(end)}}}
+  result=await fetch_window(read,1000,4600)
+  self.assertTrue(result['complete']);self.assertEqual(len(result['samples']),4)
+  self.assertEqual(calls,[(1000,1900),(1900,2800),(2800,3700),(3700,4600)])
+  self.assertEqual(result['publications']['spot']['issued_at'],'4600')

@@ -62,3 +62,9 @@ at register104. Existing voice/control allowlist preserved by the unredacted
 permission_map and extended by this one entity through supported admin options;
 no credentials or generic services were broadened. Scripts/automations/source
 restore lists audited for writers of20W. Start preflight independently reads104=0.
+
+## Actual0.4.3activation and two follow-ups
+
+Native0.4.3/finance1.0.0 is running at14:43local. Daily purchase24.50CZK is calculated from4.9kWh and subsequent measured power; datedCNB05.11.2026rate24.29 is available. Archive backfill remains unconfirmed, so0CZKshownwhileloadingisnotafinaltestrevenueclaim.0.4.4 boundsarchivequerywindowsto15minandretainsactualerrorinformationforverification.
+
+Independentregister104read aftergenericHA0write returned20; a second0writeand1Wprobealso returned20, despiteoptimisticHAstates0/1. Therefore native0WtargetisNOTproven.0.4.3incorrectlyblockedotherwise-safePVsaleonthisnon-safetycondition.0.4.4recordsactualnativebiasseparatelyfromdesired0WwithoutblockingPVsale; strictmode/enable/exportcapreadbacksremainmandatory. Grid-chargeoffwasconfirmedviaHA;nativephysicalflowcurrentlydoesnotshowgridcharging. Usermustnotbetold0Wisphysicallyhelduntilproven.

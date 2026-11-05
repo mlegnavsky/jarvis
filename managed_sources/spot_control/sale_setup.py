@@ -16,7 +16,7 @@ from .journal import Journal
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.4.3'
+VERSION='0.4.4'
 AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -81,7 +81,7 @@ async def async_setup_sales(hass,config,charge_controller):
    if state is None:return None
    stamps.append((getattr(state,'last_reported',None) or state.last_updated).timestamp())
   return min(stamps) if max(stamps)-min(stamps)<=10 else None
- async def native_readback(entity,value):
+ async def native_readback(entity,value,required=True):
   # This installation uses the verified deye_p3 register map. Never treat the
   # Solarman optimistic HA update as a physical setting readback.
   mapping={'number.inverter_export_surplus_power':(143,1),
@@ -89,17 +89,26 @@ async def async_setup_sales(hass,config,charge_controller):
   if entity not in mapping:return
   entries=hass.config_entries.async_entries('solarman')
   if len(entries)!=1:raise RuntimeError('Nelze jednoznačně ověřit registr měniče.')
-  device=entries[0].runtime_data.device;address,scale=mapping[entity]
+  device=entries[0].runtime_data.device;address,scale=mapping[entity];offset=0
+  if entity=='number.inverter_zero_export_power':
+   try:
+    definitions=device.profile.parser.get_entity_descriptions('number')
+    matches=[d for d in definitions if str(d.get('name','')).casefold()=='zero export power']
+    if len(matches)==1:
+     definition=matches[0];prefs['zero_export_definition']={k:definition[k] for k in ('name','registers','scale','offset','rule','write') if k in definition}
+     address=min(definition['registers']);scale=number(definition.get('scale',1)) or 1;offset=number(definition.get('offset',0)) or 0
+   except Exception:pass
   expected={'Zero Export To CT':2,'Export First':0,'Zero Export To Load':1,'on':1,'off':0}.get(value,value)
-  expected=int(float(expected)/scale)
+  expected=int(float(expected)/scale+offset)
   async with asyncio.timeout(15):raw=await device.execute(3,address,count=1)
   actual=raw[0] if isinstance(raw,list) and len(raw)==1 else None
   await event('native_register_readback',{'entity':entity,'address':address,'expected':expected,'actual':actual,'sale_id':c.record.get('id')})
-  if actual!=expected:raise RuntimeError(f'Měnič nepotvrdil registr {address}: požadováno {expected}, naměřeno {actual}.')
+  if entity=='number.inverter_zero_export_power':prefs['native_grid_target_w']=(actual-offset)*scale if actual is not None else None
+  if required and actual!=expected:raise RuntimeError(f'Měnič nepotvrdil registr {address}: požadováno {expected}, naměřeno {actual}.')
  async def verify_baseline():
   await native_readback('select.inverter_work_mode','Zero Export To CT')
   await native_readback('switch.inverter_export_surplus','off')
-  await native_readback('number.inverter_zero_export_power',0)
+  await native_readback('number.inverter_zero_export_power',0,required=False)
  async def write(entity,value):
   domain=entity.split('.')[0]
   if domain=='number':service='set_value';data={'value':float(value)}
@@ -156,7 +165,7 @@ async def async_setup_sales(hass,config,charge_controller):
   return {'version':VERSION,'ready':ready,'active':c.active,'observed':c.observed,'phase':c.record.get('phase','idle'),
    'settings':dict(prefs),'reason':('Automatika pozastavena po zásahu ochrany. '+(c.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':c.error or runtime_error,'price':p,
    'mode':c.record.get('mode'),'power_w':c.record.get('power_w'),'deadline':c.record.get('deadline'),
-   'grid_target_w':0,'grid_import_policy':'Cíl běžného odběru 0 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_PILOT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
+   'grid_target_w':0,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('native_grid_target_w')==0,'grid_import_policy':'Cíl běžného odběru 0 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_PILOT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)

@@ -17,3 +17,15 @@ async def fetch_day(read,start,end):
    result['complete']=True;return result
   cursor=math.nextafter(previous,math.inf)
  raise ValueError('Archive day exceeds safe page budget; completeness not confirmed')
+
+async def fetch_window(read,start,end):
+ """Bound response memory on the PHP server as well as in the HA client."""
+ if not math.isfinite(start) or not math.isfinite(end) or not 0<end-start<=90060:raise ValueError('Invalid archive window')
+ cursor=start;result={'samples':[],'publications':{},'complete':False}
+ while cursor<end:
+  stop=min(end,cursor+900)
+  data=await fetch_day(read,cursor,stop)
+  result['samples'].extend(data['samples']);result['publications'].update(data['publications'])
+  cursor=stop
+ result['complete']=True
+ return result

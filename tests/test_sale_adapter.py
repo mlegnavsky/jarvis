@@ -221,4 +221,11 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    await data['start']({'power_w':500,'duration_minutes':3},valid_until=time.time()+.01)
   self.assertEqual(self.writes,[])
 
+ async def test_nonzero_native_import_bias_does_not_block_safe_pv_selling(self):
+  data=await self.setup();await self.ticks[0]();self.device_registers[104]=20
+  self.hass.states.async_set('number.inverter_zero_export_power',20)
+  await self.service('start_sale',{'power_w':500,'duration_minutes':3})
+  self.assertTrue(data['controller'].active)
+  self.assertEqual(data['settings'].get('native_grid_target_w'),20)
+
 if __name__=='__main__':unittest.main()

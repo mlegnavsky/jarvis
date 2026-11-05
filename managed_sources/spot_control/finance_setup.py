@@ -73,7 +73,7 @@ async def async_setup_finance(hass):
     if not quote().get('rows') and publication:
      await hass.async_add_executor_job(book.remember_prices,day,publication.get('rows',[]),publication.get('rate'),publication.get('rate_date'))
     loaded=True;history_error=''
-   except Exception:history_error='Historie se dočítá; průběžné nové záznamy se dál ukládají.'
+   except Exception as exc:history_error=type(exc).__name__+': '+str(exc)[:200]
   await capture()
  async def started(_event=None):
   await capture()

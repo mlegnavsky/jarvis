@@ -11,7 +11,7 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
 from .store import Outbox
-from .paging import fetch_day
+from .paging import fetch_day,fetch_window
 DOMAIN='jarvis_energy_archive'
 CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_EXTRA)
 URL='https://laborator.odladeni.cz/energy-archive/index.php'
@@ -33,7 +33,7 @@ async def async_setup(hass,config):
    return await response.json()
  async def state(status,error=None):
   count=await hass.async_add_executor_job(queue.count)
-  attrs={'friendly_name':'Trvalý energetický archiv','version':'1.2.0','queued_records':count,'last_ack':last_ack,'interval_seconds':10,'server':remote,'retention':'permanent','notice':'Weather rows are issued forecasts, not measured weather. Samples retain source update timestamps.'}
+  attrs={'friendly_name':'Trvalý energetický archiv','version':'1.2.1','queued_records':count,'last_ack':last_ack,'interval_seconds':10,'server':remote,'retention':'permanent','notice':'Weather rows are issued forecasts, not measured weather. Samples retain source update timestamps.'}
   if error:attrs['error']=error
   hass.states.async_set('sensor.jarvis_energy_archive',status,attrs)
  async def capture(_now=None):
@@ -90,7 +90,7 @@ async def async_setup(hass,config):
  hass.http.register_view(ArchiveDay())
  async def read_window(start,end):
   async def page(lo,hi):return await request('GET',params={'op':'day','start':lo,'end':hi})
-  return await fetch_day(page,start,end)
+  return await fetch_window(page,start,end)
  async def append_event(record):
   await hass.async_add_executor_job(queue.append,{'kind':'sample','t':record['t'],'values':{},'event':record})
  hass.data[DOMAIN]={'append_event':append_event,'read_window':read_window}
