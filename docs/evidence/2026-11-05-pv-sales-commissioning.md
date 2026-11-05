@@ -68,3 +68,46 @@ restore lists audited for writers of20W. Start preflight independently reads104=
 Native0.4.3/finance1.0.0 is running at14:43local. Daily purchase24.50CZK is calculated from4.9kWh and subsequent measured power; datedCNB05.11.2026rate24.29 is available. Archive backfill remains unconfirmed, so0CZKshownwhileloadingisnotafinaltestrevenueclaim.0.4.4 boundsarchivequerywindowsto15minandretainsactualerrorinformationforverification.
 
 Independentregister104read aftergenericHA0write returned20; a second0writeand1Wprobealso returned20, despiteoptimisticHAstates0/1. Therefore native0WtargetisNOTproven.0.4.3incorrectlyblockedotherwise-safePVsaleonthisnon-safetycondition.0.4.4recordsactualnativebiasseparatelyfromdesired0WwithoutblockingPVsale; strictmode/enable/exportcapreadbacksremainmandatory. Grid-chargeoffwasconfirmedviaHA;nativephysicalflowcurrentlydoesnotshowgridcharging. Usermustnotbetold0Wisphysicallyhelduntilproven.
+
+## Actual finance reconciliation15:31local, and native commissioning0.4.6
+
+Release0.4.5 source84572306d6b8d75b00ad06ba46c647cde5954f02 activated
+verified14:30:32UTC, backups4bc59b7a. Archive1.2.2 normalizes historical
+PHP empty-map arrays while retaining events. The diagnosed list.get failure is
+resolved: finance backfill loaded5247points, history_error empty, datedCNB24.29
+05.11.2026, live daily estimate24.8467CZK purchase /0.39473CZK sale with
+0.075327kWh integrated export. These are estimates, not settlement. Recorded gaps
+5145.9s remain gaps; no interpolation across>30s. New UI supports partial state.
+The native diagnostic attempted too early before Solarman runtime_data existed;
+0.4.6 retries only after fresh healthy sensor data, with bounded reads.
+
+PV automatic trial15:17local was stopped by unchanged battery_discharge guard:
+grid351Wexport, battery298Wdischarge, PV305W, SOC98. Native stop verified. Thus
+current SolarSell/ZeroCT alone is not proved to exclude transient battery supply.
+Do not describe full PV automatic as accepted or disable its guard. Another UI
+configure enabled automatic~15:34; owner test preparatory Stop15:38 returned
+verified idle/off before0.4.6 apply. Both actual changes remain in the journal.
+
+0.4.6 adds ONLY fixed low-power native TOU feasibility commissioning. Future5min
+slot Sell32,500W cap, SOC95, discharge current min20A/prior/BMS; keep global
+ZeroCT/SolarSellOFF and all ordinary house slots' uniform SOC/power. Requires
+LV type0500/lithium/Capacity, gridchargeOFF, all prior charging flags0, Week255,
+clock delta<=5s, healthy fresh positive-price readings. Native raw FC16 writes
+are immediately read back via FC03. No use of register340 as PV production cap.
+All original register values persist before writes; cleanup independent commands
+clear everySellbit even if cap write fails, fresh post-stop measurement required
+before ordinary schedule/current restoration. Restart recovers rather than repeats.
+Readback of clock and following slot occurs across the boundary before any stop
+write. Command expiry and health are rechecked after slow audit just before arming.
+Charging preflight race reproduced and fixed before publication.
+
+Production battery_verified staysFALSE: daily recurrence and next-day offline
+behavior are not resolved by this feasibility test. No autonomous expiry claim
+or live battery test outcome exists yet. Sourcebcfe6ad9bfdb2d2768390234ef03eca6e69aef03
+(tree de998440c3c836f8797d3557170b84e5bc599073), local7f44f22. Prepare
+sales-native-window-prepare-20261105 verified; apply newly queued. Both review
+findings have watched failing regression tests and focused clean re-review.
+82targeted and346full tests PASS with repository-pinned test dependencies in
+isolated environment; real PHP archive/WebDAV tests included (no skips). Earlier
+base-runtime MCP1.29 import error and newly-unskipped missing aiowebdav2 were
+environment mismatches; no production SDK/source changes were made to hide them.
