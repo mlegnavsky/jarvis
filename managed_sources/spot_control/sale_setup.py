@@ -4,6 +4,7 @@ from datetime import datetime,timedelta,timezone
 import json
 from pathlib import Path
 import time
+from zoneinfo import ZoneInfo
 import voluptuous as vol
 from homeassistant.helpers import discovery
 from homeassistant.helpers.event import async_track_time_interval
@@ -16,14 +17,14 @@ from .journal import Journal
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.4.4'
+VERSION='0.4.5'
 AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):
  store=Store(hass,1,KEY);saved=await store.async_load() or {}
  prefs={'automatic':False,'power_w':500,'minutes':3,'source':'pv','pv_verified':False,'battery_verified':False,**saved.get('settings',{})}
  journal=await hass.async_add_executor_job(Journal,Path(hass.config.path('.storage','jarvis_energy_sales.sqlite')))
- lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0
+ lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={}
  archive_error='';runtime_error='';commission_requested=bool((config.get(DOMAIN) or {}).get('commission_pv_test',False))
  async def save_record(record):
   await store.async_save({'settings':dict(prefs),'transaction':record})
@@ -109,6 +110,20 @@ async def async_setup_sales(hass,config,charge_controller):
   await native_readback('select.inverter_work_mode','Zero Export To CT')
   await native_readback('switch.inverter_export_surplus','off')
   await native_readback('number.inverter_zero_export_power',0,required=False)
+ async def read_native_program():
+  nonlocal native_program
+  try:
+   entries=hass.config_entries.async_entries('solarman')
+   if len(entries)!=1:raise ValueError('Ambiguous inverter')
+   device=entries[0].runtime_data.device
+   async with asyncio.timeout(20):
+    clock=await device.execute(3,62,count=3)
+    program=await device.execute(3,146,count=32)
+    pv=await device.execute(3,340,count=1)
+   if len(clock)!=3 or len(program)!=32 or len(pv)!=1:raise ValueError('Incomplete native read')
+   date=datetime(2000+(clock[0]>>8),clock[0]&255,clock[1]>>8,clock[1]&255,clock[2]>>8,clock[2]&255,tzinfo=ZoneInfo('Europe/Prague'))
+   native_program={'captured_at':datetime.now(timezone.utc).isoformat(),'clock_local':date.isoformat(),'clock_error_seconds':date.timestamp()-time.time(),'clock_registers':clock,'registers_146_177':program,'max_pv_power_raw':pv[0]}
+  except Exception as exc:native_program={'error':type(exc).__name__+': '+str(exc)[:120]}
  async def write(entity,value):
   domain=entity.split('.')[0]
   if domain=='number':service='set_value';data={'value':float(value)}
@@ -162,7 +177,7 @@ async def async_setup_sales(hass,config,charge_controller):
   if c.active:raise ValueError(c.error)
  def snapshot():
   p=current_price();entity=hass.states.get('sensor.inverter_battery')
-  return {'version':VERSION,'ready':ready,'active':c.active,'observed':c.observed,'phase':c.record.get('phase','idle'),
+  return {'version':VERSION,'ready':ready,'active':c.active,'observed':c.observed,'phase':c.record.get('phase','idle'),'native_program':native_program,
    'settings':dict(prefs),'reason':('Automatika pozastavena po zásahu ochrany. '+(c.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':c.error or runtime_error,'price':p,
    'mode':c.record.get('mode'),'power_w':c.record.get('power_w'),'deadline':c.record.get('deadline'),
    'grid_target_w':0,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('native_grid_target_w')==0,'grid_import_policy':'Cíl běžného odběru 0 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_PILOT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
@@ -248,6 +263,7 @@ async def async_setup_sales(hass,config,charge_controller):
     if not ready:
      if c.active:await c.stop('recovery');await handle_stop()
      ready=not c.active
+     if ready:await read_native_program()
     was_active=c.active
     if c.active:await c.tick();await handle_stop()
     if was_active:return

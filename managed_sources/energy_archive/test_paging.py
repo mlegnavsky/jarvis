@@ -8,6 +8,15 @@ try:
 except FileNotFoundError:module=None
 
 class PagingTests(unittest.IsolatedAsyncioTestCase):
+ async def test_php_empty_maps_keep_events_and_measurements_readable(self):
+  async def read(start,end):return {'samples':[{'t':101,'values':{'grid':{'value':3}}},{'t':102,'values':[],'event':{'kind':'sale_start'}}],'publications':[]}
+  data=await module.fetch_day(read,100,200)
+  self.assertEqual(data['samples'][1]['values'],{})
+  self.assertEqual(data['samples'][1]['event'],{'kind':'sale_start'})
+  self.assertEqual(data['publications'],{})
+ async def test_nonempty_list_is_rejected_as_corrupt_measurement_map(self):
+  async def read(start,end):return {'samples':[{'t':101,'values':[1]}],'publications':{}}
+  with self.assertRaises(ValueError):await module.fetch_day(read,100,200)
  async def test_preserves_late_day_data_after_ten_thousand_events(self):
   self.assertIsNotNone(module,'archive pagination is missing')
   samples=[{'t':100+x,'values':{}} for x in range(10001)]

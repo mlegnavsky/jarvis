@@ -130,6 +130,21 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   await self.service('start_sale',{'power_w':500,'duration_minutes':3})
   self.assertIn((3,143,1),self.device_reads)
 
+ async def test_read_only_native_program_snapshot_does_not_change_inverter(self):
+  entry=self.hass.config_entries.async_entries('solarman')[0]
+  async def execute(code,address,count=1):
+   self.assertEqual(code,3)
+   if address==62:return [0x1a0b,0x050f,0x1e00]
+   if address==146:return [255,0]+[0]*30
+   if address==340:return [12000]
+   raise ValueError(address)
+  entry.runtime_data.device.execute=execute
+  data=await self.setup();await self.ticks[0]()
+  snapshot=self.hass.states.get('sensor.jarvis_energy_sales').attributes['native_program']
+  self.assertEqual(snapshot['clock_local'],'2026-11-05T15:30:00+01:00')
+  self.assertEqual(len(snapshot['registers_146_177']),32)
+  self.assertEqual(self.writes,[])
+
  async def test_expiring_file_start_is_durable_and_not_repeated(self):
   import json
   data=await self.setup();await self.ticks[0]()

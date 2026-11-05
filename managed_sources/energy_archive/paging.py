@@ -6,9 +6,15 @@ async def fetch_day(read,start,end):
  for _ in range(16):
   page=await read(cursor,end);rows=page.get('samples')
   if not isinstance(rows,list):raise ValueError('Invalid archive samples')
-  if not result['publications']:result['publications']=page.get('publications',{})
+  publications=page.get('publications',{})
+  if publications==[]:publications={}
+  if not isinstance(publications,dict):raise ValueError('Invalid archive publications')
+  if not result['publications']:result['publications']=publications
   previous=cursor
   for index,row in enumerate(rows):
+   values=row.get('values',{})
+   if values==[]:row={**row,'values':{}};rows[index]=row
+   elif not isinstance(values,dict):raise ValueError('Invalid archive values')
    stamp=float(row['t'])
    if not math.isfinite(stamp) or stamp<cursor or stamp>=end or index and stamp<=previous:raise ValueError('Archive page did not advance')
    previous=stamp

@@ -41,6 +41,7 @@ async def async_setup_finance(hass):
     if sample:await hass.async_add_executor_job(book.add,[sample])
     a=quote();now=time.time()
     body=await hass.async_add_executor_job(book.today,a.get('rows',[]),a.get('rate'),now,a.get('rate_date'))
+    if not (loaded and history_day==body['date']):body.update(sale_czk=None,quality='partial')
     body.update(archive_loaded=loaded and history_day==body['date'],archive_synced_through=watermark,history_error=history_error,live=sample is not None,version='1.0.0')
     latest=body
     common={'date':body['date'],'as_of':body['as_of'],'quality':body['quality'],'rate_date':body['rate_date'],

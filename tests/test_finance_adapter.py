@@ -21,7 +21,8 @@ class FinanceAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.hass.states.async_set('sensor.inverter_grid_power',-1000)
   await data['capture']()
   self.assertGreaterEqual(float(self.hass.states.get('sensor.jarvis_dnes_nakoupeno_za').state),24.50)
-  self.assertGreater(float(self.hass.states.get('sensor.jarvis_dnes_prodano_za').state),0)
+  self.assertGreater(data['snapshot']()['known_sale_czk'],0)
+  self.assertEqual(self.hass.states.get('sensor.jarvis_dnes_prodano_za').state,'unknown')
   report=pathlib.Path(self.hass.config.path('jarvis_workspace','finance-runtime.json'))
   self.assertTrue(report.exists())
  async def test_private_archive_backfill_is_replay_safe(self):
@@ -47,5 +48,11 @@ class FinanceAdapterTests(unittest.IsolatedAsyncioTestCase):
    await data['capture']()
    await __import__('asyncio').gather(*self.tasks)
   self.assertGreaterEqual(len(calls),2)
+
+ async def test_unverified_history_does_not_publish_zero_as_whole_day_sale(self):
+  data=await self.setup_finance();await data['capture']()
+  body=data['snapshot']()
+  self.assertFalse(body['archive_loaded']);self.assertEqual(body['quality'],'partial')
+  self.assertIsNone(body['sale_czk']);self.assertEqual(body['purchase_czk'],24.5)
 
 if __name__=='__main__':unittest.main()

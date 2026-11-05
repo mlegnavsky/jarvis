@@ -33,7 +33,7 @@ async def async_setup(hass,config):
    return await response.json()
  async def state(status,error=None):
   count=await hass.async_add_executor_job(queue.count)
-  attrs={'friendly_name':'Trvalý energetický archiv','version':'1.2.1','queued_records':count,'last_ack':last_ack,'interval_seconds':10,'server':remote,'retention':'permanent','notice':'Weather rows are issued forecasts, not measured weather. Samples retain source update timestamps.'}
+  attrs={'friendly_name':'Trvalý energetický archiv','version':'1.2.2','queued_records':count,'last_ack':last_ack,'interval_seconds':10,'server':remote,'retention':'permanent','notice':'Weather rows are issued forecasts, not measured weather. Samples retain source update timestamps.'}
   if error:attrs['error']=error
   hass.states.async_set('sensor.jarvis_energy_archive',status,attrs)
  async def capture(_now=None):
