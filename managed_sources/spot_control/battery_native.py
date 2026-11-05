@@ -16,7 +16,7 @@ except ImportError:
     from native_plan import battery_window_plan
 
 WRITABLE = {109, 142, 143, 145, 146, *range(148, 160), *range(166, 178)}
-PROFILE = {0, 98, 111, 130, 219}
+PROFILE = {0, 98, 111, 130, 213, 219}
 PROTECTIVE = [(142, 2), (143, 0), (145, 0), *((172 + i, 0) for i in range(6))]
 
 
@@ -28,6 +28,13 @@ def _number(value):
         return value if math.isfinite(value) else None
     except (TypeError, ValueError, OverflowError):
         return None
+
+
+def _bms_limit(registers):
+    dynamic, maximum = registers.get(213), registers.get(219)
+    if any(type(v) is not int or not 1 <= v < 65535 for v in (dynamic, maximum)):
+        raise ValueError(f'Unknown native BMS limits:213={dynamic},219={maximum}')
+    return min(200, dynamic, maximum)
 
 
 class _Guard(ValueError):
@@ -152,12 +159,14 @@ class BatterySaleController:
             raise _Guard('profile_changed')
         if abs(data['clock'].timestamp() - self.clock()) > 5:
             raise _Guard('native_clock')
-        if not 1 <= r[219] <= 200 or r[109] > r[219]:
+        if r[109] > _bms_limit(r):
             raise _Guard('current_limit')
         if any(r[a] != self.record['expected'][str(a)] for a in WRITABLE):
             raise _Guard('native_mismatch')
         self.record['last_native_check'] = self.clock()
-        self.record['bms_discharge_a'] = r[219]
+        self.record['bms_discharge_a'] = _bms_limit(r)
+        self.record['bms_reported_limit_a'] = r[213]
+        self.record['bms_maximum_limit_a'] = r[219]
         return data
 
     def _stopped(self):
@@ -194,7 +203,7 @@ class BatterySaleController:
                     raise _Guard('native_conflict')
                 if not self._profile_ok(current):
                     raise _Guard('profile_changed')
-                if address == 109 and value > min(175, current[219], self.record['before']['109']):
+                if address == 109 and value > min(175, _bms_limit(current), self.record['before']['109']):
                     raise _Guard('current_limit')
             if stage == 'restore':
                 if not self._stopped():
@@ -245,7 +254,7 @@ class BatterySaleController:
             current = min(20, r[109]) if purpose == 'commission' else r[109]
             house_power = min(1000, powers[0]) if purpose == 'commission' else powers[0]
             plan = battery_window_plan(data['clock'], self.clock(), power_w, duration_minutes,
-                                       minimum_soc, s['voltage_v'], r[219], current, house_power,
+                                       minimum_soc, s['voltage_v'], _bms_limit(r), current, house_power,
                                        quotes, valid_until=valid_until, window_end=window_end)
             maximum = plan['power_w'] if maximum_power_w is None else _number(maximum_power_w)
             if maximum is None or maximum < 100:
@@ -388,7 +397,7 @@ class BatterySaleController:
             targets[int(key)] = conflict['value']
         targets.update({142: 2, 145: 0, **{172 + i: 0 for i in range(6)}})
         targets[143] = min(9300, self.record['before']['143'], targets[143])
-        targets[109] = min(175, self.record['before']['109'], targets[109], r[219])
+        targets[109] = min(175, self.record['before']['109'], targets[109], _bms_limit(r))
         return targets
 
     async def _stop(self, reason):
@@ -436,7 +445,7 @@ class BatterySaleController:
                 else:
                     self.record['expected'][str(address)] = targets[address]
             final = (await self._read())['registers']
-            if any(final[a] != targets[a] for a in WRITABLE) or final[109] > final[219]:
+            if any(final[a] != targets[a] for a in WRITABLE) or final[109] > _bms_limit(final):
                 raise ValueError('Whole native snapshot does not confirm restoration')
             if not self._stopped():
                 raise ValueError('Fresh stopped grid is required after restoration')

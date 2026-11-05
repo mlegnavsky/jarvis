@@ -13,7 +13,7 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.now = datetime(2026, 11, 5, 15, 40, tzinfo=TZ).timestamp()
         self.reg = {0: 1280, 98: 1, 109: 175, 111: 1, 130: 0,
-                    142: 2, 143: 9300, 145: 0, 146: 255, 219: 200}
+                    142: 2, 143: 9300, 145: 0, 146: 255, 213: 200, 219: 200}
         for i, time in enumerate([0, 400, 800, 1200, 1600, 2000]):
             self.reg.update({148 + i: time, 154 + i: 12000, 166 + i: 30, 172 + i: 0})
         self.original = dict(self.reg)
@@ -113,6 +113,19 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(address=address), self.assertRaises(ValueError):
                 await self.start()
             self.assertEqual(self.writes, [])
+
+    async def test_grid_bms_limit_is_required_and_high_maximum_is_not_the_pack_cap(self):
+        self.reg[213]=50;self.reg[219]=300
+        await self.start()
+        self.assertEqual(self.reg[109],50)
+        self.assertEqual(self.controller.record['plan']['current_limit_a'],50)
+
+    async def test_unknown_dynamic_or_maximum_bms_limit_cannot_start(self):
+        for address in (213,219):
+            for value in (0,65535):
+                self.reg=dict(self.original);self.reg[address]=value
+                with self.assertRaises(ValueError):await self.start()
+                self.assertEqual(self.writes,[])
 
     async def test_low_bms_limits_current_and_total_battery_dc_power(self):
         self.reg[219] = 10
@@ -455,6 +468,38 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         async def hook(kind, payload):
             if kind == 'battery_native_write_intent' and payload['address'] == 109 and payload['value'] == 175:
                 self.reg[219] = 50
+        self.audit_hook = hook
+        with self.assertRaises(ValueError):
+            await self.start()
+        self.assertNotIn((109, 175), self.writes)
+        self.assertEqual(self.reg[142], 2)
+        self.assertEqual(self.controller.record['stop_reason'], 'start_failed')
+        self.audit_hook = None
+        await self.finish_stop()
+        self.assertEqual(self.reg[109], 50)
+
+    async def test_dynamic_bms_lowered_during_current_restore_audit_prevents_high_write(self):
+        self.reg[213] = 100
+        await self.start()
+        await self.enable()
+        await self.controller.stop('manual')
+        self.reg[213] = 200
+        async def hook(kind, payload):
+            if kind == 'battery_native_write_intent' and payload['address'] == 109 and payload['value'] == 175:
+                self.reg[213] = 50
+        self.audit_hook = hook
+        self.writes.clear()
+        await self.advance()
+        self.assertNotIn((109, 175), self.writes)
+        self.assertTrue(self.controller.active)
+        self.audit_hook = None
+        await self.finish_stop()
+        self.assertEqual(self.reg[109], 50)
+
+    async def test_dynamic_bms_lowered_during_current_prepare_audit_prevents_high_write(self):
+        async def hook(kind, payload):
+            if kind == 'battery_native_write_intent' and payload['address'] == 109 and payload['value'] == 175:
+                self.reg[213] = 50
         self.audit_hook = hook
         with self.assertRaises(ValueError):
             await self.start()

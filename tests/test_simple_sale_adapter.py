@@ -1,6 +1,6 @@
 """Simple policy routes battery I/O exclusively through the native controller."""
 import copy
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import math
 import time
 import types
@@ -55,7 +55,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
    values.update({f'number.inverter_program_{i}_soc':30,f'number.inverter_program_{i}_power':10000,
     f'select.inverter_program_{i}_charging':'Disabled',f'time.inverter_program_{i}_time':f'{(i-1)*4:02d}:00:00'})
   for key,value in values.items():self.hass.states.async_set(key,value)
-  registers={0:5,98:1,109:175,111:1,130:0,142:2,143:9300,145:0,146:255,219:200,340:12000}
+  registers={0:5,98:1,109:175,111:1,130:0,142:2,143:9300,145:0,146:255,213:200,219:200,340:12000}
   for address in range(98,112):registers.setdefault(address,0)
   for address in range(142,178):registers.setdefault(address,0)
   for i in range(6):registers.update({148+i:i*400,154+i:10000,166+i:30,172+i:0})
@@ -82,6 +82,22 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
  def prices(self,start,net_eur=100):
   rows=[{'time':datetime.fromtimestamp(start+i*900,timezone.utc).isoformat(),'eur_mwh':net_eur} for i in range(-1,12)]
   self.hass.states.async_set('sensor.jarvis_spot_ote',1,{'fetched_at':datetime.fromtimestamp(self.clock[0],timezone.utc).isoformat(),'rate':25,'rows':rows})
+
+ async def test_zero_target_holds_exclusive_lock_and_rechecks_command_expiry(self):
+  data=await self.setup();deadline=self.clock[0]+10
+  async def helper(device,ready,event):
+   self.assertTrue(data['busy']());self.assertTrue(ready())
+   self.clock[0]=deadline+1;self.refresh();self.assertFalse(ready())
+   return {'verified':False,'actual_w':20}
+  with patch.object(self.module,'set_zero_target',side_effect=helper):
+   with self.assertRaises(ValueError):await data['zero_import_target'](deadline)
+  self.assertEqual(data['settings']['native_grid_target_w'],20)
+  self.assertFalse(data['settings']['zero_target_proof']['verified'])
+ async def test_zero_target_cannot_run_during_native_battery_sale(self):
+  data=await self.setup();data['battery_controller'].record={'before':{'143':9300},'phase':'armed'}
+  with patch.object(self.module,'set_zero_target') as helper:
+   with self.assertRaises(ValueError):await data['zero_import_target']()
+   helper.assert_not_called()
 
  async def test_manual_battery_never_uses_legacy_sale_route(self):
   data=await self.setup();data['settings'].update(battery_verified=True,pv_verified=True)
@@ -217,6 +233,37 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.module.sync_native_clock=sync
   with self.assertRaises(ValueError):await data['commission_battery']()
   self.assertEqual(called,[])
+
+ async def test_late_automatic_segment_clips_at_2340_without_rebudgeting(self):
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,battery_verified=True)
+  local=datetime.fromtimestamp(self.clock[0],ZoneInfo('Europe/Prague'))
+  start=local.replace(hour=22,minute=0,second=0,microsecond=0).timestamp()
+  self.clock[0]=local.replace(hour=23,minute=0,second=0,microsecond=0).timestamp()
+  self.prices(start);data['settings']['selected_block']={'start':start,'end':start+7200}
+  self.hass.states.async_set('sensor.inverter_battery',70);self.refresh()
+  await self.ticks[0]()
+  battery=data['battery_controller'];self.assertTrue(battery.active)
+  cutoff=local.replace(hour=23,minute=40,second=0,microsecond=0).timestamp()
+  self.assertEqual(battery.starts[0][4]['window_end'],cutoff)
+  self.assertLessEqual(battery.record['end'],cutoff)
+  expected=self.module.size_sale(70,23.5,start,start+7200,self.clock[0],1000,max_export_w=3000)['power_w']
+  self.assertEqual(battery.starts[0][0],expected)
+
+ async def test_after_2340_is_normal_hold_and_next_day_automatic_still_starts(self):
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,battery_verified=True)
+  local=datetime.fromtimestamp(self.clock[0],ZoneInfo('Europe/Prague'))
+  start=local.replace(hour=22,minute=0,second=0,microsecond=0).timestamp()
+  self.clock[0]=local.replace(hour=23,minute=41,second=0,microsecond=0).timestamp()
+  self.prices(start);data['settings']['selected_block']={'start':start,'end':start+7200}
+  self.hass.states.async_set('sensor.inverter_battery',80);self.refresh()
+  await self.ticks[0]()
+  self.assertFalse(data['battery_controller'].active)
+  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings'].get('inhibited',False))
+  tomorrow=local.replace(hour=11,minute=0,second=0,microsecond=0)+timedelta(days=1)
+  self.clock[0]=tomorrow.timestamp()-180;self.prices(tomorrow.timestamp());self.refresh()
+  await self.ticks[0]()
+  self.assertTrue(data['battery_controller'].active)
+  self.assertTrue(data['settings']['automatic'])
 
 
 if __name__=='__main__':unittest.main()

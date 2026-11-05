@@ -19,10 +19,11 @@ from .planning_setup import async_setup_planning
 from .simple_sales import choose_daily_block,size_sale
 from .battery_native import BatterySaleController,WRITABLE as BATTERY_WRITABLE
 from .native_clock import sync_native_clock
+from .native_zero_target import set_zero_target
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.6.0'
+VERSION='0.6.1'
 AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -104,6 +105,13 @@ async def async_setup_sales(hass,config,charge_controller):
   return selected
  def battery_size(block,maximum_power_w=AUTO_PILOT_LIMIT):
   return size_sale(fresh_number('sensor.inverter_battery'),23.5,block['start'],block['end'],time.time(),fresh_number('sensor.inverter_load_power'),max_export_w=min(AUTO_PILOT_LIMIT,maximum_power_w),minimum_soc=60)
+ def automatic_window_end(block):
+  now=time.time();local=datetime.fromtimestamp(now,ZoneInfo('Europe/Prague'))
+  cutoff=local.replace(hour=23,minute=40,second=0,microsecond=0).timestamp()
+  end=min(block['end'],cutoff)
+  minute=((local.hour*60+local.minute+5)//5)*5
+  native_start=(local.replace(hour=0,minute=0,second=0,microsecond=0)+timedelta(minutes=minute)).timestamp()
+  return end if end-now>=360 and native_start+300<=end else None
  def daylight_pv(pv):
   sun=hass.states.get('sun.sun')
   return pv is not None and pv>30 or sun is not None and sun.state=='above_horizon'
@@ -169,10 +177,11 @@ async def async_setup_sales(hass,config,charge_controller):
    async with asyncio.timeout(20):
     program=await device.execute(3,146,count=32)
     pv=await device.execute(3,340,count=1)
+    bms=await device.execute(3,212,count=8)
     clock=await device.execute(3,62,count=3)
-   if len(clock)!=3 or len(program)!=32 or len(pv)!=1:raise ValueError('Incomplete native read')
+   if len(clock)!=3 or len(program)!=32 or len(pv)!=1 or len(bms)!=8:raise ValueError('Incomplete native read')
    date=datetime(2000+(clock[0]>>8),clock[0]&255,clock[1]>>8,clock[1]&255,clock[2]>>8,clock[2]&255,tzinfo=ZoneInfo('Europe/Prague'))
-   native_program={'captured_at':datetime.now(timezone.utc).isoformat(),'clock_local':date.isoformat(),'clock_error_seconds':date.timestamp()-time.time(),'clock_registers':clock,'registers_146_177':program,'max_pv_power_raw':pv[0]}
+   native_program={'captured_at':datetime.now(timezone.utc).isoformat(),'clock_local':date.isoformat(),'clock_error_seconds':date.timestamp()-time.time(),'clock_registers':clock,'registers_146_177':program,'max_pv_power_raw':pv[0],'bms_discharge_limit_a':bms[1],'bms_max_discharge_limit_a':bms[7]}
   except Exception as exc:native_program={'error':type(exc).__name__+': '+str(exc)[:120]}
  async def write(entity,value):
   domain=entity.split('.')[0]
@@ -200,7 +209,7 @@ async def async_setup_sales(hass,config,charge_controller):
  async def native_test_read():
   device=native_device();registers={}
   async with asyncio.timeout(25):
-   for address,count in ((0,1),(98,14),(130,1),(142,36),(219,1),(62,3)):
+   for address,count in ((0,1),(98,14),(130,1),(142,36),(212,8),(62,3)):
     raw=await device.execute(3,address,count=count)
     if not isinstance(raw,list) or len(raw)!=count or any(type(v) is not int for v in raw):raise ValueError('Incomplete native register snapshot')
     registers.update({address+i:v for i,v in enumerate(raw)})
@@ -257,6 +266,15 @@ async def async_setup_sales(hass,config,charge_controller):
   if result.get('verified') is not True:raise ValueError('Hodiny měniče nejsou po údržbě ověřené.')
   fresh=await native_test_read()
   if abs(fresh['clock'].timestamp()-time.time())>5:raise ValueError('Čerstvé hodiny měniče překračují odchylku5 sekund.')
+ async def zero_import_target(valid_until=None):
+  async with lock:
+   def admission():
+    return ready and not active() and not charge_controller.active and healthy() and not hass.data.get(KEY,{}).get('clock_sync_active') and (valid_until is None or time.time()<=valid_until)
+   if not admission():raise ValueError('Nulový cíl vyžaduje čerstvá měření a neaktivní řízení.')
+   result=await set_zero_target(native_device(),admission,event)
+   prefs['zero_target_proof']=result;prefs['native_grid_target_w']=result.get('actual_w')
+   await persist_settings();await event('native_zero_target_result',result)
+   if result.get('verified') is not True:raise ValueError('Měnič nativně nepotvrdil nulový cíl odběru: '+str(result.get('actual_w'))+' W.')
  async def commission_window(valid_until=None,solar_sell=False,selling_first=False):
   async with lock:
    if not ready or active() or charge_controller.active:raise ValueError('Nejprve ukonči současný test nebo prodej.')
@@ -383,7 +401,7 @@ async def async_setup_sales(hass,config,charge_controller):
    if issued<=previous.get('issued_at',0):return None
    schemas={
     'start':vol.Schema({vol.Optional('mode'):vol.In(['pv','battery']),vol.Optional('power_w'):vol.All(vol.Coerce(float),vol.Range(min=100,max=9300)),vol.Optional('duration_minutes'):vol.All(vol.Coerce(float),vol.Range(min=1,max=60))}),
-    'stop':vol.Schema({}), 'automatic':vol.Schema({vol.Required('enabled'):bool}),'commission_battery':vol.Schema({}),'commission_window':vol.Schema({vol.Optional('solar_sell',default=False):bool,vol.Optional('selling_first',default=False):bool})}
+    'stop':vol.Schema({}), 'zero_import_target':vol.Schema({}), 'automatic':vol.Schema({vol.Required('enabled'):bool}),'commission_battery':vol.Schema({}),'commission_window':vol.Schema({vol.Optional('solar_sell',default=False):bool,vol.Optional('selling_first',default=False):bool})}
    if body['action'] not in schemas:return None
    body['data']=schemas[body['action']](body['data']);return body
   except (ValueError,TypeError,vol.Invalid):return None
@@ -412,6 +430,7 @@ async def async_setup_sales(hass,config,charge_controller):
     if time.time()>body['expires_at']:raise ValueError('Povel před provedením vypršel.')
     if body['action']=='start':await start_sale(body['data'],body['expires_at'])
     elif body['action']=='commission_battery':await commission_battery(body['expires_at'])
+    elif body['action']=='zero_import_target':await zero_import_target(body['expires_at'])
     elif body['action']=='commission_window':await commission_window(body['expires_at'],body['data']['solar_sell'],body['data']['selling_first'])
     elif body['action']=='stop':await stop_sale()
     elif body['data']['enabled']:await configure({'automatic':True,'inhibited':False,'commission_cancelled':False,'commission_attempted':False if not prefs['pv_verified'] else True},body['expires_at'])
@@ -460,15 +479,17 @@ async def async_setup_sales(hass,config,charge_controller):
      await c.tick();await handle_stop()
      if c.active and c.record.get('purpose')=='automatic':
       block=await select_block(quotes()) if prefs.get('battery_verified') else None
-      if block and block['start']-180<=time.time()<block['end']:await c.stop('price');await handle_stop()
+      if block and block['start']-180<=time.time()<block['end'] and automatic_window_end(block) is not None:await c.stop('price');await handle_stop()
     if was_active:return
     if not active() and ready and healthy():
      p=current_price();soc=fresh_number('sensor.inverter_battery');pv=fresh_number('sensor.inverter_pv_power')
      future=quotes();block=await select_block(future)
      decision={'mode':'hold','power_w':0,'minimum_soc':60,'reason':'Čekám na vybraný cenový blok nebo skutečné přebytky panelů.'}
      if block:decision['reason']='Vybraný nejlepší dvouhodinový blok; bateriová rezerva60 %.'
+     if block and block['start']-180<=time.time() and automatic_window_end(block) is None:
+      decision['reason']='Dostupné okno již nestačí na bezpečný bateriový segment; automatika čeká.'
      if p and p['net']>0 and soc is not None:
-      if prefs['battery_verified'] and block and block['start']-180<=time.time()<=block['end']-360:
+      if prefs['battery_verified'] and block and block['start']-180<=time.time()<=block['end']-360 and automatic_window_end(block) is not None:
        decision={**battery_size(block),'mode':'battery','reason':'Vybraný cenový blok · výkon z aktuální energie nad60 %.'}
       elif soc>=98 and daylight_pv(pv) and time.time()>=float(prefs.get('cooldown_until',0)):
        decision={'mode':'pv','power_w':AUTO_PILOT_LIMIT,'minimum_soc':60,'reason':'Baterie je téměř plná a panely vyrábějí · dostupné přebytky.'}
@@ -485,9 +506,11 @@ async def async_setup_sales(hass,config,charge_controller):
       if decision['mode']=='battery' and prefs['battery_verified'] and decision['power_w']>=100:
        await verify_baseline();await ensure_native_clock()
        sizing=battery_size(block)
-       if sizing['power_w']>=100:
-        await battery.start(sizing['power_w'],min(60,(block['end']-time.time())/60),60,quotes(),purpose='automatic',window_end=block['end'],maximum_power_w=AUTO_PILOT_LIMIT)
+       operating_end=automatic_window_end(block)
+       if sizing['power_w']>=100 and operating_end is not None:
+        await battery.start(sizing['power_w'],min(60,(operating_end-time.time())/60),60,quotes(),purpose='automatic',window_end=operating_end,maximum_power_w=AUTO_PILOT_LIMIT)
         last_reason='Bateriový segment připraven; skutečný nativní začátek může následovat po začátku cenového bloku.'
+       elif operating_end is None:last_reason='Před půlnocí již nelze bezpečně dokončit další bateriový segment; automatika čeká.'
       elif decision['mode']=='pv' and prefs['pv_verified']:
        await verify_baseline();await c.start('pv',AUTO_PILOT_LIMIT,15,minimum_soc=60,purpose='automatic')
    except Exception as exc:
@@ -520,7 +543,7 @@ async def async_setup_sales(hass,config,charge_controller):
    return self.json({'events':await hass.async_add_executor_job(journal.recent,1000),'retention':'permanent','status':snapshot()})
  hass.http.register_view(History())
  hass.data[KEY]={'controller':c,'window':window,'battery_controller':battery,'battery_sale':battery,'controllers':[c,battery,window],
-  'busy':lambda:lock.locked(),'clock_sync_active':False,'settings':prefs,'configure':configure,'report':report,'journal':journal,'start':start_sale,'stop':stop_sale,'commission_battery':commission_battery}
+  'busy':lambda:lock.locked(),'clock_sync_active':False,'settings':prefs,'configure':configure,'report':report,'journal':journal,'start':start_sale,'stop':stop_sale,'commission_battery':commission_battery,'zero_import_target':zero_import_target}
  for platform in ('number','select','switch'):hass.async_create_task(discovery.async_load_platform(hass,platform,DOMAIN,{},config))
  async_track_time_interval(hass,tick,timedelta(seconds=5))
  async_track_time_interval(hass,report,timedelta(seconds=5))

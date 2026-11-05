@@ -140,7 +140,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    controllers['busy']=lambda:False
    controllers['clock_sync_active']=True
    self.assertFalse(charge.healthy(),'RTC synchronization owns control')
-   self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.0')
+   self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.1')
  async def test_active_owner_conflict_latches_automatic_off_before_cleanup_finishes(self):
   from unittest.mock import AsyncMock
   data=await self.setup();await self.ticks[0]()
@@ -229,12 +229,15 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    if address==62:return [0x1a0b,0x050f,0x1e00]
    if address==146:return [255,0]+[0]*30
    if address==340:return [12000]
+   if address==212:return [200,50,94,460,5,0,300,300]
    raise ValueError(address)
   entry.runtime_data.device.execute=execute
   data=await self.setup();await self.ticks[0]()
   snapshot=self.hass.states.get('sensor.jarvis_energy_sales').attributes['native_program']
   self.assertEqual(snapshot['clock_local'],'2026-11-05T15:30:00+01:00')
   self.assertEqual(len(snapshot['registers_146_177']),32)
+  self.assertEqual(snapshot['bms_discharge_limit_a'],50)
+  self.assertEqual(snapshot['bms_max_discharge_limit_a'],300)
   self.assertEqual(self.writes,[])
 
  async def test_native_window_blocks_ordinary_sale_and_charge_conflict(self):
