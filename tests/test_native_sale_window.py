@@ -33,6 +33,57 @@ class NativeWindowTests(unittest.IsolatedAsyncioTestCase):
   self.reg[0]=5
   await self.window.start()
   self.assertEqual(self.reg[173],32)
+ async def test_selling_first_uses_native_full_soc_outside_window_and_delayed_mode_switch(self):
+  await self.window.start(selling_first=True)
+  self.assertEqual([self.reg[166+i] for i in range(6)],[100,95,100,100,100,100])
+  self.assertEqual([self.reg[172+i] for i in range(6)],[0]*6)
+  self.assertEqual(self.reg[142],2);self.assertEqual(self.reg[145],0)
+  self.now=self.window.record['start'];await self.advance(1)
+  self.assertEqual(self.reg[142],0);self.assertEqual(self.reg[145],0)
+  self.assertFalse(self.window.record['production_verified'])
+ async def test_selling_first_clock_expiry_requires_full_soc_next_slot_and_no_stop_write(self):
+  await self.window.start(selling_first=True);self.now=self.window.record['start'];await self.advance(1)
+  count=len(self.writes)
+  for _ in range(5):await self.advance(5,grid_w=-400,battery_w=500,pv_w=0)
+  self.now=self.window.record['end']-30
+  for _ in range(5):await self.advance(5,grid_w=-400,battery_w=500,pv_w=0)
+  self.now=self.window.record['end'];await self.advance(5,grid_w=200,battery_w=0)
+  self.assertTrue(self.window.record['native_expiry_observed'])
+  self.assertEqual(len(self.writes),count)
+ async def test_delayed_audit_cannot_switch_to_selling_first_after_end(self):
+  await self.window.start(selling_first=True);event=self.window.event
+  async def delayed(kind,payload):
+   if kind=='native_window_write_intent' and payload.get('address')==142 and payload.get('value')==0:
+    self.now=self.window.record['end']+1;self.states['reported_at']=self.now
+   await event(kind,payload)
+  self.window.event=delayed;self.now=self.window.record['start'];await self.advance(1)
+  self.assertNotIn((142,0),self.writes)
+ async def test_higher_house_load_cannot_mask_continued_battery_discharge_as_expiry(self):
+  await self.window.start(selling_first=True);self.now=self.window.record['start'];await self.advance(1)
+  for _ in range(5):await self.advance(5,grid_w=-400,battery_w=500,pv_w=0)
+  self.now=self.window.record['end']-30
+  for _ in range(5):await self.advance(5,grid_w=-400,battery_w=500,pv_w=0)
+  self.now=self.window.record['end'];await self.advance(5,grid_w=200,battery_w=500)
+  self.assertFalse(self.window.record['native_expiry_observed'])
+ async def test_stop_attempts_zero_ct_before_time_slot_cleanup_even_after_cap_failure(self):
+  await self.window.start(selling_first=True);self.now=self.window.record['start'];await self.advance(1)
+  self.writes.clear();write=self.window.native_write
+  async def fail_cap(address,value):
+   if address==143:raise OSError('cap offline')
+   await write(address,value)
+  self.window.native_write=fail_cap;await self.window.stop()
+  self.assertLess(self.writes.index((142,2)),self.writes.index((172,0)))
+ async def test_commission_variants_cannot_be_combined(self):
+  with self.assertRaises(ValueError):await self.window.start(solar_sell=True,selling_first=True)
+  self.assertEqual(self.writes,[])
+ async def test_restoration_cannot_close_when_full_native_snapshot_disagrees(self):
+  await self.window.start();read=self.window.native_read
+  async def lost_setting():
+   data=await read();data['registers'][109]=20;return data
+  self.window.native_read=lost_setting
+  await self.window.stop();await self.advance(5,grid_w=10)
+  self.assertTrue(self.window.active)
+  self.assertFalse(any(k=='native_window_stop' for k,_ in self.events))
  async def test_solar_sell_variant_protects_all_slots_and_enables_only_inside_window(self):
   await self.window.start(solar_sell=True)
   self.assertEqual([self.reg[166+i] for i in range(6)],[95]*6)

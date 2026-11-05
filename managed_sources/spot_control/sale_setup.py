@@ -18,7 +18,7 @@ from .native_window import NativeWindow,WRITABLE
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.4.9'
+VERSION='0.5.0'
 AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -163,6 +163,7 @@ async def async_setup_sales(hass,config,charge_controller):
   device=native_device()
   async with asyncio.timeout(20):
    await device.execute(16,address,data=[value])
+   await asyncio.sleep(1) # Give the inverter configuration write time to settle.
    actual=await device.execute(3,address,count=1)
   if actual!=[value]:raise ValueError(f'Native commissioning register {address} did not confirm {value}')
  async def save_window(record):await store.async_save({'settings':dict(prefs),'transaction':c.record,'native_window':record})
@@ -170,11 +171,11 @@ async def async_setup_sales(hass,config,charge_controller):
   states=read()
   return {'soc':number(states.get('sensor.inverter_battery')),'grid_w':number(states.get('sensor.inverter_grid_power')),'battery_w':number(states.get('sensor.inverter_battery_power')),'pv_w':number(states.get('sensor.inverter_pv_power')),'healthy':healthy(),'reported_at':reported(),'net_price':(current_price() or {}).get('net')}
  window=NativeWindow(native_test_read,native_test_write,window_telemetry,save_window,event,saved=saved.get('native_window'))
- async def commission_window(valid_until=None,solar_sell=False):
+ async def commission_window(valid_until=None,solar_sell=False,selling_first=False):
   async with lock:
    if not ready or c.active or window.active or charge_controller.active:raise ValueError('Nejprve ukonči současný test nebo prodej.')
    prefs.update(automatic=False,commission_cancelled=True,inhibited=False);await persist_settings()
-   await window.start(valid_until,solar_sell=solar_sell)
+   await window.start(valid_until,solar_sell=solar_sell,selling_first=selling_first)
  async def handle_stop():
   if c.active or not c.last_stop or prefs.get('handled_stop_id')==c.last_stop['id']:return
   result=after_stop(prefs,c.last_stop);prefs.clear();prefs.update(result);await persist_settings()
@@ -255,7 +256,7 @@ async def async_setup_sales(hass,config,charge_controller):
    if issued<=previous.get('issued_at',0):return None
    schemas={
     'start':vol.Schema({vol.Optional('mode'):vol.In(['pv','battery']),vol.Optional('power_w'):vol.All(vol.Coerce(float),vol.Range(min=100,max=9300)),vol.Optional('duration_minutes'):vol.All(vol.Coerce(float),vol.Range(min=1,max=60))}),
-    'stop':vol.Schema({}), 'automatic':vol.Schema({vol.Required('enabled'):bool}),'commission_window':vol.Schema({vol.Optional('solar_sell',default=False):bool})}
+    'stop':vol.Schema({}), 'automatic':vol.Schema({vol.Required('enabled'):bool}),'commission_window':vol.Schema({vol.Optional('solar_sell',default=False):bool,vol.Optional('selling_first',default=False):bool})}
    if body['action'] not in schemas:return None
    body['data']=schemas[body['action']](body['data']);return body
   except (ValueError,TypeError,vol.Invalid):return None
@@ -283,7 +284,7 @@ async def async_setup_sales(hass,config,charge_controller):
     await event('command_claimed',receipt)
     if time.time()>body['expires_at']:raise ValueError('Povel před provedením vypršel.')
     if body['action']=='start':await start_sale(body['data'],body['expires_at'])
-    elif body['action']=='commission_window':await commission_window(body['expires_at'],body['data']['solar_sell'])
+    elif body['action']=='commission_window':await commission_window(body['expires_at'],body['data']['solar_sell'],body['data']['selling_first'])
     elif body['action']=='stop':await stop_sale()
     elif body['data']['enabled']:await configure({'automatic':True,'inhibited':False,'commission_cancelled':False,'commission_attempted':False if not prefs['pv_verified'] else True},body['expires_at'])
     else:await stop_sale()
@@ -305,7 +306,7 @@ async def async_setup_sales(hass,config,charge_controller):
      if c.active:await c.stop('recovery');await handle_stop()
      ready=not c.active and not window.active
      if ready:await read_native_program()
-    if healthy() and not c.active and not window.active and (not native_program or 'error' in native_program) and time.time()-last_native_read>=60:
+    if healthy() and not c.active and not window.active and time.time()-last_native_read>=60:
      last_native_read=time.time();await read_native_program()
     if window.active:
      await window.tick();last_reason='Ověřuji nativní časové ukončení baterie · 500 W / 5 minut / rezerva 95 %.';return

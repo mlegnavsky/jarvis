@@ -919,3 +919,38 @@ partial-known label alreadylive. Full production still blocked by native expiry/
 recurrence, PV battery-assist and calibrated forecast/house budget. ZeroWtarget
 unconfirmed(native20). Verify all restoration with delayed fresh native snapshot;
 prior immediate ACK did not persist for slot2SOC/current (corrected+confirmed17:06).
+
+## 17:19local — second native trial failed export, Selling First source prepared
+NativeWindow1793894870144619394 ended17:15:40local with deadline/stop_verifiedTRUE,
+observedFALSE/native_expiryFALSE/productionFALSE. At17:12:30 independent FC03
+confirmed142=2,143=500,145=1,146=255, slots1710/1715, allsixSOC95,173=32.
+Across the actual window PV0, grid remainedsmallimport, battery served house;
+SolarSellON+ZeroCT does not establish battery sale on this installation. Do not
+repeat unsupportedZeroCT variants or weaken health/SOC checks.
+Exact manufacturer SM2 manual section5.7 documents SellingFirst+TOU for battery
+export, not Sell32 overridingZeroCT:
+https://www.deyeinverter.com/deyeinverter/2024/08/13/instructions_sun-3-12k-sg05lp3-eu-sm2_240813_en.pdf
+
+Source0.5.0 adds only a bounded SellingFirst commissioning alternative:500W/5min,
+SOC95inside/SOC100outside,20AorlowerBMS, no gridchargeflags, MODE0 onlyafter
+actualwindowstartandfresh post-audit checks. Native expiry requires recent actual
+export, stoppedgrid AND stoppedbattery discharge<=100W, hardwareclockafterend,
+mode0/EN0/nextSOC100 before any HAstopwrite. Protective stopattemptsMODE2first,
+thenCAP0/EN0/allflagsindependently. Read-onlyreview's two findings reproducedRED
+and fixed;69targeted testsPASS. ProductionalwaysFALSE.
+SOC100outside blocks ordinary house battery use; during an HAoutage house falls
+back to grid and PVexport maycontinue; dailyrecurrence still unresolved. This is
+a diagnostic commissioning alternative, not acceptance of fullautomatic behavior.
+Idle nativeprogramnowrefreshes60s to detect settings that didnotpersist after
+immediateACK. UI includes explicit Czech gridfallback notice for this variant.
+
+Final pilot hardening: MODE2 is first protective command. Native expiry also
+requires battery discharge<=100W, preventing high house demand from masking
+continued battery discharge. After restoration, a fresh complete native snapshot
+must match every before-image setting (safeCAP9300/MODE2/EN0); otherwise the
+transaction remains active for cleanup retry and cannot emit verifiedstop.
+Configuration writes settle1s before independentFC03; futurewindow preparation
+buffer is3minutes. Additional restoration regression observedRED→GREEN;70targeted
+testsPASS. DelayedHAstates showed mixed95/30/current20 after priorcleanup; this
+is an observed mismatch, not proof of its cause. Newbootnative snapshot will
+separate staleHAstates from persistenthardwareparameters before nextpilot.
