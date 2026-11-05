@@ -95,4 +95,13 @@ class JournalTests(unittest.TestCase):
    self.assertEqual([x['kind'] for x in q.after(a,1)],['b'])
    self.assertEqual([x['kind'] for x in q.after(a,100)],['b','c'])
 
+class AutomaticPauseTests(unittest.TestCase):
+ def test_market_and_reserve_pause_do_not_disable_the_owners_automatic_mode(self):
+  for reason in ('price','reserve','recovery'):
+   result=sales.after_stop({'automatic':True},{'id':'pause','reason':reason,'purpose':'automatic','stop_verified':True})
+   self.assertTrue(result['automatic'])
+ def test_manual_transaction_recovery_still_stays_inhibited(self):
+  result=sales.after_stop({'automatic':True},{'id':'manual','reason':'recovery','purpose':'manual','stop_verified':True})
+  self.assertFalse(result['automatic']);self.assertTrue(result['inhibited'])
+
 if __name__=='__main__':unittest.main()

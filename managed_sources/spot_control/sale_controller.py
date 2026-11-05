@@ -115,14 +115,15 @@ class SaleController:
   if mode=='pv' and grid is not None and grid<-100 and batt is not None and batt>200:triggers.append('battery_discharge')
   if grid is not None and -grid>self.record['power_w']+300:triggers.append('export_limit')
   deadline=self.clock()>=self.record['deadline']
-  reserve=mode=='battery' and soc is not None and soc<=self.record['minimum_soc']
+  reserve=soc is not None and (mode=='battery' and soc<=self.record['minimum_soc'] or mode=='pv' and self.record.get('purpose')=='automatic' and soc<98)
   if triggers or deadline or reserve or self.record.get('phase')=='stopping':
    self.record.setdefault('stop_context',{'triggers':triggers,'grid_w':grid,'battery_w':batt,'soc':soc,
     'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w'],
     'reported_at':number(self.reported()),'price_net':price,'captured_at':self.clock()})
    if 'export_limit' in triggers:self.error=f"Dodávka {-grid:g} W překročila nastavených {self.record['power_w']} W a ochrannou odchylku 300 W."
    elif triggers:self.error='Ochrana prodeje: '+', '.join(triggers)
-   reason='guard' if triggers else 'deadline' if deadline else 'reserve'
+   reason='price' if triggers==['price'] and price is not None else 'guard' if triggers else 'deadline' if deadline else 'reserve'
+   if reason=='price':self.error=''
    await self.stop(reason);return
   stamp=number(self.reported())
   if stamp is not None and stamp>self.record.get('sample_last',0):
@@ -132,9 +133,13 @@ class SaleController:
   if grid is not None and grid < -threshold and stamp is not None and stamp>self.record.get('enabled_at',float('inf')):
    if stamp>self.record.get('export_last',0):
     self.record.setdefault('export_first',stamp);self.record['export_last']=stamp;self.record['export_count']=self.record.get('export_count',0)+1
-   if not self.observed:
+   resumed=self.observed and self.record.get('phase')!='running'
+   if not self.observed or resumed:
     self.observed=True;self.record['phase']='running'
     await self.event('export_observed',{'sale_id':self.record.get('id'),'grid_w':grid,'battery_w':batt,'soc':soc})
     await self.save(copy.deepcopy(self.record))
+  elif mode=='pv' and (self.observed or self.record.get('purpose')!='commission' and self.clock()-self.record['started']>60):
+   if self.record.get('phase')!='awaiting_surplus':
+    self.record['phase']='awaiting_surplus';await self.save(copy.deepcopy(self.record))
   elif self.clock()-self.record['started']>60:
    self.error='Dodávka se nepotvrdila měřením; prodej ukončuji.';await self.stop('no_export')

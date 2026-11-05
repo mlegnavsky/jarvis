@@ -65,3 +65,15 @@ Owner explicitly superseded previous100 A cap with150 A and authorized adding th
 
 ## 5 November 2026 06:25 UTC — owner-selected175 A in both directions
 Fresh post-restart settings: maxcharging175 A, gridcharging175 A, maxdischarging175 A. Explicit owner request supersedes previous150/100 limits. Added only max-discharging entity to existing Jarvis permission list through supported CAS admin options; services unchanged. Native0.3.4/button requests min(175,inverter maximum), runtimeidle verified. No assistant-started175 A physical test or trading. Prior150 A test read146.19 A/8.116kW at55.57V, battery15C/inverter42C with no battery alarm/fault; controller idle by06:17:52UTC. Short test observations do not prove long-term installation behavior. Keep BMS and manufacturer200 A/max10kW limits; actual BMS current can be lower. Proof docs/evidence/2026-11-05-charging-discharging-175a.json.
+
+## 5 November2026 — owner grid-import policy
+The owner explicitly replaced the former20W anti-export bias with a0W target.
+Normal demand is supplied from PV/battery; grid import remains permitted for an
+actual energy/power shortfall and explicit grid charging. A0W target is not a
+promise of an exactly zero instantaneous meter reading. Charge and sale recovery
+must not restore the old20W value from historical snapshots. The original private
+snapshot remains historical evidence. The native parameter is Zero Export power,
+register104; existing native charge/sale controllers do not include it in their
+restore lists. Audited live automations.yaml (three household automations), empty
+scripts.yaml, configuration.yaml and managed sales/charge/heating sources: no
+periodic writer restoring20W found. The only observed source was the native bias.

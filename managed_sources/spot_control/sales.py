@@ -10,7 +10,8 @@ def after_stop(settings,outcome):
  result=dict(settings)
  result['handled_stop_id']=outcome.get('id')
  reason=outcome.get('reason')
- if reason not in ('deadline','manual'):
+ normal=reason in ('deadline','manual','price','reserve') or reason=='recovery' and outcome.get('purpose')=='automatic' and outcome.get('stop_verified')
+ if not normal:
   result.update(automatic=False,inhibited=True)
  if reason=='manual':result.update(automatic=False,commission_cancelled=True)
  complete=(reason=='deadline' and outcome.get('purpose')=='commission' and outcome.get('mode')=='pv'

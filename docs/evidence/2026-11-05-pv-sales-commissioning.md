@@ -37,3 +37,28 @@ Validation0.4.1:49targeted sales tests pass. Full suite is run separately; known
 Release0.4.1 physically repeated500W/3min at13:58:06local. Native143=500 and145=1 were independently read. Fresh exports typically416–547W, battery continued charging~500W, SOC99%. Deadline shutdown started14:01:11, native143=0/142=2/145=0 readback confirmed, fresh grid19W import by14:01:37. Stop proof recorded14:01:28, reason deadline, sustained=true, stop_verified=true, nofailures. PV commissioning passed; automatic remained deliberately off. The coarse energy counter crossing5.1→5.2kWh does not imply this0.5kWtest sold0.1kWh. Original931Wexcursion remains a captured abnormal event; no threshold was relaxed.
 
 Live HA logs exposed a UI listener running in an executor and calling event-loop-only async_write_ha_state. Release0.4.2 marks all three platform listeners with HAcallback; a real dispatch-semantics test reproduces the old failure and passes the corrected controls. Initial automatic PV output is conservatively capped3000W; contractual9500W and absolute operating upper9300W stay distinct. Native mode/enable baseline is independently checked before enabling. Expiring commands are checked again after the two native reads. Battery automation remains gated.52sales tests pass.
+
+## Live daily CZK and normal PV pauses — release0.4.3
+
+Owner requested daily purchase/sale CZK updated with the inverter, replacing old
+placeholder income on Energie and flow text under the Domov house (both desktop
+and mobile layouts). Added durable finance ledger, five-second power sampling,
+dated quarter-price integration net of0.30CZK/kWh, purchase5CZK/kWh with daily
+counter anchors, private archive backfill with overlap/reconciliation and explicit
+partial/unknown data. Native counter/source-change timestamps and midnight reset
+are retained; a lone noon sample cannot appear as a complete zero day. FX date and
+provisional status remain visible. Original art/other views are preserved by a
+scoped generator; full YAML roundtrip checked.
+
+The3000W PV test observed export, then a temporary lack of surplus incorrectly
+triggered no_export after60s. Release0.4.3 waits for/resumes actual PV surplus
+without changing power/price/fault guards or deadlines. Normal market/reserve
+pauses keep owner's automatic mode. Automatic recovery first verifies safe stop
+and then reevaluates; interrupted manual recovery and abnormal stops stay latched.
+Automatic PV returns to charging below98%SOC. Battery automatic sale remains gated.
+
+Owner also explicitly requested native zero-import bias0W, verified initially20W
+at register104. Existing voice/control allowlist preserved by the unredacted
+permission_map and extended by this one entity through supported admin options;
+no credentials or generic services were broadened. Scripts/automations/source
+restore lists audited for writers of20W. Start preflight independently reads104=0.

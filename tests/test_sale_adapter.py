@@ -14,13 +14,16 @@ from unittest.mock import patch
 class State:
  def __init__(self,entity,state,attributes=None):
   self.entity_id=entity;self.state=str(state);self.attributes=attributes or {}
-  self.last_updated=self.last_reported=datetime.now(timezone.utc)
+  self.last_changed=self.last_updated=self.last_reported=datetime.now(timezone.utc)
 
 class States:
  def __init__(self):self.items={}
  def get(self,key):return self.items.get(key)
  def async_all(self):return list(self.items.values())
- def async_set(self,key,value,attributes=None):self.items[key]=State(key,value,attributes)
+ def async_set(self,key,value,attributes=None):
+  old=self.items.get(key);new=State(key,value,attributes)
+  if old and old.state==new.state:new.last_changed=old.last_changed
+  self.items[key]=new
 
 class Store:
  def __init__(self,*args):self.data=None
@@ -33,7 +36,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   (path/'.storage').mkdir()
   self.services={};self.writes=[];self.tasks=[];self.ticks=[]
   self.hass=types.SimpleNamespace(data={},is_running=False,states=States(),config=types.SimpleNamespace(path=lambda *parts:str(path.joinpath(*parts))))
-  self.device_registers={143:9990,142:2,145:0};self.device_reads=[];self.device_reject=False
+  self.device_registers={143:9990,142:2,145:0,104:0};self.device_reads=[];self.device_reject=False
   async def execute(code,address,count=1):
    self.device_reads.append((code,address,count));return [self.device_registers[address]]
   entry=types.SimpleNamespace(runtime_data=types.SimpleNamespace(device=types.SimpleNamespace(execute=execute)))
@@ -47,7 +50,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   async def call(domain,service,data,blocking=False):
    entity=data['entity_id'];value=data.get('value',data.get('option','on' if service=='turn_on' else 'off'))
    self.writes.append((entity,value));self.hass.states.async_set(entity,value)
-   mapping={'number.inverter_export_surplus_power':143,'select.inverter_work_mode':142,'switch.inverter_export_surplus':145}
+   mapping={'number.inverter_export_surplus_power':143,'select.inverter_work_mode':142,'switch.inverter_export_surplus':145,'number.inverter_zero_export_power':104}
    if entity in mapping and not self.device_reject:self.device_registers[mapping[entity]]={'Zero Export To CT':2,'Export First':0,'on':1,'off':0}.get(value,value)
    if entity=='number.inverter_export_surplus_power' and value==0:self.hass.states.async_set('sensor.inverter_grid_power',20)
    self.poll()
@@ -72,7 +75,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   async def quick_sleep(_delay):await self.real_sleep(0)
   self.sleep_patch=patch.object(self.module.asyncio,'sleep',quick_sleep);self.sleep_patch.start()
   values={'select.inverter_work_mode':'Zero Export To CT','switch.inverter_export_surplus':'off',
-   'number.inverter_export_surplus_power':9990,'sensor.inverter_battery':99,'sensor.inverter_battery_power':-50,
+   'number.inverter_export_surplus_power':9990,'number.inverter_zero_export_power':0,'sensor.inverter_battery':99,'sensor.inverter_battery_power':-50,
    'sensor.inverter_grid_power':20,'sensor.inverter_pv_power':400,'sensor.inverter_battery_temperature':20,
    'sensor.inverter_device_state':'Normal','sensor.inverter_device_alarm':'OK','sensor.inverter_device_fault':'OK',
    'binary_sensor.inverter_battery_alarm':'off','binary_sensor.inverter_battery_fault':'off'}

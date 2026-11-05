@@ -135,4 +135,22 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(c.active);self.assertNotEqual(c.last_stop['reason'],'deadline')
   self.assertIn('export_limit',c.last_stop['context']['triggers'])
 
+ async def test_pv_sale_waits_through_a_temporary_loss_of_surplus(self):
+  c=self.c();await c.start('pv',3000,3)
+  self.now+=5;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-1000'
+  await c.tick();self.assertTrue(c.observed)
+  self.now+=70;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='10'
+  await c.tick();self.assertTrue(c.active)
+  self.assertEqual(c.record['phase'],'awaiting_surplus')
+  self.now+=5;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-700'
+  await c.tick();self.assertEqual(c.record['phase'],'running')
+
+ async def test_automatic_surplus_sale_returns_to_charging_when_battery_is_not_full(self):
+  c=self.c();await c.start('pv',3000,3,purpose='automatic')
+  self.states['sensor.inverter_battery']='97';await c.tick()
+  self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'reserve')
+ async def test_published_negative_price_is_a_normal_market_pause(self):
+  c=self.c();await c.start('pv',500,3,purpose='automatic');self.net=-1
+  await c.tick();self.assertEqual(c.last_stop['reason'],'price')
+
 if __name__=='__main__':unittest.main()

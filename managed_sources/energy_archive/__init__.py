@@ -17,7 +17,7 @@ CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_E
 URL='https://laborator.odladeni.cz/energy-archive/index.php'
 IDS=['sensor.inverter_pv_power','sensor.inverter_load_power','sensor.inverter_grid_power','sensor.inverter_battery','sensor.jarvis_spot_ote','sensor.jarvis_vykon_baterie','sensor.inverter_power_losses','sensor.inverter_today_production','sensor.inverter_today_load_consumption','sensor.inverter_today_energy_import','sensor.inverter_today_energy_export','sensor.inverter_total_production','sensor.inverter_total_load_consumption','sensor.inverter_total_energy_import','sensor.inverter_total_energy_export']
 TZ=ZoneInfo('Europe/Prague')
-IDS+=['sensor.inverter_battery_power','sensor.inverter_battery_current','sensor.inverter_battery_voltage','sensor.inverter_battery_temperature','sensor.inverter_temperature','sensor.inverter_dc_temperature','sensor.inverter_battery_soh','sensor.inverter_device_state','sensor.inverter_device_alarm','sensor.inverter_device_fault','sensor.inverter_pv1_power','sensor.inverter_pv2_power','sensor.inverter_today_battery_charge','sensor.inverter_today_battery_discharge','sensor.jarvis_energy_sales','binary_sensor.inverter_battery_alarm','binary_sensor.inverter_battery_fault']
+IDS+=['sensor.jarvis_dnes_nakoupeno_za','sensor.jarvis_dnes_prodano_za','sensor.inverter_battery_power','sensor.inverter_battery_current','sensor.inverter_battery_voltage','sensor.inverter_battery_temperature','sensor.inverter_temperature','sensor.inverter_dc_temperature','sensor.inverter_battery_soh','sensor.inverter_device_state','sensor.inverter_device_alarm','sensor.inverter_device_fault','sensor.inverter_pv1_power','sensor.inverter_pv2_power','sensor.inverter_today_battery_charge','sensor.inverter_today_battery_discharge','sensor.jarvis_energy_sales','binary_sensor.inverter_battery_alarm','binary_sensor.inverter_battery_fault']
 async def async_setup(hass,config):
  session=async_get_clientsession(hass);lock=asyncio.Lock();seen={};last_ack=None;remote={}
  path=Path(hass.config.path('.storage','jarvis_energy_archive_outbox.sqlite'))
@@ -33,7 +33,7 @@ async def async_setup(hass,config):
    return await response.json()
  async def state(status,error=None):
   count=await hass.async_add_executor_job(queue.count)
-  attrs={'friendly_name':'Trvalý energetický archiv','version':'1.1.0','queued_records':count,'last_ack':last_ack,'interval_seconds':10,'server':remote,'retention':'permanent','notice':'Weather rows are issued forecasts, not measured weather. Samples retain source update timestamps.'}
+  attrs={'friendly_name':'Trvalý energetický archiv','version':'1.2.0','queued_records':count,'last_ack':last_ack,'interval_seconds':10,'server':remote,'retention':'permanent','notice':'Weather rows are issued forecasts, not measured weather. Samples retain source update timestamps.'}
   if error:attrs['error']=error
   hass.states.async_set('sensor.jarvis_energy_archive',status,attrs)
  async def capture(_now=None):
@@ -42,7 +42,7 @@ async def async_setup(hass,config):
    entity=hass.states.get(id)
    if entity is None:values[id]={'value':None,'source_updated':None};continue
    value=entity.state
-   values[id]={'value':None if value in ('unknown','unavailable','') else value,'source_updated':(getattr(entity,'last_reported',None) or entity.last_updated).isoformat()}
+   values[id]={'value':None if value in ('unknown','unavailable','') else value,'source_updated':(getattr(entity,'last_reported',None) or entity.last_updated).isoformat(),'source_changed':entity.last_changed.isoformat()}
   try:
    await hass.async_add_executor_job(queue.append,{'kind':'sample','t':now.timestamp(),'values':values})
    for kind,id in [('spot','sensor.jarvis_spot_ote'),('weather','sensor.jarvis_pocasi_zitenice')]:
@@ -88,9 +88,12 @@ async def async_setup(hass,config):
    except ValueError:return web.json_response({'error':'invalid_date'},status=400)
    except Exception:return web.json_response({'error':'archive_unavailable'},status=503)
  hass.http.register_view(ArchiveDay())
+ async def read_window(start,end):
+  async def page(lo,hi):return await request('GET',params={'op':'day','start':lo,'end':hi})
+  return await fetch_day(page,start,end)
  async def append_event(record):
   await hass.async_add_executor_job(queue.append,{'kind':'sample','t':record['t'],'values':{},'event':record})
- hass.data[DOMAIN]={'append_event':append_event}
+ hass.data[DOMAIN]={'append_event':append_event,'read_window':read_window}
  async def setting_changed(event):
   entity_id=event.data.get('entity_id','');old=event.data.get('old_state');new=event.data.get('new_state')
   if '.inverter_' not in entity_id or entity_id.split('.')[0] not in ('number','select','switch','time','datetime') or new is None or old is None or old.state==new.state:return

@@ -16,7 +16,7 @@ from .journal import Journal
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.4.2'
+VERSION='0.4.3'
 AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -85,7 +85,7 @@ async def async_setup_sales(hass,config,charge_controller):
   # This installation uses the verified deye_p3 register map. Never treat the
   # Solarman optimistic HA update as a physical setting readback.
   mapping={'number.inverter_export_surplus_power':(143,1),
-   'select.inverter_work_mode':(142,1),'switch.inverter_export_surplus':(145,1)}
+   'select.inverter_work_mode':(142,1),'switch.inverter_export_surplus':(145,1),'number.inverter_zero_export_power':(104,1)}
   if entity not in mapping:return
   entries=hass.config_entries.async_entries('solarman')
   if len(entries)!=1:raise RuntimeError('Nelze jednoznačně ověřit registr měniče.')
@@ -99,6 +99,7 @@ async def async_setup_sales(hass,config,charge_controller):
  async def verify_baseline():
   await native_readback('select.inverter_work_mode','Zero Export To CT')
   await native_readback('switch.inverter_export_surplus','off')
+  await native_readback('number.inverter_zero_export_power',0)
  async def write(entity,value):
   domain=entity.split('.')[0]
   if domain=='number':service='set_value';data={'value':float(value)}
@@ -155,7 +156,7 @@ async def async_setup_sales(hass,config,charge_controller):
   return {'version':VERSION,'ready':ready,'active':c.active,'observed':c.observed,'phase':c.record.get('phase','idle'),
    'settings':dict(prefs),'reason':('Automatika pozastavena po zásahu ochrany. '+(c.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':c.error or runtime_error,'price':p,
    'mode':c.record.get('mode'),'power_w':c.record.get('power_w'),'deadline':c.record.get('deadline'),
-   'automatic_limit_w':AUTO_PILOT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
+   'grid_target_w':0,'grid_import_policy':'Cíl běžného odběru 0 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_PILOT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)
@@ -169,10 +170,10 @@ async def async_setup_sales(hass,config,charge_controller):
   hass.bus.async_fire('jarvis_sales_settings')
   if time.time()-last_report>=10:
    telemetry={}
-   for entity_id in ('sensor.inverter_pv_power','sensor.inverter_grid_power','sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_battery_current','sensor.inverter_temperature','sensor.inverter_battery_temperature','sensor.inverter_total_energy_export'):
+   for entity_id in ('sensor.inverter_pv_power','sensor.inverter_grid_power','sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_battery_current','sensor.inverter_temperature','sensor.inverter_battery_temperature','sensor.inverter_total_energy_export','number.inverter_zero_export_power'):
     state=hass.states.get(entity_id)
     if state:telemetry[entity_id]={'state':state.state,'source_reported':(getattr(state,'last_reported',None) or state.last_updated).isoformat()}
-   recent=await hass.async_add_executor_job(journal.recent,20)
+   recent=await hass.async_add_executor_job(journal.recent,80)
    try:await hass.async_add_executor_job(write_report,{'captured_at':datetime.now(timezone.utc).isoformat(),**body,'telemetry':telemetry,'events':recent})
    except OSError:pass
    last_report=time.time()
@@ -262,7 +263,7 @@ async def async_setup_sales(hass,config,charge_controller):
       if mode=='pv' and soc<98:last_reason='Baterii ponechávám; čekám na přebytky panelů.'
       else:
        await verify_baseline()
-       await c.start(mode,min(AUTO_PILOT_LIMIT,decision['power_w']),15,decision['minimum_soc'])
+       await c.start(mode,min(AUTO_PILOT_LIMIT,decision['power_w']),15,decision['minimum_soc'],purpose='automatic')
    except Exception as exc:
     runtime_error=str(exc)
     try:await event('controller_error',{'error':runtime_error})

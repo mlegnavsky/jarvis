@@ -41,6 +41,7 @@ Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na do
  conditional('starting',md('🟠 **Připravuji prodej · čekám na potvrzení měniče.**')),
  conditional('awaiting_power',md('🟠 **Prodej povolen · čekám na naměřenou dodávku.**')),
  conditional('running',tile('Prodej běží','mdi:transmission-tower-export','stop_sale','blue')),
+ conditional('awaiting_surplus',md('🟠 **Čekám na přebytky panelů · prodej je povolen, právě není potvrzená dodávka.**')),
  conditional('stopping',md('🟠 **Ukončuji prodej · ověřuji návrat bez přetoků.**')),
  tile('Zastavit prodej i automatiku','mdi:stop-circle','stop_sale','red'),
  md('''### Průběh
