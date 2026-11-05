@@ -18,7 +18,7 @@ from .native_window import NativeWindow,WRITABLE
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.4.8'
+VERSION='0.4.9'
 AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):

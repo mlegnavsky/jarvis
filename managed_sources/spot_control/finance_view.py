@@ -5,7 +5,10 @@ def money_card(kind):
  buy=kind=='purchase';entity='sensor.jarvis_dnes_nakoupeno_za' if buy else 'sensor.jarvis_dnes_prodano_za'
  title='Dnes nakoupeno za' if buy else 'Dnes prodáno za'
  footer='ČEZ · 5 Kč/kWh' if buy else 'OTE − 0,30 Kč/kWh'
- fallback="{% if not is_number(v) and is_number(states('sensor.inverter_today_energy_import')) %}{% set v=(states('sensor.inverter_today_energy_import')|float)*5 %}{% endif %}" if buy else ''
+ fallback=''
+ if not buy:
+  fallback="{% set partial=false %}{% if not is_number(v) and state_attr('sensor.jarvis_dnes_prodano_za','archive_loaded') and state_attr('sensor.jarvis_dnes_prodano_za','quality')=='partial' %}{% set known=state_attr('sensor.jarvis_dnes_prodano_za','known_sale_czk') %}{% if is_number(known) %}{% set v=known %}{% set partial=true %}{% endif %}{% endif %}"
+  footer="{% if partial %}Doložená část · celkový výnos zatím není úplný.\n{% endif %}"+footer
  return {'type':'markdown','content':f"### {title}\n{{% set v=states('{entity}') %}}{fallback}\n## {{{{ ('%.2f'|format(v|float))|replace('.', ',') if is_number(v) else '—' }}}} Kč\n{footer}"}
 
 def status_card():

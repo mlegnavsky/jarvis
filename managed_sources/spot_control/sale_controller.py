@@ -17,14 +17,17 @@ class SaleController:
   self.reported=reported or (lambda:None);self.last_stop=None
  @property
  def active(self):return bool(self.record.get('before'))
+ def _validate_write(self):
+  price=number(self.price())
+  if not self.healthy() or price is None or price<=0:raise ValueError('Chybí aktuální měření nebo kladná výkupní cena.')
+  if self.clock()>=self.record['deadline']:raise ValueError('Příprava překročila časové okno prodeje.')
  async def _set(self,entity,value,guard=True):
-  if guard and (not self.healthy() or number(self.price()) is None or self.price()<=0):
-   raise ValueError('Chybí aktuální měření nebo kladná výkupní cena.')
-  if guard and self.clock()>=self.record['deadline']:raise ValueError('Příprava překročila časové okno prodeje.')
+  if guard:self._validate_write()
   try:await self.event('write_intent',{'entity':entity,'before':self.read().get(entity),'value':value,'sale_id':self.record.get('id')})
   except Exception:
    if guard:raise
    self.error='Historie je nedostupná; provádím bezpečné ukončení.'
+  if guard:self._validate_write()
   try:await self.write(entity,value)
   except Exception as exc:
    await self.event('write_failed',{'entity':entity,'error':str(exc),'sale_id':self.record.get('id')});raise

@@ -179,3 +179,32 @@ while an actuator acknowledgement is pending. No permanent trading gate is lifte
 
 Own temporary backupa12886b5 was deletedverified after fresh metadata read under
 prior local-cleanup authorization; newer/protected and all remote backups retained.
+
+## 17:09local — version0.4.8 active, second window armed
+Source573b5963fcc29da0c49d4802132f36df5f824169 activatedverified16:01:26UTC,
+backup58a4546f, Core2026.6.4 unchanged. Independent5sreport works while native
+control awaits device I/O. First SolarSellON intent failed BEFORE writing because
+clock tolerance did not pass; no test started under that intent. Read-only
+one-shot native diagnostic17:06:20 found actual17:06:18 (~2.6s behind), raw
+current109=175 and allSOC166..171=30. Diagnostic removed, original three household
+rules restored byte-for-byte and reloaded.
+
+Correction to the earlier restoration statement: immediate FC03 acknowledgements
+at16:35 did not prove persistence. At17:01 fresh native snapshot still showed
+slot2SOC95 and HA current20A. Standard supported number services restored slot2
+to30 and current175, then the17:06 direct physical read confirmed both. Do not
+claim an enduring cleanup based solely on an immediate write/read acknowledgement.
+
+Second physical intent owner-native-solar-window-after-clock-proof-20261105
+armedNativeWindow1793894870144619394 for17:10–17:15local:500W,20AorlowerBMS,
+all six SOC95, SolarSell enabled only after actual start. At17:09 still waiting,
+not yet export proof. Production battery gate staysFALSE.
+
+Independent whole-branch review found a normal SaleController race after awaited
+audit and an unvalidated purchase UI fallback. Source0.4.9 fixes both with
+observed RED→GREEN tests;361full tests pass before the version-only bump. This
+source fix is not yet active and must be deployed before another normal PV start.
+Partial cash cards were updatedverified16:07UTC, parentrevision
+d5bef4fb9d436af39d1b0ba6312036ea661c49167e21510bcbcab2d1588c2164.
+Known sale amount is explicitly labelled as an incomplete documented part, not
+a fabricated complete daily total. Raw purchase fallback is removed.

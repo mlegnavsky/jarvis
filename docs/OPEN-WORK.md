@@ -909,3 +909,13 @@ window, ALLsixSOCfloors95untilcleanup, fixed500W/current20A, no productionunlock
 Clock proof requires observed export in last15s before end; never/long-agoexport
 cannotpass. Mobile independentstatus timer prevents frozenstoppingdisplay.
 Originalstopreason/context retained. Read current runtime before any restart.
+
+## Energy checkpoint 2026-11-05 17:09 Europe/Prague
+0.4.8 activeverified; native500W/5min/SOC95 SolarSellON trial1793894870144619394
+armed17:10–17:15, not yet measured. Do NOT restart while native transaction active.
+0.4.9 source fixes reviewed post-audit normal-sale race and purchase rawcounter
+fallback;361tests passed. Must deploy before next ordinaryPV start. Finance card
+partial-known label alreadylive. Full production still blocked by native expiry/
+recurrence, PV battery-assist and calibrated forecast/house budget. ZeroWtarget
+unconfirmed(native20). Verify all restoration with delayed fresh native snapshot;
+prior immediate ACK did not persist for slot2SOC/current (corrected+confirmed17:06).

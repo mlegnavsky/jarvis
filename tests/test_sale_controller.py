@@ -34,6 +34,20 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(self.states['select.inverter_work_mode'],'Zero Export To CT')
   self.assertEqual(self.states['number.inverter_program_1_soc'],'30')
   self.assertFalse(c.observed)
+ async def test_slow_audit_cannot_enable_export_after_deadline_or_health_loss(self):
+  for cause in ('deadline','health','price'):
+   with self.subTest(cause=cause):
+    self.setUp();c=self.c();original=c.event
+    async def delayed(kind,data):
+     await original(kind,data)
+     if kind=='write_intent' and data.get('entity')=='switch.inverter_export_surplus' and data.get('value')=='on':
+      if cause=='deadline':self.now=281
+      elif cause=='health':self.fresh=False
+      else:self.net=-1
+    c.event=delayed
+    with self.assertRaises(ValueError):await c.start('pv',500,3)
+    self.assertNotIn(('switch.inverter_export_surplus','on'),self.calls)
+    self.assertFalse(c.active)
  async def test_confirm_running_only_after_measured_export(self):
   c=self.c();await c.start('pv',500,3);self.states['sensor.inverter_grid_power']='-300'
   self.now+=5;self.sample_stamp=self.now
