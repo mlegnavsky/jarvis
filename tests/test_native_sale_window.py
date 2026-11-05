@@ -105,6 +105,15 @@ class NativeWindowTests(unittest.IsolatedAsyncioTestCase):
   await self.window.start();self.now=self.window.record['end']
   await self.advance(5,grid_w=10,battery_w=110)
   self.assertFalse(self.window.record['native_expiry_observed'])
+ async def test_selling_first_observer_allows_native_power_ramp_before_connected_stop(self):
+  await self.window.start(selling_first=True);self.now=self.window.record['start'];await self.advance(1)
+  for _ in range(5):await self.advance(5,grid_w=-500,battery_w=650,pv_w=0)
+  self.now=self.window.record['end']-30
+  for _ in range(5):await self.advance(5,grid_w=-500,battery_w=650,pv_w=0)
+  self.now=self.window.record['end']+19;await self.advance(1,grid_w=-120,battery_w=246)
+  self.assertNotEqual(self.window.record.get('phase'),'stopping')
+  await self.advance(10,grid_w=250,battery_w=40)
+  self.assertTrue(self.window.record['native_expiry_observed'])
  async def test_failed_guard_reason_survives_later_cleanup_retry(self):
   await self.window.start();self.states['healthy']=False
   await self.advance(1)

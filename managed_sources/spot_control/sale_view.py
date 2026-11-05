@@ -1,12 +1,24 @@
 """Native mobile form: navigation is inert; Start is an explicit separate action."""
 def md(content):return {'type':'markdown','content':content}
 def verification_card():
- return md("### Stav ověřování\n{% set s=state_attr('sensor.jarvis_energy_sales','settings') or {} %}\n{% set c=s.get('command',{}) %}\n{% set t=state_attr('sensor.jarvis_energy_sales','native_test') or {} %}\n{% if t %}\n**Test baterie: {{ {'preparing':'příprava','armed':'čekám na začátek','measuring':'měřím průběh','expiry_observed':'nativní konec ověřen','stopping':'ukončuji a vracím nastavení'}.get(t.get('phase'),'ověřování') }} · nejvýše 500 W**\nZačátek: **{{ t.get('start') | timestamp_custom('%H:%M:%S',true) }}**, konec: **{{ t.get('end') | timestamp_custom('%H:%M:%S',true) }}**.\nRezerva při testu **{{ t.get('minimum_soc',95) }} %**.\n{% if t.get(\'selling_first\') %}Režim Selling First · mimo okno je dočasně nastaveno 100 %. Dům může odebírat ze sítě, dokud neobnovím běžné nastavení.{% endif %}\n{% elif c.get('status')=='failed' %}\n**Test se nespustil.** {{ c.get('error') }}\n{% else %}\nČekám na další ověřovací krok.\n{% endif %}\nBateriová automatika: **{{ 'ověřená' if s.get('battery_verified') else 'dosud neověřená' }}**.\n")
+ return md("### Stav ověřování\n{% set s=state_attr('sensor.jarvis_energy_sales','settings') or {} %}\n{% set c=s.get('command',{}) %}\n{% set t=state_attr('sensor.jarvis_energy_sales','native_test') or {} %}\n{% if t %}\n**Test baterie: {{ {'preparing':'příprava','armed':'čekám na začátek','measuring':'měřím průběh','expiry_observed':'nativní konec ověřen','stopping':'ukončuji a vracím nastavení'}.get(t.get('phase'),'ověřování') }} · nejvýše 500 W**\nZačátek: **{{ t.get('start') | timestamp_custom('%H:%M:%S',true) }}**, konec: **{{ t.get('end') | timestamp_custom('%H:%M:%S',true) }}**.\nRezerva při testu **{{ t.get('minimum_soc',95) }} %**.\n{% if t.get(\'selling_first\') %}Doběh regulace sleduji nejvýše 60 s po konci při stejném výkonovém stropu. Režim Selling First · mimo okno je dočasně nastaveno 100 %. Dům může odebírat ze sítě, dokud neobnovím běžné nastavení.{% endif %}\n{% elif c.get('status')=='failed' %}\n**Test se nespustil.** {{ c.get('error') }}\n{% else %}\nČekám na další ověřovací krok.\n{% endif %}\nBateriová automatika: **{{ 'ověřená' if s.get('battery_verified') else 'dosud neověřená' }}**.\n")
 def tile(name,icon,service,color):
  return {'type':'tile','entity':'sensor.jarvis_energy_sales','name':name,'icon':icon,'color':color,'hide_state':True,
   'tap_action':{'action':'perform-action','perform_action':'jarvis_spot_control.'+service},
   'icon_tap_action':{'action':'perform-action','perform_action':'jarvis_spot_control.'+service}}
 def conditional(phase,card):return {'type':'conditional','conditions':[{'condition':'state','entity':'sensor.jarvis_energy_sales','state':phase}], 'card':card}
+def planning_card():
+ return md("""### Rezerva pro dům
+{% set p=state_attr('sensor.jarvis_energy_sales','planning') or {} %}
+{% if not p or p.get('quality')=='insufficient' %}
+{{ p.get('reason','Načítám historii spotřeby a předpověď.') }}
+{% else %}
+**Doporučená rezerva: {{ p.required_soc }} %** · základ nejméně 60 %.
+Výhled spotřeby na 24 hodin: **{{ p.estimated_house_kwh | round(1) }} kWh**.
+{% if p.get('quality')=='energy_only' %}Časový průběh není úplný; solární výrobu nezapočítávám.{% elif p.get('pv_forecast_known') %}Využitelný solár podle kalibrované předpovědi: přibližně {{ p.credited_pv_kwh | round(1) }} kWh.{% else %}Neznámou nebo nedoloženou výrobu nezapočítávám.{% endif %}
+{% endif %}
+{% if p.get('history_error') %}{{ p.history_error }}{% endif %}
+""")
 def summary_cards():
  return [md('''## Prodej elektřiny
 {% set p=state_attr('sensor.jarvis_energy_sales','price') %}
@@ -21,6 +33,7 @@ Rezerva pro prodej **60 %** · maximální provozní strop **9,3 kW**.
 Automatický prodej je nyní omezen na úvodních **3 kW**. Baterie se automaticky neprodává, dokud není ověřeno její časové ukončení.
 '''),
  verification_card(),
+ planning_card(),
  conditional('native_test',tile('Zastavit ověřovací test','mdi:stop-circle','stop_sale','red')),
  {'type':'tile','entity':'switch.jarvis_sale_automatic','name':'Automatický prodej','icon':'mdi:solar-power','color':'green'},
  {'type':'tile','entity':'sensor.jarvis_energy_sales','name':'Vlastní prodej','icon':'mdi:transmission-tower-export','color':'green','hide_state':True,

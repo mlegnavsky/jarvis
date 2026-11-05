@@ -971,3 +971,32 @@ UIandruntime showactualminimumSOC. Explicitlyexplainedownerbeforeimplementation.
 ObservedRED96start/floor90/battery1000tests→GREEN48targetedtests.
 ProductionbatteryverificationstaysFALSEandfullautomationOFF. Nativeclock/
 health/price/freshness/expiry/fullrestorationguardsunchanged.
+
+## 18:19local — actual battery export proven; native ramp observation pending
+0.5.2source59a846e6b3182a03c6b06aeaa8ec59c6de26ab97/local5497755 activated
+17:53:49local,backupca20ba2c. Allnativeguardspreflightpassed; actualwindow
+1793897760591554771armed18:00–18:05 with500Wgridcap,1000WbatteryTOUpower
+includinghouse,current20A,minSOC90/otherSOC100. Sustainedactualgrid~−501to
+−511W withPV0andbattery~613–627W,SOC96. Batteryexportisproven. NativeendNOT
+yetproven:18:05:09grid−510/battery627,18:05:15−285/446,18:05:20−120/246;
+connectedstopbegan18:05:25beforecompletionwasobserved. ProofobservedTRUE,
+native_expiryFALSE,stopverifiedTRUEat18:06:13. Delayednativewholeprogram
+18:07all6SOC30/originaltimes/flags0; actualgrid10W/battery264Whouseconfirmed.
+No fullproductionclaim. Source0.5.3 allows60s observationafterSellingFirst
+boundaryatunchanged500W/SOC90/current20/health/positivepriceguards; other
+variantskeep20s. UIexplicitlystates5minslotplusup-to60sdecayobservation.
+
+Addedpureplanning.py/modelv2 withprior-issuedempiricalGHIcalibration,25%house
+profilemargin,efficiencies sqrt(.90),unknownchargecap0(noPVstoragecredit),
+strictcompletehourlyhistory; counter-onlyfallbackusesconservativerolling24h
+envelopeincludingpossibleendsinsidegaps,quantizationandedgeuncertainty.
+No fakehourlyloadorPVcreditfromcounter-onlydata. Dailymaximumcacheisrejected.
+29plannerregressiontestsPASS. planning_setup.pyreadslastfourcompletearchive
+daysandusespreviousdayweatherpublicationfornextdaycalibration; fouradapter
+testsPASS. ItsfailureorStore/snapshotfailureisisolatedfromcontrol/reportand
+fallsbackrequiredSOC100. ReserveisfedtopolicyandshowninmobileUI.
+408fulltestsPASS plusfinal29plannerregressionscheckedseparately; no claimof
+liveplannerresultsbeforeactivation/backfill. Nominalcapacity23.5kWhisexplicit
+policybasis,notmeasuredSOH. ProductionbatteryverificationstillFALSE; native
+productionactuator/outagepolicyandPV-onlybatteryassiststillpending.0Wtarget
+remainsunconfirmednative20. No new liveexportstartedwhileworksourcechanges.

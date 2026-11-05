@@ -15,18 +15,28 @@ from .sales import decide,price_at,market_rows,number,after_stop
 from .sale_controller import SaleController
 from .journal import Journal
 from .native_window import NativeWindow,WRITABLE
+from .planning_setup import async_setup_planning
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.5.2'
+VERSION='0.5.3'
 AUTO_PILOT_LIMIT=3000
 
 async def async_setup_sales(hass,config,charge_controller):
  store=Store(hass,1,KEY);saved=await store.async_load() or {}
  prefs={'automatic':False,'power_w':500,'minutes':3,'source':'pv','pv_verified':False,'battery_verified':False,**saved.get('settings',{})}
  journal=await hass.async_add_executor_job(Journal,Path(hass.config.path('.storage','jarvis_energy_sales.sqlite')))
- lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();report_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={};window=None;last_native_read=0
+ lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();report_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={};window=None;last_native_read=0;planning=None
  archive_error='';runtime_error='';commission_requested=bool((config.get(DOMAIN) or {}).get('commission_pv_test',False))
+ def home_plan():
+  try:
+   result=planning['snapshot']() if planning else {}
+   reserve=number(result.get('required_soc'))
+   if reserve is None or not 60<=reserve<=100 or result.get('quality') not in ('insufficient','conservative','calibrated','energy_only') or not isinstance(result.get('reason'),str):raise ValueError('Invalid optional plan')
+   json.dumps(result,allow_nan=False)
+   return result
+  except Exception:
+   return {'required_soc':100,'quality':'insufficient','reason':'Plán rezervy není dostupný; baterii ponechávám domu.','estimated_house_kwh':None,'credited_pv_kwh':None,'history_error':'Výpočet rezervy čeká.','feasible':False}
  async def save_record(record):
   await store.async_save({'settings':dict(prefs),'transaction':record,'native_window':window.record if window else saved.get('native_window',{})})
  async def persist_settings():await save_record(c.record)
@@ -219,7 +229,7 @@ async def async_setup_sales(hass,config,charge_controller):
    'settings':dict(prefs),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else c.error or runtime_error,'price':p,
    'mode':'battery_commission' if window.active else c.record.get('mode'),'power_w':500 if window.active else c.record.get('power_w'),'deadline':window.record.get('end') if window.active else c.record.get('deadline'),
    'grid_target_w':0,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('native_grid_target_w')==0,'grid_import_policy':'Cíl běžného odběru 0 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_PILOT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
-   'history_error':archive_error,'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
+   'history_error':archive_error,'planning':home_plan(),'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)
   temp=path.with_suffix('.tmp');temp.write_text(json.dumps(body,ensure_ascii=False,allow_nan=False));temp.replace(path)
@@ -317,10 +327,12 @@ async def async_setup_sales(hass,config,charge_controller):
      p=current_price();entity=hass.states.get('sensor.inverter_battery');soc=number(entity.state) if entity else None
      ote=hass.states.get('sensor.jarvis_spot_ote');a=ote.attributes if ote else {}
      future=market_rows(a.get('rows',[]),a.get('rate'))
-     decision=decide(soc,p,future,time.time())
+     plan=home_plan()
+     decision=decide(soc,p,future,time.time(),required_soc=plan['required_soc'])
+     if decision['mode']=='hold' and p and p['net']>0 and plan['quality']=='insufficient':decision['reason']=plan['reason']
      signature=(decision['mode'],decision['reason'],p['start'] if p else None,prefs['automatic'])
      if signature!=last_decision:
-      await event('decision',{'decision':decision,'price':p,'automatic':prefs['automatic']});last_decision=signature
+      await event('decision',{'decision':decision,'price':p,'automatic':prefs['automatic'],'planning':plan});last_decision=signature
      last_reason=decision['reason']
      if commission_requested and not prefs.get('commission_cancelled') and not prefs.get('inhibited') and not prefs.get('commission_attempted') and p and p['net']>0 and soc is not None and soc>=98:
       prefs['commission_attempted']=True;await persist_settings()
@@ -367,6 +379,9 @@ async def async_setup_sales(hass,config,charge_controller):
  for platform in ('number','select','switch'):hass.async_create_task(discovery.async_load_platform(hass,platform,DOMAIN,{},config))
  async_track_time_interval(hass,tick,timedelta(seconds=5))
  async_track_time_interval(hass,report,timedelta(seconds=5))
+ try:planning=await async_setup_planning(hass)
+ except Exception:planning=None
+ hass.data[KEY]['planning']=planning
  if hass.is_running:hass.async_create_task(tick())
  else:hass.bus.async_listen_once('homeassistant_started',tick)
  await report()

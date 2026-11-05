@@ -111,6 +111,25 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   data['window'].record={'before':{'109':175},'phase':'armed','minimum_soc':90,'end':time.time()+300}
   await data['report']()
   self.assertIn('90 %',self.hass.states.get('sensor.jarvis_energy_sales').attributes['reason'])
+ async def test_missing_house_history_exposes_protected_planning_reserve(self):
+  await self.setup();await self.ticks[0]()
+  plan=self.hass.states.get('sensor.jarvis_energy_sales').attributes['planning']
+  self.assertEqual(plan['required_soc'],100)
+  self.assertEqual(plan['quality'],'insufficient')
+ async def test_planning_storage_failure_cannot_break_native_control_or_report(self):
+  with patch.object(self.module,'async_setup_planning',side_effect=RuntimeError('storage offline')):
+   await self.setup()
+  await self.ticks[0]()
+  state=self.hass.states.get('sensor.jarvis_energy_sales')
+  self.assertTrue(state.attributes['ready'])
+  self.assertEqual(state.attributes['planning']['required_soc'],100)
+ async def test_planning_snapshot_failure_remains_isolated_from_control(self):
+  data=await self.setup()
+  def broken():raise RuntimeError('invalid optional forecast')
+  data['planning']['snapshot']=broken
+  await self.ticks[0]()
+  self.assertTrue(self.hass.states.get('sensor.jarvis_energy_sales').attributes['ready'])
+  self.assertEqual(self.hass.states.get('sensor.jarvis_energy_sales').attributes['planning']['required_soc'],100)
  async def test_explicit_stop_cancels_pending_commissioning_before_first_tick(self):
   data=await self.setup(True);await self.service('stop_sale',{})
   await self.ticks[0]()

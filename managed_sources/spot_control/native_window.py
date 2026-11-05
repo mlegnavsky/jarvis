@@ -112,7 +112,7 @@ class NativeWindow:
     if native['clock'].timestamp()>=self.record['end'] and r.get(142)==expected_mode and r.get(145)==(1 if self.record.get('solar_sell') else 0) and r.get(174)==0 and next_soc_ok:
      self.record['native_expiry_observed']=True;self.record['phase']='expiry_observed'
      await self.event('native_window_expiry',{'id':self.record['id'],'clock':native['clock'].isoformat(),'grid_w':grid,'battery_w':batt,'soc':soc,'next_soc':r.get(168)})
-  if now>=self.record['end']+20:await self.stop('deadline');return
+  if now>=self.record['end']+(60 if self.record.get('selling_first') else 20):await self.stop('deadline');return
   await self.save(copy.deepcopy(self.record))
  async def stop(self,reason='manual'):
   if not self.active:return

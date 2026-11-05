@@ -107,3 +107,12 @@ ZeroCT/SolarSellOFF, normal other house SOC30/power12000 retained. Do not restar
 or claim success until actual export, native expiry and restoration are verified.
 Production battery automation still blocked. Daily-recurrence and forecast gates
 remain open. See freshest sales-runtime.json, not old93.7s clock snapshot.
+
+## 5 November18:19local — battery sale and conservativehomeplan
+ActualSellingFirst500Wnativepilotexported~501–511WwithPV0,battery613–627W.
+Observednativepowerdecayafter18:05,butconnectedstopat+25spreventedproving
+nativeexpiry; no productionacceptance. Fullnativehouseprogramrestoreverified
+includingdelayedreadback.0.5.3sourceadds60sboundedobserverandconservative
+history/forecastplan; see freshestcommissioningevidence/source vsruntime.
+Plannerusesrolling24hcounterenvelopewhenpowerhistoryhasgapsandcreditsnoPV
+inthatmode; missingplanprotects100%anddoesnotbreakcontrol.0Wstillnative20.
