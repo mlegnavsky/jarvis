@@ -4,7 +4,7 @@ import copy
 def money_card(kind):
  buy=kind=='purchase';entity='sensor.jarvis_dnes_nakoupeno_za' if buy else 'sensor.jarvis_dnes_prodano_za'
  title='Dnes nakoupeno za' if buy else 'Dnes prodáno za'
- footer='ČEZ · 5 Kč/kWh' if buy else 'OTE − 0,30 Kč/kWh'
+ footer=("ČEZ · {{ ('%.2f'|format(state_attr('sensor.jarvis_dnes_nakoupeno_za','purchase_rate')|float(5)))|replace('.', ',') }} Kč/kWh" if buy else "OTE − {{ ('%.2f'|format(state_attr('sensor.jarvis_dnes_prodano_za','sale_fee')|float(0.30)))|replace('.', ',') }} Kč/kWh")
  fallback=''
  if not buy:
   fallback="{% set partial=false %}{% if not is_number(v) and state_attr('sensor.jarvis_dnes_prodano_za','archive_loaded') and state_attr('sensor.jarvis_dnes_prodano_za','quality')=='partial' %}{% set known=state_attr('sensor.jarvis_dnes_prodano_za','known_sale_czk') %}{% if is_number(known) %}{% set v=known %}{% set partial=true %}{% endif %}{% endif %}"

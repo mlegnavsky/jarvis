@@ -31,9 +31,13 @@ class FinanceViewTests(unittest.TestCase):
   self.assertEqual(count,{'home':2,'purchase':2,'sale':2,'price_note':2})
   self.assertIn('sensor.jarvis_dnes_prodano_za',str(out))
   self.assertNotIn('spot čeká na nastavení',str(out))
+ def test_saved_rate_is_displayed_in_cash_cards(self):
+  template=Environment().from_string(money_card('purchase')['content'])
+  out=template.render(states=lambda _:'12',state_attr=lambda *_:6.5,is_number=lambda _:True)
+  self.assertIn('6,50 Kč/kWh',out)
  def test_currency_is_rendered_in_czech_with_cents(self):
   env=Environment();template=env.from_string(money_card('purchase')['content'])
-  rendered=template.render(states=lambda _:24.5123,is_number=lambda v:True)
+  rendered=template.render(states=lambda _:24.5123,state_attr=lambda *_:None,is_number=lambda v:True)
   self.assertIn('24,51 Kč',rendered)
  def test_partial_sale_displays_known_amount_with_explicit_label(self):
   template=Environment().from_string(money_card('sale')['content'])
@@ -50,7 +54,7 @@ class FinanceViewTests(unittest.TestCase):
   self.assertNotIn('0,00 Kč',out)
  def test_unknown_purchase_does_not_relabel_an_old_raw_meter_as_today(self):
   template=Environment().from_string(money_card('purchase')['content'])
-  out=template.render(states=lambda entity:'4.9' if entity=='sensor.inverter_today_energy_import' else 'unknown',is_number=lambda v:isinstance(v,(int,float)) or str(v).replace('.','',1).isdigit())
+  out=template.render(states=lambda entity:'4.9' if entity=='sensor.inverter_today_energy_import' else 'unknown',state_attr=lambda *_:None,is_number=lambda v:isinstance(v,(int,float)) or str(v).replace('.','',1).isdigit())
   self.assertIn('— Kč',out)
   self.assertNotIn('24,50 Kč',out)
 
