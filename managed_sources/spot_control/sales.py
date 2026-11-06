@@ -21,7 +21,9 @@ def after_stop(settings,outcome):
  if outcome.get('mode')=='bias':
   verified=(reason=='deadline' and outcome.get('purpose')=='bias_probe' and outcome.get('power_w')==2 and outcome.get('minimum_soc')==30
    and all(outcome.get(k) is True for k in ('observed','sustained','stop_verified')) and not outcome.get('conflicts'))
-  if verified:result['bias_verified']=True
+  if outcome.get('purpose')=='bias_probe':
+   result.update(bias_verified=verified,automatic=False,inhibited=not verified)
+   if not verified:result['inhibited']=True
   elif not normal:result['bias_verified']=False
  complete=(reason=='deadline' and outcome.get('purpose')=='commission' and outcome.get('mode')=='pv'
   and not outcome.get('conflicts') and outcome.get('observed') and outcome.get('sustained') and outcome.get('stop_verified') and not result.get('commission_cancelled'))

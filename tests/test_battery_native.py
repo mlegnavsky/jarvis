@@ -567,6 +567,27 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(self.controller.last_stop['native_power_fence'],True)
         self.assertEqual(self.reg,self.original)
 
+    async def test_explicit_two_kw_commission_is_bounded_for_daylight_battery_proof(self):
+        self.states['soc']=64
+        await self.start(power_w=2000,minimum_soc=60,purpose='commission',maximum_power_w=2000)
+        self.assertEqual(self.reg[143],2000)
+        self.assertEqual(self.reg[109],60)
+        self.assertEqual([self.reg[154+i] for i in range(6)],[0,3000,0,0,0,0])
+        await self.controller.stop('manual');await self.finish_stop()
+        self.assertEqual(self.reg,self.original)
+
+    async def test_empty_timeout_keeps_diagnostic_type_through_protective_restoration(self):
+        await self.start();await self.enable()
+        read=self.controller.native_read
+        async def once():
+            self.controller.native_read=read
+            raise TimeoutError()
+        self.controller.native_read=once
+        await self.advance(31)
+        self.assertIn('TimeoutError',self.controller.record.get('failure_detail',''))
+        await self.finish_stop()
+        self.assertIn('TimeoutError',self.controller.last_stop['failure_detail'])
+
     async def test_commission_rejects_any_broader_scope(self):
         self.states['soc'] = 96
         for changes in [dict(power_w=501), dict(duration_minutes=10), dict(minimum_soc=59), dict(minimum_soc=61),

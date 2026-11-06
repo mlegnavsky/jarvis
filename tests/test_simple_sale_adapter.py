@@ -70,6 +70,13 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   before=data['controller'].record['id'];self.refresh();await self.ticks[0]()
   self.assertTrue(data['controller'].active);self.assertEqual(data['controller'].record['id'],before);self.assertNotEqual(data['controller'].record['phase'],'stopping')
 
+ async def test_repeat_bias_probe_revokes_old_proof_even_if_preparation_fails(self):
+  data=await self.setup();data['settings'].update(automatic=True,bias_verified=True,inhibited=False)
+  self.hass.states.async_set('sensor.inverter_battery',31);self.refresh()
+  with self.assertRaises(ValueError):await data['bias_probe']()
+  self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['bias_verified']);self.assertTrue(data['settings']['inhibited'])
+  self.assertFalse(data['controller'].active)
+
  async def test_bias_cannot_start_before_physical_verification(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,bias_verified=False,bias_enabled=True)
   quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter)

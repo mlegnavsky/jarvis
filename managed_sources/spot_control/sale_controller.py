@@ -239,14 +239,20 @@ class SaleController:
   if grid is None or soc is None:triggers.append('missing_measurement')
   if wrong_mode:triggers.append('mode_changed')
   if mode=='pv' and grid is not None and grid<-100 and batt is not None and batt>200:triggers.append('battery_discharge')
-  if grid is not None and (-grid>self.record['power_w']+300 or mode=='bias' and self.clock()-self.record['started']>10 and grid<-50):triggers.append('export_limit')
+  bias_excess=False
+  if mode=='bias' and stamp is not None and stamp>self.record.get('bias_guard_last',0) and self.record.get('enabled_at',float('inf'))<stamp and 0<=self.clock()-stamp<30:
+   self.record['bias_guard_last']=stamp
+   if grid is not None and grid<-50:
+    self.record.setdefault('bias_excess_first',stamp);bias_excess=stamp-self.record['bias_excess_first']>=20
+   else:self.record.pop('bias_excess_first',None)
+  if grid is not None and (-grid>self.record['power_w']+300 or bias_excess):triggers.append('export_limit')
   deadline=self.clock()>=self.record['deadline']
   reserve=soc is not None and (mode in ('battery','bias') and soc<=self.record['minimum_soc'] or mode=='pv' and self.record.get('purpose')=='automatic' and soc<98)
   if triggers or conflicts or no_surplus or deadline or reserve or self.record.get('phase')=='stopping':
    self.record.setdefault('stop_context',{'triggers':triggers,'grid_w':grid,'battery_w':batt,'soc':soc,
     'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w'],
     'reported_at':number(self.reported()),'price_net':price,'captured_at':self.clock()})
-   if 'export_limit' in triggers:self.error=f"Dodávka {-grid:g} W překročila nastavených {self.record['power_w']} W a ochrannou odchylku 300 W."
+   if 'export_limit' in triggers:self.error=f"Dodávka {-grid:g} W překročila výkonovou ochranu pro režim{mode}."
    elif triggers:self.error='Ochrana prodeje: '+', '.join(triggers)
    reason='external_override' if conflicts else 'price' if triggers==['price'] and price is not None else 'guard' if triggers else 'no_surplus' if no_surplus else 'deadline' if deadline else 'reserve'
    if reason in ('price','no_surplus'):self.error=''
@@ -256,7 +262,7 @@ class SaleController:
    await self.event('sale_measurement',{'sale_id':self.record.get('id'),'source_t':stamp,'grid_w':grid,'battery_w':batt,'soc':soc,'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w']})
    self.record['sample_last']=stamp
   if mode=='bias':
-   if self.clock()-self.record['started']>55 and not self.observed:
+   if self.clock()-self.record['started']>=180 and not self.observed:
     self.error='Malý přetok se nepotvrdil; požadované2 W nepovažuji za skutečný export.'
     await self.stop('no_export')
    return

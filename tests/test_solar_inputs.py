@@ -29,3 +29,7 @@ class SolarInputsTests(unittest.TestCase):
   for change in ({'observed':False},{'native_expiry_observed':False},{'stop_verified':False},
                  {'reason':'manual'},{'conflicts':{'146':{}}}):
    self.assertFalse(cycle_acceptance({**proof,**change})['verified'])
+
+ def test_no_observed_battery_sale_is_inconclusive_not_proven_native_expiry_failure(self):
+  result=cycle_acceptance({'id':'pvonly','reason':'deadline','phase':'complete','observed':False,'native_expiry_observed':False,'stop_verified':True})
+  self.assertFalse(result['verified']);self.assertFalse(result['failed'])

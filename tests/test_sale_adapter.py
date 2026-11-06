@@ -58,7 +58,10 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
     d=datetime.now(ZoneInfo('Europe/Prague'))
     return [((d.year-2000)<<8)|d.month,(d.day<<8)|d.hour,(d.minute<<8)|d.second][:count]
    return [self.device_registers.get(a,0) for a in range(address,address+count)]
-  entry=types.SimpleNamespace(runtime_data=types.SimpleNamespace(device=types.SimpleNamespace(execute=execute)))
+  device=types.SimpleNamespace(execute=execute)
+  async def response(*args,**kwargs):return await device.execute(*args,**kwargs)
+  device.modbus=types.SimpleNamespace(_semaphore=asyncio.Semaphore(1),get_response=response)
+  entry=types.SimpleNamespace(runtime_data=types.SimpleNamespace(device=device))
   self.hass.config_entries=types.SimpleNamespace(async_entries=lambda domain:[entry] if domain=='solarman' else [])
   self.hass.http=types.SimpleNamespace(register_view=lambda view:None)
   self.hass.bus=types.SimpleNamespace(async_fire=lambda *a:None,async_listen_once=lambda *a:None)

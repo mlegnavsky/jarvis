@@ -235,10 +235,10 @@ class BatterySaleController:
                 raise ValueError('A native battery sale or cleanup is already active')
             if purpose not in ('manual', 'automatic', 'commission'):
                 raise ValueError('Unknown battery-sale purpose')
-            if purpose == 'commission' and (_number(power_w) != 500
+            if purpose == 'commission' and (_number(power_w) not in (500,2000)
                     or _number(duration_minutes) != 5 or _number(minimum_soc) not in (60,90)
-                    or maximum_power_w is not None and _number(maximum_power_w) != 500):
-                raise ValueError('Commissioning is fixed at 500 W, 5 minutes and an explicit60 or90 percent SOC')
+                    or maximum_power_w is not None and _number(maximum_power_w) != _number(power_w)):
+                raise ValueError('Commissioning is fixed at an explicit500 or2000 W,5 minutes and60 or90 percent SOC')
             self._sample()
             data = await self._read()
             s = self._sample()
@@ -296,7 +296,8 @@ class BatterySaleController:
                 self.record['phase'] = 'armed'
                 await self._persist()
             except Exception as exc:
-                self.error = str(exc)
+                self.error = type(exc).__name__+': '+str(exc)
+                self.record['failure_detail'] = self.error
                 await self._stop('start_failed')
                 raise
 
@@ -362,7 +363,8 @@ class BatterySaleController:
                     return
                 await self._persist()
             except Exception as exc:
-                self.error = str(exc)
+                self.error = type(exc).__name__+': '+str(exc)
+                self.record['failure_detail'] = self.error
                 await self._stop(exc.reason if isinstance(exc, _Guard) else 'controller_error')
 
     async def adjust_power(self, power_w):
@@ -385,7 +387,8 @@ class BatterySaleController:
                 self.record['plan']['power_w'] = power
                 await self._persist()
             except Exception as exc:
-                self.error = str(exc)
+                self.error = type(exc).__name__+': '+str(exc)
+                self.record['failure_detail'] = self.error
                 await self._stop(exc.reason if isinstance(exc, _Guard) else 'controller_error')
 
     async def stop(self, reason='manual'):
@@ -452,7 +455,7 @@ class BatterySaleController:
                 raise ValueError('Fresh stopped grid is required after restoration')
             proof = {k: copy.deepcopy(self.record.get(k)) for k in (
                 'id', 'purpose', 'power_w', 'minimum_soc', 'observed', 'native_expiry_observed',
-                'start', 'end', 'conflicts', 'notice', 'native_power_fence')}
+                'start', 'end', 'conflicts', 'notice', 'native_power_fence', 'failure_detail')}
             proof.update(reason=self.record['stop_reason'], stop_verified=True,
                          phase='complete', production_verified=False,
                          restored_current_a=targets[109], restored_cap_w=targets[143])

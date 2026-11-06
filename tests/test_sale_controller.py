@@ -59,6 +59,15 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   for _ in range(8):self.now+=5;self.sample_stamp=self.now;await c.tick()
   self.assertFalse(c.active);self.assertFalse(c.last_stop['observed'])
 
+ async def test_bias_ignores_one_small_control_transient_but_stops_sustained_excess(self):
+  c=self.c();await c.start('bias',2,3,minimum_soc=30,purpose='bias_probe')
+  self.now+=20;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-86';await c.tick()
+  self.assertTrue(c.active)
+  self.now+=5;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-2';await c.tick();self.assertTrue(c.active)
+  for _ in range(5):
+   self.now+=5;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-86';await c.tick()
+  self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'guard')
+
  async def test_bias_does_not_admit_more_power_lower_floor_or_unknown_house_program(self):
   for changes in ({'power_w':3},{'minimum_soc':29},{'minimum_soc':60}):
    c=self.c();p=dict(mode='bias',power_w=2,duration_minutes=1,minimum_soc=30,purpose='bias_probe');p.update(changes)
