@@ -26,6 +26,33 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   c.health_report=lambda:{'healthy':False,'transient_only':True,'issues':[{'code':'unavailable','entity_id':'sensor.inverter_grid_power'}]}
   self.now+=5;self.sample_stamp=self.now;await c.tick()
   self.assertFalse(c.active);self.assertTrue(measurement_guard(c.last_stop),str(c.last_stop))
+ async def test_transport_outage_with_unavailable_controls_does_not_invent_owner_conflict(self):
+  from sales import measurement_guard
+  c=self.c();self.states['sensor.inverter_battery']='58'
+  await c.start('bias',20,60,minimum_soc=30,purpose='automatic')
+  original=dict(self.states)
+  for entity in c.record['expected']:self.states[entity]='unavailable'
+  real_write=c.write
+  async def restored_write(entity,value):
+   if 'unavailable' in self.states.values():self.states.update(original)
+   await real_write(entity,value)
+  c.write=restored_write
+  self.now+=26;self.sample_stamp=self.now
+  await c.tick(transport_error=TimeoutError('communication lost'))
+  self.assertFalse(c.active)
+  self.assertFalse(c.last_stop['conflicts'])
+  self.assertEqual(c.last_stop['context']['triggers'],['measurement_or_health'])
+  self.assertTrue(measurement_guard(c.last_stop))
+
+ async def test_real_mode_change_with_transport_outage_still_blocks_recovery(self):
+  from sales import measurement_guard
+  c=self.c();await c.start('bias',20,60,minimum_soc=30,purpose='automatic')
+  self.states['select.inverter_work_mode']='Zero Export To CT'
+  self.now+=26;self.sample_stamp=self.now
+  await c.tick(transport_error=TimeoutError('communication lost'))
+  self.assertFalse(measurement_guard(c.last_stop))
+  self.assertIn('mode_changed',c.last_stop['context']['triggers'])
+
  async def test_production_pv_never_writes_native_soc_or_schedule(self):
   c=self.c();await c.start('pv',500,3,minimum_soc=60,purpose='automatic')
   await c.stop()

@@ -33,7 +33,7 @@ from .owner_settings import DEFAULTS as POLICY_DEFAULTS,validate as validate_pol
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='1.0.3'
+VERSION='1.0.4'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):

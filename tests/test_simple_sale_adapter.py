@@ -53,6 +53,34 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(proof['context']['health']['issues'][-1]['source'],'refresh_sale_controls')
   self.refresh();await self.ticks[0]();self.clock[0]+=31;self.refresh();await self.ticks[0]()
   self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['inhibited'])
+ async def test_complete_control_unavailability_recovers_without_fabricated_conflicts(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,bias_enabled=True,bias_verified=False)
+  self.hass.states.async_set('sensor.inverter_battery',55);self.refresh();await self.ticks[0]()
+  self.assertTrue(data['controller'].active)
+  device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device;real=device.execute;failed=False
+  missing={}
+  async def timeout_once(code,address,count=1,**kw):
+   nonlocal failed
+   if failed:
+    for entity,value in missing.items():
+     if self.hass.states.get(entity).state=='unavailable':self.hass.states.async_set(entity,value)
+   if not failed and code==3 and address==142 and count==36:
+    failed=True
+    for entity in data['controller'].record['expected']:
+     state=self.hass.states.get(entity)
+     if state:missing[entity]=state.state;self.hass.states.async_set(entity,'unavailable')
+    raise TimeoutError('Simulated complete communication outage')
+   return await real(code,address,count=count,**kw)
+  device.execute=timeout_once;self.clock[0]+=26;self.refresh();await self.ticks[0]()
+  self.assertTrue(failed);self.assertFalse(data['controller'].active)
+  recovery=data['settings'].get('measurement_recovery') or {}
+  self.assertTrue(recovery.get('pending'),str(data['settings']))
+  proof=data['settings']['last_sale_stop']
+  self.assertFalse(proof['conflicts'])
+  self.assertEqual(proof['context']['health']['issues'][-1]['entity_id'],'native_controls')
+  self.assertEqual(proof['context']['health']['issues'][-1]['source'],'refresh_sale_controls')
+  self.refresh();await self.ticks[0]();self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['inhibited'])
  async def test_native_timeout_cannot_mask_simultaneous_export_limit(self):
   data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,bias_enabled=True)
   self.hass.states.async_set('sensor.inverter_battery',55);self.refresh();await self.ticks[0]()

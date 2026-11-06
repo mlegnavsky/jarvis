@@ -40,12 +40,15 @@ class SaleController:
   try:await self.save(copy.deepcopy(self.record))
   except Exception:
    if guard:raise
- def _conflicts(self,states):
+ def _conflicts(self,states,*,ignore_unavailable=False):
   conflicts=self.record.setdefault('conflicts',{})
   expected=self.record.get('expected',{})
   pending=self.record.get('pending',{})
   for entity,value in list(expected.items()):
    actual=states.get(entity)
+   # Missing readback is evidence of lost communication, not an owner edit.
+   # Only protective cleanup may defer this comparison; start/renew stay strict.
+   if ignore_unavailable and actual in (None,'unknown','unavailable'):continue
    if entity in pending and same_setting(actual,pending[entity]):
     expected[entity]=pending.pop(entity);continue
    if not same_setting(actual,value):
@@ -160,7 +163,7 @@ class SaleController:
  async def _stop(self,reason='manual'):
   if not self.active:return
   if number(self.reported()) is not None and number(self.reported())>self.record.get('enabled_at',float('inf')):
-   self._conflicts(self.read())
+   self._conflicts(self.read(),ignore_unavailable=True)
   self.record.setdefault('stop_reason',reason)
   self.record['phase']='stopping'
   self.record['protection_conflict']=False
@@ -271,7 +274,7 @@ class SaleController:
   missing=[entity for entity,value in (('sensor.inverter_grid_power',grid),('sensor.inverter_battery',soc)) if value is None]
   covered={i.get('entity_id') for i in health.get('issues',[]) if isinstance(i,dict) and i.get('code') in ('missing','unavailable')}
   if missing and not (transient_health(health) and set(missing)<=covered):triggers.append('missing_measurement')
-  if wrong_mode:triggers.append('mode_changed')
+  if wrong_mode and not (transient_health(health) and states.get(MODE) in (None,'unknown','unavailable')):triggers.append('mode_changed')
   house_support=mode=='pv' and self.record.get('purpose')=='automatic' and grid is not None and grid<-100 and batt is not None and batt>200
   if mode=='pv' and grid is not None and grid<-100 and batt is not None and batt>200 and not house_support:triggers.append('battery_discharge')
   bias_excess=False

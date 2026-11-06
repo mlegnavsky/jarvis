@@ -1,0 +1,7 @@
+# Energy 1.0.4 — unavailable controls during protective stop
+
+A complete control-state outage exposed an untested path in 1.0.3: protective cleanup compared unavailable readbacks with expected settings and permanently recorded them as owner conflicts. After confirmed stop and fresh data, strict recovery correctly refused that invalid proof.
+
+Cleanup now defers comparisons for missing/unknown/unavailable values only. Admission and renewal comparisons stay strict. An unavailable mode during a proven transient measurement failure is no longer a separate mode-change alarm. Available changed values remain conflicts; real mode changes, mixed faults and export-limit guards still prevent recovery. Native protections, current limits, schedules and history retention are unchanged.
+
+Regression evidence: whole-control outage reproduced before the change; controller and HA adapter tests verify confirmed cleanup and stable-data recovery. Simultaneous actual mode change still blocks recovery. Full suite:755 tests run,735 passed,20 existing optional PHP skips;0failures. Check-manifest and diff whitespace checks pass. Runtime installation and live acceptance are recorded separately in the private deployment receipt. No deliberate production outage is introduced by this release.
