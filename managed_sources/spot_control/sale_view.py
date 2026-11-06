@@ -20,7 +20,7 @@ Nominální výpočet z nastavení; skutečná využitelná kapacita není tímt
 {% if supervision.get('error') %}⚠ Dohled nad solárem hlásí chybu: {{ supervision.error }}. Výsledek dohledu není dostupný.
 {% endif %}{% for a in supervision.get('alerts',[]) %}⚠ {{ a.message }}
 {% endfor %}{% if supervision.get('notification_error') %}Upozornění v HA čeká na doručení; dohled je zobrazen zde.{% endif %}
-Přebytky: od 98 % baterie při kladném výkupu po poplatku, nejvýše 9,3 kW. Baterie podporující prodej přebytků vyvolá ochranné ukončení.
+Přebytky: od 97 % baterie při kladném výkupu po poplatku, nejvýše 9,3 kW. Baterie podporující prodej přebytků vyvolá ochranné ukončení.
 """)
 def grid_target_card():
  return {'type':'vertical-stack','grid_options':{'columns':'full'},'cards':[

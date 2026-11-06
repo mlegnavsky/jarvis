@@ -406,7 +406,7 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
 
  async def test_automatic_surplus_sale_returns_to_charging_when_battery_is_not_full(self):
   c=self.c();await c.start('pv',3000,3,purpose='automatic')
-  self.states['sensor.inverter_battery']='97';await c.tick()
+  self.states['sensor.inverter_battery']='96';await c.tick()
   self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'reserve')
  async def test_published_negative_price_is_a_normal_market_pause(self):
   c=self.c();await c.start('pv',500,3,purpose='automatic');self.net=-1

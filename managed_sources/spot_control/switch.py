@@ -18,6 +18,6 @@ class SaleAutomatic(SwitchEntity):
   self.async_on_remove(self.hass.bus.async_listen('jarvis_sales_settings',self._settings_changed))
  async def async_turn_on(self,**kwargs):
   prefs=self.data['settings']
-  await self.data['configure']({'automatic':True,'auto_verification_enabled':True,'inhibited':False,'commission_cancelled':False,'commission_attempted':False if not prefs['pv_verified'] else True});self.async_write_ha_state();await self.data['report']()
+  await self.data['configure']({'automatic':True,'auto_verification_enabled':False,'inhibited':False,'commission_cancelled':False,'commission_attempted':False if not prefs['pv_verified'] else True});self.async_write_ha_state();await self.data['report']()
  async def async_turn_off(self,**kwargs):
   await self.data['stop']();self.async_write_ha_state();await self.data['report']()

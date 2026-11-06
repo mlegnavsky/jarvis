@@ -142,6 +142,24 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['verification_resume_auto'])
   self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['automatic_requested'])
 
+ async def test_automatic_surplus_starts_at_97_percent(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
+  self.hass.states.async_set('sensor.inverter_battery',97);self.hass.states.async_set('sensor.inverter_pv_power',3000);self.refresh();await self.ticks[0]()
+  self.assertTrue(data['controller'].active);self.assertEqual(data['controller'].record['mode'],'pv')
+
+ async def test_confirmed_data_gap_recovers_only_after_stable_fresh_health_and_owner_intent(self):
+  data=await self.setup();data['settings'].update(automatic=False,requested_automatic=True,inhibited=True,bias_verified=True,pv_verified=True,auto_verification_enabled=False,measurement_recovery={'pending':True,'stop_id':'gap'})
+  self.prices(math.floor(self.clock[0]/900)*900)
+  self.refresh();await self.ticks[0]();self.assertFalse(data['settings']['automatic'])
+  self.clock[0]+=61;self.refresh();await self.ticks[0]()
+  self.assertTrue(data['settings']['automatic'],str(self.hass.states.get('sensor.jarvis_energy_sales').attributes));self.assertFalse(data['settings']['inhibited']);self.assertFalse(data['settings']['measurement_recovery']['pending'])
+  self.assertEqual(data['battery_controller'].starts,[])
+
+ async def test_owner_off_cancels_measurement_recovery(self):
+  data=await self.setup();data['settings'].update(requested_automatic=False,automatic=False,inhibited=True,measurement_recovery={'pending':True,'stop_id':'gap'})
+  self.refresh();await self.ticks[0]();self.clock[0]+=61;self.refresh();await self.ticks[0]()
+  self.assertFalse(data['settings']['automatic']);self.assertFalse(data['controller'].active)
+
  async def test_missing_capacity_blocks_manual_battery_start(self):
   data=await self.setup();data['settings']['battery_verified']=True
   self.hass.states.async_set('number.inverter_battery_capacity','unavailable')
@@ -217,6 +235,10 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   await self.module.async_setup_sales(self.hass,{},types.SimpleNamespace(active=False))
   data=self.hass.data[self.module.KEY]
   data['controller'].clock=lambda:self.clock[0]
+  class AdapterDateTime(datetime):
+   @classmethod
+   def now(cls,tz=None):return datetime.fromtimestamp(self.clock[0],tz)
+  self.datetime_patch=patch.object(self.module,'datetime',AdapterDateTime);self.datetime_patch.start();self.addCleanup(self.datetime_patch.stop)
   self.refresh();await self.ticks[0]()
   return data
 

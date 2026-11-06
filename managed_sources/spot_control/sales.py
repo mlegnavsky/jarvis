@@ -7,9 +7,26 @@ EXPORT_LIMIT=9300
 CONTRACT_LIMIT=9500
 SALE_RESERVE=60
 
+def measurement_guard(outcome):
+ return (outcome.get('purpose')=='automatic' and outcome.get('reason')=='guard'
+  and outcome.get('stop_verified') is True and not outcome.get('conflicts') and not outcome.get('failures')
+  and (outcome.get('context') or {}).get('triggers')==['measurement_or_health'])
+
+def restore_measurement_intent(settings,events):
+ result=dict(settings)
+ if not settings.get('requested_automatic'):return result
+ stops=[e.get('payload',{}) for e in events if e.get('kind')=='sale_stop']
+ if not stops or stops[-1].get('id')!=settings.get('handled_stop_id') or not measurement_guard(stops[-1]):return result
+ result['measurement_recovery']={'pending':True,'stop_id':stops[-1]['id']}
+ probes=[p for p in stops[:-1] if p.get('purpose')=='bias_probe' and p.get('mode')=='bias']
+ if probes and after_stop({'bias_verified':False},probes[-1]).get('bias_verified'):result['bias_verified']=True
+ return result
+
 def after_stop(settings,outcome):
  result=dict(settings)
  result['handled_stop_id']=outcome.get('id')
+ recover=bool(settings.get('requested_automatic') and measurement_guard(outcome))
+ if recover:result['measurement_recovery']={'pending':True,'stop_id':outcome.get('id')}
  reason=outcome.get('reason')
  no_surplus=reason=='no_surplus' and outcome.get('mode')=='pv' and outcome.get('stop_verified')
  if no_surplus:result['cooldown_until']=time.time()+300
@@ -24,7 +41,7 @@ def after_stop(settings,outcome):
   if outcome.get('purpose')=='bias_probe':
    result.update(bias_verified=verified,automatic=False,inhibited=not verified)
    if not verified:result['inhibited']=True
-  elif not normal:result['bias_verified']=False
+  elif not normal and not recover:result['bias_verified']=False
  complete=(reason=='deadline' and outcome.get('purpose')=='commission' and outcome.get('mode')=='pv'
   and not outcome.get('conflicts') and outcome.get('observed') and outcome.get('sustained') and outcome.get('stop_verified') and not result.get('commission_cancelled'))
  if complete:
@@ -75,6 +92,6 @@ def decide(soc,price,future,now,required_soc=60,capacity_kwh=23.5):
   power=min(EXPORT_LIMIT,int(budget/max(remaining,1/3600)*1000))
   if power>=100:
    return {'mode':'battery','power_w':power,'minimum_soc':floor,'budget_kwh':budget,'reason':'Výhodný interval · dostupná baterie nad rezervou.'}
- if soc>=98:
+ if soc>=97:
   return {'mode':'pv','power_w':EXPORT_LIMIT,'minimum_soc':floor,'available_pv_w':None,'reason':'Baterie je téměř plná · povoluji dostupné přebytky panelů.'}
  return {**hold,'reason':'Energii ponechávám domu nebo na výhodnější interval.','minimum_soc':floor}

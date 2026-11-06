@@ -1,0 +1,15 @@
+import unittest
+from sales import after_stop
+
+class MeasurementRecoveryTests(unittest.TestCase):
+ def proof(self):
+  return {'id':'lost-data','mode':'bias','purpose':'automatic','reason':'guard','stop_verified':True,'conflicts':{},'failures':[],'context':{'triggers':['measurement_or_health']}}
+ def test_only_confirmed_measurement_guard_queues_recovery_without_revoking_prior_bias_proof(self):
+  r=after_stop({'requested_automatic':True,'automatic':True,'bias_verified':True},self.proof())
+  self.assertTrue(r['measurement_recovery']['pending']);self.assertTrue(r['bias_verified'])
+  self.assertFalse(r['automatic']);self.assertTrue(r['inhibited'])
+ def test_owner_off_conflict_failed_stop_and_other_guards_cannot_queue_recovery(self):
+  for change in ({'stop_verified':False},{'conflicts':{'cap':{}}},{'failures':['bad']},{'context':{'triggers':['export_limit']}},{'purpose':'bias_probe'}):
+   r=after_stop({'requested_automatic':True,'automatic':True,'bias_verified':True},{**self.proof(),**change})
+   self.assertFalse((r.get('measurement_recovery') or {}).get('pending',False))
+  r=after_stop({'requested_automatic':False},self.proof());self.assertFalse((r.get('measurement_recovery') or {}).get('pending',False))

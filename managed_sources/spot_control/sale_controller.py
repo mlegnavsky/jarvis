@@ -248,7 +248,7 @@ class SaleController:
    else:self.record.pop('bias_excess_first',None)
   if grid is not None and (-grid>self.record['power_w']+300 or bias_excess):triggers.append('export_limit')
   deadline=self.clock()>=self.record['deadline']
-  reserve=soc is not None and (mode in ('battery','bias') and soc<=self.record['minimum_soc'] or mode=='pv' and self.record.get('purpose')=='automatic' and soc<98)
+  reserve=soc is not None and (mode in ('battery','bias') and soc<=self.record['minimum_soc'] or mode=='pv' and self.record.get('purpose')=='automatic' and soc<97)
   if triggers or conflicts or no_surplus or deadline or reserve or self.record.get('phase')=='stopping':
    self.record.setdefault('stop_context',{'triggers':triggers,'grid_w':grid,'battery_w':batt,'soc':soc,
     'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w'],
