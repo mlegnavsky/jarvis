@@ -3,6 +3,14 @@ from solar_inputs import capacity_basis, house_power, cycle_acceptance
 
 
 class SolarInputsTests(unittest.TestCase):
+ def test_ha_deadline_does_not_require_native_expiry(self):
+  proof={'id':'ha-sale','purpose':'automatic','native_power_fence':False,
+         'reason':'deadline','phase':'complete','observed':True,
+         'native_expiry_observed':False,'stop_verified':True,'conflicts':{}}
+  result=cycle_acceptance(proof)
+  self.assertTrue(result['verified']);self.assertFalse(result['failed'])
+  self.assertFalse(result['native_expiry_observed'])
+  self.assertFalse(cycle_acceptance({**proof,'stop_verified':False})['verified'])
  def test_configured_capacity_is_not_a_physical_capacity_claim(self):
   x=capacity_basis(460,63,23.3)
   self.assertEqual(x['capacity_kwh'],23.552)

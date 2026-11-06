@@ -30,12 +30,14 @@ def house_power(canonical,native,mode):
 
 def cycle_acceptance(proof):
  p=proof if isinstance(proof,dict) else {}
+ ha_controlled=p.get('purpose')=='automatic' and p.get('native_power_fence') is False
  verified=bool(p.get('id') and p.get('reason')=='deadline' and p.get('phase')=='complete'
-               and all(p.get(k) is True for k in ('observed','native_expiry_observed','stop_verified'))
+               and all(p.get(k) is True for k in ('observed','stop_verified'))
+               and (ha_controlled or p.get('native_expiry_observed') is True)
                and not p.get('conflicts'))
- failed=bool(p.get('observed') is True and p.get('id') and p.get('reason')=='deadline' and p.get('phase')=='complete' and p.get('native_expiry_observed') is not True)
+ failed=bool(not ha_controlled and p.get('observed') is True and p.get('id') and p.get('reason')=='deadline' and p.get('phase')=='complete' and p.get('native_expiry_observed') is not True)
  return {'verified':verified,'failed':failed,'sale_id':p.get('id'),'observed':p.get('observed') is True,
          'native_expiry_observed':p.get('native_expiry_observed') is True,
          'stop_verified':p.get('stop_verified') is True,'reason':p.get('reason'),
          'start':p.get('start'),'end':p.get('end'),'purpose':p.get('purpose'),
-         'notice':'Celý cyklus potvrzen měřením.' if verified else 'Celý cyklus zatím není doložen exportem, nativním koncem a obnovou nastavení.'}
+         'notice':('Prodej a ukončení přes HA potvrzeny měřením.' if ha_controlled else 'Celý cyklus potvrzen měřením.') if verified else 'Celý cyklus zatím není doložen exportem a potvrzeným ukončením.'}
