@@ -24,7 +24,7 @@ from .native_zero_target import set_zero_target, GRID_TARGET_W
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.6.6'
+VERSION='0.6.7'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -304,11 +304,11 @@ async def async_setup_sales(hass,config,charge_controller):
   async with lock:
    def admission():
     return ready and not active() and not charge_controller.active and healthy() and not hass.data.get(KEY,{}).get('clock_sync_active') and (valid_until is None or time.time()<=valid_until)
-   if not admission():raise ValueError('Cíl odběru 5 W vyžaduje čerstvá měření a neaktivní řízení.')
+   if not admission():raise ValueError('Cíl odběru 1 W vyžaduje čerstvá měření a neaktivní řízení.')
    result=await set_zero_target(native_device(),admission,event)
    prefs['zero_target_proof']=result;prefs['native_grid_target_w']=result.get('actual_w') if result.get('verified') is True else None
    await persist_settings();await event('native_zero_target_result',result)
-   if result.get('verified') is not True:raise ValueError('Měnič nativně nepotvrdil cíl odběru 5 W: '+str(result.get('actual_w'))+' W.')
+   if result.get('verified') is not True:raise ValueError('Měnič nativně nepotvrdil cíl odběru 1 W: '+str(result.get('actual_w'))+' W.')
  async def commission_window(valid_until=None,solar_sell=False,selling_first=False):
   async with lock:
    if not ready or active() or charge_controller.active:raise ValueError('Nejprve ukonči současný test nebo prodej.')
@@ -403,7 +403,7 @@ async def async_setup_sales(hass,config,charge_controller):
    'battery_sale':{k:v for k,v in battery.record.items() if k not in ('before','expected','pending')},'battery_sale_error':battery.error,'native_start':battery.record.get('start'),'selected_block':prefs.get('selected_block'),'sale_policy':'simple_daily_block','sale_floor_soc':60,
    'settings':dict(prefs),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or battery.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else battery.error if battery.active else c.error or runtime_error,'price':p,
    'mode':'battery_commission' if window.active else 'battery' if battery.active else c.record.get('mode'),'power_w':500 if window.active else battery.record.get('power_w') if battery.active else c.record.get('power_w'),'deadline':window.record.get('end') if window.active else battery.record.get('end') if battery.active else c.record.get('deadline'),
-   'grid_target_w':GRID_TARGET_W,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('zero_target_proof',{}).get('verified') is True and len(prefs.get('zero_target_proof',{}).get('read_shapes',[]))==2 and prefs.get('zero_target_proof',{}).get('actual_w')==GRID_TARGET_W and prefs.get('native_grid_target_w')==GRID_TARGET_W,'grid_import_policy':'Cíl běžného odběru 5 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_EXPORT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
+   'grid_target_w':GRID_TARGET_W,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('zero_target_proof',{}).get('verified') is True and len(prefs.get('zero_target_proof',{}).get('read_shapes',[]))==2 and prefs.get('zero_target_proof',{}).get('actual_w')==GRID_TARGET_W and prefs.get('native_grid_target_w')==GRID_TARGET_W,'grid_import_policy':'Cíl běžného odběru 1 W; síť pro nedostatek vlastní energie nebo výslovné nabití.','automatic_limit_w':AUTO_EXPORT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'planning':home_plan(),'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)

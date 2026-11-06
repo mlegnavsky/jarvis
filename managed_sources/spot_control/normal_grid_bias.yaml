@@ -1,6 +1,6 @@
 id: jarvis_bezny_odber_0_w
-alias: Jarvis – běžný odběr 5 W
-description: Obnoví cíl odběru 5 W po startu nebo návratu do klidu; nezasahuje do probíhajícího prodeje ani nabíjení.
+alias: Jarvis – běžný odběr 1 W
+description: Obnoví cíl odběru 1 W po startu nebo návratu do klidu; nezasahuje do probíhajícího prodeje ani nabíjení.
 triggers:
   - trigger: homeassistant
     event: start
@@ -25,6 +25,6 @@ actions:
     data:
       device: "{{ device_id('number.inverter_zero_export_power') }}"
       address: 104
-      values: [5]
+      values: [1]
 mode: single
 max_exceeded: silent

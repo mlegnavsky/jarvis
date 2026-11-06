@@ -352,10 +352,10 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   data['settings']['zero_target_proof']['read_shapes']=[{'single_before':0,'bulk':0,'single_after':0}]*2
   await data['report']()
   self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
-  data['settings']['native_grid_target_w']=5
-  data['settings']['zero_target_proof']={'verified':True,'actual_w':5,'reads':[5]*7,'read_shapes':[{'single_before':5,'bulk':5,'single_after':5}]*2}
+  data['settings']['native_grid_target_w']=1
+  data['settings']['zero_target_proof']={'verified':True,'actual_w':1,'reads':[1]*7,'read_shapes':[{'single_before':1,'bulk':1,'single_after':1}]*2}
   await data['report']()
-  self.assertEqual(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_w'],5)
+  self.assertEqual(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_w'],1)
   self.assertTrue(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
 
  async def test_shared_native_clock_range_admits_eleven_second_lag_without_sync(self):

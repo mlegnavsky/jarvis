@@ -15,7 +15,7 @@ class NormalGridPolicyTests(unittest.TestCase):
  def test_healthy_idle_house_allows_five_watts_only_and_preserves_enabled_state(self):
   self.assertTrue(self.guard());self.assertNotIn('initial_state',self.policy)
   actions=[a for a in self.policy['actions'] if 'action' in a]
-  self.assertEqual(actions,[{'action':'solarman.write_multiple_registers','data':{'device':"{{ device_id('number.inverter_zero_export_power') }}",'address':104,'values':[5]}}])
+  self.assertEqual(actions,[{'action':'solarman.write_multiple_registers','data':{'device':"{{ device_id('number.inverter_zero_export_power') }}",'address':104,'values':[1]}}])
  def test_running_sale_charge_fault_unknown_mode_and_preparation_all_block(self):
   for field in ('active','ready','healthy'):
    saved=self.attrs['sensor.jarvis_energy_sales'][field]

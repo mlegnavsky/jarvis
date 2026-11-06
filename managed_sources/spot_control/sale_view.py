@@ -4,15 +4,15 @@ def grid_target_card():
  action={'action':'perform-action','perform_action':'automation.trigger',
          'target':{'entity_id':'automation.jarvis_bezny_odber_0_w'},'data':{'skip_condition':False}}
  return {'type':'vertical-stack','grid_options':{'columns':'full'},'cards':[
-  {'type':'tile','entity':'number.inverter_zero_export_power','name':'Nastavit všude 5 W',
+  {'type':'tile','entity':'number.inverter_zero_export_power','name':'Nastavit všude 1 W',
    'icon':'mdi:transmission-tower','color':'blue','hide_state':True,
    'tap_action':action,'icon_tap_action':dict(action),'hold_action':{'action':'none'}},
   md("""{% set target=state_attr('sensor.jarvis_energy_sales','grid_target_w') %}
 {% set program=state_attr('sensor.jarvis_energy_sales','native_program') or {} %}
 {% set actual=program.get('register_104') %}
 **Požadováno: {{ target if target is not none else '—' }} W · měnič: {{ actual if actual is not none else '—' }} W**
-{% if actual==5 %}Měnič při posledním načtení potvrdil 5 W.{% elif actual is not none %}Měnič zatím 5 W nepotvrdil.{% else %}Čekám na čtení měniče.{% endif %}
-Tlačítko obnoví společné nastavení 5 W při běžném provozu. Stav se aktualizuje po načtení měniče.
+{% if actual==1 %}Měnič při posledním načtení potvrdil 1 W.{% elif actual is not none %}Měnič zatím 1 W nepotvrdil.{% else %}Čekám na čtení měniče.{% endif %}
+Tlačítko obnoví společné nastavení 1 W při běžném provozu. Stav se aktualizuje po načtení měniče.
 """)]}
 def verification_card():
  return md("### Stav ověřování\n{% set s=state_attr('sensor.jarvis_energy_sales','settings') or {} %}\n{% set c=s.get('command',{}) %}\n{% set t=state_attr('sensor.jarvis_energy_sales','native_test') or {} %}\n{% if t %}\n**Test baterie: {{ {'preparing':'příprava','armed':'čekám na začátek','measuring':'měřím průběh','expiry_observed':'nativní konec ověřen','stopping':'ukončuji a vracím nastavení'}.get(t.get('phase'),'ověřování') }} · nejvýše 500 W**\nZačátek: **{{ t.get('start') | timestamp_custom('%H:%M:%S',true) }}**, konec: **{{ t.get('end') | timestamp_custom('%H:%M:%S',true) }}**.\nRezerva při testu **{{ t.get('minimum_soc',95) }} %**.\n{% if t.get(\'selling_first\') %}Doběh regulace sleduji nejvýše 60 s po konci při stejném výkonovém stropu. Režim Selling First · mimo okno je dočasně nastaveno 100 %. Dům může odebírat ze sítě, dokud neobnovím běžné nastavení.{% endif %}\n{% elif c.get('status')=='failed' %}\n**Test se nespustil.** {{ c.get('error') }}\n{% else %}\nČekám na další ověřovací krok.\n{% endif %}\nBateriová automatika: **{{ 'ověřená' if s.get('battery_verified') else 'dosud neověřená' }}**.\n")

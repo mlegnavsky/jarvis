@@ -1,4 +1,4 @@
-"""The requested5W grid bias needs delayed native proof, never HA optimism."""
+"""The requested1W grid bias needs delayed native proof, never HA optimism."""
 import asyncio
 import unittest
 try:from native_zero_target import set_zero_target
@@ -27,10 +27,10 @@ class ZeroTargetTests(unittest.IsolatedAsyncioTestCase):
   async def sleep(seconds):await asyncio.sleep(0)
   result=await set_zero_target(device,ready or (lambda:True),event or audit,sleep=sleep)
   return device,result
- async def test_five_watts_is_the_only_write_and_delayed_reads_prove_it(self):
+ async def test_one_watt_is_the_only_write_and_delayed_reads_prove_it(self):
   d,r=await self.run_probe()
-  self.assertTrue(r['verified']);self.assertEqual(r['before_w'],20);self.assertEqual(r['actual_w'],5)
-  self.assertEqual([c for c in d.calls if c[0]==16],[(16,104,[5])])
+  self.assertTrue(r['verified']);self.assertEqual(r['before_w'],20);self.assertEqual(r['actual_w'],1)
+  self.assertEqual([c for c in d.calls if c[0]==16],[(16,104,[1])])
   self.assertGreaterEqual(sum(c[0]==3 and c[1]==104 for c in d.calls),3)
  async def test_ignored_write_reports_actual_twenty_without_fake_success(self):
   _,r=await self.run_probe(Device(ignore=True))
@@ -43,7 +43,7 @@ class ZeroTargetTests(unittest.IsolatedAsyncioTestCase):
     return result
   _,r=await self.run_probe(ShapeDependent())
   self.assertFalse(r['verified']);self.assertEqual(r['actual_w'],20)
-  self.assertTrue(any(p['single_before']==5 and p['bulk']==20 and p['single_after']==5 for p in r['read_shapes']))
+  self.assertTrue(any(p['single_before']==1 and p['bulk']==20 and p['single_after']==1 for p in r['read_shapes']))
  async def test_active_unhealthy_or_changed_native_program_never_writes(self):
   for change in ({142:0},{145:1},{130:1},{166:60},{172:1},{0:6}):
    d=Device();d.r.update(change);_,r=await self.run_probe(d)

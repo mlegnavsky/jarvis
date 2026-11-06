@@ -2,7 +2,7 @@
 import asyncio
 import time
 
-GRID_TARGET_W=5
+GRID_TARGET_W=1
 
 
 def _value(raw,count):
