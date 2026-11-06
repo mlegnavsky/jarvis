@@ -30,6 +30,8 @@ def restore_measurement_intent(settings,events):
 def after_stop(settings,outcome):
  result=dict(settings)
  result['handled_stop_id']=outcome.get('id')
+ result['last_sale_stop']=dict(outcome)
+ result['recent_sale_stops']=[*(settings.get('recent_sale_stops') or [])[-9:],dict(outcome)]
  recover=bool(settings.get('requested_automatic') and measurement_guard(outcome))
  if recover:result['measurement_recovery']={'pending':True,'stop_id':outcome.get('id')}
  reason=outcome.get('reason')

@@ -1,4 +1,4 @@
-/* Spoty hub1.0.2. Render/read operations never invoke a device service. */
+/* Spoty hub1.0.3. Render/read operations never invoke a device service. */
 (function(global){
 'use strict';
 const number=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
@@ -32,7 +32,7 @@ class Hub{
   $('date').addEventListener('change',()=>{if(/^\d{4}-\d{2}-\d{2}$/.test($('date').value))this.select(this.period,$('date').value);});
   $('previous').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,-1));$('next').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,1));$('today').onclick=()=>this.select(this.period,today());
   $('advanced').addEventListener('toggle',()=>{if($('advanced').open)this.mountLegacy();this.fit();});document.querySelectorAll('details').forEach(x=>x.addEventListener('toggle',()=>this.fit()));
-  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.0.2',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
+  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.0.3',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
   this.update();this.timer=setInterval(()=>this.update(),2000);this.resize=new ResizeObserver(()=>this.fit());this.resize.observe($('app'));global.addEventListener('pagehide',()=>{this.dead=true;clearInterval(this.timer);this.resize.disconnect();},{once:true});
  }
  fit(){if(this.fitPending)return;this.fitPending=true;requestAnimationFrame(()=>{this.fitPending=false;try{const f=global.frameElement;if(!f)return;const height=Math.ceil($('app').getBoundingClientRect().height+4);if(Math.abs((this.frameHeight||0)-height)<3)return;this.frameHeight=height;f.style.height=height+'px';f.style.position='relative';f.style.display='block';const container=f.parentElement;if(container){container.style.paddingTop='0px';container.style.height=height+'px';}}catch{}});}
@@ -55,6 +55,7 @@ class Hub{
   for(const label of this.houseLabels||[]){const id=label.dataset.entity;let value;
    if(id==='sensor.jarvis_tok_site')value=grid===null?'—':grid<0?'Prodáváme':'Odebíráme';
    else if(id==='sensor.jarvis_vykon_baterie'){const v=this.read('sensor.inverter_battery_power');value=format(v===null?null:Math.abs(v),0)+' W';}
+   else if(id==='sensor.inverter_battery_temperature'||id==='sensor.inverter_temperature'){const v=this.read(id);value=(id==='sensor.inverter_battery_temperature'?'Bat. ':'Měnič ')+format(v,1)+' °C';}
    else{const v=this.read(id);value=format(v,0)+(id==='sensor.inverter_battery'?' %':' W');}
    label.textContent=value;
   }

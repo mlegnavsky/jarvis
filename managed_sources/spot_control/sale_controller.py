@@ -219,6 +219,20 @@ class SaleController:
    self.record['phase']='running';self.record.setdefault('export_first',samples[0][0]);self.record['export_last']=stamp;self.record['export_count']=len(samples)
   else:
    for k in ('export_first','export_last','export_count'):self.record.pop(k,None)
+ async def renew_automatic_pv(self):
+  """Renew an eligible PV observation window without touching the inverter."""
+  async with self.lock:
+   if not self.active or self.record.get('mode')!='pv' or self.record.get('purpose')!='automatic' or self.record.get('phase') not in ('running','awaiting_surplus'):return False
+   now=self.clock();old=self.record['deadline'];stamp=number(self.reported());states=self.read();soc=number(states.get('sensor.inverter_battery'));price=number(self.price())
+   if not old-60<=now<old or not self.healthy() or price is None or price<=0 or soc is None or soc<97 or stamp is None or not 0<=now-stamp<30:return False
+   if self.record.get('stop_attempt_failed') or self.record.get('conflicts') or self._conflicts(states):return False
+   self.record['deadline']=now+900
+   try:
+    await self.save(copy.deepcopy(self.record))
+    await self.event('pv_window_renewed',{'sale_id':self.record['id'],'previous_end':old,'deadline':self.record['deadline'],'price_net':price})
+   except Exception:
+    self.record['deadline']=old;raise
+   return True
  async def tick(self):
   if not self.active or self.lock.locked():return
   states=self.read();grid=number(states.get('sensor.inverter_grid_power'));batt=number(states.get('sensor.inverter_battery_power'));soc=number(states.get('sensor.inverter_battery'))

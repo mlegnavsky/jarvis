@@ -28,7 +28,7 @@ from .autonomous_verification import candidate as verification_candidate,finish 
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.8.1'
+VERSION='0.8.2'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -453,7 +453,7 @@ async def async_setup_sales(hass,config,charge_controller):
   p=current_price();entity=hass.states.get('sensor.inverter_battery')
   return {'version':VERSION,'ready':ready,'active':active(),'observed':bool(window.record.get('observed')) if window.active else battery.observed if battery.active else c.observed,'phase':'native_test' if window.active else battery.record.get('phase','idle') if battery.active else c.record.get('phase','idle'),'native_program':native_program,'native_test':{k:v for k,v in window.record.items() if k!='before'},'native_test_error':window.error,
    'battery_sale':{k:v for k,v in battery.record.items() if k not in ('before','expected','pending')},'battery_sale_error':battery.error,'native_start':battery.record.get('start'),'selected_block':prefs.get('selected_block'),'sale_policy':'simple_daily_block','sale_floor_soc':60,
-   'bias_status':({'average_grid_w':c.record.get('bias_average_w'),'target_export_w':2} if c.active and c.record.get('mode')=='bias' else None),'bias_policy':{'enabled':prefs.get('bias_enabled',True),'target_export_w':2,'minimum_soc':30,'resume_soc':32,'verified':prefs.get('bias_verified',False),'ha_required':True},'charging_active':charge_controller.active,'capacity':capacity(),'house_power_w':house(),'last_cycle':cycle_acceptance(prefs.get('battery_sale_proof')),'settings':dict(prefs),'automatic_requested':bool(prefs.get('requested_automatic')),'autonomous_verification':autonomous_state(),'measurement_recovery':dict(prefs.get('measurement_recovery') or {}),'pv_surplus_soc':97,'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or battery.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else battery.error if battery.active else c.error or runtime_error,'price':p,
+   'bias_status':({'average_grid_w':c.record.get('bias_average_w'),'target_export_w':2} if c.active and c.record.get('mode')=='bias' else None),'bias_policy':{'enabled':prefs.get('bias_enabled',True),'target_export_w':2,'minimum_soc':30,'resume_soc':32,'verified':prefs.get('bias_verified',False),'ha_required':True},'charging_active':charge_controller.active,'capacity':capacity(),'house_power_w':house(),'last_cycle':cycle_acceptance(prefs.get('battery_sale_proof')),'settings':dict(prefs),'automatic_requested':bool(prefs.get('requested_automatic')),'autonomous_verification':autonomous_state(),'measurement_recovery':dict(prefs.get('measurement_recovery') or {}),'pv_surplus_soc':97,'last_stop':prefs.get('last_sale_stop'),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or battery.error or 'Čeká na nový ověřovací test.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else battery.error if battery.active else c.error or runtime_error,'price':p,
    'mode':'battery_commission' if window.active else 'battery' if battery.active else c.record.get('mode'),'power_w':500 if window.active else battery.record.get('power_w') if battery.active else c.record.get('power_w'),'deadline':window.record.get('end') if window.active else battery.record.get('end') if battery.active else c.record.get('deadline'),
    'grid_target_w':GRID_TARGET_W,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('zero_target_proof',{}).get('verified') is True and len(prefs.get('zero_target_proof',{}).get('read_shapes',[]))==2 and prefs.get('zero_target_proof',{}).get('actual_w')==GRID_TARGET_W and prefs.get('native_grid_target_w')==GRID_TARGET_W,'grid_import_policy':'Malý přetok2 W nad30 %; běžný režim na rezervě. Velký bateriový prodej zachovává60 %.','automatic_limit_w':AUTO_EXPORT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'planning':home_plan(),'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
@@ -660,6 +660,7 @@ async def async_setup_sales(hass,config,charge_controller):
      return
     was_active=c.active
     if c.active:
+     if prefs.get('automatic') and not prefs.get('inhibited'):await c.renew_automatic_pv()
      await c.tick();await handle_stop()
      if c.active and c.record.get('purpose')=='automatic':
       block=await select_block(quotes())

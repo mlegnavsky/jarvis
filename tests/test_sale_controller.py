@@ -408,6 +408,31 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   c=self.c();await c.start('pv',3000,3,purpose='automatic')
   self.states['sensor.inverter_battery']='96';await c.tick()
   self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'reserve')
+ async def test_continuous_automatic_pv_renews_without_inverter_writes_across_positive_price_change(self):
+  c=self.c();await c.start('pv',500,15,purpose='automatic')
+  old_id=c.record['id'];old_end=c.record['deadline'];before=copy.deepcopy(c.record['before'])
+  self.now=old_end-30;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-500';await c.tick()
+  self.assertTrue(c.observed);writes=len(self.calls);self.net=3.5
+  self.assertTrue(await c.renew_automatic_pv())
+  self.now=old_end+1;self.sample_stamp=self.now;await c.tick()
+  self.assertTrue(c.active);self.assertEqual(c.record['id'],old_id);self.assertEqual(c.record['before'],before);self.assertEqual(len(self.calls),writes)
+
+ async def test_pv_renewal_cannot_bypass_expiry_health_price_reserve_or_external_override(self):
+  for condition in ('manual','expired','unhealthy','price','reserve','stale','override'):
+   self.setUp();c=self.c();await c.start('pv',500,15,purpose='manual' if condition=='manual' else 'automatic')
+   old=c.record['deadline'];self.now=old-30;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-500';await c.tick()
+   if condition=='expired':self.now=old+1;self.sample_stamp=self.now
+   elif condition=='unhealthy':self.fresh=False
+   elif condition=='price':self.net=-1
+   elif condition=='reserve':self.states['sensor.inverter_battery']='96'
+   elif condition=='stale':self.sample_stamp=self.now-35
+   elif condition=='override':self.states['number.inverter_export_surplus_power']='900'
+   writes=len(self.calls);self.assertFalse(await c.renew_automatic_pv(),condition);self.assertEqual(c.record['deadline'],old);self.assertEqual(len(self.calls),writes)
+
+ async def test_positive_price_change_alone_does_not_stop_pv(self):
+  c=self.c();await c.start('pv',500,15,purpose='automatic');self.net=3.5
+  self.now+=10;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-500';await c.tick();self.assertTrue(c.active)
+
  async def test_published_negative_price_is_a_normal_market_pause(self):
   c=self.c();await c.start('pv',500,3,purpose='automatic');self.net=-1
   await c.tick();self.assertEqual(c.last_stop['reason'],'price')
