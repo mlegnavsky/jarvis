@@ -85,6 +85,55 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         await self.advance(10)
         self.assertTrue(self.controller.observed)
 
+    async def test_automatic_native_read_timeout_produces_recoverable_confirmed_stop(self):
+        from telemetry_health import recoverable_battery_stop
+        await self.start(purpose='automatic');await self.enable()
+        self.states['health']={'healthy':True,'transient_only':False,'issues':[]}
+        real=self.controller.native_read;failed=False
+        async def timeout_once():
+            nonlocal failed
+            if not failed:
+                failed=True;raise TimeoutError('Native snapshot timeout at142/36')
+            return await real()
+        self.controller.native_read=timeout_once
+        await self.advance(31)
+        await self.finish_stop()
+        proof=self.controller.last_stop
+        self.assertTrue(recoverable_battery_stop(proof),str(proof))
+        self.assertEqual(proof['failure_context']['health']['issues'][-1]['source'],'battery_native_audit')
+        self.assertEqual([self.reg[166+i] for i in range(6)],[30]*6)
+
+    async def test_native_read_timeout_crossing_plan_end_still_completes_deadline(self):
+        await self.start(purpose='automatic');await self.enable()
+        self.states['health']={'healthy':True,'transient_only':False,'issues':[]}
+        self.now=self.controller.record['end']-1;self.states['reported_at']=self.now
+        real=self.controller.native_read;failed=False
+        async def timeout_once():
+            nonlocal failed
+            if not failed:
+                failed=True;self.now+=2;self.states['reported_at']=self.now
+                raise TimeoutError('snapshot crossed deadline')
+            return await real()
+        self.controller.native_read=timeout_once
+        await self.controller.tick();await self.finish_stop()
+        self.assertEqual(self.controller.last_stop['reason'],'deadline')
+
+    async def test_native_timeout_cannot_mask_new_export_limit_violation(self):
+        from telemetry_health import recoverable_battery_stop
+        await self.start(purpose='automatic');await self.enable()
+        self.states['health']={'healthy':True,'transient_only':False,'issues':[]}
+        real=self.controller.native_read;failed=False
+        async def timeout_once():
+            nonlocal failed
+            if not failed:
+                failed=True;self.states['grid_w']=-9600;raise TimeoutError('snapshot')
+            return await real()
+        self.controller.native_read=timeout_once
+        await self.advance(31)
+        await self.finish_stop()
+        self.assertEqual(self.controller.last_stop['reason'],'export_limit')
+        self.assertFalse(recoverable_battery_stop(self.controller.last_stop))
+
     async def test_ha_sale_rejects_actual_native_reserve_below_fixed_thirty_without_writes(self):
         for i in range(6):self.reg[166+i]=10
         for purpose in ('automatic','manual'):

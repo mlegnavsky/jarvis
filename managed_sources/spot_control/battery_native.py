@@ -316,6 +316,8 @@ class BatterySaleController:
                 await self._persist()
             except Exception as exc:
                 self.error = type(exc).__name__+': '+str(exc)
+                if exc.__cause__ is not None:
+                    self.error += ' ('+type(exc.__cause__).__name__+': '+str(exc.__cause__)+')'
                 self.record['failure_detail'] = self.error
                 self.record['failure_context'] = self._failure_context()
                 await self._stop('start_failed')
@@ -332,6 +334,8 @@ class BatterySaleController:
         health = context.get('health')
         if isinstance(health,dict):
             issues = health.setdefault('issues',[])
+            if self.record.get('native_read_failure'):
+                issues.append(copy.deepcopy(self.record['native_read_failure']))
             for field,entity in (('voltage_reported_at','sensor.inverter_battery_voltage'),
                                  ('current_reported_at','sensor.inverter_battery_current')):
                 stamp = _number(sample.get(field,sample.get('reported_at')))
@@ -357,7 +361,19 @@ class BatterySaleController:
                     return
                 s = self._sample()
                 if self.clock() - self.record.get('last_native_check', 0) >= 30:
-                    await self._audit_native()
+                    try:
+                        await self._audit_native()
+                    except TimeoutError as exc:
+                        self.record['native_read_failure'] = {
+                            'code':'unavailable','entity_id':'native_controls',
+                            'source':'battery_native_audit','error':type(exc).__name__+': '+str(exc)[:160],
+                            'captured_at':self.clock(),'expected':'fresh physical register snapshot'}
+                        # A timeout may overlap a real protection. Re-read telemetry
+                        # and run every electrical/market guard before classifying it.
+                        self._sample()
+                        if self.record.get('ha_controlled') and self.clock() >= self.record['end']:
+                            raise _Guard('deadline') from exc
+                        raise _Guard('measurement') from exc
                     s = self._sample()
                 now = self.clock()
                 if now < self.record['start']:
@@ -410,6 +426,8 @@ class BatterySaleController:
                 await self._persist()
             except Exception as exc:
                 self.error = type(exc).__name__+': '+str(exc)
+                if exc.__cause__ is not None:
+                    self.error += ' ('+type(exc.__cause__).__name__+': '+str(exc.__cause__)+')'
                 self.record['failure_detail'] = self.error
                 self.record['failure_context'] = self._failure_context()
                 await self._stop(exc.reason if isinstance(exc, _Guard) else 'controller_error')
@@ -435,6 +453,8 @@ class BatterySaleController:
                 await self._persist()
             except Exception as exc:
                 self.error = type(exc).__name__+': '+str(exc)
+                if exc.__cause__ is not None:
+                    self.error += ' ('+type(exc.__cause__).__name__+': '+str(exc.__cause__)+')'
                 self.record['failure_detail'] = self.error
                 await self._stop(exc.reason if isinstance(exc, _Guard) else 'controller_error')
 

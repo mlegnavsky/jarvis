@@ -33,7 +33,7 @@ from .owner_settings import DEFAULTS as POLICY_DEFAULTS,validate as validate_pol
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='1.0.4'
+VERSION='1.0.5'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -782,8 +782,15 @@ async def async_setup_sales(hass,config,charge_controller):
        await c.stop('price');await handle_stop()
     if was_active:return
     if not active() and ready and healthy():
-     if prefs.get('automatic') and not prefs.get('inhibited') and not await ensure_house_profile():
-      last_reason='Domácí program neodpovídá pevným ochranám. HA jej nepřepisuje.';return
+     if prefs.get('automatic') and not prefs.get('inhibited'):
+      try:
+       if not await ensure_house_profile():
+        last_reason='Domácí program neodpovídá pevným ochranám. HA jej nepřepisuje.';return
+      except TimeoutError as exc:
+       last_reason='Čekám na přímé ověření měniče; plán zůstává zapnutý.'
+       try:await event('idle_native_read_timeout',{'source':'house_profile_admission','error':type(exc).__name__+': '+str(exc),'captured_at':time.time()})
+       except Exception:pass
+       return
      p=current_price();soc=fresh_number('sensor.inverter_battery');pv=fresh_number('sensor.inverter_pv_power')
      future=quotes();block=await select_block(future)
      decision=sale_decision(block,p,soc,pv)
@@ -792,17 +799,25 @@ async def async_setup_sales(hass,config,charge_controller):
       await event('decision',{'decision':decision,'price':p,'automatic':prefs['automatic'],'selected_block':block,'policy':'simple_daily_block','forecast_is_informational':True});last_decision=signature
      last_reason=decision['reason']
      if prefs['automatic'] and not prefs.get('inhibited'):
+      eligible=(decision['mode']=='battery' and decision['power_w']>=100 or decision['mode']=='bias' or decision['mode']=='pv' and prefs['pv_verified'])
+      if eligible:
+       try:await verify_baseline()
+       except TimeoutError as exc:
+        # These are read-only checks before starting any export transaction.
+        last_reason='Čekám na přímé ověření měniče; plán zůstává zapnutý.'
+        try:await event('idle_native_read_timeout',{'source':'baseline_admission','error':type(exc).__name__+': '+str(exc),'captured_at':time.time()})
+        except Exception:pass
+        return
       if decision['mode']=='battery' and decision['power_w']>=100:
-       await verify_baseline()
        operating_end=automatic_window_end(block)
        if operating_end is not None:
         await battery.start(cap(),min(60,(operating_end-time.time())/60),policy()['sale_soc'],quotes(),purpose='automatic',window_end=operating_end,maximum_power_w=cap(),business_block=block)
         last_reason='Bateriový prodej připraven přes HA; čekám na potvrzení dodávky.'
        elif operating_end is None:last_reason='Před půlnocí již nelze bezpečně dokončit další bateriový segment; automatika čeká.'
       elif decision['mode']=='bias':
-       await verify_baseline();await c.start('bias',policy()['bias_w'],60,minimum_soc=home_floor(),purpose='automatic')
+       await c.start('bias',policy()['bias_w'],60,minimum_soc=home_floor(),purpose='automatic')
       elif decision['mode']=='pv' and prefs['pv_verified']:
-       await verify_baseline();await c.start('pv',cap(),15,minimum_soc=policy()['sale_soc'],purpose='automatic')
+       await c.start('pv',cap(),15,minimum_soc=policy()['sale_soc'],purpose='automatic')
    except Exception as exc:
     runtime_error=str(exc) or type(exc).__name__
     prefs['last_controller_error']={'at':time.time(),'error':runtime_error,'sale_id':c.record.get('id') or battery.record.get('id')}

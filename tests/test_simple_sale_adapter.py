@@ -113,6 +113,24 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   device.execute=timeout_with_excess;self.clock[0]+=26;self.refresh();await self.ticks[0]()
   self.assertFalse((data['settings'].get('measurement_recovery') or {}).get('pending',False))
   self.assertIn('export_limit',data['settings']['last_sale_stop']['context']['triggers'])
+ async def test_idle_profile_admission_timeout_does_not_disable_owner_schedule(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,bias_enabled=False)
+  self.hass.states.async_set('sensor.inverter_battery',50)
+  self.clock[0]+=61;self.refresh()
+  device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device
+  read=device.modbus.get_response;failed=False
+  async def timeout_once(code,address,count=1,**kw):
+   nonlocal failed
+   if not failed:
+    failed=True;raise TimeoutError('idle native snapshot')
+   return await read(code,address,count=count,**kw)
+  device.modbus.get_response=timeout_once
+  await self.ticks[0]()
+  self.assertTrue(failed)
+  self.assertTrue(data['settings']['automatic'])
+  self.assertFalse(data['settings'].get('inhibited',False))
+  self.assertFalse(data['controller'].active);self.assertFalse(data['battery_controller'].active)
+
  async def test_report_file_failure_is_visible_without_removing_permanent_history(self):
   data=await self.setup();original=self.hass.async_add_executor_job
   async def failing(fn,*args):
