@@ -1016,3 +1016,8 @@ See docs/evidence/2026-11-06-automatic-sales-enabled.md. Stop/enable race reprod
 ## 6 November2026 — owner5W experiment deployed, native persistence failed
 
 See docs/evidence/2026-11-06-grid-target-5w.md. Source27f4256, runtime0.6.6, combined deploymentgrid5066-apply-20261106 active_verified, backup263a3f4e. Normal target/restoration/status all5W, ordinary automation on, automatic sales still on. Requested5 was briefly read four times, then native single/bulk/single all returned20; independent delayed snapshot also20. Do not claim5W persists or overwrite it with0. Future investigation must identify the actual reversion mechanism. Full suite580tests passes,20skipped; reserve/physical guards preserved.
+
+
+## 6 November 2026 — 1W experiment, persistence failed before sale
+
+Owner requested1W target and confirmation across sale/return. Source b1db6c052d9ebb848577faab6e4e5871904d25f1, runtime0.6.7, deployment grid1-apply-20261106 active_verified00:10:18UTC, backup5a64fb3e; seven files exact readback. All shared targets/button/restoration1W; no guard/price/SOC/cap changes. Full580 tests pass20skipped. Guarded probe owner-grid1-native-20261106 at00:10:38UTC returned seven1W reads and immediate verified proof, but independent native snapshot00:11:15UTC returned20 and HA telemetry00:11:25UTC20. grid_target_confirmed correctly becamefalse. Reversion occurred in idle without any sale or mode transition; no export test was started after initial persistence failed. Automatic sales remains enabled/healthy, no active transaction/controller error. Leave owner1W config, do not claim persistence or confirmed sale-cycle. Actual writer/firmware mechanism remains OPEN. Evidence docs/evidence/2026-11-06-grid-target-1w.md.
