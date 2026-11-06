@@ -1043,3 +1043,10 @@ Durableownerintent/requested_automatic survivesinternalpause; ownerOFFcancelsres
 
 
 Final09:01:07UTC continuousautomaticbias1793955603470585401 phaseRUNNING/observedTRUE, rollingmean−8.9W, requestedTRUE/automaticTRUE/inhibitedFALSE/resumeFALSE/healthyTRUE/error empty. Both physicalboundedtestcompletion and actualautomaticallyresumedcontinuousoperation are now observed. Batteryproof remains waiting. Deploymentlease releasedverified09:00:19UTC.
+
+
+## 6 November2026 — sales0.8.1 ACTIVE,97%surplus and automatic measurement recovery
+
+Sourceeb1e78c5f09538636cee077a48e90a5e0f447255. See docs/evidence/2026-11-06-surplus-097-081.md. solar097b-apply-20261106 verified/active_verified, backupd46d4096, unchangedCore2026.6.4. Owner explicitly prohibits further physicaltests; only localchecks, deploymentandread-onlystateconfirmation. Automaticcommissioningdisabled atstartup/ownerON. PVstart97/stopbelow97, samepositiveprice/9300W/batteryassistguards. Measurement-onlyconfirmedstop mayresumeownerrequest after60shealth/currentprice/independentnativeidle+stoppedgrid; knowncompletedcleanupretry supported. OwnerOFFwins. Startupmigrationrecoveredexistingdocumentedbiasproof, neverinventedbatteryproof.
+
+Fresh5.3GiB enabledbackupafterownerindependentlyclearedspace; requestedfcb10fc6deletion NOTperformed. HA itselfrestoredafterprevious33sdatagap at10:58:18UTC; laterexternalOFF/ONrespected.10:59:33UTC realautomaticPVexport4442W/PV5168W/SOC99, RUNNING/observedTRUE/automaticTRUE/inhibitedFALSE/error empty; ownerconfirmedseeingexport. No furtherenable/testcommand sent byagent. Native104still20; battery_nativefullcycleproofstillFALSE. Lease released10:57:32UTC. Do not automaticallyruncommissioning orforceanyproofgate. Read-onlytodayobserverupdated accordingly. Spotyredesignimage isproposalonly, notdeployed; day/week/month/yearrequiresrealhistoricalaggregation, notmockdata.
