@@ -1,5 +1,6 @@
 """Read-only health evidence. Recovery is allowed only for proven data loss."""
 import math
+from copy import deepcopy
 
 MEASUREMENTS = ('sensor.inverter_battery', 'sensor.inverter_pv_power',
                 'sensor.inverter_battery_power', 'sensor.inverter_grid_power',
@@ -70,3 +71,15 @@ def transient_health(health):
     issues = health.get('issues') or []
     return (health.get('healthy') is False and health.get('transient_only') is True
             and bool(issues) and all(isinstance(i,dict) and i.get('code') in TRANSIENT_CODES for i in issues))
+
+
+def control_transport_failure(health,now,error):
+    """Exact failed native read evidence, never an invented healthy/measurement ACK."""
+    report=deepcopy(health)
+    issues=list(report.get('issues') or [])
+    issues.append({'code':'unavailable','entity_id':'native_controls','value':None,
+                   'age_seconds':None,'expected':'fresh physical control-register read',
+                   'source':'refresh_sale_controls','error':type(error).__name__+': '+str(error)[:160]})
+    report.update(healthy=False,checked_at=now,issues=issues,
+                  transient_only=all(isinstance(i,dict) and i.get('code') in TRANSIENT_CODES for i in issues))
+    return report

@@ -27,13 +27,13 @@ from .solar_inputs import capacity_basis, house_power, cycle_acceptance
 from .supervision import Supervisor
 from .commissioning_completion import finish as finish_verification
 from .daily_override import today_override
-from .telemetry_health import evaluate_health, recoverable_battery_stop, MEASUREMENTS, STATUS
+from .telemetry_health import evaluate_health, recoverable_battery_stop, MEASUREMENTS, STATUS, control_transport_failure
 from .production_policy import choose_operation,complete_battery_plan,house_profile_issues
 from .owner_settings import DEFAULTS as POLICY_DEFAULTS,validate as validate_policy,revision as policy_revision
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='1.0.2'
+VERSION='1.0.3'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -229,7 +229,7 @@ async def async_setup_sales(hass,config,charge_controller):
   return actual
  async def refresh_sale_controls():
   required=('select.inverter_work_mode','number.inverter_export_surplus_power','switch.inverter_export_surplus')
-  if all(0<=time.time()-native_control_values.get(entity,{}).get('verified_at',-999)<15 for entity in required):return
+  if all(0<=time.time()-native_control_values.get(entity,{}).get('verified_at',-999)<25 for entity in required):return
   baseline={state.entity_id:state.state for state in hass.states.async_all() if '.inverter_' in state.entity_id}
   async with asyncio.timeout(15):raw=await native_device().execute(3,142,count=36)
   if not isinstance(raw,list) or len(raw)!=36 or any(type(v) is not int for v in raw):raise ValueError('Chybí úplné fyzické potvrzení režimu měniče.')
@@ -760,7 +760,19 @@ async def async_setup_sales(hass,config,charge_controller):
      return
     was_active=c.active
     if c.active:
-     await refresh_sale_controls()
+     # Confirmed cleanup and stale/faulted telemetry take priority over another
+     # diagnostic bus request. A transport timeout must retain its own evidence.
+     if c.record.get('phase')=='stopping' or not healthy():
+      await c.tick();await handle_stop();return
+     try:await refresh_sale_controls()
+     except TimeoutError as exc:
+      health=control_transport_failure(health_report(),time.time(),exc)
+      c.error='Přímé potvrzení měniče není dostupné; ověřuji bezpečné ukončení.'
+      sale_id=c.record.get('id')
+      await c.tick(transport_error=exc);await handle_stop()
+      try:await event('native_control_refresh_failed',{'sale_id':sale_id,'health':health})
+      except Exception:pass
+      return
      if prefs.get('automatic') and not prefs.get('inhibited'):await c.renew_automatic()
      await c.tick();await handle_stop()
      if c.active and c.record.get('purpose')=='automatic':

@@ -6,8 +6,8 @@ try:from .sales import EXPORT_LIMIT,number
 except ImportError:from sales import EXPORT_LIMIT,number
 try:from .production_policy import house_profile_issues,NATIVE_RESERVE_SOC
 except ImportError:from production_policy import house_profile_issues,NATIVE_RESERVE_SOC
-try:from .telemetry_health import transient_health
-except ImportError:from telemetry_health import transient_health
+try:from .telemetry_health import transient_health,control_transport_failure
+except ImportError:from telemetry_health import transient_health,control_transport_failure
 
 MODE='select.inverter_work_mode'
 ENABLE='switch.inverter_export_surplus'
@@ -248,10 +248,12 @@ class SaleController:
  async def renew_automatic_pv(self):
   """Compatibility entry point; old callers cannot renew other modes."""
   return await self.renew_automatic() if self.record.get('mode')=='pv' else False
- async def tick(self):
+ async def tick(self,*,transport_error=None):
   if not self.active or self.lock.locked():return
   states=self.read();grid=number(states.get('sensor.inverter_grid_power'));batt=number(states.get('sensor.inverter_battery_power'));soc=number(states.get('sensor.inverter_battery'))
-  price=number(self.price());mode=self.record['mode'];health=self._health_evidence();is_healthy=health.get('healthy') is True
+  price=number(self.price());mode=self.record['mode'];health=self._health_evidence()
+  if transport_error is not None:health=control_transport_failure(health,self.clock(),transport_error)
+  is_healthy=health.get('healthy') is True
   stamp=number(self.reported());fresh=stamp is not None and stamp>self.record.get('enabled_at',float('inf'))
   conflicts=self._conflicts(states) if fresh and self.record.get('phase')!='stopping' and is_healthy else self.record.get('conflicts',{})
   no_surplus=False

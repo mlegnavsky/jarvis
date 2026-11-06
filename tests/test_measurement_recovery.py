@@ -40,3 +40,10 @@ class MeasurementRecoveryTests(unittest.TestCase):
  def test_confirmed_measurement_stop_with_prior_native_ack_timeout_still_recovers(self):
   proof={**self.proof(),'reason':'stop_recovery','failures':['number.inverter_export_surplus_power: Měnič nepotvrdil number.inverter_export_surplus_power']}
   self.assertTrue(after_stop({'requested_automatic':True},proof).get('measurement_recovery',{}).get('pending',False))
+
+ def test_native_transport_failure_preserves_real_faults_and_never_labels_them_transient(self):
+  from telemetry_health import control_transport_failure
+  original={'healthy':False,'transient_only':False,'issues':[{'code':'device_fault','entity_id':'sensor.inverter_device_fault','value':'Alarm'}]}
+  report=control_transport_failure(original,100,TimeoutError('native read'))
+  self.assertFalse(report['transient_only']);self.assertEqual(report['issues'][0]['code'],'device_fault')
+  self.assertEqual(len(original['issues']),1)

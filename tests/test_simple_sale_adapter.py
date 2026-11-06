@@ -34,6 +34,38 @@ class FakeBattery:
 
 
 class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
+ async def test_native_refresh_timeout_is_typed_and_recovers_after_confirmed_stop(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,bias_enabled=True,bias_verified=False)
+  self.hass.states.async_set('sensor.inverter_battery',55);self.refresh();await self.ticks[0]()
+  self.assertTrue(data['controller'].active)
+  device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device;real=device.execute;failed=False
+  async def timeout_once(code,address,count=1,**kw):
+   nonlocal failed
+   if not failed and code==3 and address==142 and count==36:
+    failed=True;raise TimeoutError('Simulated native control transport timeout')
+   return await real(code,address,count=count,**kw)
+  device.execute=timeout_once;self.clock[0]+=26;self.refresh();await self.ticks[0]()
+  self.assertTrue(failed);self.assertFalse(data['controller'].active)
+  recovery=data['settings'].get('measurement_recovery') or {}
+  self.assertTrue(recovery.get('pending'),str(data['settings']))
+  proof=data['settings']['last_sale_stop']
+  self.assertEqual(proof['context']['health']['issues'][-1]['entity_id'],'native_controls')
+  self.assertEqual(proof['context']['health']['issues'][-1]['source'],'refresh_sale_controls')
+  self.refresh();await self.ticks[0]();self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['inhibited'])
+ async def test_native_timeout_cannot_mask_simultaneous_export_limit(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,bias_enabled=True)
+  self.hass.states.async_set('sensor.inverter_battery',55);self.refresh();await self.ticks[0]()
+  device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device;real=device.execute;failed=False
+  async def timeout_with_excess(code,address,count=1,**kw):
+   nonlocal failed
+   if not failed and code==3 and address==142 and count==36:
+    failed=True;self.hass.states.async_set('sensor.inverter_grid_power',-500)
+    raise TimeoutError('native controls unavailable')
+   return await real(code,address,count=count,**kw)
+  device.execute=timeout_with_excess;self.clock[0]+=26;self.refresh();await self.ticks[0]()
+  self.assertFalse((data['settings'].get('measurement_recovery') or {}).get('pending',False))
+  self.assertIn('export_limit',data['settings']['last_sale_stop']['context']['triggers'])
  async def test_report_file_failure_is_visible_without_removing_permanent_history(self):
   data=await self.setup();original=self.hass.async_add_executor_job
   async def failing(fn,*args):
