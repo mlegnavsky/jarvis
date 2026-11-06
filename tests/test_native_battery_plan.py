@@ -49,6 +49,12 @@ class NativeBatteryPlanTests(unittest.TestCase):
         self.assertIn('not guaranteed', p['notice'])
         json.dumps(p, allow_nan=False)
 
+    def test_late_seconds_before_boundary_skip_expired_configuration_buffer(self):
+        clock=self.clock.replace(minute=44,second=52)
+        p=self.plan(native_clock=clock,now=clock.timestamp())
+        self.assertEqual(p['start'],clock.replace(minute=50,second=0).timestamp())
+        self.assertGreaterEqual(p['start']-clock.timestamp(),60)
+
     def test_all_weekdays_use_enable_plus_actual_day_bit(self):
         for day, expected in [(2, 3), (3, 5), (4, 9), (5, 17), (6, 33), (7, 65), (8, 129)]:
             with self.subTest(day=day):

@@ -31,6 +31,13 @@ class Store:
  async def async_save(self,data):self.data=copy.deepcopy(data)
 
 class AdapterTests(unittest.IsolatedAsyncioTestCase):
+ async def test_supervision_failure_remains_visible_without_breaking_control_report(self):
+  data=await self.setup()
+  with patch.object(self.module.Supervisor,'publish',side_effect=RuntimeError('monitor failed')):
+   await data['report']()
+  self.assertEqual(self.hass.states.get('sensor.jarvis_solar_dohled').state,'error')
+  self.assertEqual(self.hass.states.get('sensor.jarvis_energy_sales').attributes['supervision']['error'],'RuntimeError')
+
  async def asyncSetUp(self):
   self.temp=tempfile.TemporaryDirectory();path=pathlib.Path(self.temp.name)
   (path/'.storage').mkdir()
@@ -95,7 +102,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    'binary_sensor.inverter_battery_alarm':'off','binary_sensor.inverter_battery_fault':'off',
    'select.inverter_time_of_use':'Week','number.inverter_battery_max_charging_current':175,
    'number.inverter_battery_max_discharging_current':175,'sensor.inverter_battery_voltage':53.7,
-   'sensor.inverter_battery_current':0,'sensor.inverter_load_power':450}
+   'sensor.inverter_battery_current':0,'sensor.inverter_load_power':450,'number.inverter_battery_capacity':460}
   for i in range(1,7):
    values.update({f'number.inverter_program_{i}_soc':30,f'number.inverter_program_{i}_power':12000,
     f'select.inverter_program_{i}_charging':'Disabled',f'time.inverter_program_{i}_time':f'{(i-1)*4:02}:00:00'})

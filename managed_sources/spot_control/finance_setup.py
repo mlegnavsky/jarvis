@@ -42,17 +42,20 @@ async def async_setup_finance(hass):
     a=quote();now=time.time()
     body=await hass.async_add_executor_job(book.today,a.get('rows',[]),a.get('rate'),now,a.get('rate_date'))
     if not (loaded and history_day==body['date']):body.update(sale_czk=None,quality='partial')
-    body.update(archive_loaded=loaded and history_day==body['date'],archive_synced_through=watermark,history_error=history_error,live=sample is not None,version='1.0.0')
+    body['cash_balance_czk']=body['sale_czk']-body['purchase_czk'] if body['sale_czk'] is not None and body['purchase_czk'] is not None else None
+    body['known_cash_balance_czk']=body['known_sale_czk']-body['known_purchase_czk']
+    body.update(archive_loaded=loaded and history_day==body['date'],archive_synced_through=watermark,history_error=history_error,live=sample is not None,version='1.1.0')
     latest=body
     common={'date':body['date'],'as_of':body['as_of'],'quality':body['quality'],'rate_date':body['rate_date'],
      'fx_provisional':body['fx_provisional'],'archive_loaded':body['archive_loaded'],'history_error':history_error,
-     'version':'1.0.0','unit_of_measurement':'CZK','device_class':'monetary','notice':'Průběžný odhad; konečné vyúčtování dle distributora a EnerSpotu.'}
-    for id,field,name in [('sensor.jarvis_dnes_nakoupeno_za','purchase_czk','Dnes nakoupeno za'),('sensor.jarvis_dnes_prodano_za','sale_czk','Dnes prodáno za')]:
+     'import_kwh':body['import_kwh'],'export_kwh':body['export_kwh'],'cash_balance_czk':body['cash_balance_czk'],'known_cash_balance_czk':body['known_cash_balance_czk'],'gap_seconds':body['gap_seconds'],
+     'version':'1.1.0','unit_of_measurement':'CZK','device_class':'monetary','notice':'Průběžný odhad; konečné vyúčtování dle distributora a EnerSpotu.'}
+    for id,field,name in [('sensor.jarvis_dnes_nakoupeno_za','purchase_czk','Dnes nakoupeno za'),('sensor.jarvis_dnes_prodano_za','sale_czk','Dnes prodáno za'),('sensor.jarvis_dnes_bilance_site','cash_balance_czk','Dnešní peněžní bilance sítě')]:
      value=body[field]
      hass.states.async_set(id,round(value,2) if value is not None else 'unknown',{'friendly_name':name,**common,'known_sale_czk':body['known_sale_czk'],'unpriced_export_kwh':body['unpriced_export_kwh'],'unaccounted_export_kwh':body['unaccounted_export_kwh']})
     await hass.async_add_executor_job(write_report,{'captured_at':datetime.now(timezone.utc).isoformat(),**body})
    except Exception as exc:
-    for id in ('sensor.jarvis_dnes_nakoupeno_za','sensor.jarvis_dnes_prodano_za'):
+    for id in ('sensor.jarvis_dnes_nakoupeno_za','sensor.jarvis_dnes_prodano_za','sensor.jarvis_dnes_bilance_site'):
      hass.states.async_set(id,'unavailable',{'error':type(exc).__name__,'notice':'Výpočet čeká; uložené záznamy zůstávají zachované.'})
   if not history_lock.locked() and (day_bounds(time.time())[0]!=history_day or time.time()-last_attempt>=60):hass.async_create_task(backfill())
  async def backfill():

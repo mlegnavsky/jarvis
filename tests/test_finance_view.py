@@ -3,9 +3,24 @@ import sys
 import unittest
 from jinja2 import Environment
 sys.path.insert(0,'managed_sources/spot_control')
-from finance_view import money_card,upgrade_dashboard
+from finance_view import money_card,upgrade_dashboard,energy_overview_card,offload_cash_blocks
 
 class FinanceViewTests(unittest.TestCase):
+ def test_energy_and_balance_card_keeps_unknown_unknown(self):
+  out=Environment().from_string(energy_overview_card()['content']).render(states=lambda _:'unknown',state_attr=lambda *_:None,is_number=lambda v:isinstance(v,(float,int)))
+  self.assertIn('— kWh',out);self.assertIn('— Kč',out)
+  self.assertIn('není zisk celé elektrárny',out)
+ def test_shared_cash_include_preserves_unrelated_yaml_bytes(self):
+  source="views:\n- path: home\n  cards:\n  - type: picture-elements\n    image: 'data:Unchanged_123'\n  - type: vertical-stack\n    cards:\n    - type: grid\n      cards:\n      - type: markdown\n        content: '### Dnes nakoupeno za'\n      - type: markdown\n        content: '### Dnes prodáno za'\n    - type: markdown\n      content: 'Průběžný odhad · dnešní den'\n- !include 'other.yaml'\n"
+  out=offload_cash_blocks(source,expected=1)
+  self.assertIn("  - !include 'solar-cash-summary.yaml'\n",out)
+  self.assertIn("    image: 'data:Unchanged_123'\n",out)
+  self.assertTrue(out.endswith("- !include 'other.yaml'\n"))
+  with self.assertRaises(ValueError):offload_cash_blocks(source,expected=4)
+  visible=source.replace('  - type: vertical-stack\n','  - type: vertical-stack\n    visibility:\n    - condition: screen\n      media_query: "(min-width: 768px)"\n')
+  out=offload_cash_blocks(visible,expected=1)
+  self.assertIn('min-width: 768px',out)
+  self.assertIn("!include 'solar-cash-summary.yaml'",out)
  def test_daily_money_replaces_both_home_layouts_and_both_energy_layouts(self):
   picture={'type':'picture-elements','image':'house.png','elements':[{'icon':'home'}]}
   flow=lambda text:{'type':'markdown','content':text}

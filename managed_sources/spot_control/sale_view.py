@@ -1,5 +1,24 @@
 """Native mobile form: navigation is inert; Start is an explicit separate action."""
+try:from .finance_view import energy_overview_card
+except ImportError:from finance_view import energy_overview_card
+
 def md(content):return {'type':'markdown','content':content}
+def operation_card():
+ return md("""### Stav soláru a baterie
+{% set c=state_attr('sensor.jarvis_energy_sales','capacity') or {} %}
+{% macro energy(v) -%}{{ ('%.2f'|format(v|float))|replace('.', ',') if is_number(v) else '—' }} kWh{%- endmacro %}
+**Kapacita podle nastavení:** {{ energy(c.get('capacity_kwh')) }}{% if c.get('configured_ah') %} · {{ c.configured_ah | round(0) }} Ah{% endif %}
+**Zbývající energie odhadem:** {{ energy(c.get('remaining_kwh')) }} · **nad rezervou 60 %:** {{ energy(c.get('above_sale_reserve_kwh')) }}
+Nominální výpočet z nastavení; skutečná využitelná kapacita není tímto změřena. Energie nad rezervou ještě zahrnuje budoucí spotřebu domu a ztráty.
+
+{% set cycle=state_attr('sensor.jarvis_energy_sales','last_cycle') or {} %}
+**Celý prodejní cyklus:** {{ 'potvrzen měřením' if cycle.get('verified') else 'zatím nedoložený celý průběh' }}.
+{% set supervision=state_attr('sensor.jarvis_energy_sales','supervision') or {} %}
+{% if supervision.get('error') %}⚠ Dohled nad solárem hlásí chybu: {{ supervision.error }}. Výsledek dohledu není dostupný.
+{% endif %}{% for a in supervision.get('alerts',[]) %}⚠ {{ a.message }}
+{% endfor %}{% if supervision.get('notification_error') %}Upozornění v HA čeká na doručení; dohled je zobrazen zde.{% endif %}
+Přebytky: od 98 % baterie při kladném výkupu po poplatku, nejvýše 9,3 kW. Baterie podporující prodej přebytků vyvolá ochranné ukončení.
+""")
 def grid_target_card():
  action={'action':'perform-action','perform_action':'automation.trigger',
          'target':{'entity_id':'automation.jarvis_bezny_odber_0_w'},'data':{'skip_condition':False}}
@@ -74,6 +93,7 @@ Rezerva pro prodej **60 %** · maximální provozní strop **9,3 kW**.
 
 Automatika vybírá denní dvouhodinový blok pro baterii a prodává dostupné přebytky panelů. Aktivace baterie vyžaduje ověřené ochrany.
 '''),
+ operation_card(),energy_overview_card(),
  daily_block_card(),
  battery_sale_card(),
  verification_card(),
@@ -91,8 +111,9 @@ def view():
 {% set p=state_attr('sensor.jarvis_energy_sales','price') %}
 **Výkup po odečtení 0,30 Kč/kWh:** {% if p %}{{ p.net | round(3) }} Kč/kWh{% else %}nedostupný{% endif %}
 
-Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na dostupné energii. Prodejní rezerva baterie je pevně 60 %. U baterie nastav nejméně 5 minut; nativní začátek je na následující pětiminutové hranici.
+Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na dostupné energii. Prodejní rezerva baterie je pevně 60 %. U baterie nastav nejméně 5 minut; nativní začátek je na nejbližší bezpečné pětiminutové hranici.
 '''),
+ operation_card(),energy_overview_card(),
  daily_block_card(),battery_sale_card(),
  {'type':'entities','title':'Nastavení vlastního prodeje','show_header_toggle':False,'entities':[
   {'entity':'select.jarvis_sale_source','name':'Co prodávat'},
@@ -139,7 +160,7 @@ def augment_spot(spot):
  if owned:
   title_first=left[0].get('content','').startswith('## Prodej elektřiny')
   button_first=left[0]==grid_target_card() and len(left)>1 and left[1].get('content','').startswith('## Prodej elektřiny')
-  if len(left) not in (10,len(summary_cards())+2,len(summary_cards())+3) or not (title_first or button_first):
+  if len(left) not in (10,len(summary_cards()),len(summary_cards())+1,len(summary_cards())+2,len(summary_cards())+3) or not (title_first or button_first):
    raise ValueError('Sales overview layout changed; refusing blind overwrite')
   retained=left[-3:]
  else:

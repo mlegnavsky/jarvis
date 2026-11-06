@@ -19,7 +19,7 @@ class ViewTests(unittest.TestCase):
   import jinja2
   env=jinja2.Environment()
   env.filters['timestamp_custom']=lambda value,fmt,local:datetime.fromtimestamp(value,ZoneInfo('Europe/Prague')).strftime(fmt)
-  return env.from_string(content).render(state_attr=lambda entity,key:attrs.get(key),states=lambda entity:'ready')
+  return env.from_string(content).render(state_attr=lambda entity,key:attrs.get(key),states=lambda entity:'ready',is_number=lambda value:isinstance(value,(int,float)))
  def markdown(self,cards,attrs):
   return '\n'.join(self.render(x['content'],attrs) for x in walk(cards) if x.get('type')=='markdown')
  def test_daily_block_shows_local_times_price_and_fixed_sale_reserve(self):

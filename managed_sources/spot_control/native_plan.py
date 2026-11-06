@@ -40,6 +40,12 @@ def native_clock_acceptable(native_clock, now):
         return False
 
 
+def next_native_start(native_clock,now):
+    """Allow at least60 real seconds before a five-minute native boundary."""
+    earliest=max(native_clock.timestamp(),_finite('now',now))+60
+    return datetime.fromtimestamp(math.ceil(earliest/300)*300,TZ)
+
+
 def _unambiguous(local):
     """Reject both gaps and repeated Prague wall times, including either fold."""
     wall = local.replace(tzinfo=None)
@@ -134,9 +140,8 @@ def battery_window_plan(native_clock, now, power_w, duration_minutes, minimum_so
     if not native_clock_acceptable(native_clock, now):
         raise ValueError('Native inverter clock is outside the measured -20..+5 second bound')
 
-    minute = math.ceil((local.hour * 60 + local.minute + 1) / 5) * 5
-    day = local.replace(hour=0, minute=0, second=0, microsecond=0, fold=0)
-    start = day + timedelta(minutes=minute)
+    start = next_native_start(local,now)
+    minute = start.hour*60+start.minute
     requested_minutes = math.floor(duration_minutes / 5) * 5
     if window_end is not None:
         requested_minutes = min(requested_minutes,

@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.storage import Store
 from .planning import build_history,reserve_for_home
+from .solar_inputs import capacity_basis
 
 KEY='jarvis_house_energy_plan'
 TZ=ZoneInfo('Europe/Prague')
@@ -16,7 +17,11 @@ async def async_setup_planning(hass):
  def snapshot():
   state=hass.states.get('sensor.jarvis_pocasi_zitenice')
   weather=dict(state.attributes) if state and state.state=='ready' else {}
-  result=reserve_for_home(model,weather,time.time())
+  setting=hass.states.get('number.inverter_battery_capacity')
+  stamp=(getattr(setting,'last_reported',None) or setting.last_updated).timestamp() if setting else None
+  ah=setting.state if stamp is not None and 0<=time.time()-stamp<600 else None
+  capacity=capacity_basis(ah,None)['capacity_kwh']
+  result=reserve_for_home(model,weather,time.time(),capacity_kwh=capacity)
   return {**result,'history_error':error,'model_date':model_date,'complete_days':model.get('complete_days',[]),'model_as_of':model.get('as_of')}
  def busy():
   sales=hass.data.get('jarvis_spot_control_sales',{})

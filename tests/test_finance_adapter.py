@@ -71,4 +71,11 @@ class FinanceAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(body['archive_loaded']);self.assertEqual(body['quality'],'partial')
   self.assertIsNone(body['sale_czk']);self.assertEqual(body['purchase_czk'],24.5)
 
+ async def test_cash_balance_stays_unknown_until_both_sides_are_accounted(self):
+  data=await self.setup_finance();await data['capture']()
+  self.assertIsNone(data['snapshot']()['cash_balance_czk'])
+  self.assertEqual(self.hass.states.get('sensor.jarvis_dnes_bilance_site').state,'unknown')
+  self.assertIn('import_kwh',self.hass.states.get('sensor.jarvis_dnes_prodano_za').attributes)
+  self.assertEqual(data['snapshot']()['known_cash_balance_czk'],data['snapshot']()['known_sale_czk']-data['snapshot']()['known_purchase_czk'])
+
 if __name__=='__main__':unittest.main()

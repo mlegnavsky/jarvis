@@ -10,7 +10,7 @@ import math
 from zoneinfo import ZoneInfo
 
 LOCAL = ZoneInfo('Europe/Prague')
-LOAD = 'sensor.inverter_load_power'
+LOAD = 'sensor.jarvis_spotreba_domu'
 PV = 'sensor.inverter_pv_power'
 SOC = 'sensor.inverter_battery'
 HOUSE_COUNTER = 'sensor.inverter_total_load_consumption'
@@ -18,7 +18,7 @@ MAX_GAP = 30
 MODEL_MAX_AGE = 7 * 86400
 WEATHER_MAX_AGE = 6 * 3600
 INVERTER_KW = 12
-MODEL_VERSION = 2
+MODEL_VERSION = 3
 STORAGE_EFFICIENCY = math.sqrt(.90)  # Policy assumption, separate from load uncertainty.
 DAY_MISSING_SECONDS = 30
 HOUR_MISSING_SECONDS = 10

@@ -12,7 +12,7 @@ except ImportError:
     planning = None
 
 LOCAL = ZoneInfo('Europe/Prague')
-LOAD = 'sensor.inverter_load_power'
+LOAD = 'sensor.jarvis_spotreba_domu'
 PV = 'sensor.inverter_pv_power'
 SOC = 'sensor.inverter_battery'
 COUNTER = 'sensor.inverter_total_load_consumption'
