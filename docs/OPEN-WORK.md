@@ -1,3 +1,13 @@
+# Solar — current deployment 6 November 2026
+
+Sales0.8.7 / Spoty1.0.7 is active. Source240876bbdc22ecee4e3c15a48fdb6b02ea9763d3; recovery087-prepare/apply verified active_verified, backup3dd998f0, Core2026.6.4 unchanged. Native HA automation.jarvis_obnova_prodeje is on and calls the atomic resume_confirmed_sale(stop_id), preserving owner Off. At13:35:14UTC ordinary runtime was ready/running PV, automatic/requestedON, inhibitedfalse, healthytrue, error empty, and measured grid−353W. House native reserve30 was confirmed across all six slots. No assistant hardware test/commissioning or backup deletion.
+
+Owner explicitly simplified automatic planned production: selected valid block and actualSOC>60 request existing9300W ceiling; stop at60 or end. Consumption/forecast budgeting and commissioning admission are removed for automatic production; no proof flag is forged and native electrical/health/current/timing guards remain. Manual commissioning gates are separate. Continuous bias target is20W above30; PV surplus from97. Current selected block15:45–17:45 Prague, average net8.85647985CZK/kWh. Do not reinstate obsolete automatic battery_verified/forecast gating from older sections.
+
+UI short plan time/average green, errors red, stopping state explicit. UI HTML/JS/CSS exact readbacks matched. Local669 tests OK,20 optional skips. Native recovery template+handler conditions cover ownerOFF, stale token, unknown cleanup, health and conflicts; independent review closed the owner-Off race by checking intent under the application lock. No artificial pause was induced to exercise recovery on hardware; owner performs actual load/plan acceptance.
+
+Evidence: docs/evidence/2026-11-06-house-group-085.md, docs/evidence/2026-11-06-simple-plan-086.md, docs/evidence/2026-11-06-conditional-recovery-087.md. Older notes below are historical; the earlier SOC100 preservation/commissioning barrier claims are superseded by this owner-authorized implementation. Literal zero grid import or exact20W export is not guaranteed beyond native battery/inverter limits and response tolerances.
+
 # Latest: 4 November 2026 — half duplex 1.3.7 ACTIVE
 
 Owner chose no barge-in. See final section below and docs/experiments/2026-11-04-half-duplex.md.
