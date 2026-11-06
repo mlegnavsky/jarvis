@@ -118,7 +118,7 @@ class SaleController:
    for i in range(1,7):
     if states.get(f'select.inverter_program_{i}_charging')!='Disabled':raise ValueError('Současně je povolené nabíjení v časovém programu.')
    if bias:
-    if soc<32:raise ValueError('Malý přetok vyžaduje baterii alespoň32 %.')
+    if soc<=30 or purpose=='bias_probe' and soc<32:raise ValueError('Malý přetok vyžaduje baterii nad30 %; ověřovací režim alespoň32 %.')
     for i in range(1,7):
      target=f'number.inverter_program_{i}_soc';p=f'number.inverter_program_{i}_power'
      if number(states.get(target))!=30 or number(states.get(p)) is None or number(states.get(p))<500:raise ValueError('Malý přetok vyžaduje běžný domácí program s rezervou30 %.')

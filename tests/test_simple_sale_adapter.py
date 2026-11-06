@@ -386,6 +386,64 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(data['settings']['native_window_proof']['id'],'pilot')
   with self.assertRaises(ValueError):await self.service('start_sale',{'mode':'battery','power_w':500,'duration_minutes':5})
 
+ async def test_owner_cap_reduction_during_ack_is_not_hidden_by_native_projection(self):
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
+  self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
+  call=self.hass.services.async_call;edited=False
+  async def owner_edit(domain,service,args,**kwargs):
+   nonlocal edited
+   result=await call(domain,service,args,**kwargs)
+   if not edited and args.get('entity_id')=='number.inverter_export_surplus_power' and args.get('value')==9300:
+    edited=True;self.hass.states.async_set('number.inverter_export_surplus_power',500)
+   return result
+  self.hass.services.async_call=owner_edit
+  self.refresh();await self.ticks[0]()
+  self.assertFalse(data['controller'].active);self.assertTrue(data['settings']['inhibited'])
+  self.assertNotIn(('switch.inverter_export_surplus','on'),self.writes)
+  self.assertEqual(self.native_registers[143],500)
+
+ async def test_native_ack_recovers_timeout_without_replaying_and_survives_stale_ha(self):
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
+  self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
+  call=self.hass.services.async_call;attempts=[]
+  async def lost_ack(domain,service,args,**kwargs):
+   if args.get('entity_id')=='switch.inverter_export_surplus' and service=='turn_on':
+    attempts.append(True);self.native_registers[145]=1;raise TimeoutError('Lost HA acknowledgement')
+   return await call(domain,service,args,**kwargs)
+  self.hass.services.async_call=lost_ack
+  self.refresh();await self.ticks[0]();self.assertTrue(data['controller'].active)
+  self.clock[0]+=11;self.refresh();await self.ticks[0]()
+  self.assertTrue(data['controller'].active);self.assertTrue(data['settings']['automatic']);self.assertEqual(len(attempts),1)
+
+ async def test_unchanged_confirmed_native_setting_does_not_wait_for_ha_timestamp(self):
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
+  self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
+  self.hass.states.async_set('number.inverter_export_surplus_power',9300);self.native_registers[143]=9300
+  state=self.hass.states.get('number.inverter_export_surplus_power');state.last_reported=state.last_updated=datetime.fromtimestamp(self.clock[0]-400,timezone.utc)
+  call=self.hass.services.async_call
+  async def unchanged(domain,service,args,**kwargs):
+   if args.get('entity_id')=='number.inverter_export_surplus_power' and args.get('value')==9300:return
+   return await call(domain,service,args,**kwargs)
+  self.hass.services.async_call=unchanged
+  self.refresh();await self.ticks[0]()
+  self.assertTrue(data['controller'].active);self.assertTrue(data['settings']['automatic'])
+  self.assertFalse(data['settings'].get('inhibited',False))
+
+ async def test_scheduled_production_needs_only_valid_block_and_soc_above_sixty(self):
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,battery_verified=False)
+  start=math.ceil(self.clock[0]/900)*900;self.clock[0]=start-60;self.prices(start)
+  self.hass.states.async_set('sensor.inverter_battery',61)
+  self.hass.states.async_set('number.inverter_battery_capacity','unavailable')
+  self.hass.states.async_set('sensor.inverter_load_power','unavailable')
+  data['planning']['snapshot']=lambda:(_ for _ in ()).throw(ValueError('No forecast'))
+  self.refresh();await self.ticks[0]()
+  battery=data['battery_controller'];self.assertTrue(battery.active)
+  self.assertEqual(battery.starts[0][0],9300);self.assertEqual(battery.starts[0][2],60)
+  self.assertFalse(data['settings']['battery_verified'])
+  self.hass.states.async_set('sensor.inverter_battery',60);self.refresh();await self.ticks[0]()
+  self.assertFalse(battery.active);self.assertIn('reserve',battery.stops)
+  self.assertTrue(data['settings']['automatic'])
+
  async def test_actual_soc_budget_starts_native_segment_without_forecast_gate(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,battery_verified=True)
   start=math.ceil(self.clock[0]/900)*900
@@ -403,7 +461,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(attrs['mode'],'battery');self.assertTrue(attrs['active'])
   self.assertFalse(attrs['observed']);self.assertEqual(attrs['sale_floor_soc'],60)
 
- async def test_native_preparation_starts_three_minutes_early_and_resizes_at_t_minus_one(self):
+ async def test_native_preparation_keeps_maximum_power_while_soc_remains_above_sixty(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,battery_verified=True)
   start=math.ceil(self.clock[0]/900)*900
   self.clock[0]=start-180;self.prices(start);self.refresh()
@@ -414,16 +472,16 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.clock[0]=start-60;self.refresh()
   self.hass.states.async_set('sensor.inverter_battery',70);self.refresh()
   await self.ticks[0]()
-  self.assertTrue(battery.active);self.assertLess(battery.record['power_w'],first_power)
+  self.assertTrue(battery.active);self.assertEqual(battery.record['power_w'],first_power);self.assertEqual(first_power,9300)
   self.assertEqual(data['settings']['selected_block'],chosen)
   self.assertEqual(battery.record['minimum_soc'],60)
 
- async def test_stale_house_measurement_prevents_native_battery_start(self):
+ async def test_scheduled_sale_does_not_need_house_consumption_forecast(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,battery_verified=True)
   start=math.ceil(self.clock[0]/900)*900;self.clock[0]=start-60;self.prices(start);self.refresh()
   self.hass.states.get('sensor.inverter_load_power').last_reported=datetime.fromtimestamp(self.clock[0]-60,timezone.utc)
   await self.ticks[0]()
-  self.assertFalse(data['battery_controller'].active)
+  self.assertTrue(data['battery_controller'].active)
 
  async def test_manual_stop_includes_battery_and_aggregate_interlock(self):
   data=await self.setup();battery=data['battery_controller']
@@ -528,8 +586,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   cutoff=local.replace(hour=23,minute=40,second=0,microsecond=0).timestamp()
   self.assertEqual(battery.starts[0][4]['window_end'],cutoff)
   self.assertLessEqual(battery.record['end'],cutoff)
-  expected=self.module.size_sale(70,23.552,start,start+7200,self.clock[0],1000,max_export_w=3000)['power_w']
-  self.assertEqual(battery.starts[0][0],expected)
+  self.assertEqual(battery.starts[0][0],9300)
 
  async def test_after_2340_is_normal_hold_and_next_day_automatic_still_starts(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,battery_verified=True)

@@ -28,6 +28,13 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   self.now+=1;self.sample_stamp=self.now
   if e=='switch.inverter_export_surplus' and v=='off':self.states['sensor.inverter_grid_power']='20'
  def c(self,saved=None):return SaleController(lambda:self.states,self.write,self.save,self.event,clock=lambda:self.now,healthy=lambda:self.fresh,price=lambda:self.net,saved=saved,reported=lambda:self.sample_stamp)
+ async def test_twenty_watt_production_can_run_above_thirty_and_stops_at_thirty(self):
+  self.states['sensor.inverter_battery']='31';c=self.c()
+  await c.start('bias',20,10,minimum_soc=30,purpose='automatic')
+  self.assertTrue(c.active)
+  self.states['sensor.inverter_battery']='30';self.now+=5;self.sample_stamp=self.now
+  await c.tick();self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'reserve')
+
  async def test_bias_probe_keeps_house_program_and_only_requests_two_watts(self):
   self.states['sensor.inverter_battery']='63';self.net=-1
   c=self.c();await c.start('bias',2,1,minimum_soc=30,purpose='bias_probe')

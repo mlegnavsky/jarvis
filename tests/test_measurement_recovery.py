@@ -24,3 +24,7 @@ class MeasurementRecoveryTests(unittest.TestCase):
   self.assertTrue(after_stop({'automatic':True,'requested_automatic':True},proof)['automatic'])
   for change in ({'stop_verified':False},{'conflicts':{'cap':{}}},{'original_reason':'guard'}):
    self.assertFalse(after_stop({'automatic':True,'requested_automatic':True},{**proof,**change})['automatic'])
+
+ def test_confirmed_measurement_stop_with_prior_native_ack_timeout_still_recovers(self):
+  proof={**self.proof(),'reason':'stop_recovery','failures':['number.inverter_export_surplus_power: Měnič nepotvrdil number.inverter_export_surplus_power']}
+  self.assertTrue(after_stop({'requested_automatic':True},proof).get('measurement_recovery',{}).get('pending',False))

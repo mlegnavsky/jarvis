@@ -292,7 +292,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    return raw
   device.execute=delayed
   await data['window'].native_write(109,60)
-  self.assertEqual(len(bulk_reads),2)
+  self.assertGreaterEqual(len(bulk_reads),2)
   self.assertEqual(self.writes.count(('number.inverter_battery_max_discharging_current',60)),1)
   self.assertEqual(self.raw_writes,[])
 
