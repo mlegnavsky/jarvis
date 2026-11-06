@@ -12,20 +12,23 @@ import os
 try:
  from .journal import Journal
  from .sales import market_rows,number
+ from .owner_settings import rate_at
 except ImportError:
  from journal import Journal
  from sales import market_rows,number
+ from owner_settings import rate_at
 TZ=ZoneInfo('Europe/Prague')
 
 def day_bounds(now):
  local=datetime.fromtimestamp(now,TZ);start=local.replace(hour=0,minute=0,second=0,microsecond=0)
  return local.date().isoformat(),start.timestamp(),(start+timedelta(days=1)).timestamp()
 
-def totals(points,quotes,rate,now):
+def totals(points,quotes,rate,now,rate_history=None):
  day,start,end=day_bounds(now);stop=min(end,now)
  prices={}
  for row in market_rows(quotes,rate):
   k=row['start'];prices[k]=None if k in prices else row['net']
+ purchase_integrated=0.;
  imported=0.;integrated_import=0.;anchor_offset=0.;valid_import=False;valid_export=False;first=None;raw_import=None;raw_export=None;exported=0.;known_sale=0.;unpriced=0.;gaps=0.;export_gaps=0;last=None;counter_export=0.;counter_import=None;reset=False;count=0
  for item in sorted(points,key=lambda p:p['t']):
   t=number(item.get('t'));p=number(item.get('grid_w'))
@@ -39,16 +42,18 @@ def totals(points,quotes,rate,now):
     if last['p']*p<0:
      zero=last['t']-last['p']*duration/(p-last['p'])
      if a<zero<b:cuts.append(zero)
-    cuts=sorted(cuts)
+    cuts.extend(r['at'] for r in (rate_history or []) if a<r['at']<b)
+    cuts=sorted(set(cuts))
     for lo,hi in zip(cuts,cuts[1:]):
      pa=last['p']+(p-last['p'])*(lo-last['t'])/duration
      pb=last['p']+(p-last['p'])*(hi-last['t'])/duration
      inc=(max(0,pa)+max(0,pb))/2*(hi-lo)/3600000
      out=(max(0,-pa)+max(0,-pb))/2*(hi-lo)/3600000
+     rates=rate_at(rate_history,lo);purchase_integrated+=inc*rates['purchase_rate']
      integrated_import+=inc;imported=integrated_import+anchor_offset;exported+=out
      price=prices.get(math.floor(lo/900)*900)
      if price is None:unpriced+=out
-     else:known_sale+=out*price
+     else:known_sale+=out*(price-(rates['sale_fee']-.30))
    elif b>a:
     gaps+=b-a
     if p<0 or last['p']<0:export_gaps+=1
@@ -85,12 +90,16 @@ def totals(points,quotes,rate,now):
  full_coverage=first is not None and first<=start+30 and gaps==0 and count>=2
  unaccounted=counter_export if exported<1e-9 and counter_export>0 else max(0,counter_export-exported-.100001)
  complete=unpriced<1e-9 and unaccounted<1e-9 and export_gaps==0 and (valid_export or full_coverage)
- return {'date':day,'purchase_czk':imported*5 if count and (valid_import or full_coverage) and not reset else None,'known_purchase_czk':imported*5,
+ current_rates=rate_at(rate_history,stop)
+ purchase=purchase_integrated+max(0,imported-integrated_import)*rate_at(rate_history,start)['purchase_rate']
+ # Counter-only energy cannot be dated across a tariff change; do not invent its cost.
+ tariff_gap=any(start<r['at']<stop for r in (rate_history or [])) and imported-integrated_import>.01
+ return {'date':day,'purchase_czk':purchase if count and (valid_import or full_coverage) and not reset and not tariff_gap else None,'known_purchase_czk':purchase,
   'sale_czk':known_sale if count and complete else None,'known_sale_czk':known_sale,
   'import_kwh':imported,'export_kwh':exported,'unpriced_export_kwh':unpriced,
   'unaccounted_export_kwh':unaccounted,'missing_export_periods':export_gaps,
   'gap_seconds':gaps,'counter_reset':reset,'samples':count,'as_of':last['t'] if last else None,
-  'quality':'estimate' if complete and (valid_import or full_coverage) and not reset else 'partial','purchase_rate':5,'sale_fee':.30}
+  'quality':'estimate' if complete and (valid_import or full_coverage) and not reset and not tariff_gap else 'partial',**current_rates,'tariff_gap':tariff_gap}
 
 class Ledger(Journal):
  def __init__(self,path):
@@ -116,14 +125,14 @@ class Ledger(Journal):
   with self.db() as db:
    old=db.execute('SELECT body FROM pricebooks WHERE day=?',(day,)).fetchone()
    if not old or old[0]!=encoded:db.execute('INSERT OR REPLACE INTO pricebooks VALUES(?,?)',(day,encoded))
- def today(self,quotes,rate,now,rate_date=None):
+ def today(self,quotes,rate,now,rate_date=None,rate_history=None):
   day,start,end=day_bounds(now)
   self.remember_prices(day,quotes,rate,rate_date)
   with self.db() as db:
    rows=db.execute('SELECT t,grid_w,import_kwh,export_kwh,import_changed,export_changed FROM points WHERE t>=? AND t<=? ORDER BY t',(start-30,min(now,end))).fetchall()
    book=db.execute('SELECT body FROM pricebooks WHERE day=?',(day,)).fetchone()
   price=json.loads(book[0]) if book else {'rows':[],'rate':None,'rate_date':None}
-  out=totals([dict(zip(('t','grid_w','import_kwh','export_kwh','import_changed','export_changed'),r)) for r in rows],price['rows'],price['rate'],now)
+  out=totals([dict(zip(('t','grid_w','import_kwh','export_kwh','import_changed','export_changed'),r)) for r in rows],price['rows'],price['rate'],now,rate_history)
   stamp=price.get('rate_date')
   try:fxday=datetime.strptime(stamp,'%d.%m.%Y').date().isoformat()
   except (ValueError,TypeError):fxday=stamp

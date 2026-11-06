@@ -1,62 +1,61 @@
-- id: jarvis_sales_confirmed_recovery
-  alias: Jarvis obnova prodeje
-  initial_state: true
-  description: Obnoví pouze vlastníkem zapnutou automatiku po fyzicky potvrzeném ukončení
-    přechodné chyby. Nikdy během zastavování, při poruše, cizím zásahu nebo ručním
-    vypnutí.
-  triggers:
-  - trigger: time_pattern
-    seconds: /15
-  conditions:
-  - condition: template
-    value_template: "{% set a = state_attr('sensor.jarvis_energy_sales','settings')\
-      \ or {} %}\n{% set s = state_attr('sensor.jarvis_energy_sales','last_stop')\
-      \ or {} %}\n{% set p = state_attr('sensor.jarvis_energy_sales','native_program')\
-      \ or {} %}\n{% set r = p.get('registers_146_177',[]) %}\n{% set c = s.get('context')\
-      \ or {} %}\n{% set fresh = as_timestamp(now())-as_timestamp(states.sensor.jarvis_energy_sales.last_updated,0)\
-      \ %}\n{% set native_age = as_timestamp(now())-as_timestamp(p.get('captured_at'),0)\
-      \ %}\n{% set recoverable = (s.get('reason') in ['guard','stop_recovery'] and\
-      \ c.get('triggers')==['measurement_or_health']) or (s.get('reason') in ['error','start_failed','stop_recovery','recovery']\
-      \ and s.get('original_reason',s.get('reason')) in ['error','start_failed','recovery']\
-      \ and not c.get('triggers')) %}\n{{ a.get('requested_automatic',false) and not\
-      \ a.get('automatic',false) and a.get('inhibited',false)\n and state_attr('sensor.jarvis_energy_sales','ready')==true\
-      \ and state_attr('sensor.jarvis_energy_sales','active')==false\n and states('sensor.jarvis_energy_sales')=='idle'\
-      \ and state_attr('sensor.jarvis_energy_sales','healthy')==true\n and s.get('purpose')=='automatic'\
-      \ and s.get('mode') in ['pv','bias'] and s.get('stop_verified')==true\n and\
-      \ not s.get('conflicts') and a.get('handled_stop_id')==s.get('id') and recoverable\n\
-      \ and fresh>=0 and fresh<20 and native_age>=0 and native_age<90\n and r|length==32\
-      \ and r[0]==255 and r[1]==1 and r[20:26]==[30,30,30,30,30,30]\n and r[26:32]==[0,0,0,0,0,0]\
-      \ and r[8:14]|min>=500\n and states('sensor.inverter_grid_power')|float(-99999)>=-100\
-      \ }}"
-  - condition: template
-    value_template: '{{ as_timestamp(now())-as_timestamp(this.attributes.last_triggered,0)>60
+id: jarvis_sales_confirmed_recovery
+alias: Jarvis obnova prodeje
+initial_state: true
+description: Obnoví pouze vlastníkem zapnutou automatiku po fyzicky potvrzeném ukončení
+  přechodné chyby. Nikdy během zastavování, při poruše, cizím zásahu nebo ručním vypnutí.
+triggers:
+- trigger: time_pattern
+  seconds: /15
+conditions:
+- condition: template
+  value_template: "{% set a = state_attr('sensor.jarvis_energy_sales','settings')\
+    \ or {} %}\n{% set s = state_attr('sensor.jarvis_energy_sales','last_stop') or\
+    \ {} %}\n{% set p = state_attr('sensor.jarvis_energy_sales','native_program')\
+    \ or {} %}\n{% set r = p.get('registers_146_177',[]) %}\n{% set c = s.get('context')\
+    \ or {} %}\n{% set fresh = as_timestamp(now())-as_timestamp(states.sensor.jarvis_energy_sales.last_updated,0)\
+    \ %}\n{% set native_age = as_timestamp(now())-as_timestamp(p.get('captured_at'),0)\
+    \ %}\n{% set recoverable = (s.get('reason') in ['guard','stop_recovery'] and c.get('triggers')==['measurement_or_health'])\
+    \ or (s.get('reason') in ['error','start_failed','stop_recovery','recovery'] and\
+    \ s.get('original_reason',s.get('reason')) in ['error','start_failed','recovery']\
+    \ and not c.get('triggers')) %}\n{{ a.get('requested_automatic',false) and not\
+    \ a.get('automatic',false) and a.get('inhibited',false)\n and state_attr('sensor.jarvis_energy_sales','ready')==true\
+    \ and state_attr('sensor.jarvis_energy_sales','active')==false\n and states('sensor.jarvis_energy_sales')=='idle'\
+    \ and state_attr('sensor.jarvis_energy_sales','healthy')==true\n and s.get('purpose')=='automatic'\
+    \ and s.get('mode') in ['pv','bias'] and s.get('stop_verified')==true\n and not\
+    \ s.get('conflicts') and a.get('handled_stop_id')==s.get('id') and recoverable\n\
+    \ and fresh>=0 and fresh<20 and native_age>=0 and native_age<90\n and r|length==32\
+    \ and r[0]==255 and r[1]==1 and r[20:26]==[a.get('policy',{}).get('home_soc',30)]*6\n\
+    \ and r[26:32]==[0,0,0,0,0,0] and r[8:14]|min>=500\n and states('sensor.inverter_grid_power')|float(-99999)>=-100\
+    \ }}"
+- condition: template
+  value_template: '{{ as_timestamp(now())-as_timestamp(this.attributes.last_triggered,0)>60
+    }}'
+actions:
+- delay:
+    seconds: 10
+- condition: template
+  value_template: "{% set a = state_attr('sensor.jarvis_energy_sales','settings')\
+    \ or {} %}\n{% set s = state_attr('sensor.jarvis_energy_sales','last_stop') or\
+    \ {} %}\n{% set p = state_attr('sensor.jarvis_energy_sales','native_program')\
+    \ or {} %}\n{% set r = p.get('registers_146_177',[]) %}\n{% set c = s.get('context')\
+    \ or {} %}\n{% set fresh = as_timestamp(now())-as_timestamp(states.sensor.jarvis_energy_sales.last_updated,0)\
+    \ %}\n{% set native_age = as_timestamp(now())-as_timestamp(p.get('captured_at'),0)\
+    \ %}\n{% set recoverable = (s.get('reason') in ['guard','stop_recovery'] and c.get('triggers')==['measurement_or_health'])\
+    \ or (s.get('reason') in ['error','start_failed','stop_recovery','recovery'] and\
+    \ s.get('original_reason',s.get('reason')) in ['error','start_failed','recovery']\
+    \ and not c.get('triggers')) %}\n{{ a.get('requested_automatic',false) and not\
+    \ a.get('automatic',false) and a.get('inhibited',false)\n and state_attr('sensor.jarvis_energy_sales','ready')==true\
+    \ and state_attr('sensor.jarvis_energy_sales','active')==false\n and states('sensor.jarvis_energy_sales')=='idle'\
+    \ and state_attr('sensor.jarvis_energy_sales','healthy')==true\n and s.get('purpose')=='automatic'\
+    \ and s.get('mode') in ['pv','bias'] and s.get('stop_verified')==true\n and not\
+    \ s.get('conflicts') and a.get('handled_stop_id')==s.get('id') and recoverable\n\
+    \ and fresh>=0 and fresh<20 and native_age>=0 and native_age<90\n and r|length==32\
+    \ and r[0]==255 and r[1]==1 and r[20:26]==[a.get('policy',{}).get('home_soc',30)]*6\n\
+    \ and r[26:32]==[0,0,0,0,0,0] and r[8:14]|min>=500\n and states('sensor.inverter_grid_power')|float(-99999)>=-100\
+    \ }}"
+- action: jarvis_spot_control.resume_confirmed_sale
+  data:
+    stop_id: '{{ (state_attr(''sensor.jarvis_energy_sales'',''last_stop'') or {}).get(''id'','''')
       }}'
-  actions:
-  - delay:
-      seconds: 10
-  - condition: template
-    value_template: "{% set a = state_attr('sensor.jarvis_energy_sales','settings')\
-      \ or {} %}\n{% set s = state_attr('sensor.jarvis_energy_sales','last_stop')\
-      \ or {} %}\n{% set p = state_attr('sensor.jarvis_energy_sales','native_program')\
-      \ or {} %}\n{% set r = p.get('registers_146_177',[]) %}\n{% set c = s.get('context')\
-      \ or {} %}\n{% set fresh = as_timestamp(now())-as_timestamp(states.sensor.jarvis_energy_sales.last_updated,0)\
-      \ %}\n{% set native_age = as_timestamp(now())-as_timestamp(p.get('captured_at'),0)\
-      \ %}\n{% set recoverable = (s.get('reason') in ['guard','stop_recovery'] and\
-      \ c.get('triggers')==['measurement_or_health']) or (s.get('reason') in ['error','start_failed','stop_recovery','recovery']\
-      \ and s.get('original_reason',s.get('reason')) in ['error','start_failed','recovery']\
-      \ and not c.get('triggers')) %}\n{{ a.get('requested_automatic',false) and not\
-      \ a.get('automatic',false) and a.get('inhibited',false)\n and state_attr('sensor.jarvis_energy_sales','ready')==true\
-      \ and state_attr('sensor.jarvis_energy_sales','active')==false\n and states('sensor.jarvis_energy_sales')=='idle'\
-      \ and state_attr('sensor.jarvis_energy_sales','healthy')==true\n and s.get('purpose')=='automatic'\
-      \ and s.get('mode') in ['pv','bias'] and s.get('stop_verified')==true\n and\
-      \ not s.get('conflicts') and a.get('handled_stop_id')==s.get('id') and recoverable\n\
-      \ and fresh>=0 and fresh<20 and native_age>=0 and native_age<90\n and r|length==32\
-      \ and r[0]==255 and r[1]==1 and r[20:26]==[30,30,30,30,30,30]\n and r[26:32]==[0,0,0,0,0,0]\
-      \ and r[8:14]|min>=500\n and states('sensor.inverter_grid_power')|float(-99999)>=-100\
-      \ }}"
-  - action: jarvis_spot_control.resume_confirmed_sale
-    data:
-      stop_id: '{{ (state_attr(''sensor.jarvis_energy_sales'',''last_stop'') or {}).get(''id'','''')
-        }}'
-  mode: single
-  max_exceeded: silent
+mode: single
+max_exceeded: silent

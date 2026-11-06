@@ -66,7 +66,7 @@ def number(value):
   return value if math.isfinite(value) else None
  except (TypeError,ValueError):return None
 
-def market_rows(rows,rate):
+def market_rows(rows,rate,fee=.30):
  rate=number(rate)
  if rate is None or rate<=0:return []
  result=[]
@@ -76,12 +76,12 @@ def market_rows(rows,rate):
    if date.tzinfo is None:continue
    start=date.timestamp(); eur=number(row.get('eur_mwh'))
    if eur is None:continue
-   result.append({'start':start,'end':start+900,'eur_mwh':eur,'gross':eur*rate/1000,'net':eur*rate/1000-.30})
+   result.append({'start':start,'end':start+900,'eur_mwh':eur,'gross':eur*rate/1000,'net':eur*rate/1000-fee})
   except (KeyError,TypeError,ValueError,OverflowError):continue
  return sorted(result,key=lambda r:r['start'])
 
-def price_at(rows,now,rate):
- matches=[r for r in market_rows(rows,rate) if r['start']<=now<r['end']]
+def price_at(rows,now,rate,fee=.30):
+ matches=[r for r in market_rows(rows,rate,fee) if r['start']<=now<r['end']]
  return matches[0] if len(matches)==1 else None
 
 def decide(soc,price,future,now,required_soc=60,capacity_kwh=23.5):

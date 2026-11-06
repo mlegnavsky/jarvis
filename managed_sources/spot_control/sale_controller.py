@@ -105,7 +105,8 @@ class SaleController:
   async with self.lock:
    if self.active:raise ValueError('Nejprve dokončím předchozí prodej.')
    power=number(power_w);minutes=number(duration_minutes);floor=number(minimum_soc)
-   bias=mode=='bias' and purpose in ('bias_probe','automatic') and power in (2,20) and floor==30
+   policy=self.policy() if hasattr(self,'policy') else {'home_soc':30,'bias_w':20,'pv_soc':97}
+   bias=mode=='bias' and purpose in ('bias_probe','automatic') and (purpose=='bias_probe' and power==2 and floor==30 or purpose=='automatic' and power in (2,policy['bias_w']) and floor==policy['home_soc'])
    if (not bias and (mode not in ('pv','battery') or power is None or not 100<=power<=EXPORT_LIMIT or floor is None or not 60<=floor<=100)) or minutes is None or not 1<=minutes<=60:
     raise ValueError('Neplatný výkon, délka nebo rezerva prodeje.')
    if not self.healthy() or number(self.price()) is None or self.price()<=0 and not bias:raise ValueError('Čekám na aktuální měření a kladnou cenu.')
@@ -118,10 +119,10 @@ class SaleController:
    for i in range(1,7):
     if states.get(f'select.inverter_program_{i}_charging')!='Disabled':raise ValueError('Současně je povolené nabíjení v časovém programu.')
    if bias:
-    if soc<=30 or purpose=='bias_probe' and soc<32:raise ValueError('Malý přetok vyžaduje baterii nad30 %; ověřovací režim alespoň32 %.')
+    if soc<=floor or purpose=='bias_probe' and soc<32:raise ValueError('Malý přetok vyžaduje baterii nad30 %; ověřovací režim alespoň32 %.')
     for i in range(1,7):
      target=f'number.inverter_program_{i}_soc';p=f'number.inverter_program_{i}_power'
-     if number(states.get(target))!=30 or number(states.get(p)) is None or number(states.get(p))<500:raise ValueError('Malý přetok vyžaduje běžný domácí program s rezervou30 %.')
+     if number(states.get(target))!=floor or number(states.get(p)) is None or number(states.get(p))<500:raise ValueError('Malý přetok vyžaduje běžný domácí program s rezervou30 %.')
     steps.append((MODE,'Export First'))
    elif mode=='battery':
     if soc<=floor:raise ValueError('Baterie je na rezervě pro prodej.')
@@ -133,7 +134,7 @@ class SaleController:
     steps.append((MODE,'Export First'))
    else:
     for i in range(1,7):
-     target=f'number.inverter_program_{i}_soc';keys.append(target);steps.append((target,30 if purpose=='automatic' else 100))
+     target=f'number.inverter_program_{i}_soc';keys.append(target);steps.append((target,policy['home_soc'] if purpose=='automatic' else 100))
     steps.append((ENABLE,'on'))
    if any(states.get(k) in (None,'unknown','unavailable') for k in keys):raise ValueError('Nastavení měniče není dostupné.')
    self.record={'id':str(time.time_ns()),'before':{k:states[k] for k in keys},'mode':mode,'power_w':int(power),'purpose':purpose,'promote_auto':bool(promote_auto),
@@ -224,7 +225,7 @@ class SaleController:
   async with self.lock:
    if not self.active or self.record.get('mode')!='pv' or self.record.get('purpose')!='automatic' or self.record.get('phase') not in ('running','awaiting_surplus'):return False
    now=self.clock();old=self.record['deadline'];stamp=number(self.reported());states=self.read();soc=number(states.get('sensor.inverter_battery'));price=number(self.price())
-   if not old-60<=now<old or not self.healthy() or price is None or price<=0 or soc is None or soc<97 or stamp is None or not 0<=now-stamp<30:return False
+   if not old-60<=now<old or not self.healthy() or price is None or price<=0 or soc is None or soc<(self.policy()['pv_soc'] if hasattr(self,'policy') else 97) or stamp is None or not 0<=now-stamp<30:return False
    if self.record.get('stop_attempt_failed') or self.record.get('conflicts') or self._conflicts(states):return False
    self.record['deadline']=now+900
    try:
@@ -263,7 +264,7 @@ class SaleController:
    else:self.record.pop('bias_excess_first',None)
   if grid is not None and (-grid>self.record['power_w']+300 or bias_excess):triggers.append('export_limit')
   deadline=self.clock()>=self.record['deadline']
-  reserve=soc is not None and (mode in ('battery','bias') and soc<=self.record['minimum_soc'] or mode=='pv' and self.record.get('purpose')=='automatic' and soc<97)
+  reserve=soc is not None and (mode in ('battery','bias') and soc<=self.record['minimum_soc'] or mode=='pv' and self.record.get('purpose')=='automatic' and soc<(self.policy()['pv_soc'] if hasattr(self,'policy') else 97))
   if triggers or conflicts or no_surplus or house_support or deadline or reserve or self.record.get('phase')=='stopping':
    self.record.setdefault('stop_context',{'triggers':triggers,'grid_w':grid,'battery_w':batt,'soc':soc,
     'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w'],

@@ -1,4 +1,4 @@
-/* Spoty hub1.0.7. Render/read operations never invoke a device service. */
+/* Spoty hub1.1.0. Render/read operations never invoke a device service. */
 (function(global){
 'use strict';
 const number=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
@@ -32,7 +32,7 @@ class Hub{
   $('date').addEventListener('change',()=>{if(/^\d{4}-\d{2}-\d{2}$/.test($('date').value))this.select(this.period,$('date').value);});
   $('previous').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,-1));$('next').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,1));$('today').onclick=()=>this.select(this.period,today());
   $('advanced').addEventListener('toggle',()=>{if($('advanced').open)this.mountLegacy();this.fit();});document.querySelectorAll('details').forEach(x=>x.addEventListener('toggle',()=>this.fit()));
-  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.0.7',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
+  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.1.0',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
   this.update();this.timer=setInterval(()=>this.update(),2000);this.resize=new ResizeObserver(()=>this.fit());this.resize.observe($('app'));global.addEventListener('pagehide',()=>{this.dead=true;clearInterval(this.timer);this.resize.disconnect();},{once:true});
  }
  fit(){if(this.fitPending)return;this.fitPending=true;requestAnimationFrame(()=>{this.fitPending=false;try{const f=global.frameElement;if(!f)return;const height=Math.ceil($('app').getBoundingClientRect().height+4);if(Math.abs((this.frameHeight||0)-height)<3)return;this.frameHeight=height;f.style.height=height+'px';f.style.position='relative';f.style.display='block';const container=f.parentElement;if(container){container.style.paddingTop='0px';container.style.height=height+'px';}}catch{}});}
@@ -49,10 +49,20 @@ class Hub{
   const active=sales.active&&sales.mode==='pv';const state=active?(sales.observed?'Prodáváme přebytky · '+format(grid===null?null:Math.max(0,-grid)/1000)+' kW':'Zapínám prodej přebytků…'):(sales.active&&sales.mode==='bias'?'Malý trvalý přetok · cíl '+(sales.bias_policy?.target_export_w??20)+' W':sales.reason||'Čekám na stav řízení.');
   $('sale-state').className='muted'+(sales.error||prefs.inhibited?' status-fault':'');
   $('sale-state').textContent=fresh?(stopping?(sales.error||'Čekám na fyzické potvrzení ukončení prodeje.'):state):'Stav řízení není čerstvý; zobrazené údaje se mohou opožďovat.';
+  const tr=global.JarvisMessages?.translate||((s)=>s);
+  $('sale-state').textContent=tr($('sale-state').textContent);
+  const stop=global.JarvisMessages?.stopInfo(sales.diagnostic_stop||sales.last_stop,prefs.last_controller_error);
+  if($('stop-summary'))$('stop-summary').textContent=stop?stop.cause+' '+stop.outcome:'Zatím není zaznamenané ukončení prodeje.';
+  if($('stop-cleanup'))$('stop-cleanup').textContent=stop?.cleanup||'';
+  if($('stop-technical'))$('stop-technical').textContent=stop?.technical||'';
+  const policy=sales.policy||{};
+  if($('plan-limits'))$('plan-limits').textContent='Rezerva '+(policy.sale_soc??60)+' % · nejvýše '+format((policy.max_w??9300)/1000,1)+' kW · konec při rezervě nebo na konci plánu.';
+  if($('sale-fee'))$('sale-fee').textContent='Po poplatku '+format(policy.sale_fee??.3)+' Kč/kWh';
+  if($('purchase-price'))$('purchase-price').textContent=format(policy.purchase_rate??5)+' Kč/kWh';
   const block=sales.selected_block,clock=v=>new Date(v*1000).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague',hour:'2-digit',minute:'2-digit'});
   $('today-plan').textContent=block?.day===today()?'Dnešní plán: '+clock(block.start)+'–'+clock(block.end)+' · průměr '+format(block.average_net)+' Kč/kWh':'Dnešní cenový plán zatím není dostupný.';
-  $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Velký bateriový prodej zachovává 60 %, malý přetok 30 % (obnovení nad 30 %). Maximální dodávka 9,3 kW.';
-  $('recovery').textContent=sales.error?'Řízení hlásí: '+sales.error:(sales.measurement_recovery?.pending?'Po výpadku měření čeká HA na stabilní data a potvrzení domácího režimu.':'');
+  $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Rezerva plánu '+(policy.sale_soc??60)+' %, domácnosti '+(policy.home_soc??30)+' %, obnovení malého přetoku '+(policy.resume_soc??31)+' %. Maximální dodávka '+format((policy.max_w??9300)/1000,1)+' kW.';
+  $('recovery').textContent=sales.error?'Řízení hlásí: '+tr(sales.error):(sales.measurement_recovery?.pending?'Po výpadku měření čeká HA na stabilní data a potvrzení domácího režimu.':'');
   $('updated').textContent='Živý stav · '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · průběžné částky nejsou fakturace';
   if(!this.houseMounted&&!this.houseLoading)this.mountHouse();if(!this.cardsMounted&&!this.mounting)this.mountCards();for(const card of this.cards)card.hass=h;
   for(const label of this.houseLabels||[]){const id=label.dataset.entity;let value;

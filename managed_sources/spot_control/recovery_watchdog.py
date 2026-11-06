@@ -13,7 +13,7 @@ TEMPLATE="""{% set a = state_attr('sensor.jarvis_energy_sales','settings') or {}
  and s.get('purpose')=='automatic' and s.get('mode') in ['pv','bias'] and s.get('stop_verified')==true
  and not s.get('conflicts') and a.get('handled_stop_id')==s.get('id') and recoverable
  and fresh>=0 and fresh<20 and native_age>=0 and native_age<90
- and r|length==32 and r[0]==255 and r[1]==1 and r[20:26]==[30,30,30,30,30,30]
+ and r|length==32 and r[0]==255 and r[1]==1 and r[20:26]==[a.get('policy',{}).get('home_soc',30)]*6
  and r[26:32]==[0,0,0,0,0,0] and r[8:14]|min>=500
  and states('sensor.inverter_grid_power')|float(-99999)>=-100 }}"""
 

@@ -40,7 +40,8 @@ async def async_setup_finance(hass):
     sample=point()
     if sample:await hass.async_add_executor_job(book.add,[sample])
     a=quote();now=time.time()
-    body=await hass.async_add_executor_job(book.today,a.get('rows',[]),a.get('rate'),now,a.get('rate_date'))
+    rates=hass.data.get('jarvis_spot_control_sales',{}).get('settings',{}).get('rate_history',[])
+    body=await hass.async_add_executor_job(book.today,a.get('rows',[]),a.get('rate'),now,a.get('rate_date'),rates)
     if not (loaded and history_day==body['date']):body.update(sale_czk=None,quality='partial')
     body['cash_balance_czk']=body['sale_czk']-body['purchase_czk'] if body['sale_czk'] is not None and body['purchase_czk'] is not None else None
     body['known_cash_balance_czk']=body['known_sale_czk']-body['known_purchase_czk']
@@ -49,7 +50,7 @@ async def async_setup_finance(hass):
     common={'date':body['date'],'as_of':body['as_of'],'quality':body['quality'],'rate_date':body['rate_date'],
      'fx_provisional':body['fx_provisional'],'archive_loaded':body['archive_loaded'],'history_error':history_error,
      'import_kwh':body['import_kwh'],'export_kwh':body['export_kwh'],'cash_balance_czk':body['cash_balance_czk'],'known_cash_balance_czk':body['known_cash_balance_czk'],'gap_seconds':body['gap_seconds'],
-     'version':'1.1.0','unit_of_measurement':'CZK','device_class':'monetary','notice':'Průběžný odhad; konečné vyúčtování dle distributora a EnerSpotu.'}
+     'purchase_rate':body['purchase_rate'],'sale_fee':body['sale_fee'],'version':'1.1.0','unit_of_measurement':'CZK','device_class':'monetary','notice':'Průběžný odhad; konečné vyúčtování dle distributora a EnerSpotu.'}
     for id,field,name in [('sensor.jarvis_dnes_nakoupeno_za','purchase_czk','Dnes nakoupeno za'),('sensor.jarvis_dnes_prodano_za','sale_czk','Dnes prodáno za'),('sensor.jarvis_dnes_bilance_site','cash_balance_czk','Dnešní peněžní bilance sítě')]:
      value=body[field]
      hass.states.async_set(id,round(value,2) if value is not None else 'unknown',{'friendly_name':name,**common,'known_sale_czk':body['known_sale_czk'],'unpriced_export_kwh':body['unpriced_export_kwh'],'unaccounted_export_kwh':body['unaccounted_export_kwh']})

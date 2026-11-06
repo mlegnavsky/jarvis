@@ -40,3 +40,15 @@ set_sales_automatic:
       required: true
       selector:
         boolean:
+configure_policy:
+  name: Uložit nastavení prodeje
+  description: Uloží ověřené parametry s kontrolou revize. Nezapíná prodej a neruší ochrany. Při běžícím prodeji změnu odmítne.
+  fields:
+    changes:
+      required: true
+      selector:
+        object:
+    expected_revision:
+      required: true
+      selector:
+        text:

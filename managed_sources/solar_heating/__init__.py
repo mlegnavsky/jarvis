@@ -13,7 +13,7 @@ from homeassistant.helpers.storage import Store
 from .engine import Controller, ROOMS, numeric
 
 DOMAIN='jarvis_solar_heating'
-VERSION='1.2.1'
+VERSION='1.2.2'
 AUTOMATION='automation.jarvis_solarni_topeni'
 SWITCHES={'child':'switch.aqara_smart_plug_eu','living':'switch.aqara_smart_plug_eu_2'}
 SENSORS={'temp':'sensor.aqara_temp_humidity_sensor_t1_teplota','pv':'sensor.inverter_pv_power','soc':'sensor.inverter_battery','discharge':'sensor.inverter_battery_power','load':'sensor.inverter_load_power'}
@@ -78,7 +78,7 @@ async def async_setup(hass,config):
      'actual_state':actual.state if actual else 'unavailable','requested_on':decision['on'],
      'temperature':inputs['temp'],'battery_soc':inputs['soc'],'pv_mean_5m_w':result['average'],
      'full_battery_exception':result['full_battery'],'off_until':controller.off_until[room],
-     'manual_off_until':controller.manual_off_until[room],'last_error':last_error[room],'settings':dict(controller.settings),'version':VERSION,'updated_at':datetime.now(timezone.utc).isoformat()})
+     'manual_off_until':controller.manual_off_until[room],'last_error':last_error[room],'settings':dict(controller.settings),'settings_revision':hashlib.sha256(json.dumps(controller.settings,sort_keys=True,allow_nan=False).encode()).hexdigest(),'version':VERSION,'updated_at':datetime.now(timezone.utc).isoformat()})
    hass.states.async_set('sensor.jarvis_topeni_solar_prumer',result['average'] if result['average'] is not None else 'unavailable',{
     'friendly_name':'Topení – solár průměr 5 minut','unit_of_measurement':'W','device_class':'power',
     'state_class':'measurement','coverage_seconds':result['coverage_seconds'],'window_seconds':300})

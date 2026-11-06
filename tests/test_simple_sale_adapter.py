@@ -301,11 +301,13 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(data['controller'].active)
 
  async def setup(self,saved=None):
-  self.clock=[round(time.time(),6)]
+  self.clock=[datetime(2026,11,6,10,1,tzinfo=ZoneInfo('Europe/Prague')).timestamp()]  # independent of a real quarter-boundary lead-in
   self.clock_patch=patch.object(self.module.time,'time',lambda:self.clock[0]);self.clock_patch.start()
   self.addCleanup(self.clock_patch.stop)
   self.storage=fixtures.Store();self.storage.data=copy.deepcopy(saved)
   self.module.Store=lambda *args:self.storage
+  quarter=math.floor(self.clock[0]/900)*900
+  self.hass.states.async_set('sensor.jarvis_spot_ote',5,{'fetched_at':datetime.fromtimestamp(self.clock[0],timezone.utc).isoformat(),'rate':25,'rows':[{'time':datetime.fromtimestamp(quarter,timezone.utc).isoformat(),'eur_mwh':240}]})
   self.assertTrue(hasattr(self.module,'BatterySaleController'),'native battery controller must be integrated')
   self.module.BatterySaleController=FakeBattery
   values={'sensor.inverter_load_power':1000,'sensor.inverter_battery_voltage':52,'sensor.inverter_battery_current':0,

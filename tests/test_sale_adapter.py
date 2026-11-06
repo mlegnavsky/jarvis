@@ -14,7 +14,7 @@ from unittest.mock import patch
 class State:
  def __init__(self,entity,state,attributes=None):
   self.entity_id=entity;self.state=str(state);self.attributes=attributes or {}
-  self.last_changed=self.last_updated=self.last_reported=datetime.now(timezone.utc)
+  self.last_changed=self.last_updated=self.last_reported=datetime.fromtimestamp(time.time(),timezone.utc)
 
 class States:
  def __init__(self):self.items={}
