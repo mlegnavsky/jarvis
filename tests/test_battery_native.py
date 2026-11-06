@@ -85,6 +85,26 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         await self.advance(10)
         self.assertTrue(self.controller.observed)
 
+    async def test_automatic_sale_preserves_inverter_schedule_and_soc(self):
+        await self.start(purpose='automatic')
+        await self.enable()
+        self.assertEqual([self.reg[166+i] for i in range(6)], [30]*6)
+        self.assertFalse(any(a in range(148,178) or a in (109,146) for a,v in self.writes))
+        await self.advance(soc=60)
+        await self.finish_stop()
+        self.assertEqual(self.controller.last_stop['reason'], 'reserve')
+        self.assertFalse(any(a in range(148,178) or a in (109,146) for a,v in self.writes))
+
+    async def test_automatic_sale_stops_at_ha_deadline(self):
+        await self.start(purpose='automatic')
+        await self.enable()
+        self.now = self.controller.record['end']
+        self.states['reported_at'] = self.now
+        await self.controller.tick()
+        self.assertEqual(self.reg[142], 2)
+        await self.finish_stop()
+        self.assertEqual(self.controller.last_stop['reason'], 'deadline')
+
     async def test_plan_and_before_image_are_durable_before_any_device_write(self):
         async def write(address, value):
             self.assertEqual(self.saved['before']['166'], 30)

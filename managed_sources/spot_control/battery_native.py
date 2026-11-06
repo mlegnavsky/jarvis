@@ -256,6 +256,12 @@ class BatterySaleController:
             plan = battery_window_plan(data['clock'], self.clock(), power_w, duration_minutes,
                                        minimum_soc, s['voltage_v'], _bms_limit(r), current, house_power,
                                        quotes, valid_until=valid_until, window_end=window_end)
+            if purpose == 'automatic':
+                # Owner policy: SOC60 is an HA stop threshold. The inverter's
+                # ordinary SOC30 schedule remains the independent fallback.
+                plan.update(ha_controlled=True, native_power_fence=False,
+                            current_limit_a=min(175, r[109], _bms_limit(r)),
+                            notice='HA stops at the sale reserve or deadline; the inverter house schedule is unchanged.')
             maximum = plan['power_w'] if maximum_power_w is None else _number(maximum_power_w)
             if maximum is None or maximum < 100:
                 raise ValueError('Maximum approved power must be a finite value of at least 100 W')
@@ -281,14 +287,15 @@ class BatterySaleController:
             try:
                 await self.event('battery_native_start', copy.deepcopy(self.record))
                 await self._write(143, plan['power_w'])
-                await self._write(109, plan['current_limit_a'])
-                for i in range(6):
-                    await self._write(148 + i, plan['times_hhmm'][i])
-                    await self._write(154 + i, plan['powers'][i])
-                    await self._write(166 + i, plan['socs'][i])
-                    await self._write(172 + i, 0)
-                await self._audit_native()
-                await self._write(146, plan['week_mask'])
+                if not plan.get('ha_controlled'):
+                    await self._write(109, plan['current_limit_a'])
+                    for i in range(6):
+                        await self._write(148 + i, plan['times_hhmm'][i])
+                        await self._write(154 + i, plan['powers'][i])
+                        await self._write(166 + i, plan['socs'][i])
+                        await self._write(172 + i, 0)
+                    await self._audit_native()
+                    await self._write(146, plan['week_mask'])
                 await self._audit_native()
                 self._sample()
                 if self.clock() >= self.record['arm_until']:
@@ -309,6 +316,9 @@ class BatterySaleController:
                 await self._stop('retry')
                 return
             try:
+                if self.record.get('ha_controlled') and self.clock() >= self.record['end']:
+                    await self._stop('deadline')
+                    return
                 s = self._sample()
                 if self.clock() - self.record.get('last_native_check', 0) >= 30:
                     await self._audit_native()
@@ -418,7 +428,8 @@ class BatterySaleController:
             read_error = exc
         # Independent protections run even when persistence/audit/readback fails.
         failures = []
-        for address, value in PROTECTIVE:
+        protective = PROTECTIVE[:3] if self.record.get('ha_controlled') else PROTECTIVE
+        for address, value in protective:
             try:
                 await self._write(address, value, protective=True)
             except Exception as exc:
@@ -433,17 +444,23 @@ class BatterySaleController:
             data = await self._read()
             r = data['registers']
             self._capture_conflicts(r)
-            if any(r[a] != value for a, value in PROTECTIVE):
+            if any(r[a] != value for a, value in protective):
                 raise ValueError('Protective register values are not physically confirmed')
             if not self._profile_ok(r):
                 raise ValueError('Native profile changed; ordinary restoration needs review')
             targets = self._restore_targets(r)
             for address in sorted(WRITABLE - {142, 143, 145, 109}):
+                if self.record.get('ha_controlled'):
+                    targets[address] = r[address]
+                    continue
                 if r[address] != targets[address]:
                     await self._write(address, targets[address], stage='restore')
                 else:
                     self.record['expected'][str(address)] = targets[address]
             for address in (109, 143):
+                if self.record.get('ha_controlled') and address == 109:
+                    targets[address] = r[address]
+                    continue
                 if r[address] != targets[address]:
                     await self._write(address, targets[address], stage='restore')
                 else:

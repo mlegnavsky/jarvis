@@ -30,7 +30,7 @@ from .owner_settings import DEFAULTS as POLICY_DEFAULTS,validate as validate_pol
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.9.0'
+VERSION='0.9.1'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -812,7 +812,7 @@ async def async_setup_sales(hass,config,charge_controller):
       last_reason='První ověřovací prodej přebytků · nejvýše 500 W / 3 minuty.'
      elif prefs['automatic'] and not prefs.get('inhibited'):
       if decision['mode']=='battery' and decision['power_w']>=100:
-       await verify_baseline();await ensure_native_clock()
+       await verify_baseline()
        operating_end=automatic_window_end(block)
        if operating_end is not None:
         await battery.start(cap(),min(60,(operating_end-time.time())/60),policy()['sale_soc'],quotes(),purpose='automatic',window_end=operating_end,maximum_power_w=cap())
