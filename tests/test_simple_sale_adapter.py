@@ -66,6 +66,14 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertIsNone(self.hass.states.get('sensor.jarvis_energy_sales').attributes['capacity']['capacity_kwh'])
   with self.assertRaises(ValueError):await data['start']({'mode':'battery','power_w':500,'duration_minutes':5})
 
+ async def test_failed_native_expiry_revokes_battery_verification_and_automatic(self):
+  data=await self.setup();data['settings'].update(battery_verified=True,automatic=True)
+  data['battery_controller'].last_stop={'id':'failedend','purpose':'manual','reason':'deadline',
+    'phase':'complete','observed':True,'native_expiry_observed':False,'stop_verified':True,'conflicts':{}}
+  await self.ticks[0]()
+  self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['battery_verified'])
+  self.assertTrue(data['settings']['inhibited'])
+
  async def test_near_full_pv_surplus_runs_outside_future_battery_block(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,battery_verified=True)
   quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter)

@@ -33,7 +33,8 @@ def cycle_acceptance(proof):
  verified=bool(p.get('id') and p.get('reason')=='deadline' and p.get('phase')=='complete'
                and all(p.get(k) is True for k in ('observed','native_expiry_observed','stop_verified'))
                and not p.get('conflicts'))
- return {'verified':verified,'sale_id':p.get('id'),'observed':p.get('observed') is True,
+ failed=bool(p.get('id') and p.get('reason')=='deadline' and p.get('phase')=='complete' and p.get('native_expiry_observed') is not True)
+ return {'verified':verified,'failed':failed,'sale_id':p.get('id'),'observed':p.get('observed') is True,
          'native_expiry_observed':p.get('native_expiry_observed') is True,
          'stop_verified':p.get('stop_verified') is True,'reason':p.get('reason'),
          'start':p.get('start'),'end':p.get('end'),'purpose':p.get('purpose'),

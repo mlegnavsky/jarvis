@@ -24,6 +24,8 @@ class SolarInputsTests(unittest.TestCase):
   proof={'id':'sale1','reason':'deadline','phase':'complete','observed':True,
          'native_expiry_observed':True,'stop_verified':True,'conflicts':{}}
   self.assertTrue(cycle_acceptance(proof)['verified'])
+  self.assertFalse(cycle_acceptance(proof)['failed'])
+  self.assertTrue(cycle_acceptance({**proof,'native_expiry_observed':False})['failed'])
   for change in ({'observed':False},{'native_expiry_observed':False},{'stop_verified':False},
                  {'reason':'manual'},{'conflicts':{'146':{}}}):
    self.assertFalse(cycle_acceptance({**proof,**change})['verified'])

@@ -3,7 +3,7 @@ import asyncio
 import math
 import time
 
-CODES=('house_measurement','measurements','control_error','inhibited','capacity','no_export','overdue','grid_target')
+CODES=('cycle_failure','house_measurement','measurements','control_error','inhibited','capacity','no_export','overdue','grid_target')
 
 def finite(value):
  try:
@@ -18,6 +18,8 @@ def evaluate(body,now,started_at=0):
   add('measurements','error','Měření soláru není čerstvé nebo neprošlo kontrolou; nový prodej musí čekat.')
  if body.get('ready') and now-started_at>=60 and not body.get('charging_active') and finite(body.get('house_power_w')) is None:
   add('house_measurement','error','Chybí čerstvá spotřeba domu; bateriový prodej čeká, aby nebral energii určenou domácnosti.')
+ if body.get('last_cycle',{}).get('failed'):
+  add('cycle_failure','error','Nativní časový konec prodeje se nepotvrdil. Automatický bateriový prodej musí zůstat pozastavený do nového úspěšného ověření.')
  error=body.get('error') or body.get('battery_sale_error') or body.get('native_test_error')
  if error:add('control_error','error','Řízení hlásí: '+str(error)[:240])
  if body.get('settings',{}).get('inhibited'):

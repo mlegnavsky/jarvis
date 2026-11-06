@@ -32,6 +32,8 @@ AUTO_EXPORT_LIMIT=9300
 async def async_setup_sales(hass,config,charge_controller):
  store=Store(hass,1,KEY);saved=await store.async_load() or {}
  prefs={'automatic':False,'power_w':500,'minutes':3,'source':'pv','pv_verified':False,'battery_verified':False,**saved.get('settings',{})}
+ if cycle_acceptance(prefs.get('battery_sale_proof'))['failed']:
+  prefs.update(automatic=False,battery_verified=False,inhibited=True)
  journal=await hass.async_add_executor_job(Journal,Path(hass.config.path('.storage','jarvis_energy_sales.sqlite')))
  lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();report_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={};window=None;battery=None;last_native_read=0;planning=None;last_power_adjust=0
  supervisor=Supervisor(hass)
@@ -344,6 +346,8 @@ async def async_setup_sales(hass,config,charge_controller):
    prefs['automatic']=False
    if accepted:prefs['battery_verified']=True;await event('battery_native_acceptance',dict(proof))
   normal=proof.get('reason') in ('deadline','manual','price','reserve','budget','energy_budget') or proof.get('reason')=='recovery' and proof.get('purpose')=='automatic' and proof.get('stop_verified') is True
+  if cycle_acceptance(proof)['failed']:
+   prefs['battery_verified']=False;normal=False
   if proof.get('conflicts'):normal=False
   if not normal:prefs.update(automatic=False,inhibited=True)
   await persist_settings()
