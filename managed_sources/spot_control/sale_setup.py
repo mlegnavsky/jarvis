@@ -18,6 +18,7 @@ from .diagnostics import diagnostic_snapshot
 from .native_window import NativeWindow,WRITABLE
 from .planning_setup import async_setup_planning
 from .simple_sales import choose_daily_block,size_sale
+from .upcoming_plan import build_next_plan,valid_prepared_block
 from .battery_native import BatterySaleController,WRITABLE as BATTERY_WRITABLE
 from .native_clock import sync_native_clock
 from .native_snapshot import read_snapshot
@@ -33,7 +34,7 @@ from .owner_settings import DEFAULTS as POLICY_DEFAULTS,validate as validate_pol
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='1.0.5'
+VERSION='1.0.6'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -126,7 +127,22 @@ async def async_setup_sales(hass,config,charge_controller):
   if len(raw)>4096:raise ValueError('One-day override is too large')
   return json.loads(raw)
  async def select_block(rows):
-  now=time.time()
+  now=time.time();day=datetime.fromtimestamp(now,ZoneInfo('Europe/Prague')).date().isoformat()
+  prepared=(prefs.get('next_plan') or {}).get('block')
+  completed=prefs.get('completed_battery_plan') or {}
+  if isinstance(prepared,dict) and prepared.get('day')==day and completed.get('day')!=day:
+   if valid_prepared_block(prepared,rows,now,policy()['block_minutes']):
+    prefs['selected_block']=dict(prepared);await persist_settings()
+    await event('prepared_daily_block_promoted',{'selected_block':prepared})
+   else:
+    # A price correction or gap invalidates an earlier automatic selection too.
+    # The ordinary chooser below may select a new complete future window.
+    prefs.pop('selected_block',None);await persist_settings()
+    await event('prepared_daily_block_invalidated',{'day':day})
+  upcoming=build_next_plan(rows,now,policy()['block_minutes'])
+  if upcoming!=prefs.get('next_plan'):
+   prefs['next_plan']=upcoming;await persist_settings()
+   await event('next_day_plan_prepared',upcoming)
   override=today_override(await hass.async_add_executor_job(read_today_override),rows,now)
   if override:
    previous=prefs.get('selected_block') or {}
@@ -575,7 +591,7 @@ async def async_setup_sales(hass,config,charge_controller):
  def snapshot():
   p=current_price();entity=hass.states.get('sensor.inverter_battery')
   return {'version':VERSION,'ready':ready,'active':active(),'observed':bool(window.record.get('observed')) if window.active else battery.observed if battery.active else c.observed,'phase':'native_test' if window.active else battery.record.get('phase','idle') if battery.active else c.record.get('phase','idle'),'native_program':native_program,'native_test':{k:v for k,v in window.record.items() if k!='before'},'native_test_error':window.error,
-   'battery_sale':{k:v for k,v in battery.record.items() if k not in ('before','expected','pending')},'battery_sale_error':battery.error,'native_start':battery.record.get('start'),'selected_block':prefs.get('selected_block'),'sale_policy':'block_and_soc','automatic_battery_policy':'scheduled_above_60','automatic_battery_requires_commission':False,'sale_floor_soc':policy()['sale_soc'],
+   'battery_sale':{k:v for k,v in battery.record.items() if k not in ('before','expected','pending')},'battery_sale_error':battery.error,'native_start':battery.record.get('start'),'selected_block':prefs.get('selected_block'),'next_plan':build_next_plan(quotes(),time.time(),policy()['block_minutes']),'sale_policy':'block_and_soc','automatic_battery_policy':'scheduled_above_60','automatic_battery_requires_commission':False,'sale_floor_soc':policy()['sale_soc'],
    'bias_status':({'average_grid_w':c.record.get('bias_average_w'),'target_export_w':policy()['bias_w']} if c.active and c.record.get('mode')=='bias' else None),'bias_policy':{'enabled':prefs.get('bias_enabled',True),'target_export_w':policy()['bias_w'],'minimum_soc':home_floor(),'resume_soc':policy()['resume_soc'],'verified':prefs.get('bias_verified',False),'ha_required':True},'charging_active':charge_controller.active,'capacity':capacity(),'house_power_w':house(),'last_cycle':cycle_acceptance(prefs.get('battery_sale_proof')),'settings':dict(prefs),'policy':policy(),'policy_revision':policy_revision(policy()),'automatic_requested':bool(prefs.get('requested_automatic')),'autonomous_verification':autonomous_state(),'measurement_recovery':dict(prefs.get('measurement_recovery') or {}),'pv_surplus_soc':policy()['pv_soc'],'last_stop':prefs.get('last_sale_stop'),'diagnostic_stop':prefs.get('last_diagnostic_stop') or prefs.get('last_sale_stop'),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or battery.error or 'Čeká na odeznění příčiny a potvrzení bezpečného režimu.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else battery.error if battery.active else c.error or runtime_error,'price':p,
    'mode':'battery_commission' if window.active else 'battery' if battery.active else c.record.get('mode'),'power_w':500 if window.active else battery.record.get('power_w') if battery.active else c.record.get('power_w'),'deadline':window.record.get('end') if window.active else battery.record.get('end') if battery.active else c.record.get('deadline'),
    'grid_target_w':GRID_TARGET_W,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('zero_target_proof',{}).get('verified') is True and len(prefs.get('zero_target_proof',{}).get('read_shapes',[]))==2 and prefs.get('zero_target_proof',{}).get('actual_w')==GRID_TARGET_W and prefs.get('native_grid_target_w')==GRID_TARGET_W,'grid_import_policy':f"Malý přetok {policy()['bias_w']:g} W; domácí rezerva {home_floor():g} %; plánovaný prodej do {policy()['sale_soc']:g} %.",'automatic_limit_w':cap(),'healthy':healthy(),'health':health_report(),'profile_issues':list(profile_issues),'completed_battery_plan':prefs.get('completed_battery_plan'),'battery_soc':number(entity.state) if entity else None,

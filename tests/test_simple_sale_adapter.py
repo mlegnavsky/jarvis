@@ -131,6 +131,68 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(data['settings'].get('inhibited',False))
   self.assertFalse(data['controller'].active);self.assertFalse(data['battery_controller'].active)
 
+ async def test_completed_today_keeps_history_and_prepares_best_tomorrow(self):
+  from test_upcoming_plan import rows,stamp
+  data=await self.setup();self.clock[0]=stamp('2026-11-06')+21*3600
+  proof={'day':'2026-11-06','start':self.clock[0]-7200,'end':self.clock[0]-1,'sale_id':'complete','reason':'reserve'}
+  data['settings'].update(completed_battery_plan=proof,selected_block=proof)
+  tomorrow=rows('2026-11-07')
+  quotes=[{'time':datetime.fromtimestamp(r['start'],timezone.utc).isoformat(),'eur_mwh':400 if 64<=i<72 else 100} for i,r in enumerate(tomorrow)]
+  self.hass.states.async_set('sensor.jarvis_spot_ote',1,{'fetched_at':datetime.fromtimestamp(self.clock[0],timezone.utc).isoformat(),'rate':25,'rows':quotes})
+  self.refresh();await self.ticks[0]();await data['report']()
+  state=self.hass.states.get('sensor.jarvis_energy_sales').attributes
+  self.assertEqual(state['next_plan']['status'],'ready')
+  self.assertEqual(state['next_plan']['block']['start'],stamp('2026-11-07')+16*3600)
+  self.assertEqual(data['settings']['completed_battery_plan'],proof)
+  self.assertFalse(data['battery_controller'].active)
+
+ async def test_saved_next_day_plan_promotes_at_midnight_without_losing_started_best_quarter(self):
+  from test_upcoming_plan import rows,stamp
+  from upcoming_plan import build_next_plan
+  data=await self.setup();tomorrow=rows('2026-11-07');prepared=build_next_plan(tomorrow,stamp('2026-11-06'),120)
+  self.clock[0]=stamp('2026-11-07')+5
+  data['settings'].update(next_plan=prepared,selected_block={'day':'2026-11-06','start':stamp('2026-11-06'),'end':stamp('2026-11-06')+7200},completed_battery_plan={'day':'2026-11-06','reason':'reserve'})
+  quotes=[{'time':datetime.fromtimestamp(r['start'],timezone.utc).isoformat(),'eur_mwh':52} for r in tomorrow]
+  self.hass.states.async_set('sensor.jarvis_spot_ote',1,{'fetched_at':datetime.fromtimestamp(self.clock[0],timezone.utc).isoformat(),'rate':25,'rows':quotes})
+  self.refresh();await self.ticks[0]()
+  self.assertEqual(data['settings']['selected_block']['start'],stamp('2026-11-07'))
+  self.assertEqual(data['settings']['selected_block']['day'],'2026-11-07')
+  self.assertEqual(data['settings']['completed_battery_plan']['day'],'2026-11-06')
+
+ async def test_complete_prepared_plan_replaces_earlier_partial_tomorrow_selection(self):
+  from test_upcoming_plan import rows,stamp
+  from upcoming_plan import build_next_plan
+  data=await self.setup();prices=rows('2026-11-07')
+  for r in prices[64:72]:r['net']=9.7
+  prepared=build_next_plan(prices,stamp('2026-11-06'),120)
+  self.clock[0]=stamp('2026-11-07')+5
+  data['settings'].update(next_plan=prepared,selected_block={'day':'2026-11-07','start':stamp('2026-11-07')+3600,'end':stamp('2026-11-07')+10800,'block_minutes':120,'average_net':1})
+  quotes=[{'time':datetime.fromtimestamp(r['start'],timezone.utc).isoformat(),'eur_mwh':400 if 64<=i<72 else 52} for i,r in enumerate(prices)]
+  self.hass.states.async_set('sensor.jarvis_spot_ote',1,{'fetched_at':datetime.fromtimestamp(self.clock[0],timezone.utc).isoformat(),'rate':25,'rows':quotes})
+  self.refresh();await self.ticks[0]()
+  self.assertEqual(data['settings']['selected_block']['start'],prepared['block']['start'])
+
+ async def test_midnight_price_correction_discards_stale_selection_and_chooses_new_best(self):
+  from test_upcoming_plan import rows,stamp
+  from upcoming_plan import build_next_plan
+  data=await self.setup();prices=rows('2026-11-07')
+  prepared=build_next_plan(prices,stamp('2026-11-06'),120)
+  self.clock[0]=stamp('2026-11-07')+5
+  data['settings'].update(next_plan=prepared,selected_block=dict(prepared['block']))
+  quotes=[{'time':datetime.fromtimestamp(r['start'],timezone.utc).isoformat(),'eur_mwh':400 if 64<=i<72 else 52} for i,r in enumerate(prices)]
+  self.hass.states.async_set('sensor.jarvis_spot_ote',1,{'fetched_at':datetime.fromtimestamp(self.clock[0],timezone.utc).isoformat(),'rate':25,'rows':quotes})
+  self.refresh();await self.ticks[0]()
+  self.assertEqual(data['settings']['selected_block']['start'],stamp('2026-11-07')+16*3600)
+
+ async def test_next_plan_report_rechecks_prices_even_without_an_execution_tick(self):
+  from test_upcoming_plan import rows,stamp
+  from upcoming_plan import build_next_plan
+  data=await self.setup();self.clock[0]=stamp('2026-11-06')+21*3600
+  data['settings']['next_plan']=build_next_plan(rows('2026-11-07'),self.clock[0],120)
+  self.hass.states.async_set('sensor.jarvis_spot_ote',1,{'fetched_at':datetime.fromtimestamp(self.clock[0]-2101,timezone.utc).isoformat(),'rate':25,'rows':[]})
+  self.clock[0]+=11;self.refresh();await data['report']()
+  self.assertEqual(self.hass.states.get('sensor.jarvis_energy_sales').attributes['next_plan']['status'],'waiting_prices')
+
  async def test_report_file_failure_is_visible_without_removing_permanent_history(self):
   data=await self.setup();original=self.hass.async_add_executor_job
   async def failing(fn,*args):

@@ -66,6 +66,12 @@ class Hub{
   if($('purchase-price'))$('purchase-price').textContent=format(policy.purchase_rate??5)+' Kč/kWh';
   const block=sales.selected_block,clock=v=>new Date(v*1000).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague',hour:'2-digit',minute:'2-digit'});
   $('today-plan').textContent=block?.day===today()?'Dnešní plán: '+clock(block.start)+'–'+clock(block.end)+' · průměr '+format(block.average_net)+' Kč/kWh':'Dnešní cenový plán zatím není dostupný.';
+  if(sales.completed_battery_plan?.day===today())$('today-plan').textContent='Dnešní plán splněn.';
+  const civil=today().split('-').map(Number),tomorrow=new Date(Date.UTC(civil[0],civil[1]-1,civil[2]+1)).toISOString().slice(0,10),next=sales.next_plan;
+  if($('next-plan')){
+   const ready=next?.day===tomorrow&&next.status==='ready'&&next.block?.day===tomorrow;
+   $('next-plan').textContent=ready?'Připraveno na nejlepší prodej · zítra '+clock(next.block.start)+'–'+clock(next.block.end)+' · průměr '+format(next.block.average_net)+' Kč/kWh po poplatku. '+(sales.settings?.inhibited?'Automatika je pozastavená; zkontroluj důvod.':sales.automatic_requested?'Spuštění automaticky po ověření baterie a ochran.':'Automatický prodej je vypnutý.'):(next?.day===tomorrow&&next.status==='no_window'?'Zítřejší ceny jsou načtené, ale chybí prodejní okno s kladným výkupem.':'Čekáme na úplné zítřejší ceny; nejlepší prodejní plán zatím není připravený.');
+  }
   $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Rezerva plánu '+(policy.sale_soc??60)+' %, domácnosti '+(policy.home_soc??30)+' %, obnovení malého přetoku '+(policy.resume_soc??31)+' %. Maximální dodávka '+format((policy.max_w??9300)/1000,1)+' kW.';
   $('recovery').textContent=sales.error?'Řízení hlásí: '+tr(sales.error):(sales.measurement_recovery?.pending?'Po výpadku měření čeká HA na stabilní data a potvrzení domácího režimu.':'');
   $('updated').textContent='Živý stav · '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · průběžné částky nejsou fakturace';
