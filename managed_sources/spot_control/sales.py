@@ -37,9 +37,9 @@ def after_stop(settings,outcome):
  reason=outcome.get('reason')
  # A fully confirmed cleanup retry preserves a normal automatic PV stop.
  # Unconfirmed restoration, owner conflicts and safety guards still inhibit.
- if reason=='stop_recovery' and outcome.get('purpose')=='automatic' and outcome.get('mode')=='pv' and outcome.get('stop_verified') is True and not outcome.get('conflicts') and outcome.get('original_reason') in ('recovery','deadline','no_surplus','price','reserve'):
+ if reason=='stop_recovery' and outcome.get('purpose')=='automatic' and outcome.get('mode')=='pv' and outcome.get('stop_verified') is True and not outcome.get('conflicts') and outcome.get('original_reason') in ('recovery','deadline','no_surplus','house_support','price','reserve'):
   reason=outcome['original_reason']
- no_surplus=reason=='no_surplus' and outcome.get('mode')=='pv' and outcome.get('stop_verified')
+ no_surplus=reason in ('no_surplus','house_support') and outcome.get('mode')=='pv' and outcome.get('stop_verified')
  if no_surplus:result['cooldown_until']=time.time()+30
  normal=no_surplus or reason in ('deadline','manual','price','reserve') or reason=='recovery' and outcome.get('purpose')=='automatic' and outcome.get('stop_verified')
  if outcome.get('conflicts'):normal=False

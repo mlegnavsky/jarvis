@@ -92,6 +92,14 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   with self.assertRaises(ValueError):await self.c().start('bias',2,1,minimum_soc=30,purpose='bias_probe')
   self.assertEqual(self.calls,[])
 
+ async def test_automatic_pv_keeps_house_battery_available_to_thirty_percent(self):
+  c=self.c();await c.start('pv',9300,15,minimum_soc=60,purpose='automatic')
+  self.assertEqual(self.states['select.inverter_work_mode'],'Zero Export To CT')
+  for i in range(1,7):self.assertEqual(float(self.states[f'number.inverter_program_{i}_soc']),30)
+  self.states['sensor.inverter_grid_power']='-150';self.states['sensor.inverter_battery_power']='500'
+  self.now+=5;self.sample_stamp=self.now;await c.tick()
+  self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'house_support')
+
  async def test_pv_only_protects_every_battery_slot_before_enabling(self):
   c=self.c();await c.start('pv',500,3)
   self.assertEqual(self.calls[0],('number.inverter_export_surplus_power',500))

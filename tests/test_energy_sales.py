@@ -102,12 +102,12 @@ class AutomaticPauseTests(unittest.TestCase):
   self.assertFalse(result['automatic']);self.assertTrue(result['inhibited'])
   self.assertFalse(result.get('pv_verified',False))
 
- def test_no_surplus_pauses_for_five_minutes_without_disabling_automatic(self):
+ def test_no_surplus_pauses_for_thirty_seconds_without_disabling_automatic(self):
   from unittest.mock import patch
   with patch.object(sales.time,'time',return_value=1000):
    result=sales.after_stop({'automatic':True},{'id':'cloud','reason':'no_surplus','mode':'pv','stop_verified':True})
   self.assertTrue(result['automatic']);self.assertFalse(result.get('inhibited',False))
-  self.assertEqual(result['cooldown_until'],1300)
+  self.assertEqual(result['cooldown_until'],1030)
  def test_unverified_no_surplus_and_owner_override_cannot_keep_automatic_enabled(self):
   for reason in ('no_surplus','external_override'):
    result=sales.after_stop({'automatic':True},{'id':'blocked','reason':reason,'mode':'pv','stop_verified':False})

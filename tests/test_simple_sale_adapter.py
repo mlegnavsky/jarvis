@@ -144,13 +144,48 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['verification_resume_auto'])
   self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['automatic_requested'])
 
- async def test_nonstandard_idle_program_skips_bias_without_disabling_automatic_surplus(self):
-  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True,bias_enabled=True,cooldown_until=self.clock[0]+30)
-  for i in range(1,7):self.hass.states.async_set(f'number.inverter_program_{i}_soc',100)
+ async def test_automatic_house_profile_replaces_old_hundred_percent_lock_before_pv(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
+  for i in range(1,7):
+   self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
   self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
   self.refresh();await self.ticks[0]()
-  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings'].get('inhibited',False));self.assertFalse(data['controller'].active)
-  self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertTrue(data['settings']['automatic'])
+  for i in range(1,7):self.assertEqual(self.native_registers[165+i],30)
+  self.assertTrue(data['controller'].active)
+  for i in range(1,7):self.assertEqual(float(data['controller'].record['before'][f'number.inverter_program_{i}_soc']),30)
+
+ async def test_house_migration_does_not_overwrite_another_reserve(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True)
+  for i in range(1,7):
+   self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
+  self.native_registers[168]=60;self.hass.states.async_set('number.inverter_program_3_soc',60)
+  self.refresh();self.writes.clear();await self.ticks[0]()
+  self.assertFalse(self.writes);self.assertTrue(data['settings']['inhibited'])
+
+ async def test_house_migration_refuses_grid_charge_program(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True)
+  for i in range(1,7):
+   self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
+  self.native_registers[172]=1
+  self.refresh();self.writes.clear();await self.ticks[0]()
+  self.assertFalse(self.writes);self.assertTrue(data['settings']['inhibited'])
+
+ async def test_owner_off_does_not_change_the_house_reserve(self):
+  data=await self.setup();data['settings'].update(automatic=False,requested_automatic=False)
+  for i in range(1,7):
+   self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
+  self.refresh();self.writes.clear();await self.ticks[0]()
+  self.assertFalse(self.writes)
+
+ async def test_cooldown_uses_house_bias_after_normalizing_the_old_idle_profile(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True,bias_enabled=True,cooldown_until=self.clock[0]+30)
+  for i in range(1,7):
+   self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
+  self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
+  self.refresh();await self.ticks[0]()
+  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings'].get('inhibited',False));self.assertEqual(data['controller'].record['mode'],'bias')
+  self.clock[0]+=31;self.refresh();await self.ticks[0]();self.refresh();await self.ticks[0]()
   self.assertTrue(data['controller'].active);self.assertEqual(data['controller'].record['mode'],'pv')
 
  async def test_automatic_surplus_starts_at_97_percent(self):
@@ -165,6 +200,15 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.clock[0]+=61;self.refresh();await self.ticks[0]()
   self.assertTrue(data['settings']['automatic'],str(self.hass.states.get('sensor.jarvis_energy_sales').attributes));self.assertFalse(data['settings']['inhibited']);self.assertFalse(data['settings']['measurement_recovery']['pending'])
   self.assertEqual(data['battery_controller'].starts,[])
+
+ async def test_measurement_recovery_normalizes_old_pv_hundred_percent_lock(self):
+  data=await self.setup();data['settings'].update(automatic=False,requested_automatic=True,inhibited=True,bias_verified=True,pv_verified=True,measurement_recovery={'pending':True,'stop_id':'gap'})
+  for i in range(1,7):
+   self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
+  self.refresh();await self.ticks[0]();self.clock[0]+=11;self.refresh();await self.ticks[0]()
+  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['inhibited'])
+  self.assertFalse(data['settings']['measurement_recovery']['pending'])
+  for i in range(1,7):self.assertEqual(self.native_registers[165+i],30)
 
  async def test_owner_off_cancels_measurement_recovery(self):
   data=await self.setup();data['settings'].update(requested_automatic=False,automatic=False,inhibited=True,measurement_recovery={'pending':True,'stop_id':'gap'})

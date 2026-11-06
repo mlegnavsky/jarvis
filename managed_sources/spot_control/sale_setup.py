@@ -28,7 +28,7 @@ from .autonomous_verification import candidate as verification_candidate,finish 
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.8.3'
+VERSION='0.8.4'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -42,7 +42,7 @@ async def async_setup_sales(hass,config,charge_controller):
  journal=await hass.async_add_executor_job(Journal,Path(hass.config.path('.storage','jarvis_energy_sales.sqlite')))
  try:prefs=restore_measurement_intent(prefs,await hass.async_add_executor_job(journal.recent,1000))
  except Exception:pass
- lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();report_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={};window=None;battery=None;last_native_read=0;planning=None;last_power_adjust=0;low_pv_since=None;measurement_healthy_since=None
+ lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();report_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={};window=None;battery=None;last_native_read=0;planning=None;last_power_adjust=0;low_pv_since=None;measurement_healthy_since=None;house_profile_confirmed=False
  supervisor=Supervisor(hass)
  archive_error='';runtime_error='';commission_requested=bool((config.get(DOMAIN) or {}).get('commission_pv_test',False))
  def home_plan():
@@ -300,6 +300,34 @@ async def async_setup_sales(hass,config,charge_controller):
    or len(set(powers))!=1 or powers[0] is None or powers[0]<500
    or any(r.get(172+i)!=0 for i in range(6))):raise ValueError('Hodiny lze udržovat jen v ověřeném neaktivním domácím režimu.')
   return True
+ async def ensure_house_profile(recovering=False):
+  nonlocal house_profile_confirmed
+  # Owner explicitly wants the house supplied by battery down to30%, also
+  # outside export windows. Migrate only the known old30/100% profile.
+  if house_profile_confirmed and all(number(read().get(f'number.inverter_program_{i}_soc'))==30 for i in range(1,7)):return
+  house_profile_confirmed=False
+  async def admission():
+   r=(await native_test_read())['registers']
+   socs=[r.get(166+i) for i in range(6)];powers=[r.get(154+i) for i in range(6)]
+   if (active() or charge_controller.active or not ((prefs.get('automatic') and not prefs.get('inhibited')) or (recovering and prefs.get('requested_automatic') and (prefs.get('measurement_recovery') or {}).get('pending'))) or not healthy()
+    or r.get(0) not in (5,1280) or (r.get(98),r.get(111),r.get(130),r.get(142),r.get(145),r.get(146))!=(1,1,0,2,0,255)
+    or any(v not in (30,100) for v in socs) or len(set(powers))!=1 or powers[0] is None or powers[0]<500
+    or any(r.get(172+i)!=0 for i in range(6)) or (fresh_number('sensor.inverter_grid_power') is None or fresh_number('sensor.inverter_grid_power') < -100)):
+    raise ValueError('Obnova domácí rezervy čeká na potvrzený neaktivní program bez nabíjení a přetoků.')
+   return r
+  r=await admission()
+  if all(r.get(166+i)==30 for i in range(6)):
+   house_profile_confirmed=True;return
+  await event('house_reserve_intent',{'minimum_soc':30,'reason':'Owner requests battery-first house supply; replace old PV SOC100 lock.'})
+  for i in range(1,7):
+   r=await admission();entity=f'number.inverter_program_{i}_soc'
+   if number(read().get(entity))!=r[165+i]:raise ValueError('Domácí rezervu mezitím změnil jiný držitel řízení.')
+   if r[165+i]==100:await write(entity,30)
+  r=await admission()
+  if any(r.get(166+i)!=30 for i in range(6)):raise ValueError('Měnič nepotvrdil domácí rezervu30 %.')
+  house_profile_confirmed=True
+  prefs['house_reserve_soc']=30
+  await persist_settings();await event('house_reserve_confirmed',{'minimum_soc':30})
  async def clock_admission(get_response):
   registers={}
   for address,count in ((0,1),(98,14),(130,1),(142,36)):
@@ -610,6 +638,7 @@ async def async_setup_sales(hass,config,charge_controller):
   async with lock:
    if not prefs.get('requested_automatic') or active() or not healthy():return
    try:
+    await ensure_house_profile(recovering=True)
     clock_idle_profile((await native_test_read())['registers'])
     grid=fresh_number('sensor.inverter_grid_power')
     if grid is None or grid < -100:raise ValueError('Čekám na potvrzení ukončené dodávky.')
@@ -672,6 +701,7 @@ async def async_setup_sales(hass,config,charge_controller):
        await c.stop('price');await handle_stop()
     if was_active:return
     if not active() and ready and healthy():
+     if prefs.get('automatic') and not prefs.get('inhibited'):await ensure_house_profile()
      p=current_price();soc=fresh_number('sensor.inverter_battery');pv=fresh_number('sensor.inverter_pv_power')
      future=quotes();block=await select_block(future)
      decision=sale_decision(block,p,soc,pv)

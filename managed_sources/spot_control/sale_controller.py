@@ -133,7 +133,7 @@ class SaleController:
     steps.append((MODE,'Export First'))
    else:
     for i in range(1,7):
-     target=f'number.inverter_program_{i}_soc';keys.append(target);steps.append((target,100))
+     target=f'number.inverter_program_{i}_soc';keys.append(target);steps.append((target,30 if purpose=='automatic' else 100))
     steps.append((ENABLE,'on'))
    if any(states.get(k) in (None,'unknown','unavailable') for k in keys):raise ValueError('Nastavení měniče není dostupné.')
    self.record={'id':str(time.time_ns()),'before':{k:states[k] for k in keys},'mode':mode,'power_w':int(power),'purpose':purpose,'promote_auto':bool(promote_auto),
@@ -253,7 +253,8 @@ class SaleController:
   if price is None or price<=0 and mode!='bias':triggers.append('price')
   if grid is None or soc is None:triggers.append('missing_measurement')
   if wrong_mode:triggers.append('mode_changed')
-  if mode=='pv' and grid is not None and grid<-100 and batt is not None and batt>200:triggers.append('battery_discharge')
+  house_support=mode=='pv' and self.record.get('purpose')=='automatic' and grid is not None and grid<-100 and batt is not None and batt>200
+  if mode=='pv' and grid is not None and grid<-100 and batt is not None and batt>200 and not house_support:triggers.append('battery_discharge')
   bias_excess=False
   if mode=='bias' and stamp is not None and stamp>self.record.get('bias_guard_last',0) and self.record.get('enabled_at',float('inf'))<stamp and 0<=self.clock()-stamp<30:
    self.record['bias_guard_last']=stamp
@@ -263,14 +264,14 @@ class SaleController:
   if grid is not None and (-grid>self.record['power_w']+300 or bias_excess):triggers.append('export_limit')
   deadline=self.clock()>=self.record['deadline']
   reserve=soc is not None and (mode in ('battery','bias') and soc<=self.record['minimum_soc'] or mode=='pv' and self.record.get('purpose')=='automatic' and soc<97)
-  if triggers or conflicts or no_surplus or deadline or reserve or self.record.get('phase')=='stopping':
+  if triggers or conflicts or no_surplus or house_support or deadline or reserve or self.record.get('phase')=='stopping':
    self.record.setdefault('stop_context',{'triggers':triggers,'grid_w':grid,'battery_w':batt,'soc':soc,
     'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w'],
     'reported_at':number(self.reported()),'price_net':price,'captured_at':self.clock()})
    if 'export_limit' in triggers:self.error=f"Dodávka {-grid:g} W překročila výkonovou ochranu pro režim{mode}."
    elif triggers:self.error='Ochrana prodeje: '+', '.join(triggers)
-   reason='external_override' if conflicts else 'price' if triggers==['price'] and price is not None else 'guard' if triggers else 'no_surplus' if no_surplus else 'deadline' if deadline else 'reserve'
-   if reason in ('price','no_surplus'):self.error=''
+   reason='external_override' if conflicts else 'price' if triggers==['price'] and price is not None else 'guard' if triggers else 'house_support' if house_support else 'no_surplus' if no_surplus else 'deadline' if deadline else 'reserve'
+   if reason in ('price','no_surplus','house_support'):self.error=''
    await self.stop(reason);return
   stamp=number(self.reported())
   if stamp is not None and stamp>self.record.get('sample_last',0):
