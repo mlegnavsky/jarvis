@@ -22,6 +22,11 @@ class ViewTests(unittest.TestCase):
   return env.from_string(content).render(state_attr=lambda entity,key:attrs.get(key),states=lambda entity:'ready',is_number=lambda value:isinstance(value,(int,float)))
  def markdown(self,cards,attrs):
   return '\n'.join(self.render(x['content'],attrs) for x in walk(cards) if x.get('type')=='markdown')
+ def test_normal_ui_reports_current_ha_control_and_dynamic_bias(self):
+  text=self.markdown(view(),{'bias_policy':{'target_export_w':20,'minimum_soc':30,'resume_soc':31}})
+  self.assertIn('Cíl:20 W',text);self.assertIn('od31 %',text)
+  self.assertNotIn('nejméně 5 minut',text)
+  self.assertIn('Běžný prodej řídí HA',text)
  def test_daily_block_shows_local_times_price_and_fixed_sale_reserve(self):
   attrs={'settings':{'battery_verified':True},'selected_block':{
    'start':datetime.fromisoformat('2026-11-06T17:00:00+00:00').timestamp(),

@@ -34,6 +34,70 @@ class FakeBattery:
 
 
 class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
+ async def test_report_file_failure_is_visible_without_removing_permanent_history(self):
+  data=await self.setup();original=self.hass.async_add_executor_job
+  async def failing(fn,*args):
+   if getattr(fn,'__name__','')=='write_report':raise OSError('private filesystem detail')
+   return await original(fn,*args)
+  self.hass.async_add_executor_job=failing
+  self.clock[0]+=11;self.refresh();await data['report']()
+  attrs=self.hass.states.get('sensor.jarvis_energy_sales').attributes
+  self.assertEqual(attrs['report_error'],'OSError')
+  self.assertTrue(data['journal'].recent())
+
+ async def test_health_transition_history_is_detailed_without_repeating_every_report(self):
+  data=await self.setup();last=max((e['id'] for e in data['journal'].recent()),default=0)
+  self.hass.states.async_set('sensor.inverter_battery','unavailable')
+  await data['report']();await data['report']();await data['report']()
+  self.hass.states.async_set('sensor.inverter_battery',75);self.refresh();await data['report']()
+  events=[e for e in data['journal'].after(last) if e['kind']=='health_changed']
+  self.assertEqual(len(events),2)
+  self.assertFalse(events[0]['payload']['health']['healthy']);self.assertTrue(events[1]['payload']['health']['healthy'])
+ async def test_production_never_migrates_a_native_reserve_or_silently_unlocks_it(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
+  for i in range(1,7):
+   self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
+  self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
+  self.refresh();self.writes.clear();self.native_group_writes.clear();await self.ticks[0]()
+  self.assertFalse(self.writes);self.assertFalse(self.native_group_writes)
+  self.assertFalse(data['controller'].active);self.assertFalse(data['battery_controller'].active)
+  self.assertEqual(self.native_registers[166],100)
+
+ async def test_completed_plan_reserve_is_durable_and_prevents_same_day_reentry(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
+  quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter)
+  block={'day':datetime.fromtimestamp(self.clock[0],ZoneInfo('Europe/Prague')).date().isoformat(),'start':quarter,'end':quarter+7200}
+  data['settings']['selected_block']=block
+  data['battery_controller'].last_stop={'id':'done60','purpose':'automatic','reason':'reserve',
+   'start':self.clock[0]-1,'end':block['end'],'stop_verified':True,'phase':'complete','conflicts':{}}
+  self.hass.states.async_set('sensor.inverter_battery',65);self.refresh();await self.ticks[0]()
+  self.assertIn('completed_battery_plan',data['settings'])
+  self.assertEqual(data['settings']['completed_battery_plan']['day'],block['day'])
+  self.assertFalse(data['battery_controller'].active)
+  await self.ticks[0]();self.assertFalse(data['battery_controller'].active)
+
+ async def test_legacy_selected_block_gets_day_before_production_and_keeps_completion(self):
+  data=await self.setup();quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter)
+  data['settings'].update(automatic=True,requested_automatic=True,selected_block={'start':quarter,'end':quarter+7200})
+  self.hass.states.async_set('sensor.inverter_battery',80);self.refresh();await self.ticks[0]()
+  self.assertEqual(data['settings']['selected_block']['day'],datetime.fromtimestamp(quarter,ZoneInfo('Europe/Prague')).date().isoformat())
+ async def test_new_pv_start_rechecks_actual_native_reserve_even_after_prior_confirmation(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
+  self.hass.states.async_set('sensor.inverter_battery',98);self.hass.states.async_set('sensor.inverter_pv_power',3000)
+  self.refresh();await self.ticks[0]();self.assertTrue(data['controller'].active)
+  await data['controller'].stop('deadline');self.writes.clear()
+  for i in range(6):self.native_registers[166+i]=10
+  self.refresh();await self.ticks[0]()
+  self.assertFalse(data['controller'].active);self.assertNotIn(('switch.inverter_export_surplus','on'),self.writes)
+ async def test_manual_ha_sale_is_not_gated_on_legacy_native_commissioning(self):
+  data=await self.setup();data['settings'].update(battery_verified=False)
+  quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter)
+  self.hass.states.async_set('sensor.inverter_battery',80);self.refresh()
+  await data['start']({'mode':'battery','power_w':500,'duration_minutes':5})
+  options=data['battery_controller'].starts[-1][4]
+  self.assertTrue(options['ha_controlled']);self.assertEqual(options['purpose'],'manual')
+  self.assertFalse(self.native_group_writes)
+
  async def test_today_exception_extends_expired_original_block_without_changing_policy(self):
   import json
   from pathlib import Path
@@ -137,30 +201,26 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.hass.states.async_set('sensor.inverter_battery',65);self.hass.states.async_set('sensor.inverter_pv_power',pv);self.refresh()
   return data
 
- async def test_ha_starts_one_bounded_battery_verification_and_resumes_only_after_full_proof(self):
+ async def test_legacy_automatic_verification_flags_cannot_start_physical_commissioning(self):
   data=await self.autonomous_setup();await self.ticks[0]()
-  self.clock[0]+=185;self.refresh();await self.ticks[0]()
-  self.assertEqual(len(data['battery_controller'].starts),1)
-  self.assertEqual(data['battery_controller'].starts[0][:3],(2000,5,60))
-  self.assertFalse(data['settings']['automatic']);self.assertTrue(data['settings']['verification_resume_auto'])
-  self.refresh();await self.ticks[0]();self.assertEqual(len(data['battery_controller'].starts),1)
-  await data['battery_controller'].stop('deadline')
-  data['battery_controller'].last_stop={'id':'auto-accepted','phase':'complete','observed':True,'native_expiry_observed':True,'stop_verified':True,'reason':'deadline','purpose':'commission','power_w':2000,'minimum_soc':60,'native_power_fence':True,'conflicts':{}}
-  self.refresh();await self.ticks[0]()
-  self.assertTrue(data['settings']['battery_verified']);self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['verification_resume_auto'])
+  self.clock[0]+=125;self.refresh();await self.ticks[0]()
+  self.assertEqual(data['battery_controller'].starts,[])
+  self.assertFalse(data['settings']['battery_verified'])
+  self.assertFalse(data['settings'].get('verification_resume_auto',False))
+  self.assertEqual(self.hass.states.get('sensor.jarvis_energy_sales').attributes['autonomous_verification']['state'],'disabled')
 
  async def test_ha_leaves_bias_running_when_sun_prevents_meaningful_battery_proof(self):
   data=await self.autonomous_setup(pv=3000);await self.ticks[0]()
   self.assertEqual(data['battery_controller'].starts,[])
   self.assertTrue(data['controller'].active);self.assertEqual(data['controller'].record['mode'],'bias')
 
- async def test_verification_coordinator_error_cannot_bypass_active_sale_protection(self):
+ async def test_retired_verification_metadata_cannot_interrupt_production(self):
   data=await self.autonomous_setup(pv=3000);await self.ticks[0]()
   self.assertTrue(data['controller'].active)
-  with patch.object(self.module,'verification_candidate',side_effect=RuntimeError('qualification unavailable')):
-   self.refresh();await self.ticks[0]()
-  self.assertFalse(data['settings']['automatic']);self.assertTrue(data['settings']['inhibited'])
-  self.assertFalse(data['controller'].active)
+  data['settings']['auto_verification']={'kind':'retired','state':'failed'}
+  self.refresh();await self.ticks[0]()
+  self.assertEqual(data['battery_controller'].starts,[])
+  self.assertTrue(data['settings']['automatic']);self.assertTrue(data['controller'].active)
 
  async def test_owner_stop_cancels_pending_automatic_verification_resume(self):
   data=await self.autonomous_setup();await self.ticks[0]();self.clock[0]+=185;self.refresh();await self.ticks[0]();await data['stop']()
@@ -175,12 +235,12 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   await data['stop']()
   self.assertFalse(self.storage.data['settings']['requested_automatic'])
 
- async def test_restart_recovers_orphaned_resume_without_inventing_acceptance(self):
-  saved={'settings':{'automatic':False,'requested_automatic':True,'auto_verification_enabled':True,'verification_resume_auto':True,'bias_verified':True,'battery_verified':False,'inhibited':False,'auto_verification':{'kind':'battery','day':'2026-11-06','attempts':1}}}
+ async def test_interrupted_legacy_commissioning_is_not_mistaken_for_verified_recovery(self):
+  saved={'settings':{'automatic':False,'requested_automatic':True,'auto_verification_enabled':True,'verification_resume_auto':True,'bias_verified':True,'battery_verified':False,'inhibited':True,'auto_verification':{'kind':'battery'}}}
   data=await self.setup(saved);self.refresh();await self.ticks[0]()
-  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['verification_resume_auto'])
-  self.assertFalse(data['settings']['battery_verified']);self.assertEqual(data['battery_controller'].starts,[])
-  self.assertGreater(data['settings']['auto_verification']['not_before'],self.clock[0])
+  self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['verification_resume_auto'])
+  self.assertTrue(data['settings']['requested_automatic']);self.assertFalse(data['settings']['battery_verified'])
+  self.assertEqual(data['battery_controller'].starts,[])
 
  async def test_restart_keeps_explicit_owner_off_even_with_stale_resume_flag(self):
   saved={'settings':{'automatic':False,'requested_automatic':False,'auto_verification_enabled':True,'verification_resume_auto':True,'bias_verified':True,'inhibited':False,'auto_verification':{'kind':'battery'}}}
@@ -188,17 +248,15 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['verification_resume_auto'])
   self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['automatic_requested'])
 
- async def test_automatic_house_profile_replaces_old_hundred_percent_lock_before_pv(self):
+ async def test_old_hundred_percent_profile_is_reported_without_an_automatic_unlock(self):
   data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
   for i in range(1,7):
    self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
   self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
   self.refresh();await self.ticks[0]()
-  self.assertTrue(data['settings']['automatic'])
-  self.assertIn((166,[30]*6),self.native_group_writes)
-  for i in range(1,7):self.assertEqual(self.native_registers[165+i],30)
-  self.assertTrue(data['controller'].active)
-  for i in range(1,7):self.assertEqual(float(data['controller'].record['before'][f'number.inverter_program_{i}_soc']),30)
+  self.assertTrue(data['settings']['requested_automatic']);self.assertFalse(self.native_group_writes)
+  self.assertFalse(data['controller'].active);self.assertEqual(self.native_registers[166],100)
+  self.assertTrue(self.hass.states.get('sensor.jarvis_energy_sales').attributes['profile_issues'])
 
  async def test_house_migration_does_not_overwrite_another_reserve(self):
   data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True)
@@ -206,7 +264,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
    self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
   self.native_registers[168]=60;self.hass.states.async_set('number.inverter_program_3_soc',60)
   self.refresh();self.writes.clear();await self.ticks[0]()
-  self.assertFalse(self.writes);self.assertTrue(data['settings']['inhibited'])
+  self.assertFalse(self.writes);self.assertFalse(data['controller'].active);self.assertFalse(data['battery_controller'].active)
 
  async def test_house_migration_refuses_grid_charge_program(self):
   data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True)
@@ -214,25 +272,15 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
    self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
   self.native_registers[172]=1
   self.refresh();self.writes.clear();await self.ticks[0]()
-  self.assertFalse(self.writes);self.assertTrue(data['settings']['inhibited'])
+  self.assertFalse(self.writes);self.assertFalse(data['controller'].active);self.assertFalse(data['battery_controller'].active)
 
- async def test_failed_group_confirmation_does_not_enable_export_or_repeat_unknown_write(self):
+ async def test_read_only_admission_never_creates_a_pending_profile_write(self):
   data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
   for i in range(1,7):
    self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
-  device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device;execute=device.execute
-  async def partial(code,address,count=1,**kwargs):
-   result=await execute(code,address,count=count,**kwargs)
-   if code==16 and address==166:self.native_registers[171]=100
-   return result
-  device.execute=partial
-  self.refresh();await self.ticks[0]()
-  self.assertFalse(data['controller'].active);self.assertTrue(data['settings']['inhibited'])
-  self.assertTrue(data['settings']['house_profile_write']['pending'])
-  count=len(self.native_group_writes)
-  data['settings'].update(automatic=False,requested_automatic=True,measurement_recovery={'pending':True,'stop_id':'gap'})
-  self.clock[0]+=12;self.refresh();await self.ticks[0]();self.clock[0]+=12;self.refresh();await self.ticks[0]()
-  self.assertEqual(len(self.native_group_writes),count);self.assertFalse(data['controller'].active)
+  self.refresh();await self.ticks[0]();self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertFalse(data['controller'].active);self.assertFalse(self.native_group_writes)
+  self.assertNotIn('house_profile_write',data['settings'])
 
  async def test_unknown_group_write_needs_two_native_confirmations_on_recovery(self):
   data=await self.setup();data['settings'].update(automatic=False,requested_automatic=True,inhibited=True,measurement_recovery={'pending':True},house_profile_write={'pending':True})
@@ -256,7 +304,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
    self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
   self.hass.states.async_set('number.inverter_program_3_soc',60)
   self.refresh();await self.ticks[0]()
-  self.assertFalse(self.native_group_writes);self.assertTrue(data['settings']['inhibited'])
+  self.assertFalse(self.native_group_writes);self.assertFalse(data['controller'].active);self.assertFalse(data['battery_controller'].active)
 
  async def test_owner_off_does_not_change_the_house_reserve(self):
   data=await self.setup();data['settings'].update(automatic=False,requested_automatic=False)
@@ -265,40 +313,67 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.refresh();self.writes.clear();await self.ticks[0]()
   self.assertFalse(self.writes)
 
- async def test_cooldown_uses_house_bias_after_normalizing_the_old_idle_profile(self):
-  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True,bias_enabled=True,cooldown_until=self.clock[0]+30)
+ async def test_external_profile_correction_allows_resume_without_ha_reprogramming(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True,cooldown_until=self.clock[0]+30)
   for i in range(1,7):
    self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
   self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
-  self.refresh();await self.ticks[0]()
-  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings'].get('inhibited',False));self.assertEqual(data['controller'].record['mode'],'bias')
-  self.clock[0]+=31;self.refresh();await self.ticks[0]();self.refresh();await self.ticks[0]()
-  self.assertTrue(data['controller'].active);self.assertEqual(data['controller'].record['mode'],'pv')
+  self.refresh();await self.ticks[0]();self.assertFalse(data['controller'].active)
+  for i in range(1,7):
+   self.hass.states.async_set(f'number.inverter_program_{i}_soc',30);self.native_registers[165+i]=30
+  self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertFalse(self.native_group_writes);self.assertTrue(data['controller'].active)
+  self.assertEqual(data['controller'].record['mode'],'pv')
 
  async def test_automatic_surplus_starts_at_97_percent(self):
   data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
   self.hass.states.async_set('sensor.inverter_battery',97);self.hass.states.async_set('sensor.inverter_pv_power',3000);self.refresh();await self.ticks[0]()
   self.assertTrue(data['controller'].active);self.assertEqual(data['controller'].record['mode'],'pv')
 
+ def recovery_proof(self):
+  return {'id':'gap','mode':'pv','purpose':'automatic','reason':'guard','stop_verified':True,'conflicts':{},'failures':[],
+          'context':{'triggers':['measurement_or_health'],'health':{'healthy':False,'transient_only':True,'issues':[{'code':'stale','entity_id':'sensor.inverter_battery','age_seconds':31}]}}}
  async def test_confirmed_data_gap_recovers_only_after_stable_fresh_health_and_owner_intent(self):
-  data=await self.setup();data['settings'].update(automatic=False,requested_automatic=True,inhibited=True,bias_verified=True,pv_verified=True,auto_verification_enabled=False,measurement_recovery={'pending':True,'stop_id':'gap'})
+  data=await self.setup();data['settings'].update(automatic=False,requested_automatic=True,inhibited=True,bias_verified=True,pv_verified=True,auto_verification_enabled=False,measurement_recovery={'pending':True,'stop_id':'gap','source':'pv','stable_seconds':30},last_sale_stop=self.recovery_proof(),handled_stop_id='gap')
   self.prices(math.floor(self.clock[0]/900)*900)
   self.refresh();await self.ticks[0]();self.assertFalse(data['settings']['automatic'])
   self.clock[0]+=61;self.refresh();await self.ticks[0]()
   self.assertTrue(data['settings']['automatic'],str(self.hass.states.get('sensor.jarvis_energy_sales').attributes));self.assertFalse(data['settings']['inhibited']);self.assertFalse(data['settings']['measurement_recovery']['pending'])
   self.assertEqual(data['battery_controller'].starts,[])
 
- async def test_measurement_recovery_normalizes_old_pv_hundred_percent_lock(self):
-  data=await self.setup();data['settings'].update(automatic=False,requested_automatic=True,inhibited=True,bias_verified=True,pv_verified=True,measurement_recovery={'pending':True,'stop_id':'gap'})
+ async def test_measurement_recovery_never_changes_a_native_hundred_percent_lock(self):
+  data=await self.setup();data['settings'].update(automatic=False,requested_automatic=True,inhibited=True,bias_verified=True,pv_verified=True,
+   measurement_recovery={'pending':True,'stop_id':'gap','source':'pv','stable_seconds':30},last_sale_stop=self.recovery_proof(),handled_stop_id='gap')
   for i in range(1,7):
    self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
-  self.refresh();await self.ticks[0]();self.clock[0]+=11;self.refresh();await self.ticks[0]()
-  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['inhibited'])
-  self.assertFalse(data['settings']['measurement_recovery']['pending'])
-  for i in range(1,7):self.assertEqual(self.native_registers[165+i],30)
+  self.refresh();await self.ticks[0]();self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertFalse(data['settings']['automatic']);self.assertTrue(data['settings']['measurement_recovery']['pending'])
+  self.assertFalse(self.native_group_writes)
+  for i in range(1,7):self.assertEqual(self.native_registers[165+i],100)
 
+ async def test_new_window_stop_supersedes_old_pending_pv_recovery(self):
+  data=await self.setup();data['settings'].update(automatic=False,requested_automatic=True,inhibited=True,
+    measurement_recovery={'pending':True,'stop_id':'gap','source':'pv','stable_seconds':30},last_sale_stop=self.recovery_proof(),handled_stop_id='gap')
+  data['window'].last_stop={'id':'window-fault','reason':'voltage','stop_verified':True,'conflicts':{}}
+  self.refresh();await self.ticks[0]();self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertFalse(data['settings']['automatic']);self.assertFalse((data['settings'].get('measurement_recovery') or {}).get('pending'))
+  self.assertEqual(data['settings']['last_diagnostic_stop']['id'],'window-fault')
+ async def test_later_battery_fault_invalidates_old_pv_recovery(self):
+  data=await self.setup();data['settings'].update(automatic=False,requested_automatic=True,inhibited=True,
+    measurement_recovery={'pending':True,'stop_id':'gap','source':'pv','stable_seconds':30},last_sale_stop=self.recovery_proof(),handled_stop_id='gap')
+  data['battery_controller'].last_stop={'id':'fault','purpose':'automatic','reason':'voltage','stop_verified':True,'conflicts':{}}
+  self.refresh();await self.ticks[0]();self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertFalse(data['settings']['automatic']);self.assertTrue(data['settings']['inhibited'])
+  self.assertFalse((data['settings'].get('measurement_recovery') or {}).get('pending'))
+ async def test_startup_does_not_resurrect_previously_recovered_battery_stop(self):
+  proof={'id':'old-gap','purpose':'automatic','reason':'health','stop_verified':True,'conflicts':{},
+   'failure_context':{'health':{'healthy':False,'transient_only':True,'issues':[{'code':'stale'}]}}}
+  saved={'settings':{'automatic':False,'requested_automatic':True,'inhibited':True,'handled_battery_stop_id':'old-gap','battery_sale_proof':proof,
+   'measurement_recovery':{'pending':False,'stop_id':'old-gap','restored_at':100},'last_diagnostic_stop':{'id':'new-fault','reason':'voltage'}}}
+  data=await self.setup(saved=saved);self.refresh();await self.ticks[0]();self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['measurement_recovery']['pending'])
  async def test_owner_off_cancels_measurement_recovery(self):
-  data=await self.setup();data['settings'].update(requested_automatic=False,automatic=False,inhibited=True,measurement_recovery={'pending':True,'stop_id':'gap'})
+  data=await self.setup();data['settings'].update(requested_automatic=False,automatic=False,inhibited=True,measurement_recovery={'pending':True,'stop_id':'gap','source':'pv','stable_seconds':30},last_sale_stop=self.recovery_proof(),handled_stop_id='gap')
   self.refresh();await self.ticks[0]();self.clock[0]+=61;self.refresh();await self.ticks[0]()
   self.assertFalse(data['settings']['automatic']);self.assertFalse(data['controller'].active)
 
@@ -425,12 +500,13 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(data['battery_controller'].starts[0][2],60)
   self.assertIn('battery_sale',self.storage.data)
 
- async def test_unverified_battery_does_not_start_from_native_pilot_proof(self):
+ async def test_manual_ha_control_is_separate_from_legacy_native_acceptance(self):
   data=await self.setup();data['window'].last_stop={'id':'pilot','native_expiry_observed':True,'stop_verified':True,'production_verified':False}
-  await self.ticks[0]()
-  self.assertFalse(data['settings']['battery_verified'])
+  await self.ticks[0]();self.assertFalse(data['settings']['battery_verified'])
   self.assertEqual(data['settings']['native_window_proof']['id'],'pilot')
-  with self.assertRaises(ValueError):await self.service('start_sale',{'mode':'battery','power_w':500,'duration_minutes':5})
+  await self.service('start_sale',{'mode':'battery','power_w':500,'duration_minutes':5})
+  self.assertTrue(data['battery_controller'].starts[-1][4]['ha_controlled'])
+  self.assertFalse(self.native_group_writes)
 
  async def test_owner_cap_reduction_during_ack_is_not_hidden_by_native_projection(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
@@ -448,15 +524,17 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertNotIn(('switch.inverter_export_surplus','on'),self.writes)
   self.assertEqual(self.native_registers[143],500)
 
- async def test_conditional_recovery_rechecks_owner_intent_and_stop_id_under_lock(self):
-  data=await self.setup();proof={'id':'stopped','purpose':'automatic','mode':'pv','reason':'stop_recovery','original_reason':'error','stop_verified':True,'conflicts':{}}
-  data['settings'].update(automatic=False,requested_automatic=False,inhibited=True,last_sale_stop=proof,handled_stop_id='stopped')
+ async def test_conditional_recovery_rechecks_owner_intent_stop_id_and_stability(self):
+  data=await self.setup();proof={**self.recovery_proof(),'id':'stopped'}
+  data['settings'].update(automatic=False,requested_automatic=False,inhibited=True,last_sale_stop=proof,handled_stop_id='stopped',measurement_recovery={'pending':True,'source':'pv','stop_id':'stopped','stable_seconds':30})
   self.refresh();await self.service('resume_confirmed_sale',{'stop_id':'stopped'})
   self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['requested_automatic'])
-  data['settings']['requested_automatic']=True
+  data['settings'].update(requested_automatic=True,measurement_recovery={'pending':True,'source':'pv','stop_id':'stopped','stable_seconds':30})
   await self.service('resume_confirmed_sale',{'stop_id':'old'})
   self.assertFalse(data['settings']['automatic'])
   self.refresh();await self.service('resume_confirmed_sale',{'stop_id':'stopped'})
+  self.assertFalse(data['settings']['automatic'])
+  self.clock[0]+=31;self.refresh();await self.service('resume_confirmed_sale',{'stop_id':'stopped'})
   self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['inhibited'])
   self.assertFalse(data['settings']['auto_verification_enabled'])
 
@@ -557,13 +635,12 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.refresh();await self.ticks[0]()
   self.assertFalse(data['controller'].active)
 
- async def test_full_daylight_battery_may_probe_curtailed_zero_pv(self):
-  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
-  self.prices(math.floor(self.clock[0]/900)*900)
-  self.hass.states.async_set('sensor.inverter_pv_power',0)
-  self.hass.states.async_set('sun.sun','above_horizon')
-  self.refresh();await self.ticks[0]()
-  self.assertTrue(data['controller'].active,self.hass.states.get('sensor.jarvis_energy_sales').attributes['error'])
+ async def test_daylight_without_real_solar_headroom_never_starts_surplus_sale(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
+  self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',0)
+  self.hass.states.async_set('sun.sun','above_horizon');self.refresh();await self.ticks[0]()
+  self.assertFalse(data['battery_controller'].active)
+  self.assertEqual(data['controller'].record.get('mode'),'bias')
 
  async def test_fixed_battery_commission_and_strict_acceptance_keep_auto_off(self):
   data=await self.setup();self.prices(math.floor(self.clock[0]/900)*900);self.refresh()

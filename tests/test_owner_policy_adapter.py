@@ -30,8 +30,8 @@ class OwnerPolicyAdapterTests(unittest.IsolatedAsyncioTestCase):
   import math
   self.prices(math.floor(self.clock[0]/900)*900);self.refresh();await self.ticks[0]()
   self.assertTrue(data['controller'].active,self.hass.states.get('sensor.jarvis_energy_sales').attributes['error'])
-  self.assertEqual(self.native_registers[166],35)
-  self.assertTrue(all(self.native_registers[i]==35 for i in range(166,172)))
+  self.assertEqual(self.native_registers[166],30)
+  self.assertTrue(all(self.native_registers[i]==30 for i in range(166,172)))
  async def test_store_failure_rolls_back_policy_and_intent(self):
   data=await self.setup();await data['report']();a=self.hass.states.get('sensor.jarvis_energy_sales').attributes
   before=dict(data['settings'])

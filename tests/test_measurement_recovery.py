@@ -2,8 +2,20 @@ import unittest
 from sales import after_stop
 
 class MeasurementRecoveryTests(unittest.TestCase):
+ def test_ambiguous_legacy_health_reason_cannot_queue_recovery(self):
+  proof=self.proof();proof['context'].pop('health')
+  r=after_stop({'requested_automatic':True},proof)
+  self.assertFalse((r.get('measurement_recovery') or {}).get('pending',False))
+ def test_documented_pv_data_loss_queues_thirty_second_recovery(self):
+  proof=self.proof();proof['context']['health']={'healthy':False,'transient_only':True,'issues':[{'code':'stale','entity_id':'sensor.inverter_battery','age_seconds':31}]}
+  r=after_stop({'requested_automatic':True},proof)
+  self.assertEqual(r['measurement_recovery']['source'],'pv')
+  self.assertEqual(r['measurement_recovery']['stable_seconds'],30)
+ def test_temperature_or_fault_mixed_with_data_loss_is_not_transient(self):
+  proof=self.proof();proof['context']['health']={'healthy':False,'transient_only':False,'issues':[{'code':'stale'},{'code':'temperature'}]}
+  self.assertFalse((after_stop({'requested_automatic':True},proof).get('measurement_recovery') or {}).get('pending',False))
  def proof(self):
-  return {'id':'lost-data','mode':'bias','purpose':'automatic','reason':'guard','stop_verified':True,'conflicts':{},'failures':[],'context':{'triggers':['measurement_or_health']}}
+  return {'id':'lost-data','mode':'bias','purpose':'automatic','reason':'guard','stop_verified':True,'conflicts':{},'failures':[],'context':{'triggers':['measurement_or_health'],'health':{'healthy':False,'transient_only':True,'issues':[{'code':'stale','entity_id':'sensor.inverter_battery','age_seconds':31}]}}}
  def test_only_confirmed_measurement_guard_queues_recovery_without_revoking_prior_bias_proof(self):
   r=after_stop({'requested_automatic':True,'automatic':True,'bias_verified':True},self.proof())
   self.assertTrue(r['measurement_recovery']['pending']);self.assertTrue(r['bias_verified'])

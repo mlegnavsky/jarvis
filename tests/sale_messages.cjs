@@ -10,3 +10,7 @@ a.match(m.translate('Měnič nepotvrdil registr 145: požadováno 1, naměřeno 
 a.match(m.translate('Měnič nepotvrdil registr 145: požadováno 0, naměřeno None.'),/neurčen|neshod|nelze/);
 a.match(m.stopInfo({mode:'battery',reason:'guard',failure_detail:'_Guard: voltage',stop_verified:false}).cause,/Napětí/);
 a.match(m.translate('_Guard: electrical_stale'),/čerstvé/);
+const precise=m.stopInfo({mode:'battery',reason:'health',stop_verified:true,failure_context:{health:{healthy:false,issues:[{code:'stale',entity_id:'sensor.inverter_battery',age_seconds:31}]}}});
+a.match(precise.cause,/Nabití baterie/);a.match(precise.cause,/31 s/);
+a.match(precise.technical,/failure_context/);
+a.equal(m.healthInfo({healthy:true,issues:[]}).length,0);

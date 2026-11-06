@@ -2,11 +2,11 @@ import copy,unittest
 from datetime import datetime,timezone,timedelta
 from types import SimpleNamespace
 from jinja2 import Environment
-from recovery_watchdog import TEMPLATE,automation
+from recovery_watchdog import TEMPLATE,automation,recoverable_stop
 
 class RecoveryTests(unittest.TestCase):
  def setUp(self):
-  self.now=datetime.now(timezone.utc);self.a={'settings':{'requested_automatic':True,'automatic':False,'inhibited':True,'handled_stop_id':'done'},'last_stop':{'id':'done','mode':'pv','purpose':'automatic','reason':'stop_recovery','original_reason':'error','stop_verified':True,'conflicts':{}},'native_program':{'captured_at':self.now.isoformat(),'registers_146_177':[255,1]+[100,500,900,1300,1700,2100]+[12000]*6+[4900]*6+[30]*6+[0]*6},'ready':True,'active':False,'healthy':True}
+  self.now=datetime.now(timezone.utc);self.a={'settings':{'requested_automatic':True,'automatic':False,'inhibited':True,'handled_stop_id':'done'},'last_stop':{'id':'done','mode':'pv','purpose':'automatic','reason':'stop_recovery','original_reason':'guard','context':{'triggers':['measurement_or_health'],'health':{'healthy':False,'transient_only':True,'issues':[{'code':'stale'}]}},'stop_verified':True,'conflicts':{}},'native_program':{'captured_at':self.now.isoformat(),'registers_146_177':[255,1]+[100,500,900,1300,1700,2100]+[12000]*6+[4900]*6+[30]*6+[0]*6},'ready':True,'active':False,'healthy':True}
   self.phase='idle';self.grid=10;self.updated=self.now
  def valid(self):
   class States:
@@ -19,7 +19,7 @@ class RecoveryTests(unittest.TestCase):
   return result.strip()=='True'
  def test_only_confirmed_idle_owner_requested_transport_stop_can_resume(self):self.assertTrue(self.valid())
  def test_owner_off_stopping_bad_health_unverified_conflict_and_stale_data_are_refused(self):
-  for section,key,value in [('settings','requested_automatic',False),('settings','automatic',True),('settings','handled_stop_id','old'),('last_stop','stop_verified',False),('last_stop','conflicts',{'cap':{}}),('last_stop','purpose','commission'),('last_stop','original_reason','export_limit')]:
+  for section,key,value in [('settings','requested_automatic',False),('settings','automatic',True),('settings','handled_stop_id','old'),('last_stop','stop_verified',False),('last_stop','conflicts',{'cap':{}}),('last_stop','purpose','commission'),('last_stop','context',{'triggers':['export_limit']})]:
    saved=copy.deepcopy(self.a);self.a[section][key]=value;self.assertFalse(self.valid(),str((section,key,value)));self.a=saved
   for key,value in [('active',True),('healthy',False),('ready',False)]:
    self.a[key]=value;self.assertFalse(self.valid());self.a[key]=not value
@@ -30,6 +30,16 @@ class RecoveryTests(unittest.TestCase):
   self.a['native_program']['registers_146_177'][23]=60;self.assertFalse(self.valid())
   self.a['native_program']['registers_146_177'][23]=30;self.a['native_program']['registers_146_177'][27]=1;self.assertFalse(self.valid())
   self.a['native_program']['registers_146_177'][27]=0;self.a['last_stop'].update(original_reason='guard',context={'triggers':['export_limit']});self.assertFalse(self.valid())
-  self.a['last_stop']['context']['triggers']=['measurement_or_health'];self.assertTrue(self.valid())
+  self.a['last_stop']['context'].update(triggers=['measurement_or_health'],health={'healthy':False,'transient_only':True,'issues':[{'code':'stale'}]});self.assertTrue(self.valid())
  def test_action_rechecks_after_delay_and_only_calls_existing_serialized_controller(self):
   a=automation();self.assertEqual(a['actions'][1]['value_template'],TEMPLATE);self.assertEqual(a['actions'][2]['action'],'jarvis_spot_control.resume_confirmed_sale');self.assertEqual(a['mode'],'single')
+
+ def test_generic_error_unknown_health_and_mixed_fault_never_resume(self):
+  for health in ({},{'healthy':False,'transient_only':True,'issues':[]},{'healthy':False,'transient_only':True,'issues':[{'code':'stale'},{'code':'fault'}]}):
+   self.a['last_stop']['context']['health']=health
+   self.assertFalse(self.valid());self.assertFalse(recoverable_stop(self.a['last_stop']))
+  self.a['last_stop'].update(reason='error',context={})
+  self.assertFalse(self.valid());self.assertFalse(recoverable_stop(self.a['last_stop']))
+ def test_native_reserve_is_independent_of_ha_home_floor(self):
+  self.a['settings']['policy']={'home_soc':35}
+  self.assertTrue(self.valid())

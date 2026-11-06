@@ -99,3 +99,8 @@ Před prací s baterií, historií grafu nebo spoty přečti [ENERGY-DATA-MAP.md
 
 ## Backup destination correction — 2026-11-04
 This supersedes earlier statements that no private server destination is connected: live HA inventory confirms the WebDAV integration for jarvis-backup@laborator.odladeni.cz is loaded. SFTP was not the final connection. Delivery of individual administration backups to that server is not verified; current admin backups are created through Supervisor and leave local Green copies. Automatic backup last-success sensor is 2026-10-29, latest attempt 2026-11-04. Investigate upload health before asserting recovery coverage. See docs/evidence/2026-11-04-cleanup-activation.md for verified cleanup and activation evidence.
+
+
+## Prepared energy refactor0.10.0 — 2026-11-06
+
+Source-only candidate on `refactor/ha-control-cleanup-20261106`, based on public060501cd69451f9047cb0baac182dc6c463a591c/energy0.9.3. Not installed; no Green source/config writes, restarts or physical tests during this preparation. See `docs/ENERGY-REFACTOR-0.10.0.md` and `docs/releases/energy-0.10.0-candidate.json`. Installation needs the owner's next explicit command. The private live work manifest remains authoritative for current runtime. Existing recovery/commissioning notes below are historical, not instructions to initiate automatic native tests.

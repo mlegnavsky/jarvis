@@ -13,13 +13,25 @@ function translate(input){let s=String(input||'').replace(/^_Guard:\s*/,'');if(n
  if(/_Guard:|[a-z]+_[a-z]+|Native |native |stopped|restoration|cleanup/i.test(s))return 'Řízení se zastavilo kvůli chybě ověření měniče. Podrobnosti jsou v původní technické hlášce níže.';
  return s;
 }
+function healthInfo(health){
+ const labels={'sensor.inverter_battery':'Nabití baterie','sensor.inverter_grid_power':'Tok do sítě','sensor.inverter_pv_power':'Výroba panelů','sensor.inverter_battery_power':'Výkon baterie','sensor.inverter_battery_temperature':'Teplota baterie','sensor.inverter_battery_voltage':'Napětí baterie','sensor.inverter_battery_current':'Proud baterie'};
+ const issues=health?.issues||[];
+ return issues.map(i=>{const entity=labels[i.entity_id]||i.entity_id||'Řízení';
+  if(i.code==='stale')return entity+': údaj je starý '+Math.round(i.age_seconds)+' s.';
+  if(i.code==='missing'||i.code==='unavailable')return entity+': údaj není dostupný.';
+  if(i.code==='temperature')return entity+': '+i.value+' °C je mimo povolený rozsah.';
+  if(i.code==='device_fault')return entity+': zařízení hlásí '+i.value+'.';
+  if(i.code==='charging_active')return 'Probíhá nabíjení ze sítě; prodej čeká.';
+  return entity+': neplatný údaj nebo časová značka.';});
+}
 function stopInfo(stop,root){if(!stop)return null;
  const code=stop.original_reason||stop.reason,triggers=stop.context?.triggers||[];
  const matched=root&&root.sale_id===stop.id;
- return {cause:matched?translate(root.error):stop.failure_detail?translate(stop.failure_detail):triggers.length?triggers.map(translate).join(' '):translate(code),
+ const health=healthInfo(stop.failure_context?.health||stop.context?.health);
+ return {cause:health.length?health.join(' '):matched?translate(root.error):stop.failure_detail?translate(stop.failure_detail):triggers.length?triggers.map(translate).join(' '):translate(code),
   cleanup:stop.error||stop.failure_detail?translate(stop.error||stop.failure_detail):'Bez zaznamenané chyby při ukončování.',
   outcome:stop.stop_verified===true?'Zastavení a obnova nastavení byly následně potvrzené.':'Ukončení prodeje zatím není potvrzené.',
-  technical:JSON.stringify({reason:stop.reason,original_reason:stop.original_reason,triggers,error:stop.error,failure_detail:stop.failure_detail,stopped_at:stop.stopped_at,mode:stop.mode,failures:stop.failures,stop_verified:stop.stop_verified,root:matched?root:undefined},null,2)};
+  technical:JSON.stringify({reason:stop.reason,original_reason:stop.original_reason,triggers,error:stop.error,failure_detail:stop.failure_detail,failure_context:stop.failure_context,context:stop.context,conflicts:stop.conflicts,stopped_at:stop.stopped_at,mode:stop.mode,failures:stop.failures,stop_verified:stop.stop_verified,root:matched?root:undefined},null,2)};
 }
-const api={translate,stopInfo};if(typeof module!=='undefined')module.exports=api;g.JarvisMessages=api;
+const api={translate,stopInfo,healthInfo};if(typeof module!=='undefined')module.exports=api;g.JarvisMessages=api;
 })(typeof window==='undefined'?globalThis:window);

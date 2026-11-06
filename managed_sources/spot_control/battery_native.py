@@ -1,8 +1,8 @@
 """Serialized native battery-sale I/O, without any production-unlock policy.
 
-Register 146 is a weekly mask, not a one-shot timer. ExportFirst is enabled
-only at the planned start; SOC100 and zero battery power outside that window supply the native
-battery fallback. Connected cleanup restores the ordinary house program.
+HA production leaves the ordinary house program unchanged and writes only export
+controls. Explicit native maintenance and saved legacy transactions retain their
+separate bounded schedule and cleanup path. A weekly mask is not a one-shot timer.
 """
 import asyncio
 import copy
@@ -178,6 +178,8 @@ class BatterySaleController:
                 and grid is not None and grid >= -100)
 
     async def _write(self, address, value, stage='prepare', protective=False):
+        if self.record.get('ha_controlled') and address not in (142,143,145):
+            raise ValueError('HA sale may change export controls only')
         if address not in WRITABLE or type(value) is not int or not 0 <= value <= 65535:
             raise ValueError('Invalid native battery-sale write')
         key = str(address)
@@ -230,7 +232,7 @@ class BatterySaleController:
                 raise
 
     async def start(self, power_w, duration_minutes, minimum_soc, quotes,
-                    valid_until=None, purpose='manual', window_end=None, maximum_power_w=None):
+                    valid_until=None, purpose='manual', window_end=None, maximum_power_w=None, ha_controlled=None):
         async with self._lock:
             if self.active:
                 raise ValueError('A native battery sale or cleanup is already active')
@@ -240,6 +242,11 @@ class BatterySaleController:
                     or _number(duration_minutes) != 5 or _number(minimum_soc) not in (60,90)
                     or maximum_power_w is not None and _number(maximum_power_w) != _number(power_w)):
                 raise ValueError('Commissioning is fixed at an explicit500 or2000 W,5 minutes and60 or90 percent SOC')
+            if ha_controlled is not None and type(ha_controlled) is not bool:
+                raise ValueError('HA control must be explicitly boolean')
+            if purpose=='commission' and ha_controlled:
+                raise ValueError('Commissioning must retain its native proof path')
+            uses_ha = purpose=='automatic' or purpose=='manual' and ha_controlled is True
             self._sample()
             data = await self._read()
             s = self._sample()
@@ -252,13 +259,15 @@ class BatterySaleController:
                     or len(set(powers)) != 1 or powers[0] < 500
                     or any(r[172 + i] != 0 for i in range(6))):
                 raise ValueError('Requires a uniform ordinary house program without charge/sell flags')
+            if uses_ha and socs != [30]*6:
+                raise ValueError('HA production requires the unchanged native reserve30 in every slot')
             current = min(60, r[109]) if purpose == 'commission' else r[109]
             house_power = min(3000, powers[0]) if purpose == 'commission' else powers[0]
             plan = battery_window_plan(data['clock'], self.clock(), power_w, duration_minutes,
                                        minimum_soc, s['voltage_v'], _bms_limit(r), current, house_power,
                                        quotes, valid_until=valid_until, window_end=window_end,
-                                       ha_controlled=purpose=='automatic')
-            if purpose == 'automatic':
+                                       ha_controlled=uses_ha)
+            if uses_ha:
                 # Owner policy: SOC60 is an HA stop threshold. The inverter's
                 # ordinary SOC30 schedule remains the independent fallback.
                 plan.update(ha_controlled=True, native_power_fence=False,

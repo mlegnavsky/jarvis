@@ -1,4 +1,4 @@
-/* Spoty hub1.1.0. Render/read operations never invoke a device service. */
+/* Spoty hub1.2.0. Render/read operations never invoke a device service. */
 (function(global){
 'use strict';
 const number=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
@@ -32,7 +32,7 @@ class Hub{
   $('date').addEventListener('change',()=>{if(/^\d{4}-\d{2}-\d{2}$/.test($('date').value))this.select(this.period,$('date').value);});
   $('previous').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,-1));$('next').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,1));$('today').onclick=()=>this.select(this.period,today());
   $('advanced').addEventListener('toggle',()=>{if($('advanced').open)this.mountLegacy();this.fit();});document.querySelectorAll('details').forEach(x=>x.addEventListener('toggle',()=>this.fit()));
-  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.1.0',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
+  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.2.0',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
   this.update();this.timer=setInterval(()=>this.update(),2000);this.resize=new ResizeObserver(()=>this.fit());this.resize.observe($('app'));global.addEventListener('pagehide',()=>{this.dead=true;clearInterval(this.timer);this.resize.disconnect();},{once:true});
  }
  fit(){if(this.fitPending)return;this.fitPending=true;requestAnimationFrame(()=>{this.fitPending=false;try{const f=global.frameElement;if(!f)return;const height=Math.ceil($('app').getBoundingClientRect().height+4);if(Math.abs((this.frameHeight||0)-height)<3)return;this.frameHeight=height;f.style.height=height+'px';f.style.position='relative';f.style.display='block';const container=f.parentElement;if(container){container.style.paddingTop='0px';container.style.height=height+'px';}}catch{}});}
@@ -42,7 +42,7 @@ class Hub{
   const stamp=Date.parse(entity?.last_reported||entity?.last_updated||'');const fresh=Number.isFinite(stamp)&&Date.now()-stamp<60000&&stamp<=Date.now()+5000;
   $('connection').textContent=fresh?'● Živá data':'Čekám na čerstvá data';$('connection').className=fresh?'live':'live stale';
   if(!this.busy)$('automatic').checked=!!requested;
-  const stopping=sales.active&&sales.phase==='stopping',on=prefs.automatic&&!prefs.inhibited;$('auto-status').textContent=stopping?'Ukončuji prodej':on?'Zapnuto':requested?'Pozastaveno':'Vypnuto';$('auto-status').className='badge '+(on?'on':requested?'wait':'');
+  const stopping=sales.active&&sales.phase==='stopping',on=prefs.automatic&&!prefs.inhibited&&!(sales.profile_issues?.length)&&sales.healthy!==false;$('auto-status').textContent=stopping?'Ukončuji prodej':on?'Zapnuto':requested?'Pozastaveno':'Vypnuto';$('auto-status').className='badge '+(on?'on':requested?'wait':'');
   const net=fresh?currentNet(sales):null;$('net-price').textContent=format(net)+' Kč/kWh';
   const grid=this.read('sensor.inverter_grid_power'),pv=this.read('sensor.inverter_pv_power'),soc=this.read('sensor.inverter_battery');
   $('pv-live').textContent=format(pv===null?null:pv/1000)+' kW';$('soc-live').textContent=format(soc,0)+' %';$('grid-live').textContent=grid===null?'Síť —':(grid<0?'Prodáváme ':'Odebíráme ')+format(Math.abs(grid)/1000)+' kW';
@@ -55,6 +55,11 @@ class Hub{
   if($('stop-summary'))$('stop-summary').textContent=stop?stop.cause+' '+stop.outcome:'Zatím není zaznamenané ukončení prodeje.';
   if($('stop-cleanup'))$('stop-cleanup').textContent=stop?.cleanup||'';
   if($('stop-technical'))$('stop-technical').textContent=stop?.technical||'';
+  const diagnosis=sales.diagnostics||{};
+  if($('diagnostic-stage'))$('diagnostic-stage').textContent='Stav: '+({starting:'Spouštění',stopping:'Ověřuji ukončení',measurement_unavailable:'Chybí čerstvá data',safety_block:'Zásah ochrany',configuration_mismatch:'Nesouhlasí nastavení měniče',paused:'Pozastaveno',export_confirmed:'Dodávka potvrzena měřením',waiting_for_export:'Čekám na naměřenou dodávku',off:'Vypnuto',plan_complete:'Dnešní plán splněn',waiting:'Čekám na podmínky'}[diagnosis.stage]||'Načítám');
+  if($('diagnostic-live'))$('diagnostic-live').textContent=JSON.stringify(diagnosis,null,2);
+  const detail=global.JarvisMessages?.healthInfo(sales.health)||[];
+  if(fresh&&detail.length)$('sale-state').textContent=detail.join(' ');
   const policy=sales.policy||{};
   if($('plan-limits'))$('plan-limits').textContent='Rezerva '+(policy.sale_soc??60)+' % · nejvýše '+format((policy.max_w??9300)/1000,1)+' kW · konec při rezervě nebo na konci plánu.';
   if($('sale-fee'))$('sale-fee').textContent='Po poplatku '+format(policy.sale_fee??.3)+' Kč/kWh';

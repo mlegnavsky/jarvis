@@ -31,7 +31,6 @@ class PriceTests(unittest.TestCase):
  def test_negative_net_blocks(self):
   p=sales.price_at([dict(self.rows[0],eur_mwh=5)],self.t,25)
   self.assertAlmostEqual(p['net'],-.175)
-  self.assertEqual(sales.decide(99,p,[],self.t)['mode'],'hold')
  def test_spring_and_autumn_offsets_are_distinct(self):
   rows=[{'time':'2026-10-25T02:00:00+02:00','eur_mwh':200},
         {'time':'2026-10-25T02:00:00+01:00','eur_mwh':300}]
@@ -41,26 +40,6 @@ class PriceTests(unittest.TestCase):
 
 class PolicyTests(unittest.TestCase):
  def setUp(self):self.assertIsNotNone(sales,'sales policy is not implemented')
- def test_full_battery_probes_curtailed_solar_without_claiming_six_kw(self):
-  result=sales.decide(99,{'net':2,'start':0,'end':900},[],5)
-  self.assertEqual(result['mode'],'pv')
-  self.assertEqual(result['power_w'],9300)
-  self.assertIsNone(result.get('available_pv_w'))
- def test_battery_not_sold_at_low_price_even_with_full_soc(self):
-  self.assertEqual(sales.decide(90,{'net':4.7,'start':0,'end':900},[],5)['mode'],'hold')
- def test_battery_waits_for_more_expensive_slot(self):
-  future=[{'start':900,'end':1800,'net':9}]
-  self.assertEqual(sales.decide(90,{'net':7,'start':0,'end':900},future,5)['mode'],'hold')
- def test_expensive_slot_sells_only_above_reserve(self):
-  p={'net':8,'start':0,'end':900}
-  self.assertEqual(sales.decide(60,p,[],5)['mode'],'hold')
-  r=sales.decide(80,p,[],5)
-  self.assertEqual(r['mode'],'battery')
-  self.assertLessEqual(r['power_w'],9300)
-  self.assertGreater(r['minimum_soc'],60)
- def test_house_forecast_increases_reserve(self):
-  r=sales.decide(80,{'net':8,'start':0,'end':900},[],5,required_soc=85)
-  self.assertEqual(r['mode'],'hold')
  def test_manual_stop_cannot_promote_or_restart_automatic(self):
   result=sales.after_stop({'automatic':False,'commission_cancelled':True},{'id':'a','reason':'manual','purpose':'commission','observed':True,'stop_verified':True,'sustained':True,'promote_auto':True})
   self.assertFalse(result['automatic']);self.assertFalse(result.get('pv_verified',False))

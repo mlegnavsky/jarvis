@@ -17,7 +17,7 @@ def evaluate(body,now,started_at=0):
  if now-started_at>=60 and not body.get('charging_active') and body.get('healthy') is not True:
   add('measurements','error','Měření soláru není čerstvé nebo neprošlo kontrolou; nový prodej musí čekat.')
  if body.get('ready') and now-started_at>=60 and not body.get('charging_active') and finite(body.get('house_power_w')) is None:
-  add('house_measurement','error','Chybí čerstvá spotřeba domu; bateriový prodej čeká, aby nebral energii určenou domácnosti.')
+  add('house_measurement','warning','Chybí čerstvá spotřeba domu; nelze doložit přebytky panelů ani přesný odhad dostupné energie.')
  if body.get('last_cycle',{}).get('failed'):
   add('cycle_failure','error','Nativní časový konec prodeje se nepotvrdil. Automatický bateriový prodej musí zůstat pozastavený do nového úspěšného ověření.')
  error=body.get('error') or body.get('battery_sale_error') or body.get('native_test_error')
@@ -25,7 +25,7 @@ def evaluate(body,now,started_at=0):
  if body.get('settings',{}).get('inhibited'):
   add('inhibited','error','Automatický prodej pozastavila ochrana. Zkontroluj důvod před obnovením.')
  if body.get('ready') and finite(body.get('capacity',{}).get('capacity_kwh')) is None:
-  add('capacity','error','Chybí platná nastavená kapacita baterie; bateriový prodej není povolen.')
+  add('capacity','warning','Chybí platná kapacita baterie; odhad energie a rozpočet ručního prodeje nejsou dostupné. Automatický plán stále hlídá měřený stav nabití.')
  sale=body.get('battery_sale') or body.get('native_test') or {}
  start=finite(sale.get('start'));end=finite(sale.get('end') or body.get('deadline'))
  if body.get('active'):

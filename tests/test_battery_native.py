@@ -85,6 +85,13 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         await self.advance(10)
         self.assertTrue(self.controller.observed)
 
+    async def test_ha_sale_rejects_actual_native_reserve_below_fixed_thirty_without_writes(self):
+        for i in range(6):self.reg[166+i]=10
+        for purpose in ('automatic','manual'):
+            with self.subTest(purpose=purpose),self.assertRaises(ValueError):
+                await self.start(purpose=purpose,ha_controlled=True)
+        self.assertFalse(self.writes);self.assertFalse(self.controller.active)
+
     async def test_automatic_sale_preserves_inverter_schedule_and_soc(self):
         await self.start(purpose='automatic')
         await self.enable()
@@ -111,6 +118,18 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         await self.controller.tick()
         self.assertEqual(self.reg[142],0)
         self.assertEqual([self.reg[166+i] for i in range(6)],[30]*6)
+
+    async def test_explicit_manual_ha_control_never_reprograms_inverter(self):
+        await self.start(purpose='manual',ha_controlled=True)
+        await self.controller.tick()
+        self.assertEqual(self.controller.record['start'],self.now)
+        self.assertFalse(any(address in range(148,178) or address in (109,146) for address,value in self.writes))
+
+    async def test_ha_transaction_rejects_a_program_write_even_if_called_accidentally(self):
+        await self.start(purpose='automatic')
+        before=list(self.writes)
+        with self.assertRaises(ValueError):await self.controller._write(166,60)
+        self.assertEqual(self.reg[166],30);self.assertEqual(before,self.writes)
 
     async def test_ha_automatic_can_use_last_three_minutes_of_business_block(self):
         await self.start(purpose='automatic',duration_minutes=3,window_end=self.now+180)

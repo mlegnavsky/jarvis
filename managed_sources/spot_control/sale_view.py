@@ -27,10 +27,10 @@ def grid_target_card():
   md('### Malý trvalý přetok'),
   md("""{% set b=state_attr('sensor.jarvis_energy_sales','bias_policy') or {} %}
 {% set live=state_attr('sensor.jarvis_energy_sales','bias_status') or {} %}
-**Cíl:2 W do sítě · rezerva30 % · obnovení od32 %.**
+**Cíl:{{ b.get('target_export_w',20) }} W do sítě · rezerva{{ b.get('minimum_soc',30) }} % · obnovení od{{ b.get('resume_soc',31) }} %.**
 Stav: **{{ 'ověřeno měřením' if b.get('verified') else 'čeká na skutečné ověření' }}**.
 {% if live %}Průměr měřené sítě: **{{ live.get('average_grid_w') if live.get('average_grid_w') is not none else 'čekám na vzorky' }} W** (záporná hodnota je dodávka).{% endif %}
-Přesných2 W nelze zaručit. Přebytky a výhodný bateriový blok mají přednost; velký prodej zachovává rezervu60 %. Malý režim dovoluje vybíjení pro dům až k30 % a vyžaduje běžící Home Assistant. Při obnově mohou vzniknout krátké mezery.
+Přesný malý výkon nelze zaručit. Přebytky a výhodný bateriový blok mají přednost; velký prodej zachovává rezervu60 %. Malý režim dovoluje vybíjení pro dům až k30 % a vyžaduje běžící Home Assistant. Při obnově mohou vzniknout krátké mezery.
 """)]}
 def verification_card():
  return md("### Stav ověřování\n{% set s=state_attr('sensor.jarvis_energy_sales','settings') or {} %}\n{% set c=s.get('command',{}) %}\n{% set t=state_attr('sensor.jarvis_energy_sales','native_test') or {} %}\n{% if t %}\n**Test baterie: {{ {'preparing':'příprava','armed':'čekám na začátek','measuring':'měřím průběh','expiry_observed':'nativní konec ověřen','stopping':'ukončuji a vracím nastavení'}.get(t.get('phase'),'ověřování') }} · nejvýše 500 W**\nZačátek: **{{ t.get('start') | timestamp_custom('%H:%M:%S',true) }}**, konec: **{{ t.get('end') | timestamp_custom('%H:%M:%S',true) }}**.\nRezerva při testu **{{ t.get('minimum_soc',95) }} %**.\n{% if t.get(\'selling_first\') %}Doběh regulace sleduji nejvýše 60 s po konci při stejném výkonovém stropu. Režim Selling First · mimo okno je dočasně nastaveno 100 %. Dům může odebírat ze sítě, dokud neobnovím běžné nastavení.{% endif %}\n{% elif c.get('status')=='failed' %}\n**Test se nespustil.** {{ c.get('error') }}\n{% else %}\nČekám na další ověřovací krok.\n{% endif %}\nBateriová automatika: **{{ 'ověřená' if s.get('battery_verified') else 'dosud neověřená' }}**.\n")
@@ -49,7 +49,7 @@ def daily_block_card():
 {% else %}
 Úplný dvouhodinový blok zatím není dostupný. Čekám na souvislé zveřejněné kladné ceny pro zbývající část dne.
 {% endif %}
-Každý den vybírám nejvýhodnější zbývající souvislý blok. Prodejní rezerva je pevně **60 %**; výkon vychází z aktuální energie nad rezervou po odečtení odhadu spotřeby domu a ztrát. Budoucí výrobu panelů do dostupné energie nepřičítám.
+Každý den vybírám nejvýhodnější zbývající souvislý blok. Prodejní rezerva je **60 %**; plánovaný prodej řídí HA podle měřeného stavu nabití a provozního výkonového stropu. Odhady energie a budoucí výroby slouží jako informace.
 Při dosažení rezervy, neplatné ceně nebo poruše skončí prodej dříve.
 """)
 def battery_sale_card():
@@ -110,7 +110,7 @@ def view():
 {% set p=state_attr('sensor.jarvis_energy_sales','price') %}
 **Výkup po odečtení 0,30 Kč/kWh:** {% if p %}{{ p.net | round(3) }} Kč/kWh{% else %}nedostupný{% endif %}
 
-Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na dostupné energii. Prodejní rezerva baterie je pevně 60 %. U baterie nastav nejméně 5 minut; nativní začátek je na nejbližší bezpečné pětiminutové hranici.
+Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na dostupné energii. Prodejní rezerva baterie je pevně 60 %. Běžný prodej řídí HA od potvrzení provozních povelů, bez přepisování časového programu a nativní rezervy měniče.
 '''),
  operation_card(),energy_overview_card(),
  daily_block_card(),battery_sale_card(),
@@ -138,7 +138,7 @@ Nastav maximální dodávku do sítě a délku. Skutečný výkon závisí na do
 
 U panelů vyžaduje časové ukončení běžící Home Assistant a spojení s měničem; při výpadku může PV export pokračovat pod nativním limitem.
 
-Bateriové okno používá nativní SOC a časový program. Mimo něj dočasných 100 % omezuje také běžné vybíjení pro dům; při výpadku řízení dům využije dostupnou síť do obnovení domácího nastavení. PV export a opakování uloženého rozvrhu tím nejsou jednorázově ukončeny.
+Běžný prodej řídí HA podle čerstvého měření a potvrzení měniče. Při ztrátě HA nebo spojení nelze zaručit ukončení v obchodním limitu 60 %; fyzické ochrany měniče a BMS zůstávají rozhodující. Servisní test je samostatný režim.
 '''),
  md('''### Historie
 Měření se ukládá do soukromého energetického archivu. Rozhodnutí a změny prodeje se zaznamenávají ihned a trvale.

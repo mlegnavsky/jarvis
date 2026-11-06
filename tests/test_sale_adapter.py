@@ -507,7 +507,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    self.assertEqual(self.hass.states.get('switch.inverter_export_surplus').state,'off')
 
  async def test_automatic_pv_operation_stays_within_nine_point_three_kw_operating_limit(self):
-  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
+  data=await self.setup();self.hass.states.async_set('sensor.inverter_pv_power',4000);data['settings'].update(automatic=True,pv_verified=True)
   await self.ticks[0]()
   self.assertTrue(data['controller'].active)
   self.assertLessEqual(data['controller'].record['power_w'],9300)

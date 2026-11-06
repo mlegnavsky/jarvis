@@ -10,6 +10,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import HomeAssistantError
 from .engine import Controller,equal,finite,charge_limits_ok,TEST_CURRENT_LIMIT
 DOMAIN='jarvis_spot_control'
+# Legacy YAML option remains accepted for upgrades; automatic commissioning is retired.
 CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({vol.Optional('commission_pv_test',default=False):bool})},extra=vol.ALLOW_EXTRA)
 async def async_setup(hass,config):
     store=Store(hass,1,DOMAIN+'.transaction')

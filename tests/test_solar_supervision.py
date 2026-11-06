@@ -8,6 +8,13 @@ class SupervisionTests(unittest.TestCase):
  def body(self,**kw):
   return {'ready':True,'healthy':True,'active':False,'phase':'idle','settings':{'automatic':True},
           'capacity':{'capacity_kwh':23.552},'house_power_w':450,'native_program':{'register_104':1},'grid_target_w':1,**kw}
+ def test_unknown_capacity_and_house_are_precise_warnings_not_false_battery_bans(self):
+  alerts=evaluate(self.body(capacity={},house_power_w=None),1000)
+  by={a['code']:a for a in alerts}
+  self.assertEqual(by['capacity']['level'],'warning')
+  self.assertIn('odhad',by['capacity']['message'])
+  self.assertIn('přebytk',by['house_measurement']['message'])
+  self.assertNotIn('bateriový prodej není povolen',str(alerts))
  def test_waiting_without_sun_or_energy_is_not_a_failed_sale(self):
   self.assertEqual(evaluate(self.body(reason='Čekám na blok.'),1000),[])
  def test_authorized_charging_is_not_reported_as_a_measurement_failure(self):

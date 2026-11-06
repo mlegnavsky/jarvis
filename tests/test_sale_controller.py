@@ -7,6 +7,64 @@ try:from sale_controller import SaleController
 except ImportError:SaleController=None
 
 class SaleTests(unittest.IsolatedAsyncioTestCase):
+ async def test_new_export_transaction_rejects_accidental_soc_write_at_boundary(self):
+  c=self.c();await c.start('pv',500,3,purpose='automatic')
+  before=list(self.calls)
+  with self.assertRaises(ValueError):await c._set('number.inverter_program_1_soc',60)
+  self.assertEqual(before,self.calls);self.assertEqual(self.states['number.inverter_program_1_soc'],'30')
+ async def test_data_guard_keeps_original_structured_health_in_its_stop_proof(self):
+  c=self.c();await c.start('pv',500,3,purpose='automatic')
+  report={'healthy':False,'transient_only':True,'issues':[{'code':'stale','entity_id':'sensor.inverter_grid_power','age_seconds':31}]}
+  c.health_report=lambda:report
+  self.now+=5;self.sample_stamp=self.now;await c.tick()
+  self.assertFalse(c.active)
+  self.assertEqual(c.last_stop['context']['health']['issues'][0]['age_seconds'],31)
+ async def test_unavailable_grid_keeps_one_typed_measurement_cause_and_can_recover(self):
+  from sales import measurement_guard
+  c=self.c();await c.start('pv',500,3,purpose='automatic')
+  self.states['sensor.inverter_grid_power']='unavailable'
+  c.health_report=lambda:{'healthy':False,'transient_only':True,'issues':[{'code':'unavailable','entity_id':'sensor.inverter_grid_power'}]}
+  self.now+=5;self.sample_stamp=self.now;await c.tick()
+  self.assertFalse(c.active);self.assertTrue(measurement_guard(c.last_stop),str(c.last_stop))
+ async def test_production_pv_never_writes_native_soc_or_schedule(self):
+  c=self.c();await c.start('pv',500,3,minimum_soc=60,purpose='automatic')
+  await c.stop()
+  self.assertFalse(any('program_' in entity for entity,value in self.calls))
+
+ async def test_manual_pv_also_preserves_native_protection(self):
+  c=self.c();await c.start('pv',500,3)
+  self.assertEqual([self.states[f'number.inverter_program_{i}_soc'] for i in range(1,7)],['30']*6)
+  self.assertFalse(any('program_' in entity for entity,value in self.calls))
+
+ async def test_continuous_bias_renews_without_device_writes_even_at_negative_price(self):
+  c=self.c();self.states['sensor.inverter_battery']='50'
+  await c.start('bias',20,60,minimum_soc=30,purpose='automatic')
+  self.states['sensor.inverter_grid_power']='-20'
+  for seconds in (1,10,10):
+   self.now+=seconds;self.sample_stamp=self.now;await c.tick()
+  self.assertTrue(c.observed)
+  old=c.record['deadline'];calls=list(self.calls)
+  self.now=old-30;self.sample_stamp=self.now;self.net=-1
+  self.assertTrue(await c.renew_automatic())
+  self.assertGreater(c.record['deadline'],old);self.assertEqual(calls,self.calls)
+
+ async def test_ha_home_floor_is_independent_of_fixed_native_thirty(self):
+  c=self.c();c.policy=lambda:{'home_soc':45,'resume_soc':46,'bias_w':20,'pv_soc':97}
+  await c.start('bias',20,60,minimum_soc=45,purpose='automatic')
+  self.assertFalse(any('program_' in entity for entity,value in self.calls))
+
+ async def test_duplicate_legacy_battery_start_is_rejected_without_any_write(self):
+  with self.assertRaises(ValueError):await self.c().start('battery',500,3)
+  self.assertFalse(self.calls)
+
+ async def legacy_soc_transaction(self):
+  c=self.c();await c.start('pv',500,3)
+  c.record.pop('control_scope',None)
+  for i in range(1,7):
+   key=f'number.inverter_program_{i}_soc'
+   c.record['before'][key]='30';c.record['expected'][key]='100';self.states[key]='100'
+  await self.save(c.record)
+  return c
  def setUp(self):
   self.assertIsNotNone(SaleController,'sales controller is not implemented')
   self.states={'select.inverter_work_mode':'Zero Export To CT','switch.inverter_export_surplus':'off',
@@ -107,14 +165,10 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   self.now+=5;self.sample_stamp=self.now;await c.tick()
   self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'house_support')
 
- async def test_pv_only_protects_every_battery_slot_before_enabling(self):
+ async def test_pv_only_preserves_all_native_slots_before_enabling(self):
   c=self.c();await c.start('pv',500,3)
-  self.assertEqual(self.calls[0],('number.inverter_export_surplus_power',500))
-  enabled=next(i for i,call in enumerate(self.calls) if call==('switch.inverter_export_surplus','on'))
-  for i in range(1,7):
-   self.assertIn((f'number.inverter_program_{i}_soc',100),self.calls[:enabled])
-  self.assertEqual(self.states['select.inverter_work_mode'],'Zero Export To CT')
-  self.assertEqual(self.states['number.inverter_program_1_soc'],'100')
+  self.assertEqual(self.calls,[('number.inverter_export_surplus_power',500),('switch.inverter_export_surplus','on')])
+  for i in range(1,7):self.assertEqual(self.states[f'number.inverter_program_{i}_soc'],'30')
   self.assertFalse(c.observed)
  async def test_pv_refuses_inactive_tou_and_any_charge_slot_without_writes(self):
   for entity,value in [('select.inverter_time_of_use','Disabled'),('select.inverter_program_6_charging','Grid')]:
@@ -176,7 +230,7 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   self.states['number.inverter_program_2_soc']='70';await c.tick()
   self.assertTrue(c.active)
  async def test_partial_restore_retry_does_not_mistake_own_restore_for_owner_change(self):
-  c=self.c();await c.start('pv',500,3);real=c.write;failed=False
+  c=await self.legacy_soc_transaction();real=c.write;failed=False
   async def fail(e,v):
    nonlocal failed
    if e=='number.inverter_program_2_soc' and str(v)=='30' and not failed:
@@ -207,7 +261,7 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(self.calls[:3],[('number.inverter_export_surplus_power',0),('select.inverter_work_mode','Zero Export To CT'),('switch.inverter_export_surplus','off')])
   self.assertEqual(self.states['switch.inverter_export_surplus'],'off')
  async def test_owner_soc_edit_while_restore_intent_is_audited_wins(self):
-  c=self.c();await c.start('pv',500,3);real=c.event
+  c=await self.legacy_soc_transaction();real=c.event
   async def edit(kind,data):
    await real(kind,data)
    if kind=='write_intent' and data.get('entity')=='number.inverter_program_1_soc' and str(data.get('value'))=='30':
@@ -219,7 +273,7 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
  async def test_export_reenabled_during_soc_restore_latches_cleanup_without_raising_cap(self):
   for entity,value in [('switch.inverter_export_surplus','on'),('select.inverter_work_mode','Export First')]:
    with self.subTest(entity=entity):
-    self.setUp();c=self.c();await c.start('pv',500,3);real=c.event;self.calls=[]
+    self.setUp();c=await self.legacy_soc_transaction();real=c.event;self.calls=[]
     async def edit(kind,data):
      await real(kind,data)
      if kind=='write_intent' and data.get('entity')=='number.inverter_program_1_soc' and str(data.get('value'))=='30':
@@ -344,11 +398,12 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   for power,minutes in [(9500,3),(500,0),(500,61),(float('nan'),3)]:
    with self.assertRaises(ValueError):await self.c().start('pv',power,minutes)
   self.assertEqual(self.calls,[])
- async def test_battery_floor_programmed_before_export_and_respected(self):
-  c=self.c();await c.start('battery',1000,3)
-  turn=next(i for i,(e,v) in enumerate(self.calls) if v=='Export First')
-  for i in range(1,7):self.assertIn((f'number.inverter_program_{i}_soc',62),self.calls[:turn])
-  self.states['sensor.inverter_battery']='62';await c.tick();self.assertFalse(c.active)
+ async def test_saved_legacy_battery_transaction_can_still_be_safely_restored(self):
+  c=await self.legacy_soc_transaction();c.record['mode']='battery'
+  self.states['select.inverter_work_mode']='Export First';c.record['expected']['select.inverter_work_mode']='Export First'
+  self.states['sensor.inverter_battery']='62';self.now+=5;self.sample_stamp=self.now
+  await c.tick();self.assertFalse(c.active)
+  for i in range(1,7):self.assertEqual(self.states[f'number.inverter_program_{i}_soc'],'30')
  async def test_pv_mode_stops_if_battery_is_exporting(self):
   c=self.c();await c.start('pv',500,3)
   self.states['sensor.inverter_grid_power']='-400';self.states['sensor.inverter_battery_power']='500'
@@ -369,7 +424,7 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   async def yielding(e,v):
    await real(e,v);await c.tick()
   c.write=yielding
-  await c.start('battery',500,3)
+  await c.start('pv',500,3)
   self.assertTrue(c.active)
  async def test_failed_cap_stop_still_attempts_mode_and_export_off(self):
   c=self.c();await c.start('pv',500,3);real=c.write

@@ -63,5 +63,10 @@ def recoverable_battery_stop(proof):
         return False
     health = (proof.get('failure_context') or {}).get('health') or {}
     issues = health.get('issues') or []
+    return transient_health(health)
+
+
+def transient_health(health):
+    issues = health.get('issues') or []
     return (health.get('healthy') is False and health.get('transient_only') is True
-            and bool(issues) and all(i.get('code') in TRANSIENT_CODES for i in issues))
+            and bool(issues) and all(isinstance(i,dict) and i.get('code') in TRANSIENT_CODES for i in issues))
