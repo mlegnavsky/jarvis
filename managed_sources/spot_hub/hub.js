@@ -1,4 +1,4 @@
-/* Spoty hub1.0.1. Render/read operations never invoke a device service. */
+/* Spoty hub1.0.2. Render/read operations never invoke a device service. */
 (function(global){
 'use strict';
 const number=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
@@ -32,7 +32,7 @@ class Hub{
   $('date').addEventListener('change',()=>{if(/^\d{4}-\d{2}-\d{2}$/.test($('date').value))this.select(this.period,$('date').value);});
   $('previous').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,-1));$('next').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,1));$('today').onclick=()=>this.select(this.period,today());
   $('advanced').addEventListener('toggle',()=>{if($('advanced').open)this.mountLegacy();this.fit();});document.querySelectorAll('details').forEach(x=>x.addEventListener('toggle',()=>this.fit()));
-  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.0.1',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
+  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.0.2',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
   this.update();this.timer=setInterval(()=>this.update(),2000);this.resize=new ResizeObserver(()=>this.fit());this.resize.observe($('app'));global.addEventListener('pagehide',()=>{this.dead=true;clearInterval(this.timer);this.resize.disconnect();},{once:true});
  }
  fit(){if(this.fitPending)return;this.fitPending=true;requestAnimationFrame(()=>{this.fitPending=false;try{const f=global.frameElement;if(!f)return;const height=Math.ceil($('app').getBoundingClientRect().height+4);if(Math.abs((this.frameHeight||0)-height)<3)return;this.frameHeight=height;f.style.height=height+'px';f.style.position='relative';f.style.display='block';const container=f.parentElement;if(container){container.style.paddingTop='0px';container.style.height=height+'px';}}catch{}});}
@@ -60,7 +60,15 @@ class Hub{
   }
   if(!this.loadingFinance&&Date.now()-this.lastFinance>60000)this.finance();this.fit();
  }
- read(id){const s=this.h?.states[id],t=Date.parse(s?.last_reported||s?.last_updated||'');return Number.isFinite(t)&&Date.now()-t<60000&&t<=Date.now()+5000?numeric(s?.state):null;}
+ read(id){
+  const s=this.h?.states[id],value=numeric(s?.state),sample=this.h?.states['sensor.jarvis_energy_sales']?.attributes?.telemetry?.[id];
+  const stamps=[s?.last_reported,s?.last_updated];
+  // HA frontend last_updated need not change while a sensor keeps the same value.
+  // Use the backend's latest physical-report timestamp only for the same value.
+  if(value!==null&&numeric(sample?.state)===value)stamps.push(sample?.source_reported);
+  const t=Math.max(...stamps.map(v=>Date.parse(v||'')).filter(Number.isFinite));
+  return Number.isFinite(t)&&Date.now()-t<60000&&t<=Date.now()+5000?value:null;
+ }
  async action(kind){
   if(this.busy||!this.h)return;
   if(kind==='manual'){const w=global.parent;w.history.pushState(null,'','/hlavni-prehled/vlastni-prodej');w.dispatchEvent(new w.Event('location-changed'));return;}
