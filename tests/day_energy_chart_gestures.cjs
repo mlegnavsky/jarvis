@@ -23,8 +23,9 @@ function fixture(width){
 }
 const c=fixture(358),root=c.shadowRoot,day=c.selectedBounds(),svg=()=>root.querySelector('svg');
 const viewBox=root.innerHTML.match(/<svg viewBox="0 0 ([\d.]+) ([\d.]+)"/).slice(1).map(Number),plotWidth=Number(root.innerHTML.match(/class="hit"[^>]*width="([\d.]+)"/)[1]);
-assert(plotWidth/viewBox[0]>=.82,'mobile curves use the available width');assert(viewBox[1]<=260,'mobile graph avoids the old tall aspect ratio');
+assert(plotWidth/viewBox[0]>=.95,'mobile curves use the available width');assert(viewBox[1]<=260,'mobile graph avoids the old tall aspect ratio');
 assert(!root.innerHTML.includes('min-height:280px'),'mobile CSS must not stretch the SVG');
+const axisLabels=[...root.innerHTML.matchAll(/<text class="power-axis-label" x="([\d.]+)"[^>]*text-anchor="([^"]+)"/g)];assert(axisLabels.length>=3,'power axis remains readable');assert(axisLabels.every(m=>Number(m[1])>=6&&m[2]==='start'),'mobile labels are inside the plotting area');
 let selected=day.start+12*3600000;c.inspecting=true;c.hoverTime=selected;c.render();
 const touch=(type,points)=>{let prevented=false;svg().listeners[type]({type,touches:points.map(([x,y])=>({clientX:x,clientY:y})),preventDefault(){prevented=true;}});return prevented;};
 const original=svg();assert(touch('touchstart',[[145,80],[215,80]]));touch('touchmove',[[70,80],[290,80]]);

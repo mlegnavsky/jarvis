@@ -70,7 +70,12 @@ class Hub{
   const civil=today().split('-').map(Number),tomorrow=new Date(Date.UTC(civil[0],civil[1]-1,civil[2]+1)).toISOString().slice(0,10),next=sales.next_plan;
   if($('next-plan')){
    const ready=next?.day===tomorrow&&next.status==='ready'&&next.block?.day===tomorrow;
-   $('next-plan').textContent=ready?'Připraveno na nejlepší prodej · zítra '+clock(next.block.start)+'–'+clock(next.block.end)+' · průměr '+format(next.block.average_net)+' Kč/kWh po poplatku. '+(sales.settings?.inhibited?'Automatika je pozastavená; zkontroluj důvod.':sales.automatic_requested?'Spuštění automaticky po ověření baterie a ochran.':'Automatický prodej je vypnutý.'):(next?.day===tomorrow&&next.status==='no_window'?'Zítřejší ceny jsou načtené, ale chybí prodejní okno s kladným výkupem.':'Čekáme na úplné zítřejší ceny; nejlepší prodejní plán zatím není připravený.');
+   $('next-plan').textContent=ready?'Další okno: zítra '+clock(next.block.start)+'–'+clock(next.block.end):next?.day===tomorrow&&next.status==='no_window'?'Zítra není vhodné prodejní okno.':'Čekáme na zítřejší ceny.';
+   if($('next-plan-detail'))$('next-plan-detail').textContent=ready?'Nejvýhodnější okno z úplných zítřejších cen · průměr '+format(next.block.average_net)+' Kč/kWh po poplatku. '+(prefs.inhibited?'Automatika je pozastavená; zkontroluj důvod.':requested?'Spuštění automaticky po ověření baterie a ochran.':'Automatický prodej je vypnutý.'):'Plán se připraví po načtení úplných cen s kladným výkupem.';
+  }
+  if($('control-alert')){
+   const alert=$('control-alert');alert.hidden=!stopping&&!prefs.inhibited&&sales.healthy!==false&&fresh&&!sales.measurement_recovery?.pending&&!sales.error&&!sales.profile_issues?.length;
+   alert.textContent=sales.measurement_recovery?.pending?'Obnova po výpadku dat…':stopping?'Ověřuji bezpečné ukončení…':prefs.inhibited?'Automatika pozastavená · podrobnosti níže.':sales.error||sales.profile_issues?.length?'Řízení hlásí problém · podrobnosti níže.':'Čekáme na čerstvá data…';
   }
   $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Rezerva plánu '+(policy.sale_soc??60)+' %, domácnosti '+(policy.home_soc??30)+' %, obnovení malého přetoku '+(policy.resume_soc??31)+' %. Maximální dodávka '+format((policy.max_w??9300)/1000,1)+' kW.';
   $('recovery').textContent=sales.error?'Řízení hlásí: '+tr(sales.error):(sales.measurement_recovery?.pending?'Po výpadku měření čeká HA na stabilní data a potvrzení domácího režimu.':'');
