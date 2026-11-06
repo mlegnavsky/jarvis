@@ -380,7 +380,8 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
     return [((dt.year-2000)<<8)|dt.month,(dt.day<<8)|dt.hour,(dt.minute<<8)|dt.second]
    return await original(code,address,count=count,**kwargs)
   device.execute=lagged;self.module.sync_native_clock=AsyncMock(side_effect=AssertionError('Unnecessary RTC write'))
-  await self.ticks[0]();await data['commission_battery']()
+  await self.ticks[0]()
+  with self.assertRaises(ValueError):await data['commission_battery']()
   self.module.sync_native_clock.assert_not_awaited()
  async def test_start_reads_native_cap_register_before_enabling(self):
   data=await self.setup();await self.ticks[0]()

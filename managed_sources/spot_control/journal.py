@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 import json
 import math
+import re
 import os
 import sqlite3
 import threading
@@ -47,3 +48,20 @@ class Journal:
   with self.db() as db:
    cursor=db.execute('INSERT OR IGNORE INTO commands(id,body) VALUES(?,?)',(key,encoded))
    return cursor.rowcount==1
+
+ def page(self,after=0,limit=100,until_id=None,kind=None,sale_id=None):
+  """Read a stable high-water window; existing rows, IDs and timestamps stay intact."""
+  if type(after) is not int or after<0 or type(limit) is not int or not 1<=limit<=1000:raise ValueError('Invalid history bounds')
+  if until_id is not None and (type(until_id) is not int or until_id<after):raise ValueError('Invalid history upper cursor')
+  if kind is not None and (not isinstance(kind,str) or not re.fullmatch(r'[a-z][a-z0-9_]{0,63}',kind)):raise ValueError('Invalid event kind')
+  if sale_id is not None and (not isinstance(sale_id,str) or not 1<=len(sale_id)<=80):raise ValueError('Invalid sale identity')
+  with self.db() as db:
+   high=db.execute('SELECT COALESCE(MAX(id),0) FROM events').fetchone()[0] if until_id is None else until_id
+   where='id>? AND id<=?';args=[after,high]
+   if kind is not None:where+=' AND kind=?';args.append(kind)
+   if sale_id is not None:
+    where+=" AND (json_extract(payload,'$.sale_id')=? OR json_extract(payload,'$.id')=?)";args.extend((sale_id,sale_id))
+   rows=db.execute('SELECT id,t,kind,payload FROM events WHERE '+where+' ORDER BY id LIMIT ?',[*args,limit+1]).fetchall()
+  more=len(rows)>limit;rows=rows[:limit]
+  events=[{'id':r[0],'t':r[1],'kind':r[2],'payload':json.loads(r[3])} for r in rows]
+  return {'events':events,'next_cursor':rows[-1][0] if rows else after,'until_id':high,'has_more':more,'retention':'permanent'}

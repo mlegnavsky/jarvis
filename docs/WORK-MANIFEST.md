@@ -99,3 +99,7 @@ Před prací s baterií, historií grafu nebo spoty přečti [ENERGY-DATA-MAP.md
 
 ## Backup destination correction — 2026-11-04
 This supersedes earlier statements that no private server destination is connected: live HA inventory confirms the WebDAV integration for jarvis-backup@laborator.odladeni.cz is loaded. SFTP was not the final connection. Delivery of individual administration backups to that server is not verified; current admin backups are created through Supervisor and leave local Green copies. Automatic backup last-success sensor is 2026-10-29, latest attempt 2026-11-04. Investigate upload health before asserting recovery coverage. See docs/evidence/2026-11-04-cleanup-activation.md for verified cleanup and activation evidence.
+
+## Připravený refaktoring FVE 6. 11. 2026
+
+Revize spot_control1.0.0 je připravena pouze v samostatné review větvi; není nasazena. Rozsah, kompatibilita, aktivace a rollback: `docs/releases/energy-control-1.0.0-review.md`. Běžící produkční větev se touto prací nemění. Historie ani finance se nemažou.

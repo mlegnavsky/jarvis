@@ -105,6 +105,48 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         await self.finish_stop()
         self.assertEqual(self.controller.last_stop['reason'], 'deadline')
 
+    async def test_ha_automatic_starts_without_five_minute_native_delay(self):
+        await self.start(purpose='automatic')
+        self.assertEqual(self.controller.record['start'],self.now)
+        await self.controller.tick()
+        self.assertEqual(self.reg[142],0)
+        self.assertEqual([self.reg[166+i] for i in range(6)],[30]*6)
+
+    async def test_ha_automatic_can_use_last_three_minutes_of_business_block(self):
+        await self.start(purpose='automatic',duration_minutes=3,window_end=self.now+180)
+        self.assertEqual(self.controller.record['end'],self.now+180)
+
+    async def test_ha_deadline_needs_no_positive_price_after_its_end(self):
+        end=self.now+300
+        self.quotes=[q for q in self.quotes if q['start']<end]
+        await self.start(purpose='automatic',window_end=end)
+        self.assertEqual(self.controller.record['end'],end)
+
+    async def test_health_failure_proof_preserves_exact_measurement_cause(self):
+        await self.start(purpose='automatic')
+        await self.enable()
+        self.states.update(healthy=False,health={'healthy':False,'transient_only':True,
+            'issues':[{'code':'stale','entity_id':'sensor.inverter_battery','age_seconds':31}]})
+        await self.advance()
+        self.states['healthy']=True
+        await self.finish_stop()
+        self.assertEqual(self.controller.last_stop['failure_context']['health']['issues'][0]['code'],'stale')
+
+    async def test_electrical_stale_proof_retains_original_channel_timestamp_and_price(self):
+        await self.start(purpose='automatic')
+        await self.enable()
+        self.states.update(health={'healthy':True,'transient_only':False,'issues':[]},
+                           voltage_reported_at=self.now-31,current_reported_at=self.now)
+        failed_stamp=self.states['voltage_reported_at']
+        await self.advance()
+        self.states.update(voltage_reported_at=self.now,current_reported_at=self.now)
+        await self.finish_stop()
+        proof=self.controller.last_stop
+        self.assertEqual(proof['reason'],'electrical_stale')
+        self.assertEqual(proof['failure_context']['voltage_reported_at'],failed_stamp)
+        self.assertEqual(proof['failure_context']['net_price'],7)
+        self.assertEqual(proof['failure_context']['health']['issues'][0]['entity_id'],'sensor.inverter_battery_voltage')
+
     async def test_plan_and_before_image_are_durable_before_any_device_write(self):
         async def write(address, value):
             self.assertEqual(self.saved['before']['166'], 30)

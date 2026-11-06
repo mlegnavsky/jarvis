@@ -1,0 +1,13 @@
+# Energy stabilization0.9.3
+
+Scope: targeted correction before the requested broad refactor. Owner authorized installation after freeing disk space and explicitly requested a one-day window6November2026 ending18:30 Europe/Prague. Native reserve30%, HA sale60%, max9300W and existing electrical/temperature/device guards remain. No new physical commissioning test.
+
+Evidence: Supervisor/Core log records17:34:33.259 `custom_components.solarman.coordinator Timeout fetching Solární systém data`. Battery transaction1793981675143483807 stopped with `_Guard: health`; cleanup verified at17:35:44. Current0.9.2 never queued battery measurement recovery, so owner manually toggledOFF/ON. That armed another segment17:40–17:45; actual export8440W observed17:41:24. This was owner recovery, not autonomous success.
+
+Changes: read-only structured health assessment retains entity/value/age and separates communication loss from device faults/temperature. Battery failure proofs retain the original sample including voltage/current timestamps and price. Only explicitly documented transient battery data loss can queue recovery; every retry revalidates the durable stop ID and proof, needs30s stable health, owner intent, confirmed complete cleanup, no conflicts, current price and independent idle-native/stopped-grid audit. Ambiguous old battery-health proofs stay inhibited. Existing PV recovery is unchanged and is part of the postponed broader refactor.
+
+Automatic HA battery windows start without native five-minute alignment and preserve native times/SOC/current. Existing manual/commissioned native-window behavior stays compatible. HA intervals require unique positive prices only within their end-exclusive interval. The one-day override is read from jarvis_workspace/sales-today-override.json, has exact date/start/end, does not alter recurring policy, and closes further scheduled battery sales for the same day after18:30. It is ignored on following days. Existing SQLite schemas, IDs, financial data, archive queues and saved transactions remain unchanged.
+
+Validation: baseline683 tests passed/20 optional skips. New tests reproduced old preparation delay, missing failure context, absent battery recovery, end-inclusive-price bug and unvalidated persisted recovery before fixes. Old pre-arming fixture times were moved to actual block start because automatic sales must no longer enable before the authorized window. Independent review found extra-quarter pricing, missing electrical evidence and recovery-proof validation; corrected with regression coverage.
+
+Deployment: not yet installed at source publication. Runtime proof and backup receipt will be appended after activation. Full refactor is paused and not included in this release.

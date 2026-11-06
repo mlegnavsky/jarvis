@@ -134,7 +134,9 @@ class SaleController:
     steps.append((MODE,'Export First'))
    else:
     for i in range(1,7):
-     target=f'number.inverter_program_{i}_soc';keys.append(target);steps.append((target,policy['home_soc'] if purpose=='automatic' else 100))
+     target=f'number.inverter_program_{i}_soc';keys.append(target)
+     if purpose=='commission':steps.append((target,100))
+     elif number(states.get(target))!=policy['home_soc']:raise ValueError('Domácí rezervu měniče automatika nepřepisuje.')
     steps.append((ENABLE,'on'))
    if any(states.get(k) in (None,'unknown','unavailable') for k in keys):raise ValueError('Nastavení měniče není dostupné.')
    self.record={'id':str(time.time_ns()),'before':{k:states[k] for k in keys},'mode':mode,'power_w':int(power),'purpose':purpose,'promote_auto':bool(promote_auto),
@@ -221,16 +223,20 @@ class SaleController:
   else:
    for k in ('export_first','export_last','export_count'):self.record.pop(k,None)
  async def renew_automatic_pv(self):
+  return await self.renew_automatic_window()
+ async def renew_automatic_window(self):
   """Renew an eligible PV observation window without touching the inverter."""
   async with self.lock:
-   if not self.active or self.record.get('mode')!='pv' or self.record.get('purpose')!='automatic' or self.record.get('phase') not in ('running','awaiting_surplus'):return False
+   if not self.active or self.record.get('mode') not in ('pv','bias') or self.record.get('purpose')!='automatic' or self.record.get('phase') not in ('running','awaiting_surplus'):return False
+   bias=self.record.get('mode')=='bias'
+   if bias and not self.observed:return False
    now=self.clock();old=self.record['deadline'];stamp=number(self.reported());states=self.read();soc=number(states.get('sensor.inverter_battery'));price=number(self.price())
-   if not old-60<=now<old or not self.healthy() or price is None or price<=0 or soc is None or soc<(self.policy()['pv_soc'] if hasattr(self,'policy') else 97) or stamp is None or not 0<=now-stamp<30:return False
+   if not old-60<=now<old or not self.healthy() or price is None or (not bias and price<=0) or soc is None or (soc<=self.record['minimum_soc'] if bias else soc<(self.policy()['pv_soc'] if hasattr(self,'policy') else 97)) or stamp is None or not 0<=now-stamp<30:return False
    if self.record.get('stop_attempt_failed') or self.record.get('conflicts') or self._conflicts(states):return False
    self.record['deadline']=now+900
    try:
     await self.save(copy.deepcopy(self.record))
-    await self.event('pv_window_renewed',{'sale_id':self.record['id'],'previous_end':old,'deadline':self.record['deadline'],'price_net':price})
+    await self.event('bias_window_renewed' if bias else 'pv_window_renewed',{'sale_id':self.record['id'],'previous_end':old,'deadline':self.record['deadline'],'price_net':price})
    except Exception:
     self.record['deadline']=old;raise
    return True

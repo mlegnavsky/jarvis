@@ -107,14 +107,11 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   self.now+=5;self.sample_stamp=self.now;await c.tick()
   self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'house_support')
 
- async def test_pv_only_protects_every_battery_slot_before_enabling(self):
+ async def test_ordinary_pv_preserves_every_house_slot(self):
   c=self.c();await c.start('pv',500,3)
   self.assertEqual(self.calls[0],('number.inverter_export_surplus_power',500))
-  enabled=next(i for i,call in enumerate(self.calls) if call==('switch.inverter_export_surplus','on'))
-  for i in range(1,7):
-   self.assertIn((f'number.inverter_program_{i}_soc',100),self.calls[:enabled])
-  self.assertEqual(self.states['select.inverter_work_mode'],'Zero Export To CT')
-  self.assertEqual(self.states['number.inverter_program_1_soc'],'100')
+  self.assertFalse([call for call in self.calls if '_soc' in call[0]])
+  self.assertEqual(self.states['number.inverter_program_1_soc'],'30')
   self.assertFalse(c.observed)
  async def test_pv_refuses_inactive_tou_and_any_charge_slot_without_writes(self):
   for entity,value in [('select.inverter_time_of_use','Disabled'),('select.inverter_program_6_charging','Grid')]:

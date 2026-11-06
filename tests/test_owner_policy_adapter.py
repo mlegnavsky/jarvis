@@ -22,16 +22,10 @@ class OwnerPolicyAdapterTests(unittest.IsolatedAsyncioTestCase):
   data['controller'].record={'id':'running','phase':'running','before':{'cap':0}}
   with self.assertRaises(ValueError):await data['configure_policy']({'sale_soc':65},a['policy_revision'])
 
- async def test_custom_home_floor_and_pv_threshold_drive_next_transaction(self):
+ async def test_native_house_floor_cannot_be_reconfigured_through_policy(self):
   data=await self.setup();await data['report']();a=self.hass.states.get('sensor.jarvis_energy_sales').attributes
-  await data['configure_policy']({'home_soc':35,'resume_soc':36,'sale_soc':65,'pv_soc':98},a['policy_revision'])
-  data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True)
-  self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
-  import math
-  self.prices(math.floor(self.clock[0]/900)*900);self.refresh();await self.ticks[0]()
-  self.assertTrue(data['controller'].active,self.hass.states.get('sensor.jarvis_energy_sales').attributes['error'])
-  self.assertEqual(self.native_registers[166],35)
-  self.assertTrue(all(self.native_registers[i]==35 for i in range(166,172)))
+  with self.assertRaises(ValueError):await data['configure_policy']({'home_soc':35},a['policy_revision'])
+  self.assertFalse(self.native_group_writes)
  async def test_store_failure_rolls_back_policy_and_intent(self):
   data=await self.setup();await data['report']();a=self.hass.states.get('sensor.jarvis_energy_sales').attributes
   before=dict(data['settings'])
