@@ -81,6 +81,25 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(proof['context']['health']['issues'][-1]['source'],'refresh_sale_controls')
   self.refresh();await self.ticks[0]();self.clock[0]+=31;self.refresh();await self.ticks[0]()
   self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['inhibited'])
+ async def test_control_outage_inside_read_cache_window_still_recovers(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,bias_enabled=True)
+  self.hass.states.async_set('sensor.inverter_battery',55);self.refresh();await self.ticks[0]()
+  c=data['controller'];original={}
+  for entity in c.record['expected']:
+   state=self.hass.states.get(entity)
+   if state:original[entity]=state.state;self.hass.states.async_set(entity,'unavailable')
+  write=c.write
+  async def restored_write(entity,value):
+   for key,previous in original.items():
+    if self.hass.states.get(key).state=='unavailable':self.hass.states.async_set(key,previous)
+   await write(entity,value)
+  c.write=restored_write
+  self.clock[0]+=5;self.refresh();await self.ticks[0]()
+  self.assertFalse(c.active)
+  self.assertTrue(data['settings'].get('measurement_recovery',{}).get('pending'),str(data['settings']['last_sale_stop']))
+  self.refresh();await self.ticks[0]();self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['inhibited'])
+
  async def test_native_timeout_cannot_mask_simultaneous_export_limit(self):
   data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,bias_enabled=True)
   self.hass.states.async_set('sensor.inverter_battery',55);self.refresh();await self.ticks[0]()

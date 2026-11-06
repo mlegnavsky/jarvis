@@ -27,7 +27,15 @@ class SaleController:
  def active(self):return bool(self.record.get('before'))
  def _health_evidence(self):
   callback=getattr(self,'health_report',None)
-  return copy.deepcopy(callback()) if callback else {'healthy':self.healthy(),'transient_only':False,'issues':[]}
+  report=copy.deepcopy(callback()) if callback else {'healthy':self.healthy(),'transient_only':False,'issues':[]}
+  states=self.read()
+  missing=[entity for entity in self.record.get('expected',{}) if states.get(entity) in (None,'unknown','unavailable')]
+  if missing:
+   issues=report.setdefault('issues',[])
+   issues.extend({'code':'unavailable','entity_id':entity,'value':states.get(entity),
+                  'source':'control_state','expected':'available control readback'} for entity in missing)
+   report.update(healthy=False,transient_only=all(i.get('code') in ('missing','unavailable','stale') for i in issues))
+  return report
  def _validate_write(self):
   price=number(self.price())
   health=self._health_evidence()
@@ -237,7 +245,7 @@ class SaleController:
    now=self.clock();old=self.record['deadline'];stamp=number(self.reported());states=self.read()
    soc=number(states.get('sensor.inverter_battery'));price=number(self.price())
    policy=self.policy() if hasattr(self,'policy') else {'pv_soc':97,'home_soc':30}
-   if not old-60<=now<old or not self.healthy() or price is None or soc is None or stamp is None or not 0<=now-stamp<30:return False
+   if not old-60<=now<old or not self._health_evidence().get('healthy') or price is None or soc is None or stamp is None or not 0<=now-stamp<30:return False
    if mode=='pv' and (price<=0 or soc<policy['pv_soc']):return False
    if mode=='bias' and (soc<=policy['home_soc'] or not self.observed):return False
    if self.record.get('stop_attempt_failed') or self.record.get('conflicts') or self._conflicts(states):return False
