@@ -1031,3 +1031,15 @@ Existing Solarman device/services/pysolarman DEBUG enabled in two bounded120s wi
 ##6 November2026 — solar0.7.0 active; automatic deliberately paused
 
 See docs/evidence/2026-11-06-solar-completion-070.md.15 deployment files exactly read back; independent verification plan finishsolar-v2-runtime-verify-apply-20261106 active_verified (sales0.7.0, finance1.1.0, supervision1.0.0, archive1.2.3). Original restart job timed out upstream while starting; reconciled without replay or second restart. Backup fcb10fc6. Cash/energy cards and fault notifications active; nominal basis23.552kWh from460Ah, not physical47kWh proof. Real500W sale exported, but native deadline FAILED; HA stopped and restored originals. automatic=false/inhibited=true/battery_verified=false; keep paused pending successful native proof. Requested1W still native20W; cause unresolved. Physical near-full PV acceptance not observed.603 tests pass20skip plus archive8. No backup deletion by this work; owner cleaned independently.
+
+
+## 6 November2026 — HA autonomous solar0.8.0 ACTIVE
+
+Source44370be7904b6a31647bb6258ac20a954e56d58c; solar080-apply-20261106 active_verified08:55:05UTC, backup70dcbfb2, alltenhashesmatched, sales0.8.0/heating1.2.1/Core2026.6.4. See docs/evidence/2026-11-06-ha-autonomous-080.md.638testsPASS20skip +28heatingPASS; independentreviewnoblockers. Existingheatingvalues21/22survivedrestart; sharedchildsensor/bothheaters strictbelow21/above22, existingguardsunchanged.
+
+OneownerON solar080-enable-owner-request-20261106 consumedconfirmed; HA itself startedbiasprobe1793955407940399361, completed09:00:01UTC deadline/observed/sustained/stoppedTRUE/noerrors/conflicts, thenrestoredandresumedautomaticbias withoutanotherchatcommand.09:00:17UTC requestedTRUE/automaticTRUE/inhibitedFALSE/bias_verifiedTRUE/resumeFALSE/healthyTRUE; newbiasawaitingfreshsamples. Exact2W notguaranteed; probe~6–9Wmeanactualexport. Meanacceptance−50..0 alignsunchanged50Wsustainedguard;180snoexportcountssincelastconfirmation, fixinglaterfalse0.7.3stop08:10UTC.
+
+Durableownerintent/requested_automatic survivesinternalpause; ownerOFFcancelsresume. Restartorphanindependentlyauditsnativeordinaryprofile/freshstoppedgrid, adds30mincooldown, neverfabricatesproof. HA autonomouslywaitsPV<=1700stable120s/SOC>=63/positivequotes/healthyfreshdata thenboundedbattery2000W5min60floor, max2attempts/day. Largebattery_verifiedstillFALSE; native-end/fullcycleacceptance NOT yetproven. DoNOT manuallystart/re-enable/retestwhileHAwaits; inspectfreshautonomous_verification andguardreason. Largeproductiongatepreserved; continuousbias30/resume32/PV98positive/battery60/cap9300policyunchanged. Native104still20; workaroundusesExportFirstcap2, registercauseunresolved. Read-onlytodayobserverupdated; nobackupdeletionorPVlimitbypass/Coreupgrade.
+
+
+Final09:01:07UTC continuousautomaticbias1793955603470585401 phaseRUNNING/observedTRUE, rollingmean−8.9W, requestedTRUE/automaticTRUE/inhibitedFALSE/resumeFALSE/healthyTRUE/error empty. Both physicalboundedtestcompletion and actualautomaticallyresumedcontinuousoperation are now observed. Batteryproof remains waiting. Deploymentlease releasedverified09:00:19UTC.
