@@ -24,6 +24,6 @@ Wrong forecast day, stale/future/missing rows, DST/timezone, high actual househo
 - [x] Run full existing Python suite and relevantNode suites; review diff.
 
 ### Task3 Publish/deploy/verify
-- [ ] Publish all source with expected Git HEAD. CAS read each exact live file; acquire lease and check storage/active state.
-- [ ] Deploy coherent static/backend bundle with required backed-up activation. Poll same job; reconcile unknown instead of retry.
-- [ ] Exact readbacks/runtime versions, owner intent, live next-day report and browser UI; durable receipt and release lease.
+- [x] Publish all source with expected Git HEAD. CAS read each exact live file; acquire lease and check storage/active state.
+- [x] Deploy coherent static/backend bundle with required backed-up activation. Poll same job; reconcile unknown instead of retry.
+- [x] Exact readbacks/runtime versions, owner intent, live next-day report and UI assets/DOM (browser pixel acceptance blocked by fresh login); durable receipt and release lease.
