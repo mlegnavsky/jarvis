@@ -402,6 +402,18 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertNotIn(('switch.inverter_export_surplus','on'),self.writes)
   self.assertEqual(self.native_registers[143],500)
 
+ async def test_conditional_recovery_rechecks_owner_intent_and_stop_id_under_lock(self):
+  data=await self.setup();proof={'id':'stopped','purpose':'automatic','mode':'pv','reason':'stop_recovery','original_reason':'error','stop_verified':True,'conflicts':{}}
+  data['settings'].update(automatic=False,requested_automatic=False,inhibited=True,last_sale_stop=proof,handled_stop_id='stopped')
+  self.refresh();await self.service('resume_confirmed_sale',{'stop_id':'stopped'})
+  self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['requested_automatic'])
+  data['settings']['requested_automatic']=True
+  await self.service('resume_confirmed_sale',{'stop_id':'old'})
+  self.assertFalse(data['settings']['automatic'])
+  self.refresh();await self.service('resume_confirmed_sale',{'stop_id':'stopped'})
+  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['inhibited'])
+  self.assertFalse(data['settings']['auto_verification_enabled'])
+
  async def test_native_ack_recovers_timeout_without_replaying_and_survives_stale_ha(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
   self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)

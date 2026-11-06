@@ -25,10 +25,11 @@ from .native_zero_target import set_zero_target, GRID_TARGET_W
 from .solar_inputs import capacity_basis, house_power, cycle_acceptance
 from .supervision import Supervisor
 from .autonomous_verification import candidate as verification_candidate,finish as finish_verification
+from .recovery_watchdog import recoverable_stop
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.8.6'
+VERSION='0.8.7'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -82,7 +83,7 @@ async def async_setup_sales(hass,config,charge_controller):
   for entity,proof in native_control_values.items():
    actual=result.get(entity)
    same=lambda a,b:a==str(b) or number(a) is not None and number(a)==number(b)
-   if 0<=time.time()-proof['verified_at']<10 and (same(actual,proof['before']) or same(actual,proof['value'])):
+   if 0<=time.time()-proof['verified_at']<30 and (same(actual,proof['before']) or same(actual,proof['value'])):
     result[entity]=str(proof['value'])
   return result
  def current_price():
@@ -214,6 +215,8 @@ async def async_setup_sales(hass,config,charge_controller):
   if required and actual!=expected:raise RuntimeError(f'Měnič nepotvrdil registr {address}: požadováno {expected}, naměřeno {actual}.')
   return actual
  async def refresh_sale_controls():
+  required=('select.inverter_work_mode','number.inverter_export_surplus_power','switch.inverter_export_surplus')
+  if all(0<=time.time()-native_control_values.get(entity,{}).get('verified_at',-999)<15 for entity in required):return
   baseline={state.entity_id:state.state for state in hass.states.async_all() if '.inverter_' in state.entity_id}
   async with asyncio.timeout(15):raw=await native_device().execute(3,142,count=36)
   if not isinstance(raw,list) or len(raw)!=36 or any(type(v) is not int for v in raw):raise ValueError('Chybí úplné fyzické potvrzení režimu měniče.')
@@ -804,12 +807,31 @@ async def async_setup_sales(hass,config,charge_controller):
    finally:
     await flush_history()
     await report()
+ async def service_resume(call):
+  nonlocal runtime_error,last_reason
+  async with lock:
+   proof=prefs.get('last_sale_stop') or {}
+   if not prefs.get('requested_automatic') or prefs.get('automatic') or not prefs.get('inhibited') or not ready or active() or not healthy():return
+   if call.data['stop_id']!=proof.get('id') or prefs.get('handled_stop_id')!=proof.get('id') or not recoverable_stop(proof):return
+   registers=(await native_test_read())['registers'];clock_idle_profile(registers)
+   if any(registers.get(166+i)!=30 for i in range(6)):return
+   grid=fresh_number('sensor.inverter_grid_power')
+   if not prefs.get('requested_automatic') or active() or not healthy() or grid is None or grid < -100:return
+   await verify_baseline()
+   # Same application lock protects this check and the operational enable.
+   if not prefs.get('requested_automatic'):return
+   c.error='';runtime_error=''
+   await _configure_locked({'automatic':True,'requested_automatic':True,'inhibited':False,'auto_verification_enabled':False,'verification_resume_auto':False})
+   last_reason='HA obnovilo automatický provoz po potvrzeném ukončení přechodné chyby.'
+   await event('conditional_recovery_confirmed',{'stop_id':proof['id']})
+  await report()
  async def service_start(call):await start_sale(dict(call.data));await report()
  async def service_stop(call):await stop_sale();await report()
  async def service_auto(call):
   if call.data['enabled']:await configure({'automatic':True,'auto_verification_enabled':False,'inhibited':False,'commission_cancelled':False,'commission_attempted':False if not prefs['pv_verified'] else True})
   else:await stop_sale()
   await report()
+ async_register_admin_service(hass,DOMAIN,'resume_confirmed_sale',service_resume,vol.Schema({vol.Required('stop_id'):str}))
  async_register_admin_service(hass,DOMAIN,'start_sale',service_start,vol.Schema({vol.Optional('mode'):vol.In(['pv','battery']),vol.Optional('power_w'):vol.All(vol.Coerce(float),vol.Range(min=100,max=9300)),vol.Optional('duration_minutes'):vol.All(vol.Coerce(float),vol.Range(min=1,max=60))}))
  async_register_admin_service(hass,DOMAIN,'stop_sale',service_stop,vol.Schema({}))
  async_register_admin_service(hass,DOMAIN,'set_sales_automatic',service_auto,vol.Schema({vol.Required('enabled'):bool}))
