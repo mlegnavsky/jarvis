@@ -33,7 +33,7 @@ class NativeBatteryPlanTests(unittest.TestCase):
         self.assertEqual(p['times_hhmm'], [0, 1545, 1615, 1620, 1625, 2355])
         self.assertEqual(p['socs'], [100, 60, 100, 100, 100, 100])
         self.assertEqual(p['flags'], [0] * 6)
-        self.assertEqual(p['week_mask'], 17)  # enable bit0, Thursday bit4
+        self.assertEqual(p['week_mask'], 255)  # enable bit0, Thursday bit4
         self.assertEqual(p['current_limit_a'], 175)
         self.assertEqual(p['battery_power_w'], 9625)
         self.assertEqual(p['powers'], [0,9625,0,0,0,0])
@@ -45,7 +45,7 @@ class NativeBatteryPlanTests(unittest.TestCase):
         self.assertEqual(p['en_register'], 145)
         self.assertEqual(p['en_value'], 0)
         self.assertFalse(p['production_verified'])
-        self.assertIn('7 days', p['notice'])
+        self.assertIn('daily', p['notice'])
         self.assertIn('house', p['notice'])
         self.assertIn('not guaranteed', p['notice'])
         json.dumps(p, allow_nan=False)
@@ -57,7 +57,7 @@ class NativeBatteryPlanTests(unittest.TestCase):
         self.assertGreaterEqual(p['start']-clock.timestamp(),60)
 
     def test_all_weekdays_use_enable_plus_actual_day_bit(self):
-        for day, expected in [(2, 3), (3, 5), (4, 9), (5, 17), (6, 33), (7, 65), (8, 129)]:
+        for day, expected in [(2,255),(3,255),(4,255),(5,255),(6,255),(7,255),(8,255)]:
             with self.subTest(day=day):
                 clock = datetime(2026, 11, day, 15, 40, tzinfo=TZ)
                 offset = clock.timestamp() - self.clock.timestamp()

@@ -25,6 +25,9 @@ class SupervisionTests(unittest.TestCase):
   self.assertIn('overdue',{a['code'] for a in evaluate(x,500)})
   x['battery_sale']['observed']=True
   self.assertNotIn('no_export',{a['code'] for a in evaluate(x,200)})
+ def test_explicit_small_export_policy_does_not_flag_ordinary_target_as_legacy_one_watt_failure(self):
+  x=self.body(bias_policy={'enabled':True,'minimum_soc':30},battery_soc=29,native_program={'register_104':20})
+  self.assertNotIn('grid_target',{a['code'] for a in evaluate(x,1000)})
  def test_error_capacity_and_inhibited_are_not_success(self):
   x=self.body(error='Nepotvrzené ukončení',capacity={'capacity_kwh':None},settings={'inhibited':True})
   self.assertTrue({'control_error','capacity','inhibited'}<={a['code'] for a in evaluate(x,200)})

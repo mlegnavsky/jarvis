@@ -28,6 +28,45 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
   self.now+=1;self.sample_stamp=self.now
   if e=='switch.inverter_export_surplus' and v=='off':self.states['sensor.inverter_grid_power']='20'
  def c(self,saved=None):return SaleController(lambda:self.states,self.write,self.save,self.event,clock=lambda:self.now,healthy=lambda:self.fresh,price=lambda:self.net,saved=saved,reported=lambda:self.sample_stamp)
+ async def test_bias_probe_keeps_house_program_and_only_requests_two_watts(self):
+  self.states['sensor.inverter_battery']='63';self.net=-1
+  c=self.c();await c.start('bias',2,1,minimum_soc=30,purpose='bias_probe')
+  self.assertEqual(self.calls,[('number.inverter_export_surplus_power',2),('select.inverter_work_mode','Export First')])
+  for i in range(1,7):
+   self.assertEqual(self.states[f'number.inverter_program_{i}_soc'],'30')
+   self.assertEqual(self.states[f'number.inverter_program_{i}_power'],'12000')
+  for seconds in (10,10,10,10):
+   self.now+=seconds;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-2';await c.tick()
+  self.assertTrue(c.active);self.assertTrue(c.observed)
+  self.states['sensor.inverter_battery']='30';self.now+=5;self.sample_stamp=self.now;await c.tick()
+  self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'reserve')
+  self.assertEqual(self.states['select.inverter_work_mode'],'Zero Export To CT')
+
+ async def test_bias_probe_cannot_accept_the_original_twenty_watt_import(self):
+  c=self.c();await c.start('bias',2,1,minimum_soc=30,purpose='bias_probe')
+  for seconds in (10,10,10,10,10,11):
+   self.now+=seconds;self.sample_stamp=self.now;await c.tick()
+  self.assertFalse(c.active);self.assertFalse(c.last_stop['observed'])
+
+ async def test_bias_probe_ignores_pre_enable_samples_and_revokes_proof_on_later_import(self):
+  c=self.c();await c.start('bias',2,1,minimum_soc=30,purpose='bias_probe')
+  self.sample_stamp=self.now-20;self.states['sensor.inverter_grid_power']='-2';await c.tick()
+  for _ in range(2):self.now+=1;self.sample_stamp=self.now;await c.tick()
+  self.assertFalse(c.observed)
+  for _ in range(4):self.now+=5;self.sample_stamp=self.now;await c.tick()
+  self.assertTrue(c.observed)
+  self.states['sensor.inverter_grid_power']='20'
+  for _ in range(8):self.now+=5;self.sample_stamp=self.now;await c.tick()
+  self.assertFalse(c.active);self.assertFalse(c.last_stop['observed'])
+
+ async def test_bias_does_not_admit_more_power_lower_floor_or_unknown_house_program(self):
+  for changes in ({'power_w':3},{'minimum_soc':29},{'minimum_soc':60}):
+   c=self.c();p=dict(mode='bias',power_w=2,duration_minutes=1,minimum_soc=30,purpose='bias_probe');p.update(changes)
+   with self.assertRaises(ValueError):await c.start(**p)
+  self.states['number.inverter_program_3_soc']='20'
+  with self.assertRaises(ValueError):await self.c().start('bias',2,1,minimum_soc=30,purpose='bias_probe')
+  self.assertEqual(self.calls,[])
+
  async def test_pv_only_protects_every_battery_slot_before_enabling(self):
   c=self.c();await c.start('pv',500,3)
   self.assertEqual(self.calls[0],('number.inverter_export_surplus_power',500))

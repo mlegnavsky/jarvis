@@ -38,6 +38,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
  asyncTearDown=fixtures.AdapterTests.asyncTearDown
  service=fixtures.AdapterTests.service
  def poll(self):
+  if hasattr(self,'clock'):self.clock[0]+=1
   fixtures.AdapterTests.poll(self)
   if hasattr(self,'clock'):self.refresh()
 
@@ -51,6 +52,29 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(a['capacity']['capacity_kwh'],23.552)
   self.assertFalse(a['capacity']['physical_verified'])
   self.assertEqual(a['house_power_w'],720)
+
+ async def test_verified_bias_runs_only_outside_higher_priority_sales_and_above_resume_floor(self):
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,bias_verified=True,bias_enabled=True,battery_verified=False)
+  quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter,net_eur=-100)
+  self.hass.states.async_set('sensor.inverter_battery',63);self.refresh();await self.ticks[0]()
+  self.assertTrue(data['controller'].active)
+  self.assertEqual(data['controller'].record['mode'],'bias')
+  self.assertEqual(data['controller'].record['power_w'],2)
+  self.assertEqual(data['controller'].record['minimum_soc'],30)
+
+ async def test_night_high_soc_does_not_interrupt_bias_without_actual_pv_opportunity(self):
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,bias_verified=True,bias_enabled=True,battery_verified=False)
+  quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter)
+  self.hass.states.async_set('sensor.inverter_battery',98);self.hass.states.async_set('sensor.inverter_pv_power',0);self.hass.states.async_set('sun.sun','below_horizon');self.refresh()
+  await data['controller'].start('bias',2,60,minimum_soc=30,purpose='automatic')
+  before=data['controller'].record['id'];self.refresh();await self.ticks[0]()
+  self.assertTrue(data['controller'].active);self.assertEqual(data['controller'].record['id'],before);self.assertNotEqual(data['controller'].record['phase'],'stopping')
+
+ async def test_bias_cannot_start_before_physical_verification(self):
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,bias_verified=False,bias_enabled=True)
+  quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter)
+  self.hass.states.async_set('sensor.inverter_battery',63);self.refresh();await self.ticks[0]()
+  self.assertFalse(data['controller'].active)
 
  async def test_missing_capacity_blocks_manual_battery_start(self):
   data=await self.setup();data['settings']['battery_verified']=True

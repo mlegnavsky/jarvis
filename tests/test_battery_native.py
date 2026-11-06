@@ -88,14 +88,14 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
     async def test_plan_and_before_image_are_durable_before_any_device_write(self):
         async def write(address, value):
             self.assertEqual(self.saved['before']['166'], 30)
-            self.assertEqual(self.saved['plan']['week_mask'], 17)
+            self.assertEqual(self.saved['plan']['week_mask'], 255)
             self.assertIn(str(address), self.saved['pending'])
             self.assertEqual(self.events[-1][0], 'battery_native_write_intent')
             await self.write(address, value)
         self.controller.native_write = write
         await self.start()
         self.assertEqual(self.writes[:2], [(143, 5000), (109, 175)])
-        self.assertEqual(self.writes[-1], (146, 17))
+        self.assertEqual(self.writes[-1], (146, 255))
         self.assertEqual([self.reg[166 + i] for i in range(6)], [100, 60, 100, 100, 100, 100])
         self.assertEqual([self.reg[172 + i] for i in range(6)], [0] * 6)
         self.assertEqual(self.reg[142], 2)

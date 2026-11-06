@@ -34,7 +34,7 @@ def evaluate(body,now,started_at=0):
   if start is not None and now>=start+90 and end is not None and now<end and sale.get('observed') is not True:
    add('no_export','warning','Po začátku bateriového prodeje se nepotvrdila dodávka do sítě.')
  actual=finite(body.get('native_program',{}).get('register_104'));target=finite(body.get('grid_target_w'))
- if not body.get('active') and actual is not None and target is not None and actual!=target:
+ if not body.get('active') and not body.get('bias_policy',{}).get('enabled') and actual is not None and target is not None and actual!=target:
   add('grid_target','warning',f'Měnič hlásí cíl běžného odběru{actual:g} W místo požadovaných{target:g} W.')
  return alerts
 

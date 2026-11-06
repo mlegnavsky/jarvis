@@ -23,7 +23,7 @@ class SaleController:
  def active(self):return bool(self.record.get('before'))
  def _validate_write(self):
   price=number(self.price())
-  if not self.healthy() or price is None or price<=0:raise ValueError('Chybí aktuální měření nebo kladná výkupní cena.')
+  if not self.healthy() or price is None or price<=0 and self.record.get('mode')!='bias':raise ValueError('Chybí aktuální měření nebo kladná výkupní cena.')
   if self.clock()>=self.record['deadline']:raise ValueError('Příprava překročila časové okno prodeje.')
  async def _persist_write(self,guard):
   try:await self.save(copy.deepcopy(self.record))
@@ -105,9 +105,10 @@ class SaleController:
   async with self.lock:
    if self.active:raise ValueError('Nejprve dokončím předchozí prodej.')
    power=number(power_w);minutes=number(duration_minutes);floor=number(minimum_soc)
-   if mode not in ('pv','battery') or power is None or not 100<=power<=EXPORT_LIMIT or minutes is None or not 1<=minutes<=60 or floor is None or not 60<=floor<=100:
+   bias=mode=='bias' and purpose in ('bias_probe','automatic') and power==2 and floor==30
+   if (not bias and (mode not in ('pv','battery') or power is None or not 100<=power<=EXPORT_LIMIT or floor is None or not 60<=floor<=100)) or minutes is None or not 1<=minutes<=60:
     raise ValueError('Neplatný výkon, délka nebo rezerva prodeje.')
-   if not self.healthy() or number(self.price()) is None or self.price()<=0:raise ValueError('Čekám na aktuální měření a kladnou cenu.')
+   if not self.healthy() or number(self.price()) is None or self.price()<=0 and not bias:raise ValueError('Čekám na aktuální měření a kladnou cenu.')
    states=self.read()
    if states.get(MODE)!='Zero Export To CT' or states.get(ENABLE)!='off':raise ValueError('Výchozí režim musí být bez přetoků.')
    keys=[CAP,ENABLE,MODE];steps=[(CAP,int(power))]
@@ -116,7 +117,13 @@ class SaleController:
    if states.get('select.inverter_time_of_use') not in ('Week','Enabled'):raise ValueError('Vyžaduji ověřený aktivní týdenní program.')
    for i in range(1,7):
     if states.get(f'select.inverter_program_{i}_charging')!='Disabled':raise ValueError('Současně je povolené nabíjení v časovém programu.')
-   if mode=='battery':
+   if bias:
+    if soc<32:raise ValueError('Malý přetok vyžaduje baterii alespoň32 %.')
+    for i in range(1,7):
+     target=f'number.inverter_program_{i}_soc';p=f'number.inverter_program_{i}_power'
+     if number(states.get(target))!=30 or number(states.get(p)) is None or number(states.get(p))<500:raise ValueError('Malý přetok vyžaduje běžný domácí program s rezervou30 %.')
+    steps.append((MODE,'Export First'))
+   elif mode=='battery':
     if soc<=floor:raise ValueError('Baterie je na rezervě pro prodej.')
     if states.get('select.inverter_time_of_use') not in ('Week','Enabled'):raise ValueError('Vyžaduji ověřený aktivní týdenní program.')
     for i in range(1,7):
@@ -180,7 +187,7 @@ class SaleController:
    await self._confirm_stopped(final_issued)
    proof={'id':self.record.get('id'),'mode':self.record.get('mode'),'purpose':self.record.get('purpose'),
     'promote_auto':self.record.get('promote_auto',False),'reason':'stop_recovery' if failures or self.record.get('stop_attempt_failed') else self.record['stop_reason'],
-    'observed':self.observed,'stop_verified':True,
+    'observed':self.observed,'stop_verified':True,'power_w':self.record.get('power_w'),'minimum_soc':self.record.get('minimum_soc'),
     'sustained':self.record.get('export_count',0)>=3 and self.record.get('export_last',0)-self.record.get('export_first',0)>=20,
     'error':self.error,'failures':failures,'context':self.record.get('stop_context'),'conflicts':copy.deepcopy(self.record.get('conflicts',{}))}
    await self.event('sale_stop',proof)
@@ -199,6 +206,18 @@ class SaleController:
      except Exception:pass
    try:await self.save(copy.deepcopy(self.record))
    except Exception:pass
+ def _bias_sample(self,stamp,grid):
+  if stamp is None or grid is None or not self.record.get('enabled_at',float('inf'))<stamp or not 0<=self.clock()-stamp<30:
+   self.observed=False;return
+  if stamp<=self.record.get('bias_last',0):return
+  self.record['bias_last']=stamp
+  samples=self.record.setdefault('bias_samples',[]);samples.append([stamp,grid]);del samples[:-12]
+  mean=sum(v for _,v in samples)/len(samples);self.record['bias_average_w']=mean
+  self.observed=len(samples)>=3 and samples[-1][0]-samples[0][0]>=20 and -20<=mean<0
+  if self.observed:
+   self.record['phase']='running';self.record.setdefault('export_first',samples[0][0]);self.record['export_last']=stamp;self.record['export_count']=len(samples)
+  else:
+   for k in ('export_first','export_last','export_count'):self.record.pop(k,None)
  async def tick(self):
   if not self.active or self.lock.locked():return
   states=self.read();grid=number(states.get('sensor.inverter_grid_power'));batt=number(states.get('sensor.inverter_battery_power'));soc=number(states.get('sensor.inverter_battery'))
@@ -212,16 +231,17 @@ class SaleController:
     self.record.setdefault('deficit_first',stamp)
     no_surplus=stamp-self.record['deficit_first']>=5
    else:self.record.pop('deficit_first',None)
-  wrong_mode=states.get(MODE)!=('Export First' if mode=='battery' else 'Zero Export To CT')
+  if mode=='bias' and self.record.get('phase')!='stopping':self._bias_sample(stamp,grid)
+  wrong_mode=states.get(MODE)!=('Export First' if mode in ('battery','bias') else 'Zero Export To CT')
   triggers=[]
   if not self.healthy():triggers.append('measurement_or_health')
-  if price is None or price<=0:triggers.append('price')
+  if price is None or price<=0 and mode!='bias':triggers.append('price')
   if grid is None or soc is None:triggers.append('missing_measurement')
   if wrong_mode:triggers.append('mode_changed')
   if mode=='pv' and grid is not None and grid<-100 and batt is not None and batt>200:triggers.append('battery_discharge')
-  if grid is not None and -grid>self.record['power_w']+300:triggers.append('export_limit')
+  if grid is not None and (-grid>self.record['power_w']+300 or mode=='bias' and self.clock()-self.record['started']>10 and grid<-50):triggers.append('export_limit')
   deadline=self.clock()>=self.record['deadline']
-  reserve=soc is not None and (mode=='battery' and soc<=self.record['minimum_soc'] or mode=='pv' and self.record.get('purpose')=='automatic' and soc<98)
+  reserve=soc is not None and (mode in ('battery','bias') and soc<=self.record['minimum_soc'] or mode=='pv' and self.record.get('purpose')=='automatic' and soc<98)
   if triggers or conflicts or no_surplus or deadline or reserve or self.record.get('phase')=='stopping':
    self.record.setdefault('stop_context',{'triggers':triggers,'grid_w':grid,'battery_w':batt,'soc':soc,
     'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w'],
@@ -235,6 +255,11 @@ class SaleController:
   if stamp is not None and stamp>self.record.get('sample_last',0):
    await self.event('sale_measurement',{'sale_id':self.record.get('id'),'source_t':stamp,'grid_w':grid,'battery_w':batt,'soc':soc,'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w']})
    self.record['sample_last']=stamp
+  if mode=='bias':
+   if self.clock()-self.record['started']>55 and not self.observed:
+    self.error='Malý přetok se nepotvrdil; požadované2 W nepovažuji za skutečný export.'
+    await self.stop('no_export')
+   return
   threshold=max(100,self.record.get('baseline_export_w',0)+100)
   if grid is not None and grid < -threshold and stamp is not None and stamp>self.record.get('enabled_at',float('inf')):
    if stamp>self.record.get('export_last',0):

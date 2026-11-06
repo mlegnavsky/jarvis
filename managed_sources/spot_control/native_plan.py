@@ -189,7 +189,7 @@ def battery_window_plan(native_clock, now, power_w, duration_minutes, minimum_so
         'powers': [0,battery_power_w,0,0,0,0],
         'native_power_fence': True,
         'flags': [0] * 6,
-        'week_mask': 1 | (1 << (local.weekday() + 1)),
+        'week_mask': 255,
         'current_limit_a': current_limit_a,
         'battery_power_w': battery_power_w,
         'power_w': min(9300, math.floor(power_w)),
@@ -201,7 +201,7 @@ def battery_window_plan(native_clock, now, power_w, duration_minutes, minimum_so
         'en_register': 145,
         'en_value': 0,
         'production_verified': False,
-        'notice': ('This is not a one-shot program: the weekday can recur after 7 days if HA is offline. '
+        'notice': ('This is not a one-shot program: the time window can recur daily if HA is offline. '
                    'Outside-window battery power is zero with SOC100; the grid supplies a shortfall '
                    'until restoration. TOU power includes house demand; actual grid export also depends on '
                    'PV and house load and is not guaranteed. The controller must enable ExportFirst only '

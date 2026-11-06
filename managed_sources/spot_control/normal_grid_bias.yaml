@@ -1,3 +1,4 @@
+# Legacy recovery only; not loaded by continuous-small-export0.7.2. Do not reinstall as an automatic writer.
 id: jarvis_bezny_odber_0_w
 alias: Jarvis – běžný odběr 1 W
 description: Obnoví cíl odběru 1 W po startu nebo návratu do klidu; nezasahuje do probíhajícího prodeje ani nabíjení.
