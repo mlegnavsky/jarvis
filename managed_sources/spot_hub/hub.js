@@ -1,4 +1,4 @@
-/* Spoty hub1.0.0. Render/read operations never invoke a device service. */
+/* Spoty hub1.0.1. Render/read operations never invoke a device service. */
 (function(global){
 'use strict';
 const number=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
@@ -32,7 +32,7 @@ class Hub{
   $('date').addEventListener('change',()=>{if(/^\d{4}-\d{2}-\d{2}$/.test($('date').value))this.select(this.period,$('date').value);});
   $('previous').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,-1));$('next').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,1));$('today').onclick=()=>this.select(this.period,today());
   $('advanced').addEventListener('toggle',()=>{if($('advanced').open)this.mountLegacy();this.fit();});document.querySelectorAll('details').forEach(x=>x.addEventListener('toggle',()=>this.fit()));
-  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.0.0',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
+  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.0.1',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
   this.update();this.timer=setInterval(()=>this.update(),2000);this.resize=new ResizeObserver(()=>this.fit());this.resize.observe($('app'));global.addEventListener('pagehide',()=>{this.dead=true;clearInterval(this.timer);this.resize.disconnect();},{once:true});
  }
  fit(){if(this.fitPending)return;this.fitPending=true;requestAnimationFrame(()=>{this.fitPending=false;try{const f=global.frameElement;if(!f)return;const height=Math.ceil($('app').getBoundingClientRect().height+4);if(Math.abs((this.frameHeight||0)-height)<3)return;this.frameHeight=height;f.style.height=height+'px';f.style.position='relative';f.style.display='block';const container=f.parentElement;if(container){container.style.paddingTop='0px';container.style.height=height+'px';}}catch{}});}
@@ -51,7 +51,13 @@ class Hub{
   $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Velký bateriový prodej zachovává 60 %, malý přetok 30 % (obnovení od 32 %). Maximální dodávka 9,3 kW.';
   $('recovery').textContent=sales.error?'Řízení hlásí: '+sales.error:(sales.measurement_recovery?.pending?'Po výpadku měření čeká HA na stabilní data a potvrzení domácího režimu.':'');
   $('updated').textContent='Živý stav · '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · průběžné částky nejsou fakturace';
-  if(!this.cardsMounted&&!this.mounting)this.mountCards();for(const card of this.cards)card.hass=h;
+  if(!this.houseMounted&&!this.houseLoading)this.mountHouse();if(!this.cardsMounted&&!this.mounting)this.mountCards();for(const card of this.cards)card.hass=h;
+  for(const label of this.houseLabels||[]){const id=label.dataset.entity;let value;
+   if(id==='sensor.jarvis_tok_site')value=grid===null?'—':grid<0?'Prodáváme':'Odebíráme';
+   else if(id==='sensor.jarvis_vykon_baterie'){const v=this.read('sensor.inverter_battery_power');value=format(v===null?null:Math.abs(v),0)+' W';}
+   else{const v=this.read(id);value=format(v,0)+(id==='sensor.inverter_battery'?' %':' W');}
+   label.textContent=value;
+  }
   if(!this.loadingFinance&&Date.now()-this.lastFinance>60000)this.finance();this.fit();
  }
  read(id){const s=this.h?.states[id],t=Date.parse(s?.last_reported||s?.last_updated||'');return Number.isFinite(t)&&Date.now()-t<60000&&t<=Date.now()+5000?numeric(s?.state):null;}
@@ -106,21 +112,36 @@ class Hub{
   }catch(e){if(request!==this.request)return;$('finance-status').textContent='Finanční přehled není dostupný. Zkus změnit období nebo stránku obnovit.';}
   finally{if(request===this.request)this.loadingFinance=false;this.fit();}
  }
+ async mountHouse(){
+  this.houseLoading=true;
+  try{
+   const cfg=this.config.house;if(!cfg)throw Error('Chybí původní karta domečku.');
+   const canvas=document.createElement('div');canvas.className='house-canvas';
+   const bg=document.createElement('img');bg.className='house-background';bg.src=cfg.image;bg.alt='';canvas.appendChild(bg);
+   const source=(cfg.elements||[]).find(e=>e.type==='image'&&e.image?.startsWith('media-source://'));
+   if(!source)throw Error('Chybí původní obrázek domu.');
+   const result=await this.h.callWS({type:'media_source/resolve_media',media_content_id:source.image});
+   const url=new URL(result.url,global.parent.location.origin);if(!result.url||!['http:','https:'].includes(url.protocol)||url.origin!==global.parent.location.origin)throw Error('Obrázek domu není dostupný.');
+   const photo=document.createElement('img');photo.className='original-house';photo.src=url.href;photo.alt='Původní obrázek vašeho domu s fotovoltaikou';canvas.appendChild(photo);
+   this.houseLabels=[];
+   for(const item of cfg.elements||[]){if(item.type!=='state-label')continue;const label=document.createElement('button');label.type='button';label.className='house-indicator';label.dataset.entity=item.entity;label.style.left=item.style.left;label.style.top=item.style.top;label.style.fontSize=item.style['font-size'];label.setAttribute('aria-label',item.entity);label.textContent='—';label.onclick=()=>{const w=global.parent;w.document.querySelector('home-assistant')?.dispatchEvent(new w.CustomEvent('hass-more-info',{detail:{entityId:item.entity},bubbles:true,composed:true}));};canvas.appendChild(label);this.houseLabels.push(label);}
+   $('house-card').replaceChildren(canvas);this.houseMounted=true;this.update();
+  }catch(e){$('house-card').textContent=e.message;}
+  finally{this.houseLoading=false;this.fit();}
+ }
  async mountCards(){
   this.mounting=true;
   try{
-   const w=global.parent;if(!w.loadCardHelpers)throw Error('Čekám na nativní karty Home Assistantu.');this.helpers=await w.loadCardHelpers();
-   if(!w.customElements.get('jarvis-power-sun')){await Promise.race([w.customElements.whenDefined('jarvis-power-sun'),new Promise((_,reject)=>setTimeout(()=>reject(Error('Graf zatím není načtený; obnov stránku.')),8000))]);}
-   const chart=this.helpers.createCardElement({type:'custom:jarvis-power-sun'});chart.hass=this.h;$('chart-card').replaceChildren(chart);this.chart=chart;this.cards.push(chart);
-   const tidy=()=>{if(!chart.shadowRoot||chart.shadowRoot.querySelector('#spot-hub-style'))return;const style=document.createElement('style');style.id='spot-hub-style';style.textContent='ha-card{border:0;box-shadow:none}.energy-summary,.balance-note,.periods{display:none!important}';chart.shadowRoot.appendChild(style);};
+   if(!global.customElements.get('jarvis-power-sun'))throw Error('Graf se načítá; obnov stránku, pokud se nezobrazí.');
+   const chart=document.createElement('jarvis-power-sun');chart.setConfig({type:'custom:jarvis-power-sun'});chart.hass=this.h;$('chart-card').replaceChildren(chart);this.chart=chart;this.cards.push(chart);
+   const tidy=()=>{if(!chart.shadowRoot||chart.shadowRoot.querySelector('#spot-hub-style'))return;const style=document.createElement('style');style.id='spot-hub-style';style.textContent='ha-card{display:block;border:0;box-shadow:none}.balance-note,.periods{display:none!important}';chart.shadowRoot.appendChild(style);};
    this.chartObserver=new MutationObserver(tidy);if(chart.shadowRoot)this.chartObserver.observe(chart.shadowRoot,{childList:true});tidy();
-   if(this.config.house){const house=this.helpers.createCardElement(this.config.house);house.hass=this.h;$('house-card').replaceChildren(house);this.cards.push(house);}
    this.cardsMounted=true;this.syncChart();
   }catch(e){$('chart-card').textContent=e.message;}
   finally{this.mounting=false;this.fit();}
  }
  syncChart(){if(!this.chart)return;this.chart.selectedDate=this.date;this.chart.period=this.period;this.chart.statsKey=null;this.chart.updated=0;this.chart.chartWindow=null;if(this.period==='day')this.chart.fetchHistory();else this.chart.fetchStats();this.chart.render();}
- async mountLegacy(){if(this.legacyMounted||!this.helpers)return;this.legacyMounted=true;for(const cfg of this.config.advanced||[]){const card=this.helpers.createCardElement(cfg);card.hass=this.h;$('advanced-cards').appendChild(card);this.cards.push(card);}this.fit();}
+ async mountLegacy(){if(this.legacyMounted)return;if(!this.helpers){if(!global.parent.loadCardHelpers)return;this.helpers=await global.parent.loadCardHelpers();}this.legacyMounted=true;for(const cfg of this.config.advanced||[]){const card=this.helpers.createCardElement(cfg);card.hass=this.h;$('advanced-cards').appendChild(card);this.cards.push(card);}this.fit();}
 }
 global.SpotHubMath=math;global.spotHub=new Hub();global.spotHub.start();
 })(typeof window==='undefined'?globalThis:window);
