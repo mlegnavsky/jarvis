@@ -154,6 +154,7 @@ class BatterySaleController:
     async def _audit_native(self, resolve_pending=True):
         data = await self._read()
         r = data['registers']
+        self._native_mismatches = [{'field':f'register_{a}','expected':self.record['expected'][str(a)],'actual':r[a]} for a in sorted(WRITABLE) if r[a]!=self.record['expected'][str(a)]]
         if self._capture_conflicts(r, resolve_pending=resolve_pending):
             raise _Guard('native_conflict')
         if not self._profile_ok(r):
@@ -232,7 +233,7 @@ class BatterySaleController:
                 raise
 
     async def start(self, power_w, duration_minutes, minimum_soc, quotes,
-                    valid_until=None, purpose='manual', window_end=None, maximum_power_w=None, ha_controlled=None):
+                    valid_until=None, purpose='manual', window_end=None, maximum_power_w=None, ha_controlled=None, business_block=None):
         async with self._lock:
             if self.active:
                 raise ValueError('A native battery sale or cleanup is already active')
@@ -283,7 +284,7 @@ class BatterySaleController:
             before = {str(a): r[a] for a in WRITABLE}
             self.record = {
                 **copy.deepcopy(plan), 'plan': copy.deepcopy(plan), 'id': str(time.time_ns()),
-                'purpose': purpose, 'phase': 'preparing', 'before': before,
+                'purpose': purpose, 'business_block':copy.deepcopy(business_block), 'phase': 'preparing', 'before': before,
                 'expected': dict(before), 'pending': {}, 'conflicts': {},
                 'observed': False, 'native_expiry_observed': False,
                 'maximum_power_w': maximum,
@@ -327,6 +328,7 @@ class BatterySaleController:
             'health','healthy','reported_at','soc','grid_w','battery_w','pv_w',
             'voltage_v','current_a','voltage_reported_at','current_reported_at','net_price')}
         context['captured_at'] = self.clock()
+        context['native_mismatches'] = copy.deepcopy(getattr(self,'_native_mismatches',[]))
         health = context.get('health')
         if isinstance(health,dict):
             issues = health.setdefault('issues',[])
@@ -507,7 +509,7 @@ class BatterySaleController:
                 raise ValueError('Fresh stopped grid is required after restoration')
             proof = {k: copy.deepcopy(self.record.get(k)) for k in (
                 'id', 'purpose', 'power_w', 'minimum_soc', 'observed', 'native_expiry_observed',
-                'start', 'end', 'conflicts', 'notice', 'native_power_fence', 'failure_detail', 'failure_context')}
+                'start', 'end', 'business_block', 'conflicts', 'notice', 'native_power_fence', 'failure_detail', 'failure_context')}
             proof.update(reason=self.record['stop_reason'], stop_verified=True,
                          phase='complete', production_verified=False,
                          restored_current_a=targets[109], restored_cap_w=targets[143])

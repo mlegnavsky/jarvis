@@ -104,3 +104,8 @@ This supersedes earlier statements that no private server destination is connect
 ## Prepared energy refactor0.10.0 — 2026-11-06
 
 Source-only candidate on `refactor/ha-control-cleanup-20261106`, based on public060501cd69451f9047cb0baac182dc6c463a591c/energy0.9.3. Not installed; no Green source/config writes, restarts or physical tests during this preparation. See `docs/ENERGY-REFACTOR-0.10.0.md` and `docs/releases/energy-0.10.0-candidate.json`. Installation needs the owner's next explicit command. The private live work manifest remains authoritative for current runtime. Existing recovery/commissioning notes below are historical, not instructions to initiate automatic native tests.
+
+
+## Energy1.0.2 reconciliation — installation authorized
+
+Preflight found concurrently installed1.0.1. Reconciled prepared0.10.0 source with newer20W bias admission, completed-day identities and history API contracts.749 Python tests/20 existing PHP skips/no failures. Read docs/ENERGY-REFACTOR-1.0.2.md and docs/releases/energy-1.0.2-candidate.json. This source note is not an active runtime receipt; consult the private deployment work manifest for actual installation state.

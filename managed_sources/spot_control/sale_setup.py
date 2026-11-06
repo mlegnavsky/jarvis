@@ -13,7 +13,7 @@ from homeassistant.helpers.storage import Store
 from .sales import measurement_guard,price_at,market_rows,number,after_stop
 from .sale_controller import SaleController
 from .journal import Journal
-from .history_view import HistoryView
+from .history_view import HistoryView,DiagnosticsView
 from .diagnostics import diagnostic_snapshot
 from .native_window import NativeWindow,WRITABLE
 from .planning_setup import async_setup_planning
@@ -33,7 +33,7 @@ from .owner_settings import DEFAULTS as POLICY_DEFAULTS,validate as validate_pol
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.10.0'
+VERSION='1.0.2'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -784,10 +784,10 @@ async def async_setup_sales(hass,config,charge_controller):
        await verify_baseline()
        operating_end=automatic_window_end(block)
        if operating_end is not None:
-        await battery.start(cap(),min(60,(operating_end-time.time())/60),policy()['sale_soc'],quotes(),purpose='automatic',window_end=operating_end,maximum_power_w=cap())
+        await battery.start(cap(),min(60,(operating_end-time.time())/60),policy()['sale_soc'],quotes(),purpose='automatic',window_end=operating_end,maximum_power_w=cap(),business_block=block)
         last_reason='Bateriový prodej připraven přes HA; čekám na potvrzení dodávky.'
        elif operating_end is None:last_reason='Před půlnocí již nelze bezpečně dokončit další bateriový segment; automatika čeká.'
-      elif decision['mode']=='bias' and prefs.get('bias_verified'):
+      elif decision['mode']=='bias':
        await verify_baseline();await c.start('bias',policy()['bias_w'],60,minimum_soc=home_floor(),purpose='automatic')
       elif decision['mode']=='pv' and prefs['pv_verified']:
        await verify_baseline();await c.start('pv',cap(),15,minimum_soc=policy()['sale_soc'],purpose='automatic')
@@ -820,6 +820,7 @@ async def async_setup_sales(hass,config,charge_controller):
  async_register_admin_service(hass,DOMAIN,'stop_sale',service_stop,vol.Schema({}))
  async_register_admin_service(hass,DOMAIN,'set_sales_automatic',service_auto,vol.Schema({vol.Required('enabled'):bool}))
  hass.http.register_view(HistoryView(hass,journal,snapshot))
+ hass.http.register_view(DiagnosticsView(snapshot))
  hass.data[KEY]={'controller':c,'window':window,'battery_controller':battery,'battery_sale':battery,'controllers':[c,battery,window],
   'busy':lambda:lock.locked(),'clock_sync_active':False,'settings':prefs,'configure':configure,'configure_policy':configure_policy,'report':report,'journal':journal,'start':start_sale,'stop':stop_sale,'bias_probe':bias_probe,'commission_battery':commission_battery,'zero_import_target':zero_import_target}
  for platform in ('number','select','switch'):hass.async_create_task(discovery.async_load_platform(hass,platform,DOMAIN,{},config))

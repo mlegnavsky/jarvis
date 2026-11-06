@@ -37,6 +37,7 @@ class HistoryViewTests(unittest.IsolatedAsyncioTestCase):
   self.assertIn('stage',result['diagnostics'])
   result=await self.view.get(self.request({'after':'0','limit':'1','sale_id':'a'}))
   self.assertTrue(result['has_more']);self.assertEqual(result['next_cursor'],1)
+  self.assertEqual((await self.view.get(self.request({'until_id':'1'})))['events'][0]['id'],1)
  async def test_malformed_or_unknown_query_is_a_bounded_bad_request(self):
   for query in ({'limit':'100000'},{'after':'-1'},{'limit':'1.5'},{'unknown':'field'},{'since':'NaN'}):
    with self.subTest(query=query):self.assertEqual((await self.view.get(self.request(query))).status,400)

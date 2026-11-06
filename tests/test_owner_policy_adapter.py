@@ -22,9 +22,10 @@ class OwnerPolicyAdapterTests(unittest.IsolatedAsyncioTestCase):
   data['controller'].record={'id':'running','phase':'running','before':{'cap':0}}
   with self.assertRaises(ValueError):await data['configure_policy']({'sale_soc':65},a['policy_revision'])
 
- async def test_custom_home_floor_and_pv_threshold_drive_next_transaction(self):
+ async def test_fixed_home_floor_and_pv_threshold_drive_next_transaction(self):
   data=await self.setup();await data['report']();a=self.hass.states.get('sensor.jarvis_energy_sales').attributes
-  await data['configure_policy']({'home_soc':35,'resume_soc':36,'sale_soc':65,'pv_soc':98},a['policy_revision'])
+  with self.assertRaises(ValueError):await data['configure_policy']({'home_soc':35},a['policy_revision'])
+  await data['configure_policy']({'home_soc':30,'resume_soc':36,'sale_soc':65,'pv_soc':98},a['policy_revision'])
   data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True)
   self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
   import math

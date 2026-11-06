@@ -27,6 +27,11 @@ class JournalQueryTests(unittest.TestCase):
   self.assertEqual([r['id'] for r in second['events']],[43]);self.assertFalse(second['has_more'])
   self.assertEqual(first['events'][0]['payload']['unknown_old_field'],7)
   self.assertFalse(self.q.claim_command({'id':'old'}))
+ def test_live_until_id_contract_keeps_snapshot_paging_stable(self):
+  first=self.q.page(limit=1)
+  self.q.append('new_event',{},t=130)
+  rest=self.q.page(after=first['next_cursor'],until_id=first['until_id'])
+  self.assertEqual([e['id'] for e in rest['events']],[42,43])
  def test_filters_time_kind_and_correlation_match_both_event_id_conventions(self):
   rows=self.q.page(after=0,limit=10,sale_id='a')['events']
   self.assertEqual([r['id'] for r in rows],[41,42])

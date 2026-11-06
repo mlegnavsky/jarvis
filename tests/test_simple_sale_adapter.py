@@ -81,6 +81,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   data['settings'].update(automatic=True,requested_automatic=True,selected_block={'start':quarter,'end':quarter+7200})
   self.hass.states.async_set('sensor.inverter_battery',80);self.refresh();await self.ticks[0]()
   self.assertEqual(data['settings']['selected_block']['day'],datetime.fromtimestamp(quarter,ZoneInfo('Europe/Prague')).date().isoformat())
+  self.assertEqual(data['battery_controller'].starts[-1][4]['business_block'],data['settings']['selected_block'])
  async def test_new_pv_start_rechecks_actual_native_reserve_even_after_prior_confirmation(self):
   data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
   self.hass.states.async_set('sensor.inverter_battery',98);self.hass.states.async_set('sensor.inverter_pv_power',3000)
@@ -187,11 +188,12 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['bias_verified']);self.assertTrue(data['settings']['inhibited'])
   self.assertFalse(data['controller'].active)
 
- async def test_bias_cannot_start_before_physical_verification(self):
-  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,bias_verified=False,bias_enabled=True)
-  quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter)
-  self.hass.states.async_set('sensor.inverter_battery',63);self.refresh();await self.ticks[0]()
-  self.assertFalse(data['controller'].active)
+ async def test_bias_can_start_without_obsolete_probe_flag_when_profile_is_confirmed(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,bias_enabled=True,bias_verified=False)
+  self.hass.states.async_set('sensor.inverter_battery',55);self.refresh();await self.ticks[0]()
+  self.assertTrue(data['controller'].active)
+  self.assertEqual(data['controller'].record['mode'],'bias')
+  self.assertFalse(self.native_group_writes)
 
  async def autonomous_setup(self,pv=1000):
   data=await self.setup()
@@ -412,7 +414,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(data['controller'].record['power_w'],9300)
 
  async def test_near_full_pv_stays_blocked_at_negative_net_price(self):
-  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
+  data=await self.setup();data['settings'].update(automatic=True,bias_enabled=False,pv_verified=True)
   quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter,net_eur=-100)
   self.hass.states.async_set('sensor.inverter_battery',99)
   self.hass.states.async_set('sensor.inverter_pv_power',1500)
@@ -627,7 +629,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   await data['stop']();self.assertFalse(battery.active);self.assertFalse(data['settings']['automatic'])
 
  async def test_dark_or_cooldown_pv_cannot_start(self):
-  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
+  data=await self.setup();data['settings'].update(automatic=True,bias_enabled=False,pv_verified=True)
   self.hass.states.async_set('sensor.inverter_pv_power',0);self.refresh();await self.ticks[0]()
   self.assertFalse(data['controller'].active)
   self.hass.states.async_set('sensor.inverter_pv_power',400)
@@ -724,7 +726,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(battery.starts[0][0],9300)
 
  async def test_after_2340_is_normal_hold_and_next_day_automatic_still_starts(self):
-  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,battery_verified=True)
+  data=await self.setup();data['settings'].update(automatic=True,bias_enabled=False,pv_verified=True,battery_verified=True)
   local=datetime.fromtimestamp(self.clock[0],ZoneInfo('Europe/Prague'))
   start=local.replace(hour=22,minute=0,second=0,microsecond=0).timestamp()
   self.clock[0]=local.replace(hour=23,minute=41,second=0,microsecond=0).timestamp()

@@ -26,7 +26,7 @@ class HistoryView(HomeAssistantView):
         if not user or not user.is_admin:
             return web.json_response({'error':'admin_required'},status=403)
         query=getattr(request,'query',{})
-        allowed={'after','limit','since','until','kind','sale_id'}
+        allowed={'after','limit','since','until','kind','sale_id','until_id'}
         try:
             if set(query)-allowed:raise ValueError('Unknown query parameter')
             if hasattr(query,'getall') and any(len(query.getall(key))!=1 for key in query):
@@ -35,7 +35,7 @@ class HistoryView(HomeAssistantView):
             for key in query:
                 raw=query[key]
                 if len(raw)>256:raise ValueError('Oversized query parameter')
-                if key in ('after','limit'):
+                if key in ('after','limit','until_id'):
                     if not raw.isdecimal():raise ValueError('Invalid integer')
                     options[key]=int(raw)
                 elif key in ('since','until'):
@@ -53,3 +53,16 @@ class HistoryView(HomeAssistantView):
             return web.json_response({'error':'history_unavailable','retention':'permanent'},status=503)
         except (ValueError,TypeError,OverflowError):
             return web.json_response({'error':'invalid_history_query'},status=400)
+
+
+class DiagnosticsView(HomeAssistantView):
+    url='/api/jarvis_spot_control/sales/diagnostics'
+    name='api:jarvis_spot_control:sales:diagnostics'
+    requires_auth=True
+
+    def __init__(self,snapshot):self.snapshot=snapshot
+
+    async def get(self,request):
+        user=request.get('hass_user')
+        if not user or not user.is_admin:return web.json_response({'error':'admin_required'},status=403)
+        return self.json(diagnostic_snapshot(self.snapshot(),time.time()))

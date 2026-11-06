@@ -5,7 +5,7 @@ import math
 
 DEFAULTS={'pv_soc':97,'bias_w':20,'home_soc':30,'resume_soc':31,'sale_soc':60,
           'block_minutes':120,'max_w':9300,'purchase_rate':5,'sale_fee':.30}
-RANGES={'pv_soc':(90,100),'bias_w':(1,50),'home_soc':(30,59),'resume_soc':(31,60),
+RANGES={'pv_soc':(90,100),'bias_w':(1,50),'home_soc':(30,30),'resume_soc':(31,60),
         'sale_soc':(60,95),'block_minutes':(15,240),'max_w':(100,9300),
         'purchase_rate':(0,30),'sale_fee':(0,10)}
 

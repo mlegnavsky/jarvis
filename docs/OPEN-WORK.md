@@ -765,3 +765,8 @@ At12:13:14 runtime0.8.3 ready/automatic true, inhibited false, error empty; HA i
 ## 2026-11-06 — Energy0.10.0 candidate prepared, NOT INSTALLED
 
 Refactor review branch `refactor/ha-control-cleanup-20261106`; source baseline060501cd69451f9047cb0baac182dc6c463a591c. Read-only profile admission, export-only production boundaries, pure policy, durable completed-plan evidence, strict30s measurement recovery and permanent queryable diagnostics/history. Removed automatic commissioning and duplicate production policy; retained explicit maintenance and old transaction cleanup.746 Python tests run/20 existing skips/0fail;11 Node suites pass; independent review findings fixed. Visual browser acceptance blocked by environment EPERM, and live0.10.0 physical acceptance deferred to explicitly authorized installation. See `docs/ENERGY-REFACTOR-0.10.0.md`. Do not install based solely on this prepared-source note.
+
+
+## Energy1.0.2 reconciliation — installation authorized
+
+Preflight found concurrently installed1.0.1. Reconciled prepared0.10.0 source with newer20W bias admission, completed-day identities and history API contracts.749 Python tests/20 existing PHP skips/no failures. Read docs/ENERGY-REFACTOR-1.0.2.md and docs/releases/energy-1.0.2-candidate.json. This source note is not an active runtime receipt; consult the private deployment work manifest for actual installation state.

@@ -48,7 +48,7 @@ class Journal:
    cursor=db.execute('INSERT OR IGNORE INTO commands(id,body) VALUES(?,?)',(key,encoded))
    return cursor.rowcount==1
 
- def page(self,after=0,limit=100,since=None,until=None,kind=None,sale_id=None):
+ def page(self,after=0,limit=100,since=None,until=None,kind=None,sale_id=None,until_id=None):
   """Stable ascending cursors over existing rows; no migration or deletion."""
   if type(after) is not int or after<0 or type(limit) is not int or not 1<=limit<=1000:
    raise ValueError('Invalid history cursor or limit')
@@ -58,7 +58,9 @@ class Journal:
   if since is not None and until is not None and since>until:raise ValueError('Invalid history interval')
   for value,maximum in ((kind,64),(sale_id,128)):
    if value is not None and (not isinstance(value,str) or not 1<=len(value)<=maximum):raise ValueError('Invalid history filter')
-  clauses=['id>?'];args=[after]
+  if until_id is not None and (type(until_id) is not int or until_id<after):raise ValueError('Invalid history upper cursor')
+  with self.db() as db:high=db.execute('SELECT COALESCE(MAX(id),0) FROM events').fetchone()[0] if until_id is None else until_id
+  clauses=['id>?','id<=?'];args=[after,high]
   for column,operator,value in (('t','>=',since),('t','<=',until),('kind','=',kind)):
    if value is not None:clauses.append(column+operator+'?');args.append(value)
   if sale_id is not None:
@@ -68,4 +70,4 @@ class Journal:
    rows=db.execute('SELECT id,t,kind,payload FROM events WHERE '+' AND '.join(clauses)+' ORDER BY id LIMIT ?',(*args,limit+1)).fetchall()
   events=[{'id':r[0],'t':r[1],'kind':r[2],'payload':json.loads(r[3])} for r in rows[:limit]]
   return {'events':events,'next_cursor':events[-1]['id'] if events else after,
-          'has_more':len(rows)>limit,'retention':'permanent'}
+          'has_more':len(rows)>limit,'until_id':high,'retention':'permanent'}

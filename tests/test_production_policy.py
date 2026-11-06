@@ -53,10 +53,10 @@ class ProductionPolicyTests(unittest.TestCase):
     def test_ha_home_floor_does_not_change_native_profile_requirement(self):
         self.assertFalse(house_profile_issues(self.states))
         self.assertEqual(self.choose(soc=45,policy={**DEFAULTS,'home_soc':45,'resume_soc':46})['mode'],'hold')
-    def test_invalid_soc_stale_price_or_unverified_bias_never_authorize_export(self):
+    def test_invalid_soc_and_stale_price_never_authorize_export(self):
         for soc in (None,float('nan'),-1,101):self.assertEqual(self.choose(soc=soc)['mode'],'hold')
         self.assertEqual(self.choose(price={**self.price,'end':self.now})['mode'],'hold')
-        self.assertEqual(self.choose(soc=55,settings={**self.settings,'bias_verified':False})['mode'],'hold')
+        self.assertEqual(self.choose(soc=55,settings={**self.settings,'bias_verified':False})['mode'],'bias')
     def proof(self,**changes):
         return {'id':'cycle','purpose':'automatic','start':self.block['start'],
                 'end':self.block['end'],'reason':'reserve','stop_verified':True,'conflicts':{},**changes}
@@ -76,3 +76,17 @@ class ProductionPolicyTests(unittest.TestCase):
         for change in ({'reason':'health'},{'reason':'manual'},{'stop_verified':False},
                        {'conflicts':{'143':{}}},{'purpose':'commission'},{'start':self.now-999999}):
             self.assertNotIn('completed_battery_plan',complete_battery_plan({'selected_block':self.block},self.proof(**change),self.now))
+
+    def test_live_completed_blocks_identity_survives_upgrade(self):
+        import json
+        key=json.dumps([self.block['day'],float(self.block['start']),float(self.block['end'])],separators=(',',':'))
+        self.settings['completed_blocks']={key:{'sale_id':'old','reason':'reserve'}}
+        self.assertEqual(self.choose(soc=70)['mode'],'bias')
+
+    def test_legacy_completed_day_blocks_truncated_or_reselected_same_day_plan(self):
+        import json
+        key=json.dumps([self.block['day'],float(self.block['start']),float(self.block['end'])],separators=(',',':'))
+        self.settings['completed_blocks']={key:{'sale_id':'old','reason':'reserve'}}
+        for block in ({**self.block,'end':self.block['end']-300},{**self.block,'start':self.block['start']-300}):
+            self.assertEqual(self.choose(block=block,soc=70)['mode'],'bias')
+        self.assertEqual(self.choose(block={**self.block,'day':'2026-11-07'},soc=70)['mode'],'battery')
