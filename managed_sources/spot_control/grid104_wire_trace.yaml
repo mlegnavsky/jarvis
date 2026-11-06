@@ -7,7 +7,7 @@ triggers:
     seconds: "/5"
 conditions:
   - condition: template
-    value_template: "{{ 1793942460 <= as_timestamp(now()) < 1793942580 }}"
+    value_template: "{{ 1793942694 <= as_timestamp(now()) < 1793942814 }}"
 actions:
   - action: logger.set_level
     data:
