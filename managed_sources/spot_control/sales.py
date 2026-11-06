@@ -8,8 +8,13 @@ CONTRACT_LIMIT=9500
 SALE_RESERVE=60
 
 def measurement_guard(outcome):
- return (outcome.get('purpose')=='automatic' and outcome.get('reason')=='guard'
-  and outcome.get('stop_verified') is True and not outcome.get('conflicts') and not outcome.get('failures')
+ failures=outcome.get('failures') or []
+ # A completed retry may retain a timeout of an earlier restoration write.
+ # Recovery still independently audits the complete idle native profile.
+ known_retry=outcome.get('reason')=='stop_recovery' and all(isinstance(f,str) and f in (
+  'number.inverter_export_surplus_power: ','select.inverter_work_mode: ','switch.inverter_export_surplus: ') for f in failures)
+ return (outcome.get('purpose') in ('automatic','manual') and outcome.get('reason') in ('guard','stop_recovery')
+  and outcome.get('stop_verified') is True and not outcome.get('conflicts') and (not failures or known_retry)
   and (outcome.get('context') or {}).get('triggers')==['measurement_or_health'])
 
 def restore_measurement_intent(settings,events):

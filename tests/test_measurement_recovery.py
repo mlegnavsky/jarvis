@@ -13,3 +13,8 @@ class MeasurementRecoveryTests(unittest.TestCase):
    r=after_stop({'requested_automatic':True,'automatic':True,'bias_verified':True},{**self.proof(),**change})
    self.assertFalse((r.get('measurement_recovery') or {}).get('pending',False))
   r=after_stop({'requested_automatic':False},self.proof());self.assertFalse((r.get('measurement_recovery') or {}).get('pending',False))
+
+ def test_confirmed_production_stop_retry_recovers_but_unfinished_retry_does_not(self):
+  proof={**self.proof(),'purpose':'manual','reason':'stop_recovery','failures':['number.inverter_export_surplus_power: ']}
+  r=after_stop({'requested_automatic':True},proof);self.assertTrue(r['measurement_recovery']['pending'])
+  r=after_stop({'requested_automatic':True},{**proof,'stop_verified':False});self.assertFalse((r.get('measurement_recovery') or {}).get('pending',False))
