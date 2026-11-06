@@ -240,7 +240,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   power,minutes,floor,quotes,options=data['battery_controller'].starts[0]
   self.assertEqual((power,minutes,floor),(500,5,90));self.assertEqual(options['maximum_power_w'],500)
   await data['battery_controller'].stop('manual')
-  proof={'id':'accepted','phase':'complete','observed':True,'native_expiry_observed':True,'stop_verified':True,'reason':'deadline','purpose':'commission','power_w':500,'minimum_soc':90}
+  proof={'id':'accepted','phase':'complete','observed':True,'native_expiry_observed':True,'stop_verified':True,'reason':'deadline','purpose':'commission','power_w':500,'minimum_soc':90,'native_power_fence':True}
   data['battery_controller'].last_stop=proof;await self.ticks[0]()
   self.assertTrue(data['settings']['battery_verified']);self.assertFalse(data['settings']['automatic'])
   self.assertEqual(data['settings']['battery_sale_proof'],proof)
@@ -249,6 +249,19 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
    data['battery_controller'].last_stop={**proof,'id':'bad-'+key,key:1}
    await self.ticks[0]()
    self.assertFalse(data['settings']['battery_verified'])
+
+ async def test_explicit_60_percent_commission_uses_fixed_bounded_power_and_needs_fenced_proof(self):
+  data=await self.setup();self.prices(math.floor(self.clock[0]/900)*900)
+  self.hass.states.async_set('sensor.inverter_battery',63);self.refresh()
+  await data['commission_battery'](minimum_soc=60)
+  self.assertEqual(data['battery_controller'].starts[0][:3],(500,5,60))
+  await data['battery_controller'].stop('manual')
+  proof={'id':'fenced','phase':'complete','observed':True,'native_expiry_observed':True,'stop_verified':True,'reason':'deadline','purpose':'commission','power_w':500,'minimum_soc':60,'native_power_fence':True}
+  data['battery_controller'].last_stop=proof;await self.ticks[0]()
+  self.assertTrue(data['settings']['battery_verified']);self.assertFalse(data['settings']['automatic'])
+  data['settings']['battery_verified']=False
+  data['battery_controller'].last_stop={**proof,'id':'unfenced','native_power_fence':False};await self.ticks[0]()
+  self.assertFalse(data['settings']['battery_verified'])
 
  async def test_native_stop_with_owner_conflict_inhibits_even_after_normal_deadline(self):
   data=await self.setup()

@@ -26,7 +26,7 @@ from .supervision import Supervisor
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.7.0'
+VERSION='0.7.1'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -325,13 +325,16 @@ async def async_setup_sales(hass,config,charge_controller):
    prefs.update(automatic=False,commission_cancelled=True,inhibited=False);await persist_settings()
    await ensure_native_clock()
    await window.start(valid_until,solar_sell=solar_sell,selling_first=selling_first)
- async def commission_battery(valid_until=None):
+ async def commission_battery(valid_until=None,minimum_soc=90):
   async with lock:
    if valid_until is not None and time.time()>valid_until:raise ValueError('Povel před provedením vypršel.')
    if not ready or active() or charge_controller.active or not healthy():raise ValueError('Nejprve ukonči současný test nebo prodej a ověř měření.')
+   if type(minimum_soc) is not int or minimum_soc not in (60,90):raise ValueError('Ověřovací rezerva musí být60 nebo90 %.')
+   soc=fresh_number('sensor.inverter_battery')
+   if soc is None or soc<minimum_soc+3:raise ValueError('Ověřovací test vyžaduje nejméně3 procentní body nad rezervou.')
    prefs.update(automatic=False,commission_cancelled=True,inhibited=False);await persist_settings()
    await verify_baseline();await ensure_native_clock()
-   await battery.start(500,5,90,quotes(),valid_until=valid_until,purpose='commission',maximum_power_w=500)
+   await battery.start(500,5,minimum_soc,quotes(),valid_until=valid_until,purpose='commission',maximum_power_w=500)
  async def handle_native_stops():
   proof=getattr(window,'last_stop',None)
   if proof and proof.get('stop_verified') is True and prefs.get('native_window_proof',{}).get('id')!=proof.get('id'):
@@ -341,7 +344,7 @@ async def async_setup_sales(hass,config,charge_controller):
   prefs['handled_battery_stop_id']=proof.get('id');prefs['battery_sale_proof']=dict(proof)
   accepted=(all(proof.get(key) is True for key in ('observed','native_expiry_observed','stop_verified'))
    and proof.get('reason')=='deadline' and proof.get('purpose')=='commission' and proof.get('power_w')==500
-   and proof.get('minimum_soc')==90 and proof.get('phase')=='complete' and not proof.get('conflicts'))
+   and type(proof.get('minimum_soc')) is int and proof.get('minimum_soc') in (60,90) and proof.get('native_power_fence') is True and proof.get('phase')=='complete' and not proof.get('conflicts'))
   if proof.get('purpose')=='commission':
    prefs['automatic']=False
    if accepted:prefs['battery_verified']=True;await event('battery_native_acceptance',dict(proof))
@@ -458,7 +461,7 @@ async def async_setup_sales(hass,config,charge_controller):
    if issued<=previous.get('issued_at',0):return None
    schemas={
     'start':vol.Schema({vol.Optional('mode'):vol.In(['pv','battery']),vol.Optional('power_w'):vol.All(vol.Coerce(float),vol.Range(min=100,max=9300)),vol.Optional('duration_minutes'):vol.All(vol.Coerce(float),vol.Range(min=1,max=60))}),
-    'stop':vol.Schema({}), 'zero_import_target':vol.Schema({}), 'automatic':vol.Schema({vol.Required('enabled'):bool}),'commission_battery':vol.Schema({}),'commission_window':vol.Schema({vol.Optional('solar_sell',default=False):bool,vol.Optional('selling_first',default=False):bool})}
+    'stop':vol.Schema({}), 'zero_import_target':vol.Schema({}), 'automatic':vol.Schema({vol.Required('enabled'):bool}),'commission_battery':vol.Schema({vol.Optional('minimum_soc',default=90):vol.In([60,90])}),'commission_window':vol.Schema({vol.Optional('solar_sell',default=False):bool,vol.Optional('selling_first',default=False):bool})}
    if body['action'] not in schemas:return None
    body['data']=schemas[body['action']](body['data']);return body
   except (ValueError,TypeError,vol.Invalid):return None
@@ -486,7 +489,7 @@ async def async_setup_sales(hass,config,charge_controller):
     await event('command_claimed',receipt)
     if time.time()>body['expires_at']:raise ValueError('Povel před provedením vypršel.')
     if body['action']=='start':await start_sale(body['data'],body['expires_at'])
-    elif body['action']=='commission_battery':await commission_battery(body['expires_at'])
+    elif body['action']=='commission_battery':await commission_battery(body['expires_at'],body['data']['minimum_soc'])
     elif body['action']=='zero_import_target':await zero_import_target(body['expires_at'])
     elif body['action']=='commission_window':await commission_window(body['expires_at'],body['data']['solar_sell'],body['data']['selling_first'])
     elif body['action']=='stop':await stop_sale()

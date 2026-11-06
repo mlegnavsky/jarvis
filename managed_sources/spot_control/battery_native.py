@@ -1,7 +1,7 @@
 """Serialized native battery-sale I/O, without any production-unlock policy.
 
 Register 146 is a weekly mask, not a one-shot timer. ExportFirst is enabled
-only at the planned start; SOC100 outside that window supplies the native
+only at the planned start; SOC100 and zero battery power outside that window supply the native
 battery fallback. Connected cleanup restores the ordinary house program.
 """
 import asyncio
@@ -236,9 +236,9 @@ class BatterySaleController:
             if purpose not in ('manual', 'automatic', 'commission'):
                 raise ValueError('Unknown battery-sale purpose')
             if purpose == 'commission' and (_number(power_w) != 500
-                    or _number(duration_minutes) != 5 or _number(minimum_soc) != 90
+                    or _number(duration_minutes) != 5 or _number(minimum_soc) not in (60,90)
                     or maximum_power_w is not None and _number(maximum_power_w) != 500):
-                raise ValueError('Commissioning is fixed at 500 W, 5 minutes and 90 percent SOC')
+                raise ValueError('Commissioning is fixed at 500 W, 5 minutes and an explicit60 or90 percent SOC')
             self._sample()
             data = await self._read()
             s = self._sample()
@@ -348,6 +348,7 @@ class BatterySaleController:
                     r = data['registers']
                     if (data['clock'].timestamp() >= self.record['end'] and r[142] == 0
                             and r[145] == 0 and r[168] == 100 and r[174] == 0
+                            and r[156] == 0 and self.record.get('native_power_fence') is True
                             and float(s['reported_at']) >= self.record['end'] and s['battery_w'] <= 100
                             and (s['grid_w'] >= -100 or -s['grid_w'] <= max(0, s['pv_w']) + 100)):
                         self.record['native_expiry_observed'] = True
@@ -451,7 +452,7 @@ class BatterySaleController:
                 raise ValueError('Fresh stopped grid is required after restoration')
             proof = {k: copy.deepcopy(self.record.get(k)) for k in (
                 'id', 'purpose', 'power_w', 'minimum_soc', 'observed', 'native_expiry_observed',
-                'start', 'end', 'conflicts', 'notice')}
+                'start', 'end', 'conflicts', 'notice', 'native_power_fence')}
             proof.update(reason=self.record['stop_reason'], stop_verified=True,
                          phase='complete', production_verified=False,
                          restored_current_a=targets[109], restored_cap_w=targets[143])

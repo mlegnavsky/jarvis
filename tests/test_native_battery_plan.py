@@ -36,7 +36,8 @@ class NativeBatteryPlanTests(unittest.TestCase):
         self.assertEqual(p['week_mask'], 17)  # enable bit0, Thursday bit4
         self.assertEqual(p['current_limit_a'], 175)
         self.assertEqual(p['battery_power_w'], 9625)
-        self.assertEqual(p['powers'], [9625] * 6)
+        self.assertEqual(p['powers'], [0,9625,0,0,0,0])
+        self.assertIs(p['native_power_fence'], True)
         self.assertEqual(p['mode'], 'ExportFirst')
         self.assertEqual(p['mode_register'], 142)
         self.assertEqual(p['mode_value'], 0)

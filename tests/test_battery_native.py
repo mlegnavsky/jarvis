@@ -556,9 +556,20 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(proof['native_expiry_observed'], False)
         self.assertIs(proof['stop_verified'], True)
 
+    async def test_explicit_60_commission_programs_zero_power_outside_slot_and_keeps_bounds(self):
+        self.states['soc']=63
+        await self.start(power_w=500,minimum_soc=60,purpose='commission',maximum_power_w=500)
+        self.assertEqual([self.reg[154+i] for i in range(6)],[0,3000,0,0,0,0])
+        self.assertEqual(self.reg[109],60)
+        self.assertEqual(self.reg[143],500)
+        self.assertEqual(self.reg[167],60)
+        await self.controller.stop('manual');await self.finish_stop()
+        self.assertIs(self.controller.last_stop['native_power_fence'],True)
+        self.assertEqual(self.reg,self.original)
+
     async def test_commission_rejects_any_broader_scope(self):
         self.states['soc'] = 96
-        for changes in [dict(power_w=501), dict(duration_minutes=10), dict(minimum_soc=60),
+        for changes in [dict(power_w=501), dict(duration_minutes=10), dict(minimum_soc=59), dict(minimum_soc=61),
                         dict(maximum_power_w=9300)]:
             params = dict(power_w=500, duration_minutes=5, minimum_soc=90,
                           purpose='commission', maximum_power_w=500)
