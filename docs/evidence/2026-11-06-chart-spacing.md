@@ -1,0 +1,2 @@
+Chart spacing deployed 6 November 2026.
+Source001f8f24c177dd937a59ceada1843acf9d734d8b. graph-spacing-apply-20261106 verified/file_written, activation none. Independent live chart SHA25628e0b07d6232805602eb63527e04e9c48cee48ea79b63ac5fff441ba6866a04f; hub HTMLa2a7eb423892ec618e630384f681bb08b9c16837e89f17cae1f31e16898808e1, both content-exact. Daily math/render/gestures, hub pure/DOM and manifest checks pass. No Core restart or inverter writes. Owner iPhone pixel acceptance awaits reload.
