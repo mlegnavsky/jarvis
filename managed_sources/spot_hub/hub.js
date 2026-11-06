@@ -1,4 +1,4 @@
-/* Spoty hub1.0.3. Render/read operations never invoke a device service. */
+/* Spoty hub1.0.4. Render/read operations never invoke a device service. */
 (function(global){
 'use strict';
 const number=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
@@ -32,7 +32,7 @@ class Hub{
   $('date').addEventListener('change',()=>{if(/^\d{4}-\d{2}-\d{2}$/.test($('date').value))this.select(this.period,$('date').value);});
   $('previous').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,-1));$('next').onclick=()=>this.select(this.period,shiftDate(this.date,this.period,1));$('today').onclick=()=>this.select(this.period,today());
   $('advanced').addEventListener('toggle',()=>{if($('advanced').open)this.mountLegacy();this.fit();});document.querySelectorAll('details').forEach(x=>x.addEventListener('toggle',()=>this.fit()));
-  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.0.3',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
+  try{const response=await fetch('/local/jarvis-spot-hub-config.json?v=1.0.4',{credentials:'same-origin'});if(!response.ok)throw Error('configuration');this.config=await response.json();}catch{$('action-error').hidden=false;$('action-error').textContent='Podrobnosti stránky se nepodařilo načíst.';}
   this.update();this.timer=setInterval(()=>this.update(),2000);this.resize=new ResizeObserver(()=>this.fit());this.resize.observe($('app'));global.addEventListener('pagehide',()=>{this.dead=true;clearInterval(this.timer);this.resize.disconnect();},{once:true});
  }
  fit(){if(this.fitPending)return;this.fitPending=true;requestAnimationFrame(()=>{this.fitPending=false;try{const f=global.frameElement;if(!f)return;const height=Math.ceil($('app').getBoundingClientRect().height+4);if(Math.abs((this.frameHeight||0)-height)<3)return;this.frameHeight=height;f.style.height=height+'px';f.style.position='relative';f.style.display='block';const container=f.parentElement;if(container){container.style.paddingTop='0px';container.style.height=height+'px';}}catch{}});}
@@ -55,9 +55,9 @@ class Hub{
   for(const label of this.houseLabels||[]){const id=label.dataset.entity;let value;
    if(id==='sensor.jarvis_tok_site')value=grid===null?'—':grid<0?'Prodáváme':'Odebíráme';
    else if(id==='sensor.jarvis_vykon_baterie'){const v=this.read('sensor.inverter_battery_power');value=format(v===null?null:Math.abs(v),0)+' W';}
-   else if(id==='sensor.inverter_battery_temperature'||id==='sensor.inverter_temperature'){const v=this.read(id);value=(id==='sensor.inverter_battery_temperature'?'Bat. ':'Měnič ')+format(v,1)+' °C';}
+   else if(id==='sensor.inverter_battery_temperature'||id==='sensor.inverter_temperature'){const v=this.read(id);value=format(v,1)+' °C';}
    else{const v=this.read(id);value=format(v,0)+(id==='sensor.inverter_battery'?' %':' W');}
-   label.textContent=value;
+   if(label.temperatureValue)label.temperatureValue.textContent=value;else label.textContent=value;
   }
   if(!this.loadingFinance&&Date.now()-this.lastFinance>60000)this.finance();this.fit();
  }
@@ -133,7 +133,13 @@ class Hub{
    const url=new URL(result.url,global.parent.location.origin);if(!result.url||!['http:','https:'].includes(url.protocol)||url.origin!==global.parent.location.origin)throw Error('Obrázek domu není dostupný.');
    const photo=document.createElement('img');photo.className='original-house';photo.src=url.href;photo.alt='Původní obrázek vašeho domu s fotovoltaikou';canvas.appendChild(photo);
    this.houseLabels=[];
-   for(const item of cfg.elements||[]){if(item.type!=='state-label')continue;const label=document.createElement('button');label.type='button';label.className='house-indicator';label.dataset.entity=item.entity;label.style.left=item.style.left;label.style.top=item.style.top;label.style.fontSize=item.style['font-size'];label.setAttribute('aria-label',item.entity);label.textContent='—';label.onclick=()=>{const w=global.parent;w.document.querySelector('home-assistant')?.dispatchEvent(new w.CustomEvent('hass-more-info',{detail:{entityId:item.entity},bubbles:true,composed:true}));};canvas.appendChild(label);this.houseLabels.push(label);}
+   for(const item of cfg.elements||[]){if(item.type!=='state-label')continue;const label=document.createElement('button');label.type='button';label.className='house-indicator';label.dataset.entity=item.entity;label.style.left=item.style.left;label.style.top=item.style.top;label.style.fontSize=item.style['font-size'];label.setAttribute('aria-label',item.entity);label.textContent='—';
+    if(item.entity==='sensor.inverter_battery_temperature'||item.entity==='sensor.inverter_temperature'){
+     const battery=item.entity==='sensor.inverter_battery_temperature';label.className+=' house-temperature';label.style.fontSize='';label.style.left=battery?'79%':'91.5%';label.style.top='34%';label.title=battery?'Teplota baterie':'Teplota měniče';label.setAttribute('aria-label',label.title);
+     const icon=document.createElement('span');icon.className='temperature-icon';icon.innerHTML=battery?'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="17" height="12" rx="2"/><path d="M21 10v4M6 10v4M10 10v4M14 10v4"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M13 6l-4 7h5l-3 5M8 19h.01"/></svg>';
+     const text=document.createElement('span');text.className='temperature-value';text.textContent='— °C';label.replaceChildren(icon,text);label.temperatureValue=text;
+    }
+    label.onclick=()=>{const w=global.parent;w.document.querySelector('home-assistant')?.dispatchEvent(new w.CustomEvent('hass-more-info',{detail:{entityId:item.entity},bubbles:true,composed:true}));};canvas.appendChild(label);this.houseLabels.push(label);}
    $('house-card').replaceChildren(canvas);this.houseMounted=true;this.update();
   }catch(e){$('house-card').textContent=e.message;}
   finally{this.houseLoading=false;this.fit();}
