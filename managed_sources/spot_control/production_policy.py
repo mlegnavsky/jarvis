@@ -47,7 +47,7 @@ def decide_production(*,policy,settings,block,price,now,soc,pv_available,profile
    return {'mode':'battery','power_w':policy['max_w'],'minimum_soc':policy['sale_soc'],'reason':f"Prodej podle plánu · baterie nad {policy['sale_soc']:g} %."}
   if settings.get('pv_verified') and soc>=policy['pv_soc'] and pv_available and now>=float(settings.get('cooldown_until',0)):
    return {'mode':'pv','power_w':policy['max_w'],'minimum_soc':policy['sale_soc'],'reason':'Baterie je téměř plná · dostupné přebytky.'}
- if valid_price and settings.get('bias_enabled') and settings.get('bias_verified') and soc>=policy['resume_soc'] and profile_ready:
+ if valid_price and settings.get('bias_enabled') and soc>=policy['resume_soc'] and profile_ready:
   return {'mode':'bias','power_w':policy['bias_w'],'minimum_soc':policy['home_soc'],'reason':f"Malý trvalý přetok · cíl {policy['bias_w']:g} W, rezerva {policy['home_soc']:g} %."}
  return hold
 

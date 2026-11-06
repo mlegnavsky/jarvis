@@ -25,3 +25,7 @@ class ProductionPolicyTests(unittest.TestCase):
  def test_block_identity_keeps_exact_deadline(self):
   block={'day':'2026-11-06','start':1793960000,'end':1793960600}
   self.assertNotEqual(block_key(block),block_key({**block,'end':1793960900}))
+ def test_normal_bias_starts_without_historical_probe_but_keeps_proof_false(self):
+  settings={'bias_enabled':True,'bias_verified':False}
+  self.assertEqual(self.decide(now=600,soc=60,settings=settings)['mode'],'bias')
+  self.assertFalse(settings['bias_verified'])

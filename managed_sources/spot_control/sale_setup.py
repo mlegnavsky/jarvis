@@ -36,7 +36,7 @@ from .owner_settings import DEFAULTS as POLICY_DEFAULTS,validate as validate_pol
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='1.0.0'
+VERSION='1.0.1'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -727,7 +727,7 @@ async def async_setup_sales(hass,config,charge_controller):
         await battery.start(cap(),min(60,(operating_end-time.time())/60),policy()['sale_soc'],quotes(),purpose='automatic',window_end=operating_end,maximum_power_w=cap(),business_block=copy.deepcopy(prefs.get('selected_block')))
         last_reason='Bateriový prodej připraven přes HA; čekám na potvrzení dodávky.'
        elif operating_end is None:last_reason='Před půlnocí již nelze bezpečně dokončit další bateriový segment; automatika čeká.'
-      elif decision['mode']=='bias' and prefs.get('bias_verified'):
+      elif decision['mode']=='bias':
        await verify_baseline();await c.start('bias',policy()['bias_w'],60,minimum_soc=home_floor(),purpose='automatic')
       elif decision['mode']=='pv' and prefs['pv_verified']:
        await verify_baseline();await c.start('pv',cap(),15,minimum_soc=policy()['sale_soc'],purpose='automatic')

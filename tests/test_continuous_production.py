@@ -39,3 +39,10 @@ class ContinuousProductionTests(unittest.IsolatedAsyncioTestCase):
   self.assertIn(block_key(original),self.storage.data['settings'].get('completed_blocks',{}))
   self.assertNotIn(block_key(replacement),self.storage.data['settings']['completed_blocks'])
   self.assertFalse(self.storage.data['battery_sale'])
+ async def test_normal_bias_without_probe_is_started_not_forged_verified(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,bias_verified=False)
+  self.hass.states.async_set('sensor.inverter_battery',60);self.hass.states.async_set('sensor.inverter_pv_power',0)
+  self.refresh();await self.ticks[0]()
+  self.assertTrue(data['controller'].active)
+  self.assertEqual(data['controller'].record['mode'],'bias')
+  self.assertFalse(data['settings']['bias_verified'])

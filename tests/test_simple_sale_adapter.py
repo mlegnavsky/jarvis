@@ -123,11 +123,11 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['bias_verified']);self.assertTrue(data['settings']['inhibited'])
   self.assertFalse(data['controller'].active)
 
- async def test_bias_cannot_start_before_physical_verification(self):
+ async def test_ordinary_bias_starts_without_commissioning(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,bias_verified=False,bias_enabled=True)
   quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter)
   self.hass.states.async_set('sensor.inverter_battery',63);self.refresh();await self.ticks[0]()
-  self.assertFalse(data['controller'].active)
+  self.assertTrue(data['controller'].active);self.assertEqual(data['controller'].record['mode'],'bias');self.assertFalse(data['settings']['bias_verified'])
 
  async def autonomous_setup(self,pv=1000):
   data=await self.setup()
@@ -300,7 +300,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(data['controller'].record['power_w'],9300)
 
  async def test_near_full_pv_stays_blocked_at_negative_net_price(self):
-  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,bias_enabled=False)
   quarter=math.floor(self.clock[0]/900)*900;self.prices(quarter,net_eur=-100)
   self.hass.states.async_set('sensor.inverter_battery',99)
   self.hass.states.async_set('sensor.inverter_pv_power',1500)
@@ -514,7 +514,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   await data['stop']();self.assertFalse(battery.active);self.assertFalse(data['settings']['automatic'])
 
  async def test_dark_or_cooldown_pv_cannot_start(self):
-  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True)
+  data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,bias_enabled=False)
   self.hass.states.async_set('sensor.inverter_pv_power',0);self.refresh();await self.ticks[0]()
   self.assertFalse(data['controller'].active)
   self.hass.states.async_set('sensor.inverter_pv_power',400)
