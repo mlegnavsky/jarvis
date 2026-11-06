@@ -105,7 +105,7 @@ class SaleController:
   async with self.lock:
    if self.active:raise ValueError('Nejprve dokončím předchozí prodej.')
    power=number(power_w);minutes=number(duration_minutes);floor=number(minimum_soc)
-   bias=mode=='bias' and purpose in ('bias_probe','automatic') and power==2 and floor==30
+   bias=mode=='bias' and purpose in ('bias_probe','automatic') and power in (2,20) and floor==30
    if (not bias and (mode not in ('pv','battery') or power is None or not 100<=power<=EXPORT_LIMIT or floor is None or not 60<=floor<=100)) or minutes is None or not 1<=minutes<=60:
     raise ValueError('Neplatný výkon, délka nebo rezerva prodeje.')
    if not self.healthy() or number(self.price()) is None or self.price()<=0 and not bias:raise ValueError('Čekám na aktuální měření a kladnou cenu.')
@@ -279,7 +279,7 @@ class SaleController:
    self.record['sample_last']=stamp
   if mode=='bias':
    if self.clock()-self.record.get('bias_confirmed_at',self.record['started'])>=180 and not self.observed:
-    self.error='Malý přetok se nepotvrdil; požadované2 W nepovažuji za skutečný export.'
+    self.error='Malý přetok se nepotvrdil; požadovaný malý výkon nepovažuji za skutečný export.'
     await self.stop('no_export')
    return
   threshold=max(100,self.record.get('baseline_export_w',0)+100)

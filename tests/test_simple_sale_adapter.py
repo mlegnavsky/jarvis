@@ -61,7 +61,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.hass.states.async_set('sensor.inverter_battery',63);self.refresh();await self.ticks[0]()
   self.assertTrue(data['controller'].active)
   self.assertEqual(data['controller'].record['mode'],'bias')
-  self.assertEqual(data['controller'].record['power_w'],2)
+  self.assertEqual(data['controller'].record['power_w'],20)
   self.assertEqual(data['controller'].record['minimum_soc'],30)
 
  async def test_night_high_soc_does_not_interrupt_bias_without_actual_pv_opportunity(self):
@@ -151,6 +151,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
   self.refresh();await self.ticks[0]()
   self.assertTrue(data['settings']['automatic'])
+  self.assertIn((166,[30]*6),self.native_group_writes)
   for i in range(1,7):self.assertEqual(self.native_registers[165+i],30)
   self.assertTrue(data['controller'].active)
   for i in range(1,7):self.assertEqual(float(data['controller'].record['before'][f'number.inverter_program_{i}_soc']),30)
@@ -170,6 +171,48 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.native_registers[172]=1
   self.refresh();self.writes.clear();await self.ticks[0]()
   self.assertFalse(self.writes);self.assertTrue(data['settings']['inhibited'])
+
+ async def test_failed_group_confirmation_does_not_enable_export_or_repeat_unknown_write(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
+  for i in range(1,7):
+   self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
+  device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device;execute=device.execute
+  async def partial(code,address,count=1,**kwargs):
+   result=await execute(code,address,count=count,**kwargs)
+   if code==16 and address==166:self.native_registers[171]=100
+   return result
+  device.execute=partial
+  self.refresh();await self.ticks[0]()
+  self.assertFalse(data['controller'].active);self.assertTrue(data['settings']['inhibited'])
+  self.assertTrue(data['settings']['house_profile_write']['pending'])
+  count=len(self.native_group_writes)
+  data['settings'].update(automatic=False,requested_automatic=True,measurement_recovery={'pending':True,'stop_id':'gap'})
+  self.clock[0]+=12;self.refresh();await self.ticks[0]();self.clock[0]+=12;self.refresh();await self.ticks[0]()
+  self.assertEqual(len(self.native_group_writes),count);self.assertFalse(data['controller'].active)
+
+ async def test_unknown_group_write_needs_two_native_confirmations_on_recovery(self):
+  data=await self.setup();data['settings'].update(automatic=False,requested_automatic=True,inhibited=True,measurement_recovery={'pending':True},house_profile_write={'pending':True})
+  self.refresh();await self.ticks[0]()
+  device=self.hass.config_entries.async_entries('solarman')[0].runtime_data.device;execute=device.execute;reads=0
+  async def transient(code,address,count=1,**kwargs):
+   nonlocal reads
+   result=await execute(code,address,count=count,**kwargs)
+   if code==3 and address==142 and count==36:
+    reads+=1
+    if reads==1:self.native_registers[171]=100
+   return result
+  device.execute=transient
+  self.clock[0]+=11;self.refresh();await self.ticks[0]()
+  self.assertFalse(data['settings']['automatic']);self.assertTrue(data['settings']['house_profile_write']['pending'])
+  self.assertFalse(self.native_group_writes)
+
+ async def test_group_write_does_not_overwrite_custom_reserve_pending_in_ha(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True)
+  for i in range(1,7):
+   self.hass.states.async_set(f'number.inverter_program_{i}_soc',100);self.native_registers[165+i]=100
+  self.hass.states.async_set('number.inverter_program_3_soc',60)
+  self.refresh();await self.ticks[0]()
+  self.assertFalse(self.native_group_writes);self.assertTrue(data['settings']['inhibited'])
 
  async def test_owner_off_does_not_change_the_house_reserve(self):
   data=await self.setup();data['settings'].update(automatic=False,requested_automatic=False)
@@ -276,10 +319,13 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   for address in range(142,178):registers.setdefault(address,0)
   for i in range(6):registers.update({148+i:i*400,154+i:10000,166+i:30,172+i:0})
   self.device_registers.update(registers);registers=self.device_registers
-  self.native_registers=registers
+  self.native_registers=registers;self.native_group_writes=[]
   async def execute(code,address,count=1,**kwargs):
    if code==16:
-    for i,value in enumerate(kwargs['data']):registers[address+i]=value
+    self.native_group_writes.append((address,list(kwargs['data'])))
+    for i,value in enumerate(kwargs['data']):
+     registers[address+i]=value
+     if 166<=address+i<=171:self.hass.states.async_set(f'number.inverter_program_{address+i-165}_soc',value)
     return kwargs['data']
    if address==62:
     dt=datetime.fromtimestamp(self.clock[0],ZoneInfo('Europe/Prague'))

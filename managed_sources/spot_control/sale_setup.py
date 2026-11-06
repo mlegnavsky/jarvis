@@ -28,7 +28,7 @@ from .autonomous_verification import candidate as verification_candidate,finish 
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.8.4'
+VERSION='0.8.5'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -145,7 +145,7 @@ async def async_setup_sales(hass,config,charge_controller):
    if prefs['pv_verified'] and soc>=97 and daylight_pv(pv) and time.time()>=float(prefs.get('cooldown_until',0)):
     return {'mode':'pv','power_w':AUTO_EXPORT_LIMIT,'minimum_soc':60,'reason':'Baterie je téměř plná · dostupné přebytky.'}
   if p and prefs.get('bias_enabled') and prefs.get('bias_verified') and soc>=32 and bias_profile_ready(read()):
-   return {'mode':'bias','power_w':2,'minimum_soc':30,'reason':'Malý trvalý přetok · cíl2 W, návrat do normálu při30 %.'}
+   return {'mode':'bias','power_w':20,'minimum_soc':30,'reason':'Malý trvalý přetok · cíl20 W, návrat do normálu při30 %.'}
   return hold
  def healthy():
   if charge_controller.active:return False
@@ -304,7 +304,7 @@ async def async_setup_sales(hass,config,charge_controller):
   nonlocal house_profile_confirmed
   # Owner explicitly wants the house supplied by battery down to30%, also
   # outside export windows. Migrate only the known old30/100% profile.
-  if house_profile_confirmed and all(number(read().get(f'number.inverter_program_{i}_soc'))==30 for i in range(1,7)):return
+  if house_profile_confirmed and all(number(read().get(f'number.inverter_program_{i}_soc'))==30 for i in range(1,7)):return True
   house_profile_confirmed=False
   async def admission():
    r=(await native_test_read())['registers']
@@ -317,17 +317,36 @@ async def async_setup_sales(hass,config,charge_controller):
    return r
   r=await admission()
   if all(r.get(166+i)==30 for i in range(6)):
-   house_profile_confirmed=True;return
-  await event('house_reserve_intent',{'minimum_soc':30,'reason':'Owner requests battery-first house supply; replace old PV SOC100 lock.'})
-  for i in range(1,7):
-   r=await admission();entity=f'number.inverter_program_{i}_soc'
-   if number(read().get(entity))!=r[165+i]:raise ValueError('Domácí rezervu mezitím změnil jiný držitel řízení.')
-   if r[165+i]==100:await write(entity,30)
+   if (prefs.get('house_profile_write') or {}).get('pending'):
+    await asyncio.sleep(3);r=await admission()
+    if any(r.get(166+i)!=30 for i in range(6)):return False
+   house_profile_confirmed=all(number(read().get(f'number.inverter_program_{i}_soc'))==30 for i in range(1,7))
+   if house_profile_confirmed and (prefs.get('house_profile_write') or {}).get('pending'):
+    prefs['house_profile_write']['pending']=False;await persist_settings()
+   return house_profile_confirmed
+  intent=prefs.get('house_profile_write')
+  if intent and intent.get('pending'):
+   raise ValueError('Čekám na potvrzení jednorázového skupinového zápisu domácí rezervy.')
+  prefs['house_profile_write']={'pending':True,'before':[r[166+i] for i in range(6)],'target':[30]*6,'issued_at':time.time()}
+  await persist_settings();await event('house_reserve_intent',dict(prefs['house_profile_write']))
   r=await admission()
-  if any(r.get(166+i)!=30 for i in range(6)):raise ValueError('Měnič nepotvrdil domácí rezervu30 %.')
-  house_profile_confirmed=True
+  for i in range(1,7):
+   ha=number(read().get(f'number.inverter_program_{i}_soc'))
+   if ha not in (r[165+i],30):raise ValueError('Domácí rezervu mezitím změnil jiný držitel řízení.')
+  async with asyncio.timeout(20):await native_device().execute(16,166,data=[30]*6)
+  stable=0
+  for delay in (2,3,5,10):
+   await asyncio.sleep(delay);r=await admission()
+   actual=[r.get(166+i) for i in range(6)]
+   await event('house_reserve_bulk_readback',{'expected':[30]*6,'actual':actual})
+   stable=stable+1 if actual==[30]*6 else 0
+   if stable>=2:break
+  if stable<2:raise ValueError('Měnič nepotvrdil celou domácí rezervu30 % ve dvou skupinových čteních.')
+  prefs['house_profile_write']['pending']=False
   prefs['house_reserve_soc']=30
-  await persist_settings();await event('house_reserve_confirmed',{'minimum_soc':30})
+  house_profile_confirmed=all(number(read().get(f'number.inverter_program_{i}_soc'))==30 for i in range(1,7))
+  await persist_settings();await event('house_reserve_confirmed',{'minimum_soc':30,'registers':actual,'stable_reads':stable})
+  return house_profile_confirmed
  async def clock_admission(get_response):
   registers={}
   for address,count in ((0,1),(98,14),(130,1),(142,36)):
@@ -483,9 +502,9 @@ async def async_setup_sales(hass,config,charge_controller):
   p=current_price();entity=hass.states.get('sensor.inverter_battery')
   return {'version':VERSION,'ready':ready,'active':active(),'observed':bool(window.record.get('observed')) if window.active else battery.observed if battery.active else c.observed,'phase':'native_test' if window.active else battery.record.get('phase','idle') if battery.active else c.record.get('phase','idle'),'native_program':native_program,'native_test':{k:v for k,v in window.record.items() if k!='before'},'native_test_error':window.error,
    'battery_sale':{k:v for k,v in battery.record.items() if k not in ('before','expected','pending')},'battery_sale_error':battery.error,'native_start':battery.record.get('start'),'selected_block':prefs.get('selected_block'),'sale_policy':'simple_daily_block','sale_floor_soc':60,
-   'bias_status':({'average_grid_w':c.record.get('bias_average_w'),'target_export_w':2} if c.active and c.record.get('mode')=='bias' else None),'bias_policy':{'enabled':prefs.get('bias_enabled',True),'target_export_w':2,'minimum_soc':30,'resume_soc':32,'verified':prefs.get('bias_verified',False),'ha_required':True},'charging_active':charge_controller.active,'capacity':capacity(),'house_power_w':house(),'last_cycle':cycle_acceptance(prefs.get('battery_sale_proof')),'settings':dict(prefs),'automatic_requested':bool(prefs.get('requested_automatic')),'autonomous_verification':autonomous_state(),'measurement_recovery':dict(prefs.get('measurement_recovery') or {}),'pv_surplus_soc':97,'last_stop':prefs.get('last_sale_stop'),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or battery.error or 'Čeká na odeznění příčiny a potvrzení bezpečného režimu.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else battery.error if battery.active else c.error or runtime_error,'price':p,
+   'bias_status':({'average_grid_w':c.record.get('bias_average_w'),'target_export_w':20} if c.active and c.record.get('mode')=='bias' else None),'bias_policy':{'enabled':prefs.get('bias_enabled',True),'target_export_w':20,'minimum_soc':30,'resume_soc':32,'verified':prefs.get('bias_verified',False),'ha_required':True},'charging_active':charge_controller.active,'capacity':capacity(),'house_power_w':house(),'last_cycle':cycle_acceptance(prefs.get('battery_sale_proof')),'settings':dict(prefs),'automatic_requested':bool(prefs.get('requested_automatic')),'autonomous_verification':autonomous_state(),'measurement_recovery':dict(prefs.get('measurement_recovery') or {}),'pv_surplus_soc':97,'last_stop':prefs.get('last_sale_stop'),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or battery.error or 'Čeká na odeznění příčiny a potvrzení bezpečného režimu.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else battery.error if battery.active else c.error or runtime_error,'price':p,
    'mode':'battery_commission' if window.active else 'battery' if battery.active else c.record.get('mode'),'power_w':500 if window.active else battery.record.get('power_w') if battery.active else c.record.get('power_w'),'deadline':window.record.get('end') if window.active else battery.record.get('end') if battery.active else c.record.get('deadline'),
-   'grid_target_w':GRID_TARGET_W,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('zero_target_proof',{}).get('verified') is True and len(prefs.get('zero_target_proof',{}).get('read_shapes',[]))==2 and prefs.get('zero_target_proof',{}).get('actual_w')==GRID_TARGET_W and prefs.get('native_grid_target_w')==GRID_TARGET_W,'grid_import_policy':'Malý přetok2 W nad30 %; běžný režim na rezervě. Velký bateriový prodej zachovává60 %.','automatic_limit_w':AUTO_EXPORT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
+   'grid_target_w':GRID_TARGET_W,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('zero_target_proof',{}).get('verified') is True and len(prefs.get('zero_target_proof',{}).get('read_shapes',[]))==2 and prefs.get('zero_target_proof',{}).get('actual_w')==GRID_TARGET_W and prefs.get('native_grid_target_w')==GRID_TARGET_W,'grid_import_policy':'Malý přetok20 W nad30 %; běžný režim na rezervě. Velký bateriový prodej zachovává60 %.','automatic_limit_w':AUTO_EXPORT_LIMIT,'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'planning':home_plan(),'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)
@@ -638,7 +657,7 @@ async def async_setup_sales(hass,config,charge_controller):
   async with lock:
    if not prefs.get('requested_automatic') or active() or not healthy():return
    try:
-    await ensure_house_profile(recovering=True)
+    if not await ensure_house_profile(recovering=True):return
     clock_idle_profile((await native_test_read())['registers'])
     grid=fresh_number('sensor.inverter_grid_power')
     if grid is None or grid < -100:raise ValueError('Čekám na potvrzení ukončené dodávky.')
@@ -701,7 +720,8 @@ async def async_setup_sales(hass,config,charge_controller):
        await c.stop('price');await handle_stop()
     if was_active:return
     if not active() and ready and healthy():
-     if prefs.get('automatic') and not prefs.get('inhibited'):await ensure_house_profile()
+     if prefs.get('automatic') and not prefs.get('inhibited') and not await ensure_house_profile():
+      last_reason='Čekám na aktualizaci potvrzené domácí rezervy v HA.';return
      p=current_price();soc=fresh_number('sensor.inverter_battery');pv=fresh_number('sensor.inverter_pv_power')
      future=quotes();block=await select_block(future)
      decision=sale_decision(block,p,soc,pv)
@@ -724,7 +744,7 @@ async def async_setup_sales(hass,config,charge_controller):
         last_reason='Bateriový segment připraven; skutečný nativní začátek může následovat po začátku cenového bloku.'
        elif operating_end is None:last_reason='Před půlnocí již nelze bezpečně dokončit další bateriový segment; automatika čeká.'
       elif decision['mode']=='bias' and prefs.get('bias_verified'):
-       await verify_baseline();await c.start('bias',2,60,minimum_soc=30,purpose='automatic')
+       await verify_baseline();await c.start('bias',20,60,minimum_soc=30,purpose='automatic')
       elif decision['mode']=='pv' and prefs['pv_verified']:
        await verify_baseline();await c.start('pv',AUTO_EXPORT_LIMIT,15,minimum_soc=60,purpose='automatic')
    except Exception as exc:

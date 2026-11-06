@@ -19,7 +19,7 @@ def prepare(spot):
  if old.get('path')!='spoty' or right[0].get('type')!='picture-elements':raise ValueError('Unexpected native Spoty structure')
  advanced=[x for x in left if x.get('type') not in ('conditional',) and x.get('name') not in ('Automatický prodej','Vlastní prodej')]
  config={'house':with_temperatures(right[0]),'advanced':advanced,'source':'existing_native_spot_view'}
- view={'title':'Spoty','path':'spoty','icon':old.get('icon','mdi:lightning-bolt'),'type':'panel','cards':[{'type':'iframe','url':'/local/jarvis-spot-hub.html?v=1.0.5','aspect_ratio':'85%'}]}
+ view={'title':'Spoty','path':'spoty','icon':old.get('icon','mdi:lightning-bolt'),'type':'panel','cards':[{'type':'iframe','url':'/local/jarvis-spot-hub.html?v=1.0.6','aspect_ratio':'85%'}]}
  return yaml.safe_dump(view,allow_unicode=True,sort_keys=False),json.dumps(config,ensure_ascii=False,separators=(',',':'))
 if __name__=='__main__':
  import sys
