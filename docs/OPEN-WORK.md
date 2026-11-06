@@ -1,3 +1,11 @@
+# Current: owner settings0.9.0 — 6 November 2026
+
+Approved accordion settings and Czech diagnostics deployed: sourceb032ac35142a4786a6e858e18925342e917d42a5, display follow-up7df0d112248c8e1dfd9c223594c20e809ef4e954. owner-settings-prepare/apply verified active_verified, backup479b3769; sales0.9.0/heating1.2.2; Core2026.6.4 unchanged. Root settings view and display follow-up verified/file_written; exact UI/root/cash readbacks matched. Current policy defaults97PV/20Wbias/home30/resume31/plan60/120min/9300W and21/22C heating retained. Per-card save is revision-bound, persisted and confirmed; sale edits while active are rejected. Save never enables automation or clears guards. No assistant hardware test, unblock or ON operation.
+
+Read-only14:43:33UTC:0.9.0 ready/armed, requested+automatictrue, inhibitedfalse, error empty. Existing selected block15:45–17:45Prague, average8.85647985. This is HA's ordinary owner-requested planned operation, not assistant commissioning. Full production/battery export or native expiry is not asserted from an armed state. Finance live at14:43:37UTC. Heating settings revision exactly preserved. Local679 testsOK/20optional skips plus28heating and8cash tests; DOM draft/CAS/readback checks passed. Chromium rendering was blocked by the executor's Unix-socket policy; pixel mobile/desktop acceptance is not claimed.
+
+See docs/evidence/2026-11-06-owner-settings-090.md. It distinguishes original failure from cleanup and separate latest battery/PV diagnostics. Missing historical original causes remain explicitly unknown.
+
 # Solar — current deployment 6 November 2026
 
 Sales0.8.7 / Spoty1.0.7 is active. Source240876bbdc22ecee4e3c15a48fdb6b02ea9763d3; recovery087-prepare/apply verified active_verified, backup3dd998f0, Core2026.6.4 unchanged. Native HA automation.jarvis_obnova_prodeje is on and calls the atomic resume_confirmed_sale(stop_id), preserving owner Off. At13:35:14UTC ordinary runtime was ready/running PV, automatic/requestedON, inhibitedfalse, healthytrue, error empty, and measured grid−353W. House native reserve30 was confirmed across all six slots. No assistant hardware test/commissioning or backup deletion.
