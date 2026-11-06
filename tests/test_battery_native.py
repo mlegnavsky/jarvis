@@ -85,6 +85,21 @@ class BatteryNativeTests(unittest.IsolatedAsyncioTestCase):
         await self.advance(10)
         self.assertTrue(self.controller.observed)
 
+    async def test_weather_reserve_only_raises_active_automatic_floor_without_native_writes(self):
+        await self.controller.start(500,5,60,self.quotes,purpose='automatic')
+        before=list(self.writes)
+        await self.controller.raise_reserve(75)
+        self.assertEqual(self.controller.record['minimum_soc'],75)
+        self.assertEqual(self.controller.record['plan']['minimum_soc'],75)
+        await self.controller.raise_reserve(60)
+        self.assertEqual(self.controller.record['minimum_soc'],75)
+        self.assertEqual(self.writes,before)
+        self.states.update(soc=74,reported_at=self.now)
+        await self.controller.tick()
+        await self.finish_stop()
+        self.assertFalse(self.controller.active)
+        self.assertEqual(self.controller.last_stop['reason'],'reserve')
+
     async def test_automatic_native_read_timeout_produces_recoverable_confirmed_stop(self):
         from telemetry_health import recoverable_battery_stop
         await self.start(purpose='automatic');await self.enable()

@@ -348,6 +348,23 @@ class BatterySaleController:
                 i.get('code') in ('missing','unavailable','stale') for i in issues))
         return context
 
+    async def raise_reserve(self, minimum_soc):
+        """Raise only the HA threshold; never write native SOC/program registers."""
+        value = _number(minimum_soc)
+        if value is None or not 60 <= value <= 100:
+            raise ValueError('Invalid weather reserve')
+        async with self._lock:
+            if (not self.active or self.record.get('purpose') != 'automatic'
+                    or self.record.get('phase') == 'stopping'):
+                return
+            old = max(self.record.get('minimum_soc',60),self.record.get('plan',{}).get('minimum_soc',60))
+            if value <= old:
+                return
+            self.record['minimum_soc'] = value
+            self.record.setdefault('plan',{})['minimum_soc'] = value
+            self.record['weather_reserve_updated_at'] = self.clock()
+            await self._persist()
+
     async def tick(self):
         async with self._lock:
             if not self.active:

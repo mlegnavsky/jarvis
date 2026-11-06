@@ -24,6 +24,8 @@ class FakeBattery:
   self.record={'before':{'143':9300},'id':'battery-test','phase':'armed','power_w':power_w,'minimum_soc':minimum_soc,
    'start':start,'end':min(start+duration_minutes*60,kwargs.get('window_end',float('inf'))),'purpose':kwargs.get('purpose'),'observed':False,'maximum_power_w':kwargs.get('maximum_power_w',power_w)}
   await self.save(self.record)
+ async def raise_reserve(self,value):
+  if self.record.get('purpose')=='automatic':self.record['minimum_soc']=max(self.record.get('minimum_soc',60),value)
  async def tick(self):pass
  async def adjust_power(self,power):self.adjustments.append(power);self.record['power_w']=power;await self.save(self.record)
  async def stop(self,reason='manual'):
@@ -301,6 +303,23 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   health=self.hass.states.get('sensor.jarvis_energy_sales').attributes['health']
   self.assertFalse(health['healthy']);self.assertTrue(health['transient_only'])
   self.assertEqual(health['issues'][0]['entity_id'],'sensor.inverter_battery')
+
+ async def test_weather_reserve_drives_automatic_start_and_failed_forecast_blocks_only_battery(self):
+  data=await self.setup();self.weather_kwh=15
+  data['settings'].update(automatic=True,requested_automatic=True,bias_enabled=False)
+  q=math.ceil(self.clock[0]/900)*900;self.clock[0]=q;self.prices(q)
+  self.hass.states.async_set('sensor.inverter_battery',85);self.refresh();await self.ticks[0]()
+  self.assertTrue(data['battery_controller'].starts,str(self.hass.states.get('sensor.jarvis_energy_sales').attributes.get('weather_reserve')))
+  self.assertEqual(data['battery_controller'].starts[-1][2],75)
+  self.weather_kwh=1;self.refresh();await self.ticks[0]()
+  self.assertIn('reserve',data['battery_controller'].stops)
+
+ async def test_weather_unavailable_does_not_stop_explicit_manual_battery_sale(self):
+  data=await self.setup();b=data['battery_controller']
+  data['weather_planning']['snapshot']=lambda *args:{'required_soc':100,'reason':'Chybí počasí'}
+  b.record={'id':'manual','purpose':'manual','before':{'143':9300},'phase':'running','start':self.clock[0],'end':self.clock[0]+600,'power_w':500,'maximum_power_w':500,'minimum_soc':60}
+  self.hass.states.async_set('sensor.inverter_battery',90);self.refresh();await self.ticks[0]()
+  self.assertTrue(b.active);self.assertFalse(b.stops)
 
  asyncSetUp=fixtures.AdapterTests.asyncSetUp
  asyncTearDown=fixtures.AdapterTests.asyncTearDown
@@ -615,6 +634,8 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
    if address in (142,143,145,104) and count==1:return [self.device_registers[address]]
    return [registers.get(address+i,0) for i in range(count)]
   self.hass.config_entries.async_entries('solarman')[0].runtime_data.device.execute=execute
+  self.weather_kwh=30
+  SimpleAdapterTests.weather_fixture(self)
   await self.module.async_setup_sales(self.hass,{},types.SimpleNamespace(active=False))
   data=self.hass.data[self.module.KEY]
   data['controller'].clock=lambda:self.clock[0]
@@ -625,7 +646,14 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.refresh();await self.ticks[0]()
   return data
 
+ def weather_fixture(self):
+  from test_weather_reserve import fixture
+  w,_,_=fixture(self.weather_kwh,datetime.fromtimestamp(self.clock[0],ZoneInfo('Europe/Prague')).date().isoformat())
+  w['fetched_at']=datetime.fromtimestamp(self.clock[0],timezone.utc).isoformat()
+  self.hass.states.async_set('sensor.jarvis_pocasi_zitenice','ready',w)
+
  def refresh(self):
+  if hasattr(self,'weather_kwh'):SimpleAdapterTests.weather_fixture(self)
   for state in self.hass.states.async_all():
    state.last_updated=state.last_reported=datetime.fromtimestamp(self.clock[0],timezone.utc)
 
@@ -726,7 +754,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertTrue(data['controller'].active);self.assertTrue(data['settings']['automatic'])
   self.assertFalse(data['settings'].get('inhibited',False))
 
- async def test_scheduled_production_needs_only_valid_block_and_soc_above_sixty(self):
+ async def test_scheduled_production_requires_capacity_then_starts_above_weather_floor(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,battery_verified=False)
   start=math.ceil(self.clock[0]/900)*900;self.clock[0]=start;self.prices(start)
   self.hass.states.async_set('sensor.inverter_battery',61)
@@ -734,7 +762,10 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.hass.states.async_set('sensor.inverter_load_power','unavailable')
   data['planning']['snapshot']=lambda:(_ for _ in ()).throw(ValueError('No forecast'))
   self.refresh();await self.ticks[0]()
-  battery=data['battery_controller'];self.assertTrue(battery.active)
+  battery=data['battery_controller'];self.assertFalse(battery.active)
+  self.hass.states.async_set('number.inverter_battery_capacity',460)
+  self.hass.states.async_set('sensor.inverter_load_power',1000)
+  self.refresh();await self.ticks[0]();self.refresh();await self.ticks[0]();self.assertTrue(battery.active,str(self.hass.states.get('sensor.jarvis_energy_sales').attributes.get('weather_reserve')))
   self.assertEqual(battery.starts[0][0],9300);self.assertEqual(battery.starts[0][2],60)
   self.assertFalse(data['settings']['battery_verified'])
   self.hass.states.async_set('sensor.inverter_battery',60);self.refresh();await self.ticks[0]()

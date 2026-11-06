@@ -1,4 +1,4 @@
-/* Spoty hub1.2.0. Render/read operations never invoke a device service. */
+/* Spoty hub1.3.0. Render/read operations never invoke a device service. */
 (function(global){
 'use strict';
 const number=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
@@ -13,7 +13,15 @@ function shiftDate(key,period,step){
  if(period==='month'||period==='year'){const base=new Date(Date.UTC(year,month,1));year=base.getUTCFullYear();month=base.getUTCMonth();day=Math.min(day,new Date(Date.UTC(year,month+1,0)).getUTCDate());}
  return new Date(Date.UTC(year,month,day,12)).toISOString().slice(0,10);
 }
-const math={money,currentNet,shiftDate,moneyChoice};if(typeof module!=='undefined')module.exports=math;
+function reserveView(sales,fresh){
+ const p=sales?.weather_reserve||{};const valid=fresh&&number(p.required_soc)!==null;
+ return {summary:!fresh?'Čekám na čerstvá data':!valid?'Čekám na výpočet rezervy':p.required_soc>=100?'Z baterie neprodávat':`Ponechat nejméně ${format(Math.max(p.required_soc,sales.sale_floor_soc||0),0)} %`,
+  day:p.forecast_day||'—',production:format(p.forecast_pv_kwh,1)+' kWh',conservative:format(p.conservative_pv_kwh,1)+' kWh',
+  house:format(p.house_with_margin_kwh,1)+' kWh',base:format(p.house_daily_kwh,1)+' kWh +25 % zásoba',capacity:format(p.capacity_kwh,2)+' kWh',
+  reason:p.reason||'Výpočet ještě není dostupný.',quality:p.quality==='unavailable'?'Chybí platné podklady; prodej z baterie čeká.':'Odhad výroby z jedné referenční křivky; spotřeba '+(p.load_quality==='observed'?'průběžně měřená.':'zatím částečná, nejméně8 kWh/den před zásobou.'),
+  age:p.forecast_issued_at?new Date(p.forecast_issued_at).toLocaleString('cs-CZ',{timeZone:'Europe/Prague'})+' · stáří '+format(Math.max(0,p.forecast_age_seconds||0)/60,0)+' min':'Předpověď není dostupná.'};
+}
+const math={money,currentNet,shiftDate,moneyChoice,reserveView};if(typeof module!=='undefined')module.exports=math;
 if(typeof document==='undefined')return;
 const $=id=>document.getElementById(id),today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Prague',year:'numeric',month:'2-digit',day:'2-digit'}).format(Date.now());
 class Hub{
@@ -61,7 +69,7 @@ class Hub{
   const detail=global.JarvisMessages?.healthInfo(sales.health)||[];
   if(fresh&&detail.length)$('sale-state').textContent=detail.join(' ');
   const policy=sales.policy||{};
-  if($('plan-limits'))$('plan-limits').textContent='Rezerva '+(policy.sale_soc??60)+' % · nejvýše '+format((policy.max_w??9300)/1000,1)+' kW · konec při rezervě nebo na konci plánu.';
+  if($('plan-limits'))$('plan-limits').textContent='Rezerva '+(sales.sale_floor_soc??policy.sale_soc??60)+' % · nejvýše '+format((policy.max_w??9300)/1000,1)+' kW · konec při rezervě nebo na konci plánu.';
   if($('sale-fee'))$('sale-fee').textContent='Po poplatku '+format(policy.sale_fee??.3)+' Kč/kWh';
   if($('purchase-price'))$('purchase-price').textContent=format(policy.purchase_rate??5)+' Kč/kWh';
   const block=sales.selected_block,clock=v=>new Date(v*1000).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague',hour:'2-digit',minute:'2-digit'});
@@ -77,7 +85,19 @@ class Hub{
    const alert=$('control-alert');alert.hidden=!stopping&&!prefs.inhibited&&sales.healthy!==false&&fresh&&!sales.measurement_recovery?.pending&&!sales.error&&!sales.profile_issues?.length;
    alert.textContent=sales.measurement_recovery?.pending?'Obnova po výpadku dat…':stopping?'Ověřuji bezpečné ukončení…':prefs.inhibited?'Automatika pozastavená · podrobnosti níže.':sales.error||sales.profile_issues?.length?'Řízení hlásí problém · podrobnosti níže.':'Čekáme na čerstvá data…';
   }
-  $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Rezerva plánu '+(policy.sale_soc??60)+' %, domácnosti '+(policy.home_soc??30)+' %, obnovení malého přetoku '+(policy.resume_soc??31)+' %. Maximální dodávka '+format((policy.max_w??9300)/1000,1)+' kW.';
+  if($('weather-summary')){
+   const p=sales.weather_reserve||{},view=reserveView(sales,fresh);
+   for(const [id,key] of Object.entries({'weather-summary':'summary','weather-day':'day','weather-production':'production','weather-conservative':'conservative','weather-house':'house','weather-base':'base','weather-capacity':'capacity','weather-reason':'reason','weather-quality':'quality','weather-issued':'age'}))$(id).textContent=view[key];
+   const date=t=>new Date(t*1000).toLocaleString('cs-CZ',{timeZone:'Europe/Prague',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
+   $('weather-horizon').textContent=p.horizon_start?date(p.horizon_start)+' → '+date(p.horizon_end):'Čekám na prodejní okno.';
+   const table=(id,rows)=>{const body=$(id);body.replaceChildren();for(const values of rows){const tr=document.createElement('tr');for(const value of values){const td=document.createElement('td');td.textContent=value;tr.appendChild(td);}body.appendChild(tr);}};
+   const signature=JSON.stringify([p.forecast_issued_at,p.required_soc,p.house_daily_kwh,p.horizon_start,p.recent_decisions?.length]);
+   if(this.weatherSignature!==signature){this.weatherSignature=signature;
+    table('weather-hours',(p.intervals||[]).map(v=>[date(v.start)+'–'+date(v.end),format(v.pv_kwh,2),format(v.house_kwh,2)]));
+    table('weather-history',(p.recent_decisions||[]).slice().reverse().map(v=>[v.at?new Date(v.at).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague',hour:'2-digit',minute:'2-digit'}):'—',v.forecast_day||'—',(v.reserve_soc>=100?'Bez prodeje':v.reserve_soc+' %'),format(v.forecast_pv_kwh,1)]));
+   }
+  }
+  $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Rezerva plánu '+(sales.sale_floor_soc??policy.sale_soc??60)+' %, domácnosti '+(policy.home_soc??30)+' %, obnovení malého přetoku '+(policy.resume_soc??31)+' %. Maximální dodávka '+format((policy.max_w??9300)/1000,1)+' kW.';
   $('recovery').textContent=sales.error?'Řízení hlásí: '+tr(sales.error):(sales.measurement_recovery?.pending?'Po výpadku měření čeká HA na stabilní data a potvrzení domácího režimu.':'');
   $('updated').textContent='Živý stav · '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · průběžné částky nejsou fakturace';
   if(!this.houseMounted&&!this.houseLoading)this.mountHouse();if(!this.cardsMounted&&!this.mounting)this.mountCards();for(const card of this.cards)card.hass=h;

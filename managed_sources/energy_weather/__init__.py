@@ -10,7 +10,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval, async_track_time_change
 from .data import parse_ote, ote_url
 DOMAIN='jarvis_energy_weather'
-VERSION='1.0.1'
+VERSION='1.0.2'
 CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_EXTRA)
 TZ=ZoneInfo('Europe/Prague')
 async def async_setup(hass, config):
@@ -46,7 +46,7 @@ async def async_setup(hass, config):
   try:
    # Explicit locality requested by user; not the geographic centre of HA's home zone.
    lat,lon=50.555,14.156
-   url=f'https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,cloud_cover,wind_speed_10m,shortwave_radiation,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset&forecast_days=7&timezone=Europe%2FPrague&timeformat=unixtime'
+   url=f'https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,cloud_cover,wind_speed_10m,shortwave_radiation,global_tilted_irradiance,weather_code&tilt=45&azimuth=-45&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset&forecast_days=7&timezone=Europe%2FPrague&timeformat=unixtime'
    raw=await fetch(url)
    h=raw['hourly']; d=raw['daily']
    if not h['time'] or max(h['time'])<now.timestamp()+86400: raise ValueError('Předpověď je zastaralá')
