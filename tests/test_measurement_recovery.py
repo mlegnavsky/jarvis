@@ -18,3 +18,9 @@ class MeasurementRecoveryTests(unittest.TestCase):
   proof={**self.proof(),'purpose':'manual','reason':'stop_recovery','failures':['number.inverter_export_surplus_power: ']}
   r=after_stop({'requested_automatic':True},proof);self.assertTrue(r['measurement_recovery']['pending'])
   r=after_stop({'requested_automatic':True},{**proof,'stop_verified':False});self.assertFalse((r.get('measurement_recovery') or {}).get('pending',False))
+
+ def test_fully_restored_pv_restart_does_not_latch_automatic_off(self):
+  proof={'id':'retry','mode':'pv','purpose':'automatic','reason':'stop_recovery','original_reason':'recovery','stop_verified':True,'conflicts':{},'failures':['number.inverter_export_surplus_power: timeout']}
+  self.assertTrue(after_stop({'automatic':True,'requested_automatic':True},proof)['automatic'])
+  for change in ({'stop_verified':False},{'conflicts':{'cap':{}}},{'original_reason':'guard'}):
+   self.assertFalse(after_stop({'automatic':True,'requested_automatic':True},{**proof,**change})['automatic'])

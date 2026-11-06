@@ -187,7 +187,7 @@ class SaleController:
    await self._confirm_stopped(final_issued)
    proof={'id':self.record.get('id'),'mode':self.record.get('mode'),'purpose':self.record.get('purpose'),
     'promote_auto':self.record.get('promote_auto',False),'reason':'stop_recovery' if failures or self.record.get('stop_attempt_failed') else self.record['stop_reason'],
-    'observed':self.observed,'stop_verified':True,'power_w':self.record.get('power_w'),'minimum_soc':self.record.get('minimum_soc'),
+    'original_reason':self.record.get('stop_reason'),'observed':self.observed,'stop_verified':True,'power_w':self.record.get('power_w'),'minimum_soc':self.record.get('minimum_soc'),
     'sustained':self.record.get('export_count',0)>=3 and self.record.get('export_last',0)-self.record.get('export_first',0)>=20,
     'error':self.error,'failures':failures,'context':self.record.get('stop_context'),'conflicts':copy.deepcopy(self.record.get('conflicts',{}))}
    await self.event('sale_stop',proof)

@@ -35,8 +35,12 @@ def after_stop(settings,outcome):
  recover=bool(settings.get('requested_automatic') and measurement_guard(outcome))
  if recover:result['measurement_recovery']={'pending':True,'stop_id':outcome.get('id')}
  reason=outcome.get('reason')
+ # A fully confirmed cleanup retry preserves a normal automatic PV stop.
+ # Unconfirmed restoration, owner conflicts and safety guards still inhibit.
+ if reason=='stop_recovery' and outcome.get('purpose')=='automatic' and outcome.get('mode')=='pv' and outcome.get('stop_verified') is True and not outcome.get('conflicts') and outcome.get('original_reason') in ('recovery','deadline','no_surplus','price','reserve'):
+  reason=outcome['original_reason']
  no_surplus=reason=='no_surplus' and outcome.get('mode')=='pv' and outcome.get('stop_verified')
- if no_surplus:result['cooldown_until']=time.time()+300
+ if no_surplus:result['cooldown_until']=time.time()+30
  normal=no_surplus or reason in ('deadline','manual','price','reserve') or reason=='recovery' and outcome.get('purpose')=='automatic' and outcome.get('stop_verified')
  if outcome.get('conflicts'):normal=False
  if not normal:

@@ -52,6 +52,8 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(a['capacity']['capacity_kwh'],23.552)
   self.assertFalse(a['capacity']['physical_verified'])
   self.assertEqual(a['house_power_w'],720)
+  self.assertEqual(a['telemetry']['sensor.inverter_battery']['state'],self.hass.states.get('sensor.inverter_battery').state)
+  self.assertIn('source_reported',a['telemetry']['sensor.inverter_battery'])
 
  async def test_verified_bias_runs_only_outside_higher_priority_sales_and_above_resume_floor(self):
   data=await self.setup();data['settings'].update(automatic=True,pv_verified=True,bias_verified=True,bias_enabled=True,battery_verified=False)
@@ -141,6 +143,15 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   data=await self.setup(saved);self.refresh();await self.ticks[0]()
   self.assertFalse(data['settings']['automatic']);self.assertFalse(data['settings']['verification_resume_auto'])
   self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['automatic_requested'])
+
+ async def test_nonstandard_idle_program_skips_bias_without_disabling_automatic_surplus(self):
+  data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True,bias_enabled=True,cooldown_until=self.clock[0]+30)
+  for i in range(1,7):self.hass.states.async_set(f'number.inverter_program_{i}_soc',100)
+  self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',3000)
+  self.refresh();await self.ticks[0]()
+  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings'].get('inhibited',False));self.assertFalse(data['controller'].active)
+  self.clock[0]+=31;self.refresh();await self.ticks[0]()
+  self.assertTrue(data['controller'].active);self.assertEqual(data['controller'].record['mode'],'pv')
 
  async def test_automatic_surplus_starts_at_97_percent(self):
   data=await self.setup();data['settings'].update(automatic=True,requested_automatic=True,pv_verified=True,bias_verified=True)
