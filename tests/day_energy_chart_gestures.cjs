@@ -41,3 +41,22 @@ touch('touchstart',[[145,80],[215,80]]);const canceled=svg();touch('touchcancel'
 for(const date of ['2026-03-29','2026-10-25']){const d=c.dayBounds(Date.parse(date+'T12:00Z')),ticks=c.chartTimeTicks(d,{start:d.start,end:d.end},298);assert.equal(ticks[0].label,'00:00');assert.equal(ticks.at(-1).label,'24:00');for(let i=1;i<ticks.length;i++)assert((ticks[i].t-ticks[i-1].t)/(d.end-d.start)*298>=48,'DST labels remain separated');}
 const desktop=fixture(1100);assert(desktop.shadowRoot.innerHTML.includes('Kč/kWh</text>'),'desktop retains the three vertical scales');
 console.log('Chart gestures: mobile SVG width/height, pinch, pan, refresh, reset, keyboard, slider, vertical scrolling and DST ticks passed');
+
+// A horizon crossing must share the visible zero line despite asymmetric W data.
+{
+ const card=fixture(390),bounds=card.selectedBounds();
+ card.rows[card.ids()[2]]=[{t:bounds.start,v:-9000}];
+ card.altitude=t=>-60+120*(t-bounds.start)/(bounds.end-bounds.start);
+ card.render();
+ const html=card.shadowRoot.innerHTML,zero=Number(html.match(/class="power-axis-label"[^>]* y="([\d.]+)"[^>]*>0<\/text>/)[1])-4;
+ const points=html.match(/<polyline[^>]*stroke-dasharray="6 4" points="([^"]+)"/)[1].split(' ').map(p=>p.split(',').map(Number));
+ assert(Math.abs(points[144][1]-zero)<1e-6,'solar horizon must align with power zero');
+ const clip=html.match(/<clipPath[^>]*><rect x="[^"]+" y="([\d.]+)"[^>]*height="([\d.]+)"/).slice(1).map(Number);
+ assert(points.every(p=>p[1]>=clip[0]&&p[1]<=clip[0]+clip[1]),'solar curve stays in the chart');
+ const battery=html.match(/<path d="([^"]+)"[^>]*stroke="#23a57b"/)[1];
+ const batteryYs=[...battery.matchAll(/[ML][\d.]+,([\d.]+)/g)].map(m=>Number(m[1]));
+ assert(Math.min(...batteryYs)>=clip[0]+6,'full battery keeps visible top headroom');
+ assert(html.indexOf('class="chart-tools"')<html.indexOf('class="chart-weather"'),'forecast follows zoom tools');
+ assert(html.indexOf('class="chart-weather"')<html.indexOf('<svg viewBox='),'forecast remains directly above plot');
+ console.log('Solar horizon, top headroom, fitted solar bounds and forecast adjacency passed');
+}
