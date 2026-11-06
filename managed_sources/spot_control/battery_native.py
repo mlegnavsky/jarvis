@@ -90,6 +90,7 @@ class BatterySaleController:
 
     def _sample(self, plan=None):
         s = dict(self.telemetry())
+        self._last_sample = copy.deepcopy(s)
         if not s.get('healthy'):
             raise _Guard('health')
         if not self._fresh(s.get('reported_at')):
@@ -157,7 +158,7 @@ class BatterySaleController:
             raise _Guard('native_conflict')
         if not self._profile_ok(r):
             raise _Guard('profile_changed')
-        if not native_clock_acceptable(data['clock'], self.clock()):
+        if not self.record.get('ha_controlled') and not native_clock_acceptable(data['clock'], self.clock()):
             raise _Guard('native_clock')
         if r[109] > _bms_limit(r):
             raise _Guard('current_limit')
@@ -255,7 +256,8 @@ class BatterySaleController:
             house_power = min(3000, powers[0]) if purpose == 'commission' else powers[0]
             plan = battery_window_plan(data['clock'], self.clock(), power_w, duration_minutes,
                                        minimum_soc, s['voltage_v'], _bms_limit(r), current, house_power,
-                                       quotes, valid_until=valid_until, window_end=window_end)
+                                       quotes, valid_until=valid_until, window_end=window_end,
+                                       ha_controlled=purpose=='automatic')
             if purpose == 'automatic':
                 # Owner policy: SOC60 is an HA stop threshold. The inverter's
                 # ordinary SOC30 schedule remains the independent fallback.
@@ -305,8 +307,31 @@ class BatterySaleController:
             except Exception as exc:
                 self.error = type(exc).__name__+': '+str(exc)
                 self.record['failure_detail'] = self.error
+                self.record['failure_context'] = self._failure_context()
                 await self._stop('start_failed')
                 raise
+
+    def _failure_context(self):
+        """Keep the failed sample, including individual electrical timestamps."""
+        sample = getattr(self, '_last_sample', {})
+        context = {key:copy.deepcopy(sample.get(key)) for key in (
+            'health','healthy','reported_at','soc','grid_w','battery_w','pv_w',
+            'voltage_v','current_a','voltage_reported_at','current_reported_at','net_price')}
+        context['captured_at'] = self.clock()
+        health = context.get('health')
+        if isinstance(health,dict):
+            issues = health.setdefault('issues',[])
+            for field,entity in (('voltage_reported_at','sensor.inverter_battery_voltage'),
+                                 ('current_reported_at','sensor.inverter_battery_current')):
+                stamp = _number(sample.get(field,sample.get('reported_at')))
+                age = self.clock()-stamp if stamp is not None else None
+                if age is None or age<0 or age>=30:
+                    issues.append({'code':'stale' if age is not None and age>=30 else 'timestamp',
+                                   'entity_id':entity,'age_seconds':age,'reported_at':stamp})
+            health['healthy'] = bool(health.get('healthy')) and not issues
+            health['transient_only'] = (bool(issues) and all(
+                i.get('code') in ('missing','unavailable','stale') for i in issues))
+        return context
 
     async def tick(self):
         async with self._lock:
@@ -375,6 +400,7 @@ class BatterySaleController:
             except Exception as exc:
                 self.error = type(exc).__name__+': '+str(exc)
                 self.record['failure_detail'] = self.error
+                self.record['failure_context'] = self._failure_context()
                 await self._stop(exc.reason if isinstance(exc, _Guard) else 'controller_error')
 
     async def adjust_power(self, power_w):
@@ -472,7 +498,7 @@ class BatterySaleController:
                 raise ValueError('Fresh stopped grid is required after restoration')
             proof = {k: copy.deepcopy(self.record.get(k)) for k in (
                 'id', 'purpose', 'power_w', 'minimum_soc', 'observed', 'native_expiry_observed',
-                'start', 'end', 'conflicts', 'notice', 'native_power_fence', 'failure_detail')}
+                'start', 'end', 'conflicts', 'notice', 'native_power_fence', 'failure_detail', 'failure_context')}
             proof.update(reason=self.record['stop_reason'], stop_verified=True,
                          phase='complete', production_verified=False,
                          restored_current_a=targets[109], restored_cap_w=targets[143])

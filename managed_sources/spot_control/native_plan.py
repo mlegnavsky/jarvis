@@ -87,7 +87,8 @@ def _positive_coverage(prices, start, observer_deadline):
 
 def battery_window_plan(native_clock, now, power_w, duration_minutes, minimum_soc,
                         battery_voltage, bms_discharge_a, configured_discharge_a,
-                        house_program_power, quotes, valid_until=None, window_end=None):
+                        house_program_power, quotes, valid_until=None, window_end=None,
+                        ha_controlled=False):
     """Return JSON-safe values; reject invalid inputs with ``ValueError``.
 
     ``native_clock`` is an aware datetime, normalized to Europe/Prague; ``now``
@@ -118,7 +119,7 @@ def battery_window_plan(native_clock, now, power_w, duration_minutes, minimum_so
         if window_end <= now:
             raise ValueError('Selected business block has ended')
 
-    if not 5 <= duration_minutes <= 60:
+    if not (0 < duration_minutes <= 60 if ha_controlled else 5 <= duration_minutes <= 60):
         raise ValueError('Native window duration must be 5..60 minutes')
     if not 0 <= minimum_soc <= 98:
         raise ValueError('Native minimum SOC must be 0..98 percent')
@@ -132,6 +133,22 @@ def battery_window_plan(native_clock, now, power_w, duration_minutes, minimum_so
         raise ValueError('Configured discharge limit must be 1..350 A')
     if not 1 <= house_program_power <= 65535:
         raise ValueError('Existing house-program power must be 1..65535 W')
+    if ha_controlled:
+        # No TOU program is written, so its boundaries and clock are irrelevant.
+        end = min(now + duration_minutes * 60, window_end if window_end is not None else float('inf'))
+        if end - now < 10:
+            raise ValueError('No safe HA-controlled sale interval remains')
+        if not _positive_coverage(_quarter_prices(quotes), now, math.nextafter(end, -math.inf)):
+            raise ValueError('HA sale requires unique positive prices for the whole interval')
+        current_limit_a = math.floor(min(175, configured_discharge_a, bms_discharge_a,
+                                         math.floor(10000 / battery_voltage)))
+        return {'start':now, 'end':end, 'observer_deadline':end, 'arm_until':now+60,
+                'duration_minutes':(end-now)/60, 'ha_controlled':True,
+                'native_power_fence':False, 'current_limit_a':current_limit_a,
+                'battery_power_w':math.floor(min(10000, house_program_power, current_limit_a*battery_voltage)),
+                'power_w':min(9300, math.floor(power_w)), 'minimum_soc':max(60,math.ceil(minimum_soc)),
+                'mode':'ExportFirst', 'enable_at':now, 'production_verified':False,
+                'notice':'HA stops at the sale reserve or deadline; the inverter house schedule is unchanged.'}
     if (not isinstance(native_clock, datetime) or native_clock.tzinfo is None
             or native_clock.utcoffset() is None):
         raise ValueError('Native inverter clock must be timezone aware')

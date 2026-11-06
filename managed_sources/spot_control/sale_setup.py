@@ -26,11 +26,13 @@ from .solar_inputs import capacity_basis, house_power, cycle_acceptance
 from .supervision import Supervisor
 from .autonomous_verification import candidate as verification_candidate,finish as finish_verification
 from .recovery_watchdog import recoverable_stop
+from .daily_override import today_override
+from .telemetry_health import evaluate_health, recoverable_battery_stop, MEASUREMENTS, STATUS
 from .owner_settings import DEFAULTS as POLICY_DEFAULTS,validate as validate_policy,revision as policy_revision
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='0.9.2'
+VERSION='0.9.3'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -43,6 +45,10 @@ async def async_setup_sales(hass,config,charge_controller):
  prefs['auto_verification_enabled']=False  # Owner requests production only; no automatic commissioning.
  prefs.setdefault('requested_automatic',bool(prefs.get('automatic') or prefs.get('verification_resume_auto')))
  if not prefs['requested_automatic']:prefs['automatic']=False
+ elif recoverable_battery_stop(prefs.get('battery_sale_proof') or {}):
+  proof=prefs['battery_sale_proof']
+  if prefs.get('handled_battery_stop_id')==proof.get('id') and not prefs.get('automatic'):
+   prefs['measurement_recovery']={'pending':True,'stop_id':proof['id'],'source':'battery','stable_seconds':30}
  if cycle_acceptance(prefs.get('battery_sale_proof'))['failed']:
   prefs.update(automatic=False,battery_verified=False,inhibited=True)
  journal=await hass.async_add_executor_job(Journal,Path(hass.config.path('.storage','jarvis_energy_sales.sqlite')))
@@ -113,8 +119,22 @@ async def async_setup_sales(hass,config,charge_controller):
    if issued.tzinfo is None or not 0<=time.time()-issued.timestamp()<=2100:return []
    return market_rows(entity.attributes.get('rows',[]),entity.attributes.get('rate'),policy()['sale_fee'])
   except (KeyError,TypeError,ValueError,OverflowError):return []
+ def read_today_override():
+  path=Path(hass.config.path('jarvis_workspace','sales-today-override.json'))
+  if not path.exists():return None
+  with path.open('rb') as stream:raw=stream.read(4097)
+  if len(raw)>4096:raise ValueError('One-day override is too large')
+  return json.loads(raw)
  async def select_block(rows):
-  now=time.time();selected=prefs.get('selected_block')
+  now=time.time()
+  override=today_override(await hass.async_add_executor_job(read_today_override),rows,now)
+  if override:
+   previous=prefs.get('selected_block') or {}
+   if not previous.get('one_day_override') or any(override[k]!=previous.get(k) for k in ('day','start','end')):
+    prefs['selected_block']=override;await persist_settings()
+    await event('daily_block_override',override)
+   return prefs['selected_block']
+  selected=prefs.get('selected_block')
   if isinstance(selected,dict):
    start=number(selected.get('start'));end=number(selected.get('end'))
    if start is not None and end is not None and end-start==policy()['block_minutes']*60 and now<end:
@@ -142,8 +162,7 @@ async def async_setup_sales(hass,config,charge_controller):
   now=time.time();local=datetime.fromtimestamp(now,ZoneInfo('Europe/Prague'))
   cutoff=local.replace(hour=23,minute=40,second=0,microsecond=0).timestamp()
   end=min(block['end'],cutoff)
-  native_start=next_native_start(local,now).timestamp()
-  return end if end-now>=360 and native_start+300<=end else None
+  return end if end-now>=10 else None
  def daylight_pv(pv):
   sun=hass.states.get('sun.sun')
   return pv is not None and pv>30 or sun is not None and sun.state=='above_horizon'
@@ -153,30 +172,22 @@ async def async_setup_sales(hass,config,charge_controller):
   hold={'mode':'hold','power_w':0,'minimum_soc':policy()['sale_soc'],'reason':'Čekám na cenový blok, přebytky nebo ověřený malý přetok.'}
   if soc is None:return hold
   if p and p['net']>0:
-   if soc>policy()['sale_soc'] and block and block['start']-180<=time.time()<=block['end']-360 and automatic_window_end(block) is not None:
+   if soc>policy()['sale_soc'] and block and block['start']<=time.time()<block['end']-10 and automatic_window_end(block) is not None:
     return {'mode':'battery','power_w':cap(),'minimum_soc':policy()['sale_soc'],'reason':f"Prodej podle plánu · baterie nad {policy()['sale_soc']:g} %."}
    if prefs['pv_verified'] and soc>=policy()['pv_soc'] and daylight_pv(pv) and time.time()>=float(prefs.get('cooldown_until',0)):
     return {'mode':'pv','power_w':cap(),'minimum_soc':policy()['sale_soc'],'reason':'Baterie je téměř plná · dostupné přebytky.'}
   if p and prefs.get('bias_enabled') and prefs.get('bias_verified') and soc>=policy()['resume_soc'] and bias_profile_ready(read()):
    return {'mode':'bias','power_w':policy()['bias_w'],'minimum_soc':home_floor(),'reason':f"Malý trvalý přetok · cíl {policy()['bias_w']:g} W, rezerva {home_floor():g} %."}
   return hold
- def healthy():
-  if charge_controller.active:return False
-  ids=('sensor.inverter_battery','sensor.inverter_pv_power','sensor.inverter_battery_power','sensor.inverter_grid_power','sensor.inverter_battery_temperature')
-  now=time.time()
-  for entity_id in ids:
+ def health_report():
+  samples={}
+  for entity_id in (*MEASUREMENTS,*STATUS):
    state=hass.states.get(entity_id)
-   reported=(getattr(state,'last_reported',None) or state.last_updated) if state else None
-   if state is None or number(state.state) is None or reported is None or not 0<=now-reported.timestamp()<30:return False
-  states=read();temp=number(states.get('sensor.inverter_battery_temperature'))
-  if temp is None or not 0<=temp<45:return False
-  if states.get('sensor.inverter_device_state')!='Normal' or states.get('sensor.inverter_device_alarm')!='OK' or states.get('sensor.inverter_device_fault')!='OK':return False
-  for entity_id in ('sensor.inverter_device_state','sensor.inverter_device_alarm','sensor.inverter_device_fault','binary_sensor.inverter_battery_alarm','binary_sensor.inverter_battery_fault'):
-   state=hass.states.get(entity_id)
-   if state is None or entity_id.startswith('binary_sensor.') and state.state!='off':return False
-   stamp=(getattr(state,'last_reported',None) or state.last_updated).timestamp()
-   if not 0<=now-stamp<=60:return False
-  return True
+   if state:
+    reported=getattr(state,'last_reported',None) or state.last_updated
+    samples[entity_id]={'state':state.state,'reported_at':reported.timestamp() if reported else None}
+  return evaluate_health(samples,time.time(),charging=charge_controller.active)
+ def healthy():return health_report()['healthy']
  def reported():
   stamps=[]
   for entity_id in ('sensor.inverter_grid_power','sensor.inverter_battery_power','sensor.inverter_pv_power'):
@@ -338,10 +349,10 @@ async def async_setup_sales(hass,config,charge_controller):
  async def save_window(record):await store.async_save({'settings':dict(prefs),'transaction':c.record,'native_window':record,'battery_sale':battery.record if battery else saved.get('battery_sale',{})})
  async def save_battery(record):await store.async_save({'settings':dict(prefs),'transaction':c.record,'native_window':window.record if window else saved.get('native_window',{}),'battery_sale':record})
  def window_telemetry():
-  states=read()
+  states=read();health=health_report()
   voltage=hass.states.get('sensor.inverter_battery_voltage');current=hass.states.get('sensor.inverter_battery_current')
   stamp=lambda state:(getattr(state,'last_reported',None) or state.last_updated).timestamp() if state else None
-  return {'soc':number(states.get('sensor.inverter_battery')),'grid_w':number(states.get('sensor.inverter_grid_power')),'battery_w':number(states.get('sensor.inverter_battery_power')),'pv_w':number(states.get('sensor.inverter_pv_power')),'healthy':healthy(),'reported_at':reported(),'net_price':(current_price() or {}).get('net'),
+  return {'soc':number(states.get('sensor.inverter_battery')),'grid_w':number(states.get('sensor.inverter_grid_power')),'battery_w':number(states.get('sensor.inverter_battery_power')),'pv_w':number(states.get('sensor.inverter_pv_power')),'healthy':health['healthy'],'health':health,'reported_at':reported(),'net_price':(current_price() or {}).get('net'),
    'voltage_v':number(voltage.state) if voltage else None,'current_a':number(current.state) if current else None,'voltage_reported_at':stamp(voltage),'current_reported_at':stamp(current)}
  window=NativeWindow(native_test_read,native_test_write,window_telemetry,save_window,event,saved=saved.get('native_window'))
  battery=BatterySaleController(native_test_read,native_test_write,window_telemetry,save_battery,event,saved=saved.get('battery_sale'))
@@ -486,6 +497,8 @@ async def async_setup_sales(hass,config,charge_controller):
    prefs['battery_verified']=False;normal=False
   if proof.get('conflicts'):normal=False
   if not normal:prefs.update(automatic=False,inhibited=True)
+  if prefs.get('requested_automatic') and recoverable_battery_stop(proof):
+   prefs['measurement_recovery']={'pending':True,'stop_id':proof['id'],'source':'battery','stable_seconds':30}
   if proof.get('purpose')=='commission' and prefs.get('auto_verification',{}).get('kind')=='battery':
    result=finish_verification(prefs,proof,accepted,time.time());prefs.clear();prefs.update(result)
   await persist_settings()
@@ -578,7 +591,7 @@ async def async_setup_sales(hass,config,charge_controller):
    'battery_sale':{k:v for k,v in battery.record.items() if k not in ('before','expected','pending')},'battery_sale_error':battery.error,'native_start':battery.record.get('start'),'selected_block':prefs.get('selected_block'),'sale_policy':'block_and_soc','automatic_battery_policy':'scheduled_above_60','automatic_battery_requires_commission':False,'sale_floor_soc':policy()['sale_soc'],
    'bias_status':({'average_grid_w':c.record.get('bias_average_w'),'target_export_w':policy()['bias_w']} if c.active and c.record.get('mode')=='bias' else None),'bias_policy':{'enabled':prefs.get('bias_enabled',True),'target_export_w':policy()['bias_w'],'minimum_soc':home_floor(),'resume_soc':policy()['resume_soc'],'verified':prefs.get('bias_verified',False),'ha_required':True},'charging_active':charge_controller.active,'capacity':capacity(),'house_power_w':house(),'last_cycle':cycle_acceptance(prefs.get('battery_sale_proof')),'settings':dict(prefs),'policy':policy(),'policy_revision':policy_revision(policy()),'automatic_requested':bool(prefs.get('requested_automatic')),'autonomous_verification':autonomous_state(),'measurement_recovery':dict(prefs.get('measurement_recovery') or {}),'pv_surplus_soc':policy()['pv_soc'],'last_stop':prefs.get('last_sale_stop'),'diagnostic_stop':prefs.get('last_diagnostic_stop') or prefs.get('last_sale_stop'),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or battery.error or 'Čeká na odeznění příčiny a potvrzení bezpečného režimu.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else battery.error if battery.active else c.error or runtime_error,'price':p,
    'mode':'battery_commission' if window.active else 'battery' if battery.active else c.record.get('mode'),'power_w':500 if window.active else battery.record.get('power_w') if battery.active else c.record.get('power_w'),'deadline':window.record.get('end') if window.active else battery.record.get('end') if battery.active else c.record.get('deadline'),
-   'grid_target_w':GRID_TARGET_W,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('zero_target_proof',{}).get('verified') is True and len(prefs.get('zero_target_proof',{}).get('read_shapes',[]))==2 and prefs.get('zero_target_proof',{}).get('actual_w')==GRID_TARGET_W and prefs.get('native_grid_target_w')==GRID_TARGET_W,'grid_import_policy':f"Malý přetok {policy()['bias_w']:g} W; domácí rezerva {home_floor():g} %; plánovaný prodej do {policy()['sale_soc']:g} %.",'automatic_limit_w':cap(),'healthy':healthy(),'battery_soc':number(entity.state) if entity else None,
+   'grid_target_w':GRID_TARGET_W,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('zero_target_proof',{}).get('verified') is True and len(prefs.get('zero_target_proof',{}).get('read_shapes',[]))==2 and prefs.get('zero_target_proof',{}).get('actual_w')==GRID_TARGET_W and prefs.get('native_grid_target_w')==GRID_TARGET_W,'grid_import_policy':f"Malý přetok {policy()['bias_w']:g} W; domácí rezerva {home_floor():g} %; plánovaný prodej do {policy()['sale_soc']:g} %.",'automatic_limit_w':cap(),'healthy':healthy(),'health':health_report(),'battery_soc':number(entity.state) if entity else None,
    'history_error':archive_error,'planning':home_plan(),'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)
@@ -723,11 +736,15 @@ async def async_setup_sales(hass,config,charge_controller):
   nonlocal measurement_healthy_since,last_reason
   recovery=prefs.get('measurement_recovery') or {}
   if not recovery.get('pending'):measurement_healthy_since=None;return
+  if recovery.get('source')=='battery':
+   proof=prefs.get('battery_sale_proof') or {}
+   if proof.get('id')!=recovery.get('stop_id') or prefs.get('handled_battery_stop_id')!=proof.get('id') or not recoverable_battery_stop(proof):
+    measurement_healthy_since=None;return
   if not prefs.get('requested_automatic'):
    prefs['measurement_recovery']={};measurement_healthy_since=None;await persist_settings();return
   if not ready or active() or not healthy() or not current_price():measurement_healthy_since=None;return
   if measurement_healthy_since is None:measurement_healthy_since=time.time();return
-  if time.time()-measurement_healthy_since<10:return
+  if time.time()-measurement_healthy_since<recovery.get('stable_seconds',10):return
   async with lock:
    if not prefs.get('requested_automatic') or active() or not healthy():return
    try:
@@ -816,7 +833,7 @@ async def async_setup_sales(hass,config,charge_controller):
        operating_end=automatic_window_end(block)
        if operating_end is not None:
         await battery.start(cap(),min(60,(operating_end-time.time())/60),policy()['sale_soc'],quotes(),purpose='automatic',window_end=operating_end,maximum_power_w=cap())
-        last_reason='Bateriový segment připraven; skutečný nativní začátek může následovat po začátku cenového bloku.'
+        last_reason='Bateriový prodej připraven přes HA; čekám na potvrzení dodávky.'
        elif operating_end is None:last_reason='Před půlnocí již nelze bezpečně dokončit další bateriový segment; automatika čeká.'
       elif decision['mode']=='bias' and prefs.get('bias_verified'):
        await verify_baseline();await c.start('bias',policy()['bias_w'],60,minimum_soc=home_floor(),purpose='automatic')
