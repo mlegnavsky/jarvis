@@ -73,7 +73,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
  async def test_manual_on_then_temperature_safety(self):
   self.set_state('switch.aqara_smart_plug_eu_2','on');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_living'].state,'Ručně')
-  self.set_state(self.g['SENSORS']['temp'],'23.5');await self.drain()
+  self.set_state(self.g['SENSORS']['temp'],'23.6');await self.drain()
   self.assertEqual(self.states['switch.aqara_smart_plug_eu_2'].state,'off')
  async def test_disabling_visible_automation_stops_automatic_heat(self):
   self.set_state(self.g['AUTOMATION'],'off');await self.drain()
@@ -81,7 +81,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
 
  async def test_late_switch_confirmation_clears_previous_error(self):
   self.defer_switch=True
-  self.set_state(self.g['SENSORS']['temp'],'23.5');await self.drain()
+  self.set_state(self.g['SENSORS']['temp'],'23.6');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Chyba ovládání')
   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Dosaženo 23,5 °C')
@@ -104,14 +104,14 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   from unittest.mock import patch
   self.defer_switch=True
   now=time.time()
-  self.set_state(self.g['SENSORS']['temp'],'23.5');await self.drain()
+  self.set_state(self.g['SENSORS']['temp'],'23.6');await self.drain()
   with patch.object(time,'time',return_value=now+60):
    self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
   c=self.hass.data['jarvis_solar_heating']['controller']
   self.assertEqual(c.manual_off_until['child'],0)
  async def test_explicit_off_while_command_pending_still_locks(self):
   self.defer_switch=True
-  self.set_state(self.g['SENSORS']['temp'],'23.5');await self.drain()
+  self.set_state(self.g['SENSORS']['temp'],'23.6');await self.drain()
   for cb in self.bus['call_service']:cb(NS(data={'domain':'switch','service':'turn_off','service_data':{'entity_id':'switch.aqara_smart_plug_eu'}},context=Context()))
   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].attributes['mode'],'manual_off')

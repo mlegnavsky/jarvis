@@ -213,8 +213,9 @@ class SaleController:
   self.record['bias_last']=stamp
   samples=self.record.setdefault('bias_samples',[]);samples.append([stamp,grid]);del samples[:-12]
   mean=sum(v for _,v in samples)/len(samples);self.record['bias_average_w']=mean
-  self.observed=len(samples)>=3 and samples[-1][0]-samples[0][0]>=20 and -20<=mean<0
+  self.observed=len(samples)>=3 and samples[-1][0]-samples[0][0]>=20 and -50<=mean<0
   if self.observed:
+   self.record['bias_confirmed_at']=self.clock()
    self.record['phase']='running';self.record.setdefault('export_first',samples[0][0]);self.record['export_last']=stamp;self.record['export_count']=len(samples)
   else:
    for k in ('export_first','export_last','export_count'):self.record.pop(k,None)
@@ -262,7 +263,7 @@ class SaleController:
    await self.event('sale_measurement',{'sale_id':self.record.get('id'),'source_t':stamp,'grid_w':grid,'battery_w':batt,'soc':soc,'pv_w':number(states.get('sensor.inverter_pv_power')),'requested_w':self.record['power_w']})
    self.record['sample_last']=stamp
   if mode=='bias':
-   if self.clock()-self.record['started']>=180 and not self.observed:
+   if self.clock()-self.record.get('bias_confirmed_at',self.record['started'])>=180 and not self.observed:
     self.error='Malý přetok se nepotvrdil; požadované2 W nepovažuji za skutečný export.'
     await self.stop('no_export')
    return

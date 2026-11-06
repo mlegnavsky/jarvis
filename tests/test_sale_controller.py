@@ -68,6 +68,22 @@ class SaleTests(unittest.IsolatedAsyncioTestCase):
    self.now+=5;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-86';await c.tick()
   self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'guard')
 
+ async def test_small_export_with_regulation_variance_remains_confirmed(self):
+  c=self.c();await c.start('bias',2,10,minimum_soc=30,purpose='automatic')
+  for _ in range(40):
+   self.now+=5;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-30';await c.tick()
+  self.assertTrue(c.active);self.assertTrue(c.observed)
+
+ async def test_confirmed_small_export_does_not_stop_on_one_late_import_window(self):
+  c=self.c();await c.start('bias',2,10,minimum_soc=30,purpose='automatic')
+  for _ in range(40):
+   self.now+=5;self.sample_stamp=self.now;self.states['sensor.inverter_grid_power']='-2';await c.tick()
+  self.states['sensor.inverter_grid_power']='20'
+  for _ in range(12):self.now+=5;self.sample_stamp=self.now;await c.tick()
+  self.assertTrue(c.active);self.assertFalse(c.observed)
+  for _ in range(36):self.now+=5;self.sample_stamp=self.now;await c.tick()
+  self.assertFalse(c.active);self.assertEqual(c.last_stop['reason'],'no_export')
+
  async def test_bias_does_not_admit_more_power_lower_floor_or_unknown_house_program(self):
   for changes in ({'power_w':3},{'minimum_soc':29},{'minimum_soc':60}):
    c=self.c();p=dict(mode='bias',power_w=2,duration_minutes=1,minimum_soc=30,purpose='bias_probe');p.update(changes)

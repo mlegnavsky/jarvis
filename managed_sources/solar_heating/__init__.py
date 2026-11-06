@@ -13,7 +13,7 @@ from homeassistant.helpers.storage import Store
 from .engine import Controller, ROOMS, numeric
 
 DOMAIN='jarvis_solar_heating'
-VERSION='1.2.0'
+VERSION='1.2.1'
 AUTOMATION='automation.jarvis_solarni_topeni'
 SWITCHES={'child':'switch.aqara_smart_plug_eu','living':'switch.aqara_smart_plug_eu_2'}
 SENSORS={'temp':'sensor.aqara_temp_humidity_sensor_t1_teplota','pv':'sensor.inverter_pv_power','soc':'sensor.inverter_battery','discharge':'sensor.inverter_battery_power','load':'sensor.inverter_load_power'}

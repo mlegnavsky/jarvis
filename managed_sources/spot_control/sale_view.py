@@ -11,6 +11,9 @@ def operation_card():
 **Zbývající energie odhadem:** {{ energy(c.get('remaining_kwh')) }} · **nad rezervou 60 %:** {{ energy(c.get('above_sale_reserve_kwh')) }}
 Nominální výpočet z nastavení; skutečná využitelná kapacita není tímto změřena. Energie nad rezervou ještě zahrnuje budoucí spotřebu domu a ztráty.
 
+{% set auto=state_attr('sensor.jarvis_energy_sales','autonomous_verification') or {} %}
+**Samostatné řízení HA:** {{ auto.get('reason','Čekám na stav.') }}
+
 {% set cycle=state_attr('sensor.jarvis_energy_sales','last_cycle') or {} %}
 **Celý prodejní cyklus:** {{ 'potvrzen měřením' if cycle.get('verified') else 'zatím nedoložený celý průběh' }}.
 {% set supervision=state_attr('sensor.jarvis_energy_sales','supervision') or {} %}

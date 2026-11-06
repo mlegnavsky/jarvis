@@ -71,7 +71,7 @@ class Controller:
   elif soc<cfg['battery_off']:self.full=False
   if temp_ok:
    if temp<cfg['temp_on']:self.demand=True
-   elif temp>=cfg['temp_off']:self.demand=False
+   elif temp>cfg['temp_off']:self.demand=False
   if energy_ok and discharge>cfg['discharge_w'] and not self.full:
    if self.discharge_since is None:self.discharge_since=now
   else:self.discharge_since=None
@@ -83,7 +83,7 @@ class Controller:
     desired=False;reason='Ručně vypnuto do půlnoci';self.manual[room]=False
    elif not temp_ok:
     desired=False;reason='Chybí teplota';self.manual[room]=False
-   elif temp>=cfg['temp_off']:
+   elif temp>cfg['temp_off']:
     desired=False;reason='Dosaženo '+str(cfg['temp_off']).replace('.',',')+' °C';self.manual[room]=False
    elif self.manual[room]:
     if not numeric(soc) or soc<=cfg['manual_stop_soc']:

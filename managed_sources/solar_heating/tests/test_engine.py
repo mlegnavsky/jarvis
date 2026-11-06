@@ -15,9 +15,17 @@ class HeatingTests(unittest.TestCase):
   a=self.run_at(c,1120,child=True,load=1300);self.assertTrue(a['living']['on'])
  def test_thermal_hysteresis(self):
   c=self.make();self.run_at(c);self.assertTrue(self.run_at(c,temp=23,child=True)['child']['on'])
-  self.assertFalse(self.run_at(c,temp=23.5,child=True)['child']['on'])
+  self.assertFalse(self.run_at(c,temp=23.6,child=True)['child']['on'])
+ def test_owner_21_22_shared_hysteresis_keeps_exact_boundaries_and_turns_both_off_above(self):
+  c=self.make();c.configure({'temp_on':21,'temp_off':22});c.demand=True;c.on_since['child']=500
+  a=self.run_at(c,temp=22,child=True,living=True,load=3400)
+  self.assertTrue(a['child']['on']);self.assertTrue(a['living']['on'])
+  a=self.run_at(c,temp=22.1,child=True,living=True,load=3400)
+  self.assertFalse(a['child']['on']);self.assertFalse(a['living']['on'])
+  self.assertFalse(self.run_at(c,temp=21.5)['child']['on'])
+  self.assertTrue(self.run_at(c,1301,temp=20.9)['child']['on'])
  def test_manual_ends_on_either_limit_and_returns_auto(self):
-  for kw in [dict(temp=23.5),dict(soc=50)]:
+  for kw in [dict(temp=23.6),dict(soc=50)]:
    c=self.make();c.manual['child']=True
    a=self.run_at(c,child=True,**kw);self.assertFalse(a['child']['on']);self.assertFalse(c.manual['child'])
  def test_manual_ignores_clouds_but_not_missing_temperature(self):
@@ -55,7 +63,7 @@ class HeatingTests(unittest.TestCase):
   c=self.make();c.configure({'temp_on':21,'temp_off':23})
   self.assertFalse(self.run_at(c,temp=21.5)['child']['on'])
   self.assertTrue(self.run_at(c,temp=20.5)['child']['on'])
-  self.assertFalse(self.run_at(c,temp=23,child=True)['child']['on'])
+  self.assertFalse(self.run_at(c,temp=23.1,child=True)['child']['on'])
   self.assertEqual(Controller(c.dump()).settings['temp_off'],23)
  def test_invalid_settings_leave_previous_rules_intact(self):
   c=self.make()
