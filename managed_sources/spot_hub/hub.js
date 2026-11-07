@@ -55,7 +55,7 @@ class Hub{
  }
  fit(){if(this.fitPending)return;this.fitPending=true;requestAnimationFrame(()=>{this.fitPending=false;try{const f=global.frameElement;if(!f)return;const height=Math.ceil($('app').getBoundingClientRect().height+4);if(Math.abs((this.frameHeight||0)-height)<3)return;this.frameHeight=height;f.style.height=height+'px';f.style.position='relative';f.style.display='block';const container=f.parentElement;if(container){container.style.paddingTop='0px';container.style.height=height+'px';}}catch{}});}
  update(){
-  const h=this.getHost();if(!h){$('connection').textContent='Čekám na připojení HA';$('connection').className='live stale';return;}this.h=h;
+  const h=this.getHost();if(!h){this.renderMonitor(null,false);$('connection').textContent='Čekám na připojení HA';$('connection').className='live stale';return;}this.h=h;
   const entity=h.states['sensor.jarvis_energy_sales'],sales=entity?.attributes||{},prefs=sales.settings||{},requested=sales.automatic_requested??prefs.requested_automatic??prefs.automatic;
   const stamp=Date.parse(entity?.last_reported||entity?.last_updated||'');const fresh=Number.isFinite(stamp)&&Date.now()-stamp<60000&&stamp<=Date.now()+5000;
   $('connection').textContent=fresh?'● Živá data':'Čekám na čerstvá data';$('connection').className=fresh?'live':'live stale';
@@ -68,14 +68,7 @@ class Hub{
   $('sale-state').className='muted'+(sales.error||prefs.inhibited?' status-fault':'');
   $('sale-state').textContent=fresh?(stopping?(sales.error||'Čekám na fyzické potvrzení ukončení prodeje.'):state):'Stav řízení není čerstvý; zobrazené údaje se mohou opožďovat.';
   const tr=global.JarvisMessages?.translate||((s)=>s);
-  if($('monitor-summary')){
-   const view=monitorView(sales.supervision,fresh);
-   $('monitor-summary').textContent=view.summary;$('monitor-result').textContent=view.result;
-   $('monitor-reason').textContent=view.reason||'';$('monitor-notice').textContent=view.notice||'';
-   $('monitor-alerts').textContent=view.alerts.join(' ');
-   const rows=(id,items)=>{const root=$(id);root.replaceChildren();for(const values of items){const row=document.createElement('tr');for(const value of values){const cell=document.createElement('td');cell.textContent=value;row.appendChild(cell);}root.appendChild(row);}};
-   rows('monitor-measurements',view.measurements);rows('monitor-incidents',view.incidents);
-  }
+  this.renderMonitor(sales.supervision,fresh);
   $('sale-state').textContent=tr($('sale-state').textContent);
   const stop=global.JarvisMessages?.stopInfo(sales.diagnostic_stop||sales.last_stop,prefs.last_controller_error);
   if($('stop-summary'))$('stop-summary').textContent=stop?stop.cause+' '+stop.outcome:'Zatím není zaznamenané ukončení prodeje.';
@@ -127,6 +120,16 @@ class Hub{
    if(label.temperatureValue)label.temperatureValue.textContent=value;else label.textContent=value;
   }
   if(!this.loadingFinance&&Date.now()-this.lastFinance>60000)this.finance();this.fit();
+ }
+ renderMonitor(report,fresh){
+  if($('monitor-summary')){
+   const view=monitorView(report,fresh);
+   $('monitor-summary').textContent=view.summary;$('monitor-result').textContent=view.result;
+   $('monitor-reason').textContent=view.reason||'';$('monitor-notice').textContent=view.notice||'';
+   $('monitor-alerts').textContent=view.alerts.join(' ');
+   const rows=(id,items)=>{const root=$(id);root.replaceChildren();for(const values of items){const row=document.createElement('tr');for(const value of values){const cell=document.createElement('td');cell.textContent=value;row.appendChild(cell);}root.appendChild(row);}};
+   rows('monitor-measurements',view.measurements);rows('monitor-incidents',view.incidents);
+  }
  }
  read(id){
   const s=this.h?.states[id],sales=this.h?.states['sensor.jarvis_energy_sales'],sample=sales?.attributes?.telemetry?.[id];
