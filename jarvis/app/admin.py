@@ -171,7 +171,7 @@ class Admin:
             if device is None:
                 raise APIError(404, 'device_not_found')
             metadata = {k: device.get(k) for k in ('area_id', 'name_by_user')}
-            return {'device': diagnostics.select(device, ('id', 'name', 'name_by_user', 'area_id', 'manufacturer', 'model')),
+            return {'device': diagnostics.select(device, ('id', 'name', 'name_by_user', 'area_id', 'manufacturer', 'model', 'sw_version', 'hw_version')),
                     'revision': revision(metadata), 'areas': areas,
                     'entities': [diagnostics.select(e, ('id', 'entity_id', 'name', 'original_name', 'area_id', 'disabled_by')) for e in entities if e.get('device_id') == target]}
         if query == 'permission_map':

@@ -1,3 +1,9 @@
+# 3.12.6
+
+- Stage an official commit-pinned Voice PE recovery configuration for the existing explicitly allowed living-room target, retaining private network/API/OTA connectivity and a revision-bound before-image.
+- Remove custom voice callbacks/models from the staged configuration; use the existing separate compile/install/reconnect verification. No firmware is flashed by updating Jarvis.
+- Read public device software/hardware versions for reference comparison. No credential export, audio framework, or HA Core upgrade.
+
 # 3.12.5
 
 - Preserve all administration receipts and idempotency while allowing up to 10000 historical jobs instead of1000.

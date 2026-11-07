@@ -219,6 +219,14 @@
       ],
       "source": "jarvis/app/firmware.py"
     },
+    "firmware_stock_stage": {
+      "arguments": [
+        "expected_revision",
+        "package_sha",
+        "target"
+      ],
+      "source": "jarvis/app/firmware.py"
+    },
     "heating_settings": {
       "arguments": [
         "changes",

@@ -8,9 +8,10 @@ from .firmware_client import FirmwareClient
 from .policy import APIError
 from .ha import UpstreamError
 from .firmware_reference import facts as reference_facts, staged_source
+from .firmware_stock import stock_source
 
 ADDON='5c53de3b_esphome'
-FIELDS={'firmware_reference_stage':{'target','source_sha','profile','reference_server_id','expected_revision'},'firmware_model_settings':{'target','model_id','probability_cutoff','expected_revision'},'firmware_compile':{'target','expected_revision'},'firmware_install':{'target','expected_revision'},
+FIELDS={'firmware_stock_stage':{'target','package_sha','expected_revision'},'firmware_reference_stage':{'target','source_sha','profile','reference_server_id','expected_revision'},'firmware_model_settings':{'target','model_id','probability_cutoff','expected_revision'},'firmware_compile':{'target','expected_revision'},'firmware_install':{'target','expected_revision'},
         'firmware_config_restore':{'target','backup_id','expected_revision'},
         'firmware_model_install':{'target','model_id','model_base64','sha256','manifest','expected_revision'}}
 
@@ -32,6 +33,14 @@ class FirmwareStore(WorkspaceFiles):
  def config(self,target):
   path=self.target(target);data=ConfigFiles.read(self,path)
   if data['content'] is None:raise APIError(404,'firmware_config_missing')
+  # Official stock firmware inherits wake models from its public package.
+  try:
+   root=yaml.compose(data['content'])
+   if not isinstance(root,yaml.MappingNode):raise APIError(400,'unsupported_firmware_model_configuration')
+   root_values={k.value:v for k,v in root.value}
+   if 'micro_wake_word' not in root_values and reference_facts(data['content']).get('public_voice_package'):
+    return data,[]
+  except (TypeError,AttributeError,yaml.YAMLError):raise APIError(400,'unsupported_firmware_model_configuration') from None
   try:
    root=yaml.compose(data['content']);micro=next(v for k,v in root.value if k.value=='micro_wake_word')
    models=next(v for k,v in micro.value if k.value=='models');entries=[]
@@ -49,6 +58,12 @@ class FirmwareStore(WorkspaceFiles):
   candidate=staged_source(data['content'],args)
   result=self.write_raw(self.target(args['target']),candidate.encode(),args['expected_revision'],0o600)
   return {**result,'activation_performed':False,'source_sha':args['source_sha'],'profile':args['profile'],'reference_server_id':args['reference_server_id']}
+ def stage_stock(self,args):
+  data,_=self.config(args['target'])
+  if data['revision']!=args.get('expected_revision'):raise APIError(409,'firmware_revision_conflict')
+  candidate=stock_source(data['content'],args)
+  result=self.write_raw(self.target(args['target']),candidate.encode(),args['expected_revision'],0o600)
+  return {**result,'activation_performed':False,'package_sha':args['package_sha'],'profile':'official_stock'}
  def local_model(self,node):
   manifest_path='esphome/'+node.value
   raw,_=self.raw(manifest_path)
@@ -145,12 +160,13 @@ class FirmwareBridge:
     row=db.execute('SELECT operation,before_data FROM jobs WHERE key=?',(args['backup_id'],)).fetchone()
    saved=json.loads(row[1]) if row and row[1] else {}
    before=saved.get('firmware_config',{})
-   if not row or row[0] not in ('firmware_model_install','firmware_model_settings','firmware_reference_stage') or before.get('path')!=store.target(args['target']) or not isinstance(before.get('content'),str):raise APIError(404,'firmware_backup_not_found')
+   if not row or row[0] not in ('firmware_model_install','firmware_model_settings','firmware_reference_stage','firmware_stock_stage') or before.get('path')!=store.target(args['target']) or not isinstance(before.get('content'),str):raise APIError(404,'firmware_backup_not_found')
    self.admin.remember(key,{'firmware_config':ConfigFiles.read(store,store.target(args['target']))})
    result=store.write_raw(before['path'],before['content'].encode(),args['expected_revision'],0o600)
    return {**result,'activation_performed':False}
-  if operation in ('firmware_model_install','firmware_model_settings','firmware_reference_stage'):
+  if operation in ('firmware_model_install','firmware_model_settings','firmware_reference_stage','firmware_stock_stage'):
    self.admin.remember(key,{'firmware_config':ConfigFiles.read(store,store.target(args['target']))})
+   if operation=='firmware_stock_stage':return store.stage_stock(args)
    if operation=='firmware_reference_stage':return store.stage_reference(args)
    return store.tune_model(args) if operation=='firmware_model_settings' else store.install_model(args)
   if operation=='firmware_install':
