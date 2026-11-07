@@ -68,6 +68,8 @@ def choose_operation(*, block, price, soc, pv_w, house_w, now, policy, settings,
             and soc >= policy['resume_soc']):
         return decision('bias', policy['bias_w'], policy['home_soc'], 'bias',
                         f"Malý trvalý přetok · cíl {policy['bias_w']:g} W, rezerva {policy['home_soc']:g} %.")
+    if not settings.get('bias_enabled',True):
+        return hold('house_priority', 'Běžný domácí režim · napájení domu má přednost. Automatický prodej čeká na přebytky nebo cenový plán.')
     return hold('waiting', 'Čekám na cenový blok, přebytky nebo podmínky malého přetoku.')
 
 

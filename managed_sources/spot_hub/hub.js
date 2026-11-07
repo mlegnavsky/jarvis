@@ -108,7 +108,7 @@ class Hub{
     table('weather-history',(p.recent_decisions||[]).slice().reverse().map(v=>[v.at?new Date(v.at).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague',hour:'2-digit',minute:'2-digit'}):'—',v.forecast_day||'—',(v.reserve_soc>=100?'Bez prodeje':v.reserve_soc+' %'),format(v.forecast_pv_kwh,1)]));
    }
   }
-  $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Rezerva plánu '+(sales.sale_floor_soc??policy.sale_soc??60)+' %, domácnosti '+(policy.home_soc??30)+' %, obnovení malého přetoku '+(policy.resume_soc??31)+' %. Maximální dodávka '+format((policy.max_w??9300)/1000,1)+' kW.';
+  $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Rezerva plánu '+(sales.sale_floor_soc??policy.sale_soc??60)+' %, domácnosti '+(policy.home_soc??30)+' %. '+(sales.bias_policy?.enabled===false?(sales.bias_policy.disabled_reason||'Malý přetok je pozastaven.')+' ':'Obnovení malého přetoku '+(policy.resume_soc??31)+' %. ')+'Maximální dodávka '+format((policy.max_w??9300)/1000,1)+' kW.';
   $('recovery').textContent=sales.error?'Řízení hlásí: '+tr(sales.error):(sales.measurement_recovery?.pending?'Po výpadku měření čeká HA na stabilní data a potvrzení domácího režimu.':'');
   $('updated').textContent='Živý stav · '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · průběžné částky nejsou fakturace';
   if(!this.houseMounted&&!this.houseLoading)this.mountHouse();if(!this.cardsMounted&&!this.mounting)this.mountCards();for(const card of this.cards)card.hass=h;

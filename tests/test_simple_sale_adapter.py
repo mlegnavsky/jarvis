@@ -389,18 +389,19 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertFalse(data['settings'].get('verification_resume_auto',False))
   self.assertEqual(self.hass.states.get('sensor.jarvis_energy_sales').attributes['autonomous_verification']['state'],'disabled')
 
- async def test_ha_leaves_bias_running_when_sun_prevents_meaningful_battery_proof(self):
+ async def test_ha_keeps_house_supply_when_sun_prevents_meaningful_battery_proof(self):
   data=await self.autonomous_setup(pv=3000);await self.ticks[0]()
   self.assertEqual(data['battery_controller'].starts,[])
-  self.assertTrue(data['controller'].active);self.assertEqual(data['controller'].record['mode'],'bias')
+  self.assertFalse(data['controller'].active)
+  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['settings']['bias_enabled'])
 
  async def test_retired_verification_metadata_cannot_interrupt_production(self):
   data=await self.autonomous_setup(pv=3000);await self.ticks[0]()
-  self.assertTrue(data['controller'].active)
+  self.assertFalse(data['controller'].active)
   data['settings']['auto_verification']={'kind':'retired','state':'failed'}
   self.refresh();await self.ticks[0]()
   self.assertEqual(data['battery_controller'].starts,[])
-  self.assertTrue(data['settings']['automatic']);self.assertTrue(data['controller'].active)
+  self.assertTrue(data['settings']['automatic']);self.assertFalse(data['controller'].active)
 
  async def test_owner_stop_cancels_pending_automatic_verification_resume(self):
   data=await self.autonomous_setup();await self.ticks[0]();self.clock[0]+=185;self.refresh();await self.ticks[0]();await data['stop']()
@@ -832,7 +833,8 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.hass.states.async_set('sensor.inverter_battery',99);self.hass.states.async_set('sensor.inverter_pv_power',0)
   self.hass.states.async_set('sun.sun','above_horizon');self.refresh();await self.ticks[0]()
   self.assertFalse(data['battery_controller'].active)
-  self.assertEqual(data['controller'].record.get('mode'),'bias')
+  self.assertFalse(data['controller'].active)
+  self.assertTrue(data['settings']['automatic'])
 
  async def test_fixed_battery_commission_and_strict_acceptance_keep_auto_off(self):
   data=await self.setup();self.prices(math.floor(self.clock[0]/900)*900);self.refresh()
