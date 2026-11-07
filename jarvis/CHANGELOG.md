@@ -1,3 +1,8 @@
+# 3.12.7
+
+- Carry bounded, credential-filtered error summaries from failed native firmware jobs. The companion Core firmware bridge1.0.1 can read a terminal sidecar for an already authorized device.
+- No raw build output, arbitrary streaming command, new firmware installation, audio transport, or Core version upgrade.
+
 # 3.12.6
 
 - Stage an official commit-pinned Voice PE recovery configuration for the existing explicitly allowed living-room target, retaining private network/API/OTA connectivity and a revision-bound before-image.

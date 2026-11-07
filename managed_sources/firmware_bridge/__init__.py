@@ -3,6 +3,7 @@ import asyncio
 import re
 import time
 import uuid
+from collections import deque
 
 import aiohttp
 import voluptuous as vol
@@ -68,7 +69,29 @@ async def _native_call(hass,user_id,command,args):
             if not isinstance(reply,dict):raise ValueError('unavailable')
             if reply.get('message_id')==message_id:
                 if 'error_code' in reply or 'result' not in reply:raise ValueError('unavailable')
-                return reply['result']
+                result=reply['result']
+                # Read only a terminal failed job belonging to our configured device.
+                # New Device Builder versions keep terminal output in a private sidecar.
+                if (command=='firmware/get_job' and isinstance(result,dict)
+                        and result.get('job_id')==args.get('job_id')
+                        and result.get('configuration') in hass.data[DOMAIN].get('targets',())
+                        and result.get('status')=='failed' and not result.get('output')):
+                    stream_id=uuid.uuid4().hex
+                    await ws.send_json({'command':'firmware/follow_job','message_id':stream_id,'args':{'job_id':args['job_id']}})
+                    tail=deque(maxlen=200)
+                    for _ in range(4096):
+                        frame=await ws.receive_json()
+                        if not isinstance(frame,dict):raise ValueError('unavailable')
+                        if frame.get('message_id')!=stream_id:continue
+                        if 'error_code' in frame:raise ValueError('unavailable')
+                        if frame.get('event')=='output' and isinstance(frame.get('data'),str):
+                            tail.append(frame['data'][:2000])
+                        elif frame.get('event')=='result':
+                            if not isinstance(frame.get('data'),dict) or frame['data'].get('status')!='failed':raise ValueError('unavailable')
+                            result={**result,'output':list(tail)}
+                            break
+                    else:raise ValueError('unavailable')
+                return result
         raise ValueError('unavailable')
     except Exception:
         cache.pop(user_id,None)

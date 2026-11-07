@@ -235,7 +235,10 @@ def unwrap(value,key):
  if isinstance(value,dict) and key in value:return value[key]
  return value
 
-def public_job(job):return {k:job.get(k) for k in ('job_id','configuration','job_type','status','exit_code','progress','created_at','completed_at','depends_on')}
+def public_job(job):
+ result={k:job.get(k) for k in ('job_id','configuration','job_type','status','exit_code','progress','created_at','completed_at','depends_on')}
+ if 'error_summary' in job:result['error_summary']=job['error_summary']
+ return result
 def public_device(d):
  runtime=d.get('runtime_state') or {}
  return {'configuration':d.get('configuration'),'expected_config_hash':d.get('expected_config_hash'),

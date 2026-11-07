@@ -5,6 +5,7 @@ import re
 import time
 import unittest
 import uuid
+from collections import deque
 from pathlib import Path
 from types import SimpleNamespace
 import aiohttp
@@ -20,6 +21,14 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
             await ws.send_json({'server_version':'1.25.0','requires_auth':False})
             async for message in ws:
                 command=message.json();self.commands.append(command)
+                if command['command']=='firmware/get_job':
+                    await ws.send_json({'message_id':command['message_id'],'result':{'job_id':'failed1','configuration':'voice.yaml','status':'failed','exit_code':1,'output':[]}})
+                    continue
+                if command['command']=='firmware/follow_job':
+                    for line in ['normal build output','src/main.cpp:5: error: member missing']:
+                        await ws.send_json({'message_id':command['message_id'],'event':'output','data':line})
+                    await ws.send_json({'message_id':command['message_id'],'event':'result','data':{'status':'failed','exit_code':1}})
+                    continue
                 await ws.send_json({'message_id':command['message_id'],'result':{'configured':[],'importable':[]}})
             self.closed=True
             return ws
@@ -31,12 +40,12 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
             data={'session':'private-session'} if path=='/ingress/session' else {'state':'started','ingress_url':'/api/hassio_ingress/opaque'}
             return {'result':'ok','data':data}
         supervisor=SimpleNamespace(base_url=self.server.make_url('/'),send_command=send_command)
-        self.hass=SimpleNamespace(data={'hassio':supervisor,'jarvis_firmware_bridge':{'sessions':{}}})
+        self.hass=SimpleNamespace(data={'hassio':supervisor,'jarvis_firmware_bridge':{'sessions':{},'targets':['voice.yaml']}})
         # Isolate the transport function from HA-only registration imports;
         # its networking executes unchanged against aiohttp above.
         source=ast.parse((Path(__file__).parents[1]/'__init__.py').read_text())
         fn=next(n for n in source.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='_native_call')
-        env={'asyncio':asyncio,'aiohttp':aiohttp,'re':re,'time':time,'uuid':uuid,'DATA_COMPONENT':'hassio','DOMAIN':'jarvis_firmware_bridge','ADDON':'5c53de3b_esphome','async_get_clientsession':lambda hass:self.session}
+        env={'asyncio':asyncio,'aiohttp':aiohttp,'re':re,'time':time,'uuid':uuid,'deque':deque,'DATA_COMPONENT':'hassio','DOMAIN':'jarvis_firmware_bridge','ADDON':'5c53de3b_esphome','async_get_clientsession':lambda hass:self.session}
         exec(compile(ast.Module(body=[fn],type_ignores=[]),'<native transport>','exec'),env)
         self.native=env['_native_call']
     async def asyncTearDown(self):
@@ -49,3 +58,11 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.core_commands[0],('/ingress/session',{'method':'post','payload':{'user_id':'admin-id'},'source':'jarvis_firmware_bridge'}))
         self.assertEqual([c['command'] for c in self.commands],['devices/list','devices/list'])
         self.assertNotIn('private-session',str(result))
+    async def test_failed_owned_job_reads_terminal_sidecar_stream(self):
+        result=await self.native(self.hass,'admin-id','firmware/get_job',{'job_id':'failed1'})
+        self.assertEqual(result['output'][-1],'src/main.cpp:5: error: member missing')
+        self.assertEqual([x['command'] for x in self.commands],['firmware/get_job','firmware/follow_job'])
+    async def test_foreign_job_never_opens_output_stream(self):
+        self.hass.data['jarvis_firmware_bridge']['targets']=['other.yaml']
+        result=await self.native(self.hass,'admin-id','firmware/get_job',{'job_id':'failed1'})
+        self.assertEqual([x['command'] for x in self.commands],['firmware/get_job'])

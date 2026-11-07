@@ -1,7 +1,7 @@
 {
   "domain": "jarvis_firmware_bridge",
   "name": "Jarvis Firmware Bridge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "documentation": "https://github.com/esphome/device-builder/blob/1.25.0/docs/API.md",
   "dependencies": ["hassio"],
   "codeowners": [],
