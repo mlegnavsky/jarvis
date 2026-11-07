@@ -1,0 +1,66 @@
+{
+  "verified_at": "2026-11-01T14:06:50Z",
+  "runtime_source": "d8b2d592a7c3aaec1486b14ff7034edee425a2b9",
+  "tested_source": "fad4825012b8f33b4b01c18c6440ffb5d16bd330",
+  "ci": {
+    "push": {
+      "run": 41314032755,
+      "conclusion": "success",
+      "laboratory_publication": "success"
+    },
+    "pull_request": {
+      "run": 41314039808,
+      "conclusion": "success"
+    }
+  },
+  "local_tests": {
+    "addon": {
+      "passed": 240,
+      "skipped": 20
+    },
+    "speaker": 127,
+    "homepod": 51,
+    "companion": 49
+  },
+  "runtime": {
+    "speaker_version": "1.2.0",
+    "speaker_status": "ready",
+    "matching_policy": "cohort_margin_v1",
+    "bank_revision": "c18052f5d63d3d9e825e23ab5448442813fe73cdb0d50b3b4763e6b4729a82d4",
+    "authorized_profiles": 1,
+    "anchor_profiles": 1,
+    "homepod_version": "1.1.0",
+    "homepod_status": "configured",
+    "terminal_tts_start_policy": "withheld_for_external_output",
+    "family_guide": "idle_ready",
+    "microphone": {
+      "captured_at": "2026-11-01T14:06:50.215975+00:00",
+      "microphone": "idle",
+      "mute": "off"
+    }
+  },
+  "deployment": {
+    "apply_job": "cohort12-apply-20261101",
+    "apply_result": "runtime_check_failed_during_readiness",
+    "independent_runtime_readback_files": 24,
+    "guarded_matching_activation": "verified",
+    "backup": "8bae64d7",
+    "deployment_lease": "released"
+  },
+  "review": "No remaining Important or Critical findings",
+  "diagnosis_correction": "Full-suite hang was a composition-test fixture missing native event_callback, not the official MCP SDK. Fixed fixture and bounded readiness wait.",
+  "limits": {
+    "physical_household_accuracy_verified": false,
+    "identity_probability_100_percent_claimed": false,
+    "replay_detection_installed": false,
+    "arbitrary_speech_barge_in": false,
+    "additional_calibration_requested": false
+  },
+  "laboratory": {
+    "source_commit": "fad4825012b8f33b4b01c18c6440ffb5d16bd330",
+    "workflow_run": 41314032755,
+    "catalog_verified_at": "2026-11-01T14:02:25.899492+00:00",
+    "checks": "tests_and_container_builds_passed",
+    "live_plesk_http_content_verified": false
+  }
+}

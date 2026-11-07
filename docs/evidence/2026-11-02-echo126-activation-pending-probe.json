@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "status": "source_active_postboot_probe_pending",
+  "source_commit": "e59225b421bf025e1bb184c2864bb97b9333c16d",
+  "reviewed_local_commit": "e186a50625e0c41994ac5ba0b498d4953c66ed18",
+  "source_tree": "15ffcbabf3037009372cf0e253c60faa1805217c",
+  "runtime_version": "1.2.6",
+  "runtime_source_revision": "52c151f927d245b04a164bc8125d64c5f0254ca997e22ce4d303c0e94d1f4882",
+  "core_version": "2026.6.4",
+  "deployment": {
+    "plan": "echo126-prepare-20261102",
+    "apply_job": "echo126-apply-20261102",
+    "state": "verified",
+    "phase": "active_verified",
+    "finished_at": "2026-11-02T23:04:17.926295+00:00",
+    "backup_slug": "f17abe4b",
+    "files_exact_on_fresh_read": 7
+  },
+  "ci": {
+    "push": {
+      "id": 41541737295,
+      "conclusion": "success"
+    },
+    "pull_request": {
+      "id": 41541743850,
+      "conclusion": "success"
+    },
+    "laboratory_publication_job": {
+      "id": 125607970424,
+      "conclusion": "success"
+    }
+  },
+  "tests": {
+    "duplex": 172,
+    "companion": 83,
+    "identity": 154,
+    "diagnostics": 30,
+    "addon": 242,
+    "addon_skipped": 20
+  },
+  "postboot": {
+    "reported_at": "2026-11-02T23:04:49.436108+00:00",
+    "adapter": "active",
+    "sensor_status": "configured",
+    "self_test": "not_run",
+    "output_test": "not_run",
+    "microphone_state_checked_at": "2026-11-02T23:08:27.692806+00:00",
+    "microphone_mute": "off",
+    "satellite": "idle",
+    "voice_ready": false
+  },
+  "blocker": {
+    "cause": "ephemeral_orchestration_state_lost_during_interrupted_read_including_own_lease_token",
+    "lease_owner": "echo126-20261102",
+    "lease_expires_at_epoch": 1793663726.0198748,
+    "lease_released": false,
+    "protected_admin_writes_attempted_without_token": false,
+    "activation_replayed": false,
+    "backup_replayed": false,
+    "private_receipt_still_prepared": true
+  },
+  "acceptance": {
+    "long_conversation": false,
+    "one_second_response": false,
+    "raw_microphone_saved": false,
+    "aec3_deployed": false,
+    "wider_RMS_gate_deployed": false
+  },
+  "resume": "Do not restart or reapply. Reconcile the same verified job, current source and lease. After lease expiry acquire a new short lease with a durably retained private token; use fresh CAS control nonce for probe, verify exact source, then idle-only fixed output_test, update private receipt and release. Browser fallback requires the user consent required by browser guidance. Microphone diagnostic recording has not been authorized.",
+  "superseded_by": "docs/evidence/2026-11-03-echo126-native-verification.json"
+}

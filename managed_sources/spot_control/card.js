@@ -1,0 +1,93 @@
+/* Jarvis Spoty 0.3.1: live preparation screen; deliberately no physical writes. */
+(() => {
+const esc=x=>String(x??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=(x,n=1)=>Number.isFinite(x)?x.toLocaleString('cs-CZ',{maximumFractionDigits:n}):'—';
+function value(states,id,maxAge=120,now=Date.now()){
+ const s=states[id];if(!s||s.state===''||['unknown','unavailable'].includes(s.state))return null;
+ const t=Date.parse(s.last_reported||s.last_updated);if(maxAge!==null&&(!Number.isFinite(t)||now-t>maxAge*1000||t>now+60000))return null;
+ const n=Number(s.state);return Number.isFinite(n)?n:null;
+}
+function flow(states,now=Date.now()){
+ const pv=value(states,'sensor.inverter_pv_power',120,now),load=value(states,'sensor.inverter_load_power',120,now),grid=value(states,'sensor.inverter_grid_power',120,now),battery=value(states,'sensor.inverter_battery_power',120,now),soc=value(states,'sensor.inverter_battery',null,now);
+ return {pv,load,grid,battery,soc,valid:[pv,load,grid,battery].every(Number.isFinite)};
+}
+const money=x=>Number.isFinite(x)?x.toLocaleString('cs-CZ',{minimumFractionDigits:3,maximumFractionDigits:3}):'—';
+const clock=t=>new Date(t).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague',hour:'2-digit',minute:'2-digit'});
+const interval=t=>clock(t)+'–'+clock(Number(t)+900000);
+function price(states,now=Date.now()){
+ const a=states['sensor.jarvis_spot_ote']?.attributes||{};
+ const row=(a.rows||[]).find(r=>{const t=Date.parse(r.time);return t<=now&&now<t+900000;});
+ return row&&Number.isFinite(row.price)?row.price:null;
+}
+class JarvisSpotControlCard extends HTMLElement{
+ setConfig(c){this.cfg=c;this.period='day';this.day=0;if(!this.root)this.root=this.attachShadow({mode:'open'});this.render();}
+ set hass(h){this.h=h;this.render();this.resolveHouse();}
+ async resolveHouse(){if(this.houseURL||this.houseLoading||!this.h.callWS)return;this.houseLoading=true;try{const r=await this.h.callWS({type:'media_source/resolve_media',media_content_id:'media-source://media_source/local/jarvis_dashboard/solar-house.png'});if(r.url&&(/^(https?:\/\/|\/)/.test(r.url))){this.houseURL=r.url;this.render();}}catch{this.houseError=true;}finally{this.houseLoading=false;}}
+ connectedCallback(){this.tick=setInterval(()=>this.render(),30000);}
+ disconnectedCallback(){clearInterval(this.tick);}
+ async command(action){
+ if(this.busy)return;this.busy=true;this.actionError='';this.render();
+ try{await this.h.callService('jarvis_spot_control',action,{});}catch(e){this.actionError=e?.message||'Povel se nepodařilo provést.';}finally{this.busy=false;this.render();}
+ }
+ getCardSize(){return 16;}
+ graph(){
+ const now=Date.now(),rows=this.h?.states['sensor.jarvis_spot_ote']?.attributes?.rows||[];
+ const today=new Date(now).toLocaleDateString('sv-SE',{timeZone:'Europe/Prague'});
+ const date=new Date(Date.parse(today+'T12:00:00Z')+this.day*86400000).toISOString().slice(0,10);
+ const list=rows.filter(r=>Number.isFinite(Date.parse(r.time))&&Number.isFinite(r.price)&&new Date(r.time).toLocaleDateString('sv-SE',{timeZone:'Europe/Prague'})===date).sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));
+ this.chartRows=list;
+ if(!list.length)return '<p>Ceny pro tento den zatím nejsou dostupné.</p>';
+ let selected=list.findIndex(r=>r.time===this.selectedTime);
+ const current=list.findIndex(r=>Date.parse(r.time)<=now&&now<Date.parse(r.time)+900000);
+ if(selected<0)selected=Math.max(0,current);
+ const best=Math.max(...list.map(r=>r.price)),min=Math.min(0,...list.map(r=>r.price)),max=Math.max(1,best),y=v=>160-(v-min)/(max-min)*130;
+ const x=i=>36+(i+.5)*552/list.length;
+ return `<svg viewBox="0 0 600 192" role="img" aria-label="Ceny OTE po čtvrthodinách">${[min,(min+max)/2,max].map(v=>`<text x="0" y="${y(v)}" fill="currentColor" font-size="12">${fmt(v)}</text><path d="M35 ${y(v)}H590" stroke="#dce4ed"/>`).join('')}${list.map((r,i)=>`<rect x="${36+i*552/list.length}" width="${Math.max(1,552/list.length-1)}" y="${Math.min(y(0),y(r.price))}" height="${Math.max(.5,Math.abs(y(r.price)-y(0)))}" fill="${r.price<0?'#c63849':r.price===best&&best>0?'#13834c':'#399be9'}"><title>${interval(Date.parse(r.time))}: ${money(r.price)} Kč/kWh</title></rect>`).join('')}${current<0?'':`<path d="M${x(current)} 15V165" stroke="#c25d00" stroke-width="2"/><text x="${Math.min(510,Math.max(36,x(current)-25))}" y="12" fill="#a24d00" font-size="12">Teď ${clock(now)}</text>`}<path data-selection d="M${x(selected)} 20V165" stroke="#253b58" stroke-dasharray="4 3"/><text x="36" y="188" fill="currentColor" font-size="12">00 h</text><text x="310" y="188" fill="currentColor" font-size="12">12 h</text><text x="560" y="188" fill="currentColor" font-size="12">24 h</text></svg><label>Prohlédnout čtvrthodinu<input data-price-slider type="range" min="0" max="${list.length-1}" step="1" value="${selected}" style="width:100%;accent-color:#087fed" aria-label="Vybraná čtvrthodina"></label><div data-price-selection class="note">${interval(Date.parse(list[selected].time))} · <b>${money(list[selected].price)} Kč/kWh</b></div><small>● Zelená: nejvyšší kladná cena dne · oranžová: aktuální čas<br>OTE bez DPH a poplatků · ${list.length} intervalů</small>`;
+ }
+
+ render(){if(!this.root||!this.h||this.dragging)return;const s={...this.h.states,...(this.h.states['sensor.jarvis_spot_control']?.attributes?.telemetry||{})},f=flow(s),ote=price(s),fresh=f.valid;
+ const zero=s['select.inverter_work_mode']?.state==='Zero Export To CT'&&s['switch.inverter_export_surplus']?.state==='off';
+ const w=x=>Number.isFinite(x)?(Math.abs(x)<1000?fmt(x,0)+' W':fmt(x/1000,2)+' kW'):'—';
+ const arrow=(d,p,color)=>`<path d="${d}" class="wire ${fresh&&Number.isFinite(p)&&Math.abs(p)>30?'moving':''}" style="--flow:${color};--duration:${Math.max(.5,3-Math.min(Math.abs(p||0),6000)/2400)}s"/>`;
+ const bp=f.battery, gp=f.grid;
+ const battText=bp===null?'Neaktuální měření':bp < -30?'Nabíjí se':bp>30?'Vybíjí se':'V klidu';
+ const state=!fresh?'Čekám na aktuální měření':gp < -30?'Dům dodává energii do sítě':gp>30?'Dům odebírá energii ze sítě':'Síť je téměř v rovnováze';
+ const buy=value(s,'input_number.jarvis_nakup_elektriny_cena',null);
+ const daily=this.period==='day',imp=daily?value(s,'sensor.inverter_today_energy_import',null):null,exp=daily?value(s,'sensor.inverter_today_energy_export',null):null;
+ const dailyWx=s['sensor.jarvis_pocasi_zitenice']?.attributes?.daily||[];
+ const archive=s['sensor.jarvis_energy_archive']?.state;
+ const ctl=s['sensor.jarvis_spot_control'],ca=ctl?.attributes||{},active=ca.active===true;
+ const canStart=ca.ready===true&&ca.telemetry_fresh===true&&!active&&!this.busy;
+ const message=this.actionError||ca.error||'';
+ const status=active?(ca.charging_observed?'Nabíjení ze sítě naměřeno':'Test spuštěný · čekám na měření'):state;
+ this.root.innerHTML=`<style>
+ :host{display:block;padding:20px;max-width:1500px;margin:auto;color:var(--primary-text-color,#172b43);font-family:var(--paper-font-body1_-_font-family,Arial,sans-serif)}*{box-sizing:border-box}h1{font-size:28px;margin:0}h2{font-size:19px;margin:0 0 12px}h3{font-size:16px;margin:0 0 8px}.top{display:flex;gap:16px;align-items:center;margin:16px 0}.badge{font-size:12px;background:#e7effa;color:#215f9b;padding:7px 10px;border-radius:7px}.modes,.actions,.stats,.prices{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr))}.mode,.box,.stat{padding:18px;border:1px solid var(--divider-color,#d8e2ed);background:var(--card-background-color,#fff);border-radius:14px}.mode.active{border:2px solid #087fed;background:linear-gradient(120deg,#079bff,#0065ed);color:white}.mode strong{font-size:21px}.primary:not(:disabled){background:linear-gradient(120deg,#079bff,#0065ed);color:white;border-color:#087fed;font-weight:bold}.actions button{font-weight:bold}.main .box{background:linear-gradient(160deg,var(--card-background-color,#fff),#f1f7fe)}.mode strong,.stat b{display:block}.mode small{display:block;margin-top:7px}.main{display:grid;grid-template-columns:1fr 1.2fr;gap:16px;margin:16px 0}.note{padding:12px 16px;border-radius:10px;background:#eef3f9;color:#264057;margin:14px 0;line-height:1.5}.warning{background:#fff4de;color:#765212}.house{position:relative;background:linear-gradient(140deg,#102e49,#051626);color:white;min-height:370px;border-radius:14px;overflow:hidden}.house img{position:absolute;left:17%;top:15%;width:66%;height:68%;object-fit:contain}.house svg{position:absolute;inset:0;width:100%;height:100%}.wire{stroke:var(--flow);stroke-width:2;fill:none;opacity:.25}.wire.moving{opacity:1;stroke-dasharray:3 5;animation:flow var(--duration) linear infinite}@keyframes flow{to{stroke-dashoffset:-32}}.metric{position:absolute;background:#0c263eeb;border:1px solid #4f7892;border-radius:10px;padding:10px;min-width:110px;font-size:13px}.metric b{font-size:21px;display:block;margin:4px 0}.pv{left:2%;top:3%}.battery{right:2%;top:3%}.home{left:2%;bottom:3%}.grid{right:2%;bottom:3%}.prices{grid-template-columns:1fr 1fr;margin-top:12px}.prices b{display:block;font-size:22px}.prices small{display:block;margin-top:6px}small{font-size:12px;line-height:1.5;opacity:.85}.actions{margin:16px 0}.actions button{font-size:15px;padding:16px;border:1px solid #becbd8;border-radius:10px}.actions button:disabled{background:#edf1f5;color:#536577;cursor:not-allowed}.tabs{display:flex;gap:8px;margin:12px 0}button{font-family:inherit;cursor:pointer;border:1px solid #d4dfeb;background:var(--card-background-color,#fff);color:inherit;padding:9px 16px;border-radius:8px}button.selected{background:#087fed;color:white;border-color:#087fed}.chart svg{width:100%}.stat b{font-size:23px;margin:10px 0}.stat small{display:block}details{padding:16px;border:1px solid #d8e2ed;border-radius:12px;margin-top:14px}summary{cursor:pointer;font-weight:bold}.restore{margin-top:16px}.restore button{font-weight:bold}.wx{display:flex;gap:14px;margin:12px 0}.muted{opacity:.75}p{line-height:1.55}.foot{font-size:11px;margin-top:12px;opacity:.65}@media(max-width:700px){.main{grid-template-columns:1fr}.visual{grid-row:1}.modes{gap:6px}.mode{padding:10px;font-size:13px}.mode small{font-size:11px}.top{flex-wrap:wrap}.house{min-height:315px}.metric{min-width:90px;padding:7px;font-size:11px}.metric b{font-size:18px}.actions{grid-template-columns:1fr 1fr}.actions button:last-child{grid-column:1/-1}.stats{grid-template-columns:1fr}.prices .box{padding:12px}.prices b{font-size:18px}}@media(prefers-reduced-motion:reduce){.moving{animation:none!important}}
+ </style><div class="top"><h1>Spotové řízení</h1><span class="badge">RUČNÍ TEST · OTE</span></div>
+ <div class="modes"><div class="mode"><strong>Plně AI režim</strong><small>Zatím neaktivní</small></div><div class="mode"><strong>Vlastní plán</strong><small>Zatím neaktivní</small></div><div class="mode ${zero?'active':''}"><strong>${zero?'✓ ':''}Offgrid</strong><small>${zero?'Zjištěn režim bez přetoků':'Stav bez přetoků nepotvrzen'} · síť zůstává připojená</small></div></div>
+ <div class="note">Současný provoz zůstává beze změny. ${zero?'Vyrovnávací odběr: '+esc(s['number.inverter_zero_export_power']?.state)+' W.':''} Automatický prodej je vypnutý. Ruční test nabíjení je dostupný níže.</div>
+ <div class="main"><div class="box"><h2>Co se právě děje</h2><div class="note ${fresh?'':'warning'}"><strong>${status}</strong><br>${battText} · ${w(bp===null?null:Math.abs(bp))}</div><p>${active?`Cíl ${fmt(ca.target_soc,0)} % · zbývá nejvýše ${Math.max(0,Math.ceil((ca.deadline*1000-Date.now())/60000))} min. Po testu se obnoví nastavení.`:"Dům pracuje bez přetoků. Můžeš spustit krátký test nabíjení ze sítě."}</p><div class="wx"><span>☀ Předpověď dnes a zítra</span><a href="/hlavni-prehled/pocasi">Zobrazit počasí</a></div><h3>Ceny OTE</h3><div class="tabs"><button data-day="0" class="${this.day===0?'selected':''}">Dnes</button><button data-day="1" class="${this.day===1?'selected':''}">Zítra</button></div><div class="chart">${this.graph()}</div><p><small>Aktuální OTE: ${money(ote)} Kč/kWh. Toto není smluvní cena výkupu.</small></p></div>
+ <div class="visual"><div class="house"><img src="${esc(this.houseURL||'')}" alt="Tvůj dům se solárními panely"><svg viewBox="0 0 600 370" preserveAspectRatio="none">${arrow('M135 70 Q220 70 260 150',f.pv,'#f6c945')}${arrow(bp<0?'M340 150 Q420 70 465 70':'M465 70 Q420 70 340 150',bp,'#66e6b5')}${arrow('M270 235 Q200 300 135 300',f.load,'#7acaf4')}${arrow(gp<0?'M340 235 Q420 300 465 300':'M465 300 Q420 300 340 235',gp,'#bb9bff')}</svg>
+ <div class="metric pv">☀ Solár<b>${w(f.pv)}</b>Výroba</div><div class="metric battery">▰ Baterie<b>${fmt(f.soc,0)} %</b>${battText}<br>${w(bp===null?null:Math.abs(bp))}</div><div class="metric home">⌂ Dům<b>${w(f.load)}</b>Spotřeba</div><div class="metric grid">⚡ Síť<b>${w(gp===null?null:Math.abs(gp))}</b>${gp===null?'Neaktuální měření':gp<0?'Dodáváme':'Odebíráme'}</div></div>
+ <div class="prices"><div class="box">Nákup · ČEZ · pevná sazba<b>${money(buy)} Kč/kWh</b><small>Sazba zadaná majitelem</small></div><div class="box">Prodej · test OTE<small>Teď ${clock(Date.now())} · ${interval(Math.floor(Date.now()/900000)*900000)}</small><b>${money(ote)} Kč/kWh</b><small>${ote===null?'Cena nedostupná':ote<=0?'Prodej blokován':'Bez poplatků a DPH'}</small></div></div></div></div>
+ <div class="box" style="margin-top:16px"><h3>Kontrola baterie a měniče</h3><div class="stats"><div>Teplota baterie<b>${fmt(value(s,'sensor.inverter_battery_temperature',120))} °C</b></div><div>Proud baterie<b>${fmt(value(s,'sensor.inverter_battery_current',120),2)} A</b></div><div>Napětí baterie<b>${fmt(value(s,'sensor.inverter_battery_voltage',120),2)} V</b></div></div><p>Teplota měniče: ${fmt(value(s,'sensor.inverter_temperature',120))} °C</p><small>— znamená chybějící nebo neaktuální měření. Teplota baterie neukazuje teplotu kabelů a pojistek.</small></div>
+ <div class="actions"><button class="primary" data-action="start_test" ${canStart?"":"disabled"}>⚡ Dobít baterii ze sítě</button><button disabled title="Prodej zatím nebyl aktivován">☀ Prodávat přebytky</button><button data-action="stop_restore" ${active&&!this.busy?"":"disabled"}>■ Zastavit a vrátit</button></div>${message?`<div class="note warning" role="alert">${esc(message)}</div>`:""}
+ <div class="note warning">Zkušební nabíjení: nejvýše 10 minut, +5 procentních bodů (max. 90 %), nejvýše ${fmt(ca.test_current_limit,0)} A na straně baterie. Test se zastaví při teplotě mimo 0 až méně než 45 °C nebo při chybějícím měření. Nákup ze sítě: ČEZ, ${money(buy)} Kč/kWh. Prodej se nespouští.</div>
+ <div class="box"><h3>Rezerva baterie</h3><p>Návrh: <b>vlastní minimum 60 %</b> nebo <b>určuje AI</b>. Zatím se neuplatňuje.</p></div>
+ <div class="box" style="margin-top:16px"><h2>Prodej a nákup</h2><div class="tabs">${[['day','Den'],['week','Týden'],['month','Měsíc']].map(([id,t])=>`<button data-period="${id}" class="${this.period===id?'selected':''}">${t}</button>`).join('')}</div><div class="stats"><div class="stat">Prodáno<b>${fmt(exp,2)} kWh</b><small>Částka: zatím nedostupná</small></div><div class="stat">Nakoupeno<b>${fmt(imp,2)} kWh</b><small>Částka: zatím nedostupná</small></div><div class="stat">Finanční bilance<b>— Kč</b><small>Čeká na intervalové vyúčtování</small></div></div><small>${daily?'Dnešní čítače měniče.':'Součty za období zatím nejsou připojené.'} Archiv: ${esc(archive||'nedostupný')}. Historii neoceňujeme dnešní cenou.</small></div>
+ <div class="restore"><button data-action="stop_restore" ${active&&!this.busy?"":"disabled"}>↶ Vrátit nastavení před testem</button><p><small>Vrací přesně hodnoty změněné tímto testem. Původní záloha z 4. 11. je uložená zvlášť; toto není úplná obnova všech nastavení měniče.</small></p></div>
+ <details><summary>Ochrany a historie</summary><p>Po restartu Home Assistantu se rozpracovaný test obnoví do původních hodnot. Při výpadku samotného Home Assistantu nemůže běžet desetiminutový dohled; na měniči stále platí konec aktivního časového intervalu.</p><p>Prodej se připravuje pouze s kladnou čistou výkupní cenou. Neznámá cena, chybějící měření nebo nepotvrzené limity musí prodej blokovat. Při plné baterii a záporné ceně je nutné omezit přetoky.</p><p>Směr toku z baterie a sítě je měřený. Přesný podíl soláru a baterie na prodané energii zatím neurčujeme. Ztráty měniče: ${w(value(s,'sensor.inverter_power_losses',120))}.</p><p>Udávaná kapacita 23,5 kWh se liší od senzoru měniče (${fmt(value(s,'sensor.inverter_battery_capacity',null))} kWh). Odhad zbývajících kWh zatím nezobrazujeme jako jistotu.</p></details><div class="foot">Spoty 0.3.1 · ruční test · automatický prodej vypnutý</div>`;
+ this.root.querySelectorAll('[data-price-slider]').forEach(slider=>{
+ slider.onpointerdown=()=>{this.dragging=true;};
+ slider.oninput=()=>{const i=Number(slider.value),r=this.chartRows[i];if(!r)return;this.selectedTime=r.time;
+ this.root.querySelectorAll('[data-price-selection]').forEach(el=>el.innerHTML=interval(Date.parse(r.time))+' · <b>'+money(r.price)+' Kč/kWh</b>');
+ this.root.querySelectorAll('[data-selection]').forEach(el=>el.setAttribute('d','M'+(36+(i+.5)*552/this.chartRows.length)+' 20V165'));
+ slider.setAttribute('aria-valuetext',interval(Date.parse(r.time))+' '+money(r.price)+' Kč/kWh');};
+ slider.onchange=()=>{this.dragging=false;};slider.onpointerup=()=>{this.dragging=false;};slider.onpointercancel=()=>{this.dragging=false;};slider.onblur=()=>{this.dragging=false;};
+ });
+ this.root.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>this.command(b.dataset.action));
+ this.root.querySelectorAll('[data-period]').forEach(b=>b.onclick=()=>{this.period=b.dataset.period;this.render();});this.root.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{this.day=Number(b.dataset.day);this.selectedTime=null;this.render();});
+ }
+}
+if(typeof customElements!=='undefined'&&!customElements.get('jarvis-spot-control-card'))customElements.define('jarvis-spot-control-card',JarvisSpotControlCard);
+if(typeof module!=='undefined')module.exports={value,flow,price};
+})();

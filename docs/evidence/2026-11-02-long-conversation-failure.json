@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "scope": "failure_of_1.2.5_not_completion_evidence",
+  "runtime_version": "1.2.5",
+  "source": "604e6b845dc25063ad5962babd8868b37864c1cc5dc2aced29424c996b8bb2ab",
+  "observed_at": "2026-11-02T22:31:16.366051+00:00",
+  "first_story": {
+    "owner_report": "speech fluent, about10s response wait",
+    "stages_ms": {
+      "stt": 632.8,
+      "identity": 0.7,
+      "agent": 2089.9
+    },
+    "tts_ms": 4224.5,
+    "homepod_sender_estimate_ms": 2310.2,
+    "endpoint_ms": 700,
+    "total_estimated_ms": 9958.1
+  },
+  "longer_dialogue": {
+    "owner_report": "cuts and answers own questions",
+    "elapsed_s": 108.219,
+    "starts": 8,
+    "complete": 3,
+    "speech_interruptions": 4,
+    "output_stops": 5,
+    "source_end_reason": "audio_source_ended",
+    "source_end_external_cause": "unknown",
+    "confirmations": 13,
+    "rejected_confirmations": 9,
+    "text_echo_rejections": 8,
+    "transport_errors": 0
+  },
+  "approximate_offset_ms": {
+    "observed": 1250,
+    "observer_clock": "nominal first-received sample count; not calibrated acoustic/hardware timing"
+  },
+  "rejected_experiments": {
+    "wide_envelope": {
+      "three_consistent_windows": true,
+      "independent_speech_like_negative": "failed",
+      "deployed": false
+    },
+    "native_aec3": {
+      "short_voiced_cases_failed": 9,
+      "late_echo_rejection_and_human_preservation": "failed",
+      "native_near_only_delay_ms": 8,
+      "long_case_s": 10,
+      "long_case_tail_human_correlation": 0.656,
+      "long_case_tail_human_gain": 0.341,
+      "arm64_wheels_not_execution_proof": true,
+      "deployed": false
+    }
+  },
+  "scoped_next_repair": "normal completion tail, bounded ASR phrase variants, protected controls/negation and scalar attribution; original acoustic gate unchanged",
+  "raw_microphone_recording": false,
+  "full_acoustic_solution_verified": false,
+  "one_second_response_verified": false
+}

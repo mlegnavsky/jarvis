@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "scope": "accepted_turn_lifetime_fix_not_acoustic_acceptance",
+  "runtime_version": "1.3.3",
+  "core_version": "2026.6.4",
+  "source": {
+    "public_commit": "49432b79c04fe50ec4a20cda5f276484bef3f3cf",
+    "local_commit": "ff66f448807272c60ecc693bcaa361ed9b41b48f",
+    "tree": "636936aeb784110e440df2e1cced3fe097bd04a7",
+    "reviewed_local_commit": "7c5b50ba17ef23c10c8b9497319336f665e02586",
+    "runtime_revision": "183cec10cdf60ea7bab2c685104e9b102bd749b35eeebc8946aa3a4cba40f70f",
+    "three_files_postboot_exact": true,
+    "files": [
+      {
+        "path": "custom_components/jarvis_local_duplex/__init__.py",
+        "before_revision": "7e86a6f7ae7d1a8ebd0b0f494afc810b6d94d4001694e867ae713a9c2231da95",
+        "active_revision": "6d84dd651c6b1cad7061a62ff774b794b6394a138212ad26d45b34be5532a1dd"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/manifest.json",
+        "before_revision": "bb0930bc3657cde1eba8285a4ebedca3ab2222517a692ad024552e077967c1bf",
+        "active_revision": "204eedc2f778fd40c007f4eb54d42102a8db064f5b432b0a00f825f8b492a2f1"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/session.py",
+        "before_revision": "477b1f174abc4b79900a678d8585e17991d35e085d675e70f03ef5383dd0594d",
+        "active_revision": "64a221c69867abe66138b1e87cea49a01a601e042b1b783ce15a9b91a8593a9c"
+      }
+    ]
+  },
+  "ci": {
+    "runs": [
+      {
+        "id": 41614103516,
+        "event": "pull_request",
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "49432b79c04fe50ec4a20cda5f276484bef3f3cf"
+      },
+      {
+        "id": 41614096520,
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "49432b79c04fe50ec4a20cda5f276484bef3f3cf"
+      }
+    ],
+    "lab_job": 125843614207,
+    "immutable_step": "success"
+  },
+  "deployment": {
+    "prepare_id": "active133-prepare-20261103",
+    "revision": "5d15b5f2af58e1886a607992a67cb9d65fa5b8c5aba3227982bbfb437473ce9a",
+    "apply_id": "active133-apply-20261103",
+    "state": "verified",
+    "phase": "active_verified",
+    "finished_at": "2026-11-03T09:55:21.614909+00:00",
+    "backup_slug": "4fb5ba7f",
+    "repeated_apply": false
+  },
+  "native_proof": {
+    "fresh_nonce_matched": true,
+    "control_write_verified": true,
+    "control_readback_exact": true,
+    "report_at": "2026-11-03T09:56:11.703737+00:00",
+    "status": "passed",
+    "scope": "native_VAD_and_TTS_reference_no_playback",
+    "native_vad_probability": 0.00439656525850296,
+    "native_vad_warmup_frames": 77,
+    "reference_seconds": 2.8316875,
+    "reference_signal": {
+      "duration_s": 2.832,
+      "silent": false,
+      "peak_dbfs": -9.07,
+      "rms_dbfs": -23.71
+    },
+    "microphone_opened": false,
+    "audible_playback": false,
+    "source_revision": "183cec10cdf60ea7bab2c685104e9b102bd749b35eeebc8946aa3a4cba40f70f",
+    "pipeline_signature": "7e4a5a90ac21fdfa8394d3fad1cc682875dec1bf74b5a6baab85ac471fdf5f91",
+    "waveform_probe": {
+      "status": "measured",
+      "comparisons": 1216,
+      "processing_ms": 19.669,
+      "kernel": "audioop_findfactor",
+      "acoustic_echo_proof": false,
+      "correlation": 1,
+      "offset_ms": 1250,
+      "peak_margin": 0.7777,
+      "alternative_count": 1195,
+      "reference_window_sample": 0,
+      "window_ms": 400,
+      "search_ms": 2000,
+      "sample_rate": 500,
+      "scope": "generated_reference_only_no_microphone"
+    },
+    "calibration_probe": {
+      "status": "passed",
+      "scope": "generated_reference_only_no_microphone",
+      "processing_ms": 722.151,
+      "facts": {
+        "status": "measured",
+        "source_identity_proof": false,
+        "waveform_lag_samples": 20000,
+        "waveform_correlation": 0.999078,
+        "coherence": 1,
+        "frames": 37,
+        "effective_bins": 7.84,
+        "energy_frame_participation": 16.17,
+        "kernel": "numpy",
+        "waveform_boundary_hit": false,
+        "band_lag_samples": 20000,
+        "band_score": 1,
+        "band_peak_margin": 0.517058,
+        "band_runner_exclusion_ms": 100,
+        "band_waveform_correlation": 0.999078,
+        "band_coherence": 1,
+        "processing_ms": 722.06
+      },
+      "acoustic_echo_proof": false
+    }
+  },
+  "host_simulation": {
+    "file": "experiments/active-session-20261103/result.json",
+    "wall_seconds": 300.1915,
+    "human_turns_accepted": 8,
+    "human_turns_expected": 8,
+    "no_240s_cut": true,
+    "provider_failures": 0,
+    "known_echo_faults_accepted": 2,
+    "acoustic_fix_proved": false
+  },
+  "final_state": {
+    "status": "configured",
+    "adapter": "active",
+    "sessions": 0,
+    "active": null,
+    "calibration": {
+      "state": "off",
+      "capture_id": null,
+      "expires_at": null,
+      "captured_seconds": 0,
+      "retained_audio_bytes": 0,
+      "raw_audio_saved": false,
+      "input_modified": false,
+      "error_type": null,
+      "result_file": "jarvis_workspace/local_duplex/calibration-result.json"
+    },
+    "television_integration": "loaded",
+    "satellite": "idle",
+    "microphone_mute_switch": "off",
+    "homepod": "off",
+    "household_microphone_opened": false,
+    "remote_start_performed": false,
+    "updated_at": "2026-11-03T09:57:29.740634+00:00"
+  },
+  "storage": {
+    "before_free_gib": 1.7,
+    "pre_backup_free_gib": 2.4,
+    "deleted_old_unprotected_backup": "f17abe4b",
+    "delete_job": "active133-backup-delete-f17abe4b-20261103",
+    "delete_verified": true,
+    "keep_latest": 3,
+    "protected_preserved": true,
+    "invalid_slug_field_rejected_before_job_then_same_intent_corrected": true
+  },
+  "review": {
+    "critical": 0,
+    "important": 0,
+    "minor": 1,
+    "minor_deferred": "40ms real-clock watchdog unit test may be flaky on heavily paused CI; no runtime defect",
+    "all_rulings_and_exclusions": "docs/evidence/2026-11-03-active-session133-host-proof.json"
+  },
+  "open": [
+    "own_echo_with_mismatching_ASR",
+    "immediate_human_interruption",
+    "one_second_natural_latency",
+    "one_remotely_started_30s_room_measurement_needs_new_explicit_scope_and_fixed_reviewed_route"
+  ],
+  "operator_closure": {
+    "receipt_path": "jarvis_workspace/local_duplex/activity-session-receipt.json",
+    "receipt_revision": "372ecb1f62df4815f7ac5be5bd75f6f4a4b8e656627d7226289ae65f8c733c38",
+    "receipt_exact_readback": true,
+    "receipt_snapshot_before_release": true,
+    "lease_release": "verified",
+    "release_job": "active133-release-20261103",
+    "release_finished_at": "2026-11-03T09:57:01.652703+00:00",
+    "fresh_locked": false,
+    "private_token_file_deleted": true
+  },
+  "new_microphone_or_authority_change": false,
+  "homepod_output_not_repeated": "stream transport unchanged from independently verified1.3.2; this change only session lifetime/version; no new output/audibility claim"
+}
+

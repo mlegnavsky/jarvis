@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "scope": "bounded_one_shot_operator_software_tests_not_room_acceptance",
+  "runtime_version": "1.3.4",
+  "source_revision": "0c4997b43b5727a2ca595c6dad1cc340eb9b3d4c20cf8f105dd9c5b2454877b1",
+  "permission": {
+    "owner_explicit": true,
+    "request_id": "5d44e702-e671-497a-8343-cf796622a791",
+    "maximum_remote_starts": 1,
+    "maximum_seconds": 30
+  },
+  "tests": {
+    "duplex": 264,
+    "addon": 242,
+    "addon_optional_skips": 20,
+    "manifest": "passed",
+    "diff": "passed",
+    "red_green": [
+      "missing fixed control/coordinator10 failures",
+      "missing native link4 failures/operator callback2 errors",
+      "missing HA binding5 failures",
+      "foreign pending prompt1 failure",
+      "foreign TV-acquire ownership1 failure"
+    ],
+    "boundaries": "hardware/HA/codec native behaviors separately characterized; unit deadline shortened to0.12s; no live microphone proof yet"
+  },
+  "native_sources": [
+    "home-assistant/core2026.6.4 assist_satellite/entity.py, esphome/assist_satellite.py, assist_pipeline/__init__.py and pipeline.py",
+    "esphome/esphome2026.10.1 voice_assistant.cpp"
+  ],
+  "protocol_rulings": [
+    "native metadata-only begin avoids Core debug recording startup and no provider validate for reserved diagnostic",
+    "continuation=false before announcement stop and RUN_END prevents automatic re-listen",
+    "exact pipeline task ownership preserves a foreign run",
+    "global durable one-shot claim rejects any new nonce after restart"
+  ],
+  "review": {
+    "fresh_context_model": "gpt-6-astra",
+    "reviewed_local_commit": "e56cc0f0b0677676f718dda5b9bfe363c7e99ed7",
+    "critical": 0,
+    "important_found": 3,
+    "important_fixed_in_one_red_green_pass": 3,
+    "minor": 0,
+    "fixes": [
+      {
+        "finding": "changed pipeline bypasses reserved operator route",
+        "red_green": [
+          "test_changed_pipeline_still_reaches_operator_before_original_core",
+          "test_changed_pipeline_with_valid_marker_is_closed_without_capture"
+        ],
+        "fix": "operator check before fixed-satellite Core fallback; only valid diagnostic shape captures"
+      },
+      {
+        "finding": "missing/consumed/cleared marker permits late or duplicate cloud routing",
+        "red_green": [
+          "test_isolation_blocks_missing_consumed_and_duplicate_markers",
+          "test_persistent_isolation_releases_only_after_old_native_connection_is_gone"
+        ],
+        "fix": "durable independent passive isolation before native start, kept through exact satellite connection reset; unknown inputs close locally"
+      },
+      {
+        "finding": "start permitted without verified active operator wrapper",
+        "red_green": [
+          "test_operator_installation_proof_rejects_replaced_wrapper_and_other_owner",
+          "test_muted_busy_or_other_selected_pipeline_blocks_remote_start"
+        ],
+        "fix": "supportedCore + adapteractive + exact wrapper/hass/handler identity proof, checked before native start"
+      }
+    ],
+    "declined_rulings": [
+      {
+        "behavior": "actual <=30s physical stop/receiver acknowledgement/network failure",
+        "ruling": "must verify live after deployment; host timeout/events alone insufficient",
+        "cost": "cannot claim physical stop before fresh state/connection checks"
+      },
+      {
+        "behavior": "live task identity/callback order/TV and HomePod restoration",
+        "ruling": "source/doubles tested; actual device acceptance required",
+        "cost": "native mismatch could block capture or owned restoration"
+      },
+      {
+        "behavior": "HomePod takeover outside HA service events",
+        "ruling": "unchanged native transport ownership limitations, not complete outside-client audit",
+        "cost": "unobserved external takeover remains possible"
+      },
+      {
+        "behavior": "power-loss latch durability/forensic RAM erasure",
+        "ruling": "application durable writes/buffer zeroing verified, no stronger guarantee",
+        "cost": "power loss/storage and memory forensics not covered"
+      },
+      {
+        "behavior": "acoustic fix/instant barge/1s response",
+        "ruling": "measurement only, original goal remains open",
+        "cost": "diagnostic result is not itself a repair"
+      },
+      {
+        "behavior": "full revalidation of unchanged analysis/identity/stream algorithms",
+        "ruling": "verify integration/full suite; no new exhaustive audit",
+        "cost": "inherited untested edges remain"
+      }
+    ]
+  },
+  "deployment": {
+    "state": "pending"
+  },
+  "microphone_activated": false,
+  "acoustic_fix_proved": false,
+  "rulings": [
+    {
+      "decision": "isolate all ambiguous fixed-satellite native inputs during one test and cleanup",
+      "reason": "Core prompt is not durable origin identity",
+      "cost_if_wrong": "a human activation during isolation may be locally closed; nobodyhome and finite diagnostic ownership"
+    },
+    {
+      "decision": "retain isolation until original API client disconnected and a new native entity idle",
+      "reason": "flush old queued callbacks/audio independently of prompt and timeout",
+      "cost_if_wrong": "failed reset keeps voice blocked until a verified reconnect; privacy fails closed"
+    },
+    {
+      "decision": "fixed native ESPHome entry reload after test, <=30s cleanup",
+      "reason": "a real connection boundary prevents delayed packets from entering ordinary STT",
+      "cost_if_wrong": "brief voice-terminal reconnect; no firmware/config/new microphone start"
+    }
+  ]
+}

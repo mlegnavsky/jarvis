@@ -1,0 +1,1841 @@
+{
+  "schema": 1,
+  "scope": "host_realtime_synthetic_dialogue_fault_injection",
+  "started_utc": "2026-11-03T09:40:48.470222+00:00",
+  "source_fingerprint": "183cec10cdf60ea7bab2c685104e9b102bd749b35eeebc8946aa3a4cba40f70f",
+  "runtime_version": "1.3.3",
+  "requested_seconds": 300.0,
+  "wall_seconds": 300.1915,
+  "session": {
+    "stage": "closed",
+    "frames": 30020,
+    "frames_during_output": 24746,
+    "completed_turns": 5,
+    "accepted_turns": 10,
+    "interruptions": 4,
+    "failures": 0,
+    "last_error": null,
+    "truncated": 0,
+    "reason": "audio_source_ended",
+    "deferred_turns": 0,
+    "deferred_replaced": 0,
+    "deferred_expired": 0,
+    "suppressed_frames": 0,
+    "input_end": {
+      "elapsed_s": 300.191,
+      "stage": "speaking",
+      "output_active": true
+    },
+    "interruption_policy": "completed_transcript_before_stop",
+    "confirmations": 9,
+    "rejected_confirmations": 5,
+    "confirmation_failures": 0,
+    "session_budget_policy": "since_last_accepted_turn"
+  },
+  "output": {
+    "owned": false,
+    "started": 10,
+    "completed": 5,
+    "skipped": 0,
+    "stopped": 5,
+    "echo_frames": 844,
+    "overlap_frames": 24746,
+    "discarded": 0,
+    "last_stop_s": 0.0,
+    "last_reference_duration_s": 57.6,
+    "last_error": null,
+    "text_echo_suppressed": 5,
+    "tts_generation_ms": 26.6,
+    "first_audio_wait_ms": 1500.0,
+    "transcript_guard": [
+      {
+        "decision": "no_recent_output",
+        "candidate_words": 5,
+        "reference_words": 0,
+        "shared_words": 0,
+        "overlap_ratio": 0.0,
+        "edit_distance": null,
+        "capture_audio_ms": 2620,
+        "output_owned_at_check": false
+      },
+      {
+        "decision": "generated_exact_phrase",
+        "candidate_words": 6,
+        "reference_words": 185,
+        "overlap_ratio": 1.0,
+        "shared_words": 6,
+        "edit_distance": 0,
+        "capture_audio_ms": 3940,
+        "output_owned_at_check": true
+      },
+      {
+        "decision": "different_words",
+        "candidate_words": 2,
+        "reference_words": 185,
+        "overlap_ratio": 1.0,
+        "shared_words": 0,
+        "edit_distance": null,
+        "capture_audio_ms": 3760,
+        "output_owned_at_check": true
+      },
+      {
+        "decision": "insufficient_overlap",
+        "candidate_words": 4,
+        "reference_words": 27,
+        "overlap_ratio": 0.0034,
+        "shared_words": 1,
+        "edit_distance": null,
+        "capture_audio_ms": 2620,
+        "output_owned_at_check": false
+      },
+      {
+        "decision": "different_words",
+        "candidate_words": 2,
+        "reference_words": 185,
+        "overlap_ratio": 1.0,
+        "shared_words": 0,
+        "edit_distance": null,
+        "capture_audio_ms": 1890,
+        "output_owned_at_check": true
+      },
+      {
+        "decision": "outside_output_interval",
+        "candidate_words": 4,
+        "reference_words": 0,
+        "shared_words": 0,
+        "overlap_ratio": 0.0,
+        "edit_distance": null,
+        "capture_audio_ms": 2620,
+        "output_owned_at_check": false
+      },
+      {
+        "decision": "generated_exact_phrase",
+        "candidate_words": 6,
+        "reference_words": 185,
+        "overlap_ratio": 1.0,
+        "shared_words": 6,
+        "edit_distance": 0,
+        "capture_audio_ms": 1080,
+        "output_owned_at_check": true
+      },
+      {
+        "decision": "generated_exact_phrase",
+        "candidate_words": 6,
+        "reference_words": 185,
+        "overlap_ratio": 1.0,
+        "shared_words": 6,
+        "edit_distance": 0,
+        "capture_audio_ms": 1150,
+        "output_owned_at_check": true
+      },
+      {
+        "decision": "generated_exact_phrase",
+        "candidate_words": 6,
+        "reference_words": 185,
+        "overlap_ratio": 1.0,
+        "shared_words": 6,
+        "edit_distance": 0,
+        "capture_audio_ms": 1060,
+        "output_owned_at_check": true
+      },
+      {
+        "decision": "different_words",
+        "candidate_words": 2,
+        "reference_words": 185,
+        "overlap_ratio": 1.0,
+        "shared_words": 0,
+        "edit_distance": null,
+        "capture_audio_ms": 3940,
+        "output_owned_at_check": true
+      },
+      {
+        "decision": "outside_output_interval",
+        "candidate_words": 5,
+        "reference_words": 0,
+        "shared_words": 0,
+        "overlap_ratio": 0.0,
+        "edit_distance": null,
+        "capture_audio_ms": 2690,
+        "output_owned_at_check": false
+      },
+      {
+        "decision": "generated_exact_phrase",
+        "candidate_words": 7,
+        "reference_words": 185,
+        "overlap_ratio": 1.0,
+        "shared_words": 7,
+        "edit_distance": 0,
+        "capture_audio_ms": 3940,
+        "output_owned_at_check": true
+      },
+      {
+        "decision": "different_words",
+        "candidate_words": 4,
+        "reference_words": 185,
+        "overlap_ratio": 1.0,
+        "shared_words": 1,
+        "edit_distance": null,
+        "capture_audio_ms": 2630,
+        "output_owned_at_check": true
+      },
+      {
+        "decision": "outside_output_interval",
+        "candidate_words": 4,
+        "reference_words": 0,
+        "shared_words": 0,
+        "overlap_ratio": 0.0,
+        "edit_distance": null,
+        "capture_audio_ms": 2570,
+        "output_owned_at_check": false
+      },
+      {
+        "decision": "insufficient_overlap",
+        "candidate_words": 4,
+        "reference_words": 185,
+        "overlap_ratio": 0.3866,
+        "shared_words": 1,
+        "edit_distance": null,
+        "capture_audio_ms": 2570,
+        "output_owned_at_check": false
+      }
+    ],
+    "target": "media_player.homepod_obyvak_homepod_obyvak",
+    "transport": "native_raop_mp3_stream",
+    "volume_decision": {
+      "volume": 0.45,
+      "muted": false,
+      "source": "raop",
+      "busy": false
+    },
+    "negotiated_latency_s": 1.5,
+    "sender_scheduling_delay_s": 1.5,
+    "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+    "pending_resource_cleanup": 0,
+    "streaming": {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 477184,
+      "reference_seconds": 57.6,
+      "first_reference_ms": 2.8,
+      "producer_eof_ms": null,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 2048,
+      "cleanup_pending": false,
+      "error_type": "StreamAborted",
+      "raw_microphone_saved": false
+    }
+  },
+  "observer": {
+    "scope": "active_dialogue_scalar_playback_observations",
+    "frames_seen": 30020,
+    "frames_during_output": 26246,
+    "timing_unavailable_frames": 21,
+    "frames_before_sender_estimate": 1469,
+    "clipped_frames": 0,
+    "peak_dbfs": -6.52,
+    "max_rms": 0.180329,
+    "max_receive_minus_nominal_ms": 38.7,
+    "capture_origin": "first_received_chunk_nominal_sample_count_not_hardware_clock",
+    "observations": [
+      {
+        "elapsed_capture_s": 167.59,
+        "correlation": 0.9343,
+        "offset_ms": 1250,
+        "reference_window_frame": 1613,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 167.69,
+        "correlation": 0.9407,
+        "offset_ms": 1250,
+        "reference_window_frame": 1623,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 167.79,
+        "correlation": 0.9045,
+        "offset_ms": 1250,
+        "reference_window_frame": 1633,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 167.89,
+        "correlation": 0.8596,
+        "offset_ms": 1240,
+        "reference_window_frame": 1644,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 167.99,
+        "correlation": 0.9306,
+        "offset_ms": 1240,
+        "reference_window_frame": 1654,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 168.09,
+        "correlation": 0.9019,
+        "offset_ms": -570,
+        "reference_window_frame": 1845,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 168.19,
+        "correlation": 0.6759,
+        "offset_ms": -460,
+        "reference_window_frame": 1844,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 168.29,
+        "correlation": 0.6558,
+        "offset_ms": 1390,
+        "reference_window_frame": 1669,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 168.39,
+        "correlation": 0.4181,
+        "offset_ms": 1380,
+        "reference_window_frame": 1680,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 180.09,
+        "correlation": 0.7807,
+        "offset_ms": -610,
+        "reference_window_frame": 3049,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 180.19,
+        "correlation": 0.6475,
+        "offset_ms": 980,
+        "reference_window_frame": 2900,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 180.29,
+        "correlation": 0.7762,
+        "offset_ms": 1060,
+        "reference_window_frame": 2902,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 180.39,
+        "correlation": 0.9259,
+        "offset_ms": -330,
+        "reference_window_frame": 3051,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 180.49,
+        "correlation": 0.8119,
+        "offset_ms": -370,
+        "reference_window_frame": 3065,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 180.59,
+        "correlation": 0.9226,
+        "offset_ms": -970,
+        "reference_window_frame": 3135,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 180.69,
+        "correlation": 0.9259,
+        "offset_ms": -980,
+        "reference_window_frame": 3146,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 180.79,
+        "correlation": 0.8555,
+        "offset_ms": -380,
+        "reference_window_frame": 3096,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 180.89,
+        "correlation": 0.8566,
+        "offset_ms": -380,
+        "reference_window_frame": 3106,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 180.99,
+        "correlation": 0.8907,
+        "offset_ms": -710,
+        "reference_window_frame": 3149,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 181.09,
+        "correlation": 0.9093,
+        "offset_ms": 260,
+        "reference_window_frame": 3062,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 181.19,
+        "correlation": 0.8514,
+        "offset_ms": 270,
+        "reference_window_frame": 3071,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 181.29,
+        "correlation": 0.9596,
+        "offset_ms": 810,
+        "reference_window_frame": 3027,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 181.39,
+        "correlation": 0.9504,
+        "offset_ms": -270,
+        "reference_window_frame": 3145,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 181.49,
+        "correlation": 0.8748,
+        "offset_ms": -270,
+        "reference_window_frame": 3155,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 181.59,
+        "correlation": 0.9584,
+        "offset_ms": -930,
+        "reference_window_frame": 3231,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 181.69,
+        "correlation": 0.7308,
+        "offset_ms": 420,
+        "reference_window_frame": 3106,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 181.79,
+        "correlation": 0.9524,
+        "offset_ms": 1380,
+        "reference_window_frame": 3020,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 181.89,
+        "correlation": 0.974,
+        "offset_ms": 1390,
+        "reference_window_frame": 3029,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 181.99,
+        "correlation": 0.9591,
+        "offset_ms": -220,
+        "reference_window_frame": 3200,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 182.09,
+        "correlation": 0.6175,
+        "offset_ms": -120,
+        "reference_window_frame": 3200,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 182.19,
+        "correlation": 0.8813,
+        "offset_ms": -10,
+        "reference_window_frame": 3199,
+        "window_ms": 400,
+        "search_ms": 1500
+      },
+      {
+        "elapsed_capture_s": 182.29,
+        "correlation": 0.7223,
+        "offset_ms": 80,
+        "reference_window_frame": 3200,
+        "window_ms": 400,
+        "search_ms": 1500
+      }
+    ],
+    "latest": {
+      "elapsed_capture_s": 182.29,
+      "correlation": 0.7223,
+      "offset_ms": 80,
+      "reference_window_frame": 3200,
+      "window_ms": 400,
+      "search_ms": 1500
+    },
+    "turns": [
+      {
+        "timings_ms": {
+          "stt": 551.7,
+          "identity": 0.0,
+          "agent": 151.2
+        },
+        "output": {
+          "owned": false,
+          "started": 3,
+          "completed": 1,
+          "skipped": 0,
+          "stopped": 2,
+          "echo_frames": 476,
+          "overlap_frames": 6816,
+          "discarded": 0,
+          "last_stop_s": 0.001,
+          "last_reference_duration_s": 57.6,
+          "last_error": null,
+          "text_echo_suppressed": 1,
+          "tts_generation_ms": 22.1,
+          "first_audio_wait_ms": 1500.1,
+          "transcript_guard": [
+            {
+              "decision": "different_words",
+              "candidate_words": 2,
+              "reference_words": 185,
+              "overlap_ratio": 1.0,
+              "shared_words": 0,
+              "edit_distance": null,
+              "capture_audio_ms": 1890,
+              "output_owned_at_check": true
+            }
+          ],
+          "target": "media_player.homepod_obyvak_homepod_obyvak",
+          "transport": "native_raop_mp3_stream",
+          "volume_decision": {
+            "volume": 0.45,
+            "muted": false,
+            "source": "raop",
+            "busy": false
+          },
+          "negotiated_latency_s": 1.5,
+          "sender_scheduling_delay_s": 1.5,
+          "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+          "pending_resource_cleanup": 0,
+          "streaming": {
+            "transport": "native_raop_mp3_stream",
+            "compressed_bytes": 477184,
+            "reference_seconds": 57.6,
+            "first_reference_ms": 3.0,
+            "producer_eof_ms": null,
+            "producer_done": true,
+            "decoder_done": true,
+            "native_pending_peak": 262144,
+            "reference_pending_peak": 4096,
+            "cleanup_pending": false,
+            "error_type": "StreamAborted",
+            "raw_microphone_saved": false
+          }
+        }
+      },
+      {
+        "timings_ms": {
+          "stt": 551.2,
+          "identity": 0.0,
+          "agent": 150.2
+        },
+        "output": {
+          "owned": false,
+          "started": 4,
+          "completed": 2,
+          "skipped": 0,
+          "stopped": 2,
+          "echo_frames": 476,
+          "overlap_frames": 7133,
+          "discarded": 0,
+          "last_stop_s": 0.001,
+          "last_reference_duration_s": 3.096,
+          "last_error": null,
+          "text_echo_suppressed": 1,
+          "tts_generation_ms": 21.8,
+          "first_audio_wait_ms": 1500.1,
+          "transcript_guard": [
+            {
+              "decision": "different_words",
+              "candidate_words": 2,
+              "reference_words": 185,
+              "overlap_ratio": 1.0,
+              "shared_words": 0,
+              "edit_distance": null,
+              "capture_audio_ms": 1890,
+              "output_owned_at_check": true
+            }
+          ],
+          "target": "media_player.homepod_obyvak_homepod_obyvak",
+          "transport": "native_raop_mp3_stream",
+          "volume_decision": {
+            "volume": 0.45,
+            "muted": false,
+            "source": "raop",
+            "busy": false
+          },
+          "negotiated_latency_s": 1.5,
+          "sender_scheduling_delay_s": 1.5,
+          "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+          "pending_resource_cleanup": 0,
+          "streaming": {
+            "transport": "native_raop_mp3_stream",
+            "compressed_bytes": 24813,
+            "reference_seconds": 3.096,
+            "first_reference_ms": 2.9,
+            "producer_eof_ms": 55.5,
+            "producer_done": true,
+            "decoder_done": true,
+            "native_pending_peak": 20480,
+            "reference_pending_peak": 2048,
+            "cleanup_pending": false,
+            "error_type": null,
+            "raw_microphone_saved": false
+          }
+        }
+      },
+      {
+        "timings_ms": {
+          "stt": 551.6,
+          "identity": 0.0,
+          "agent": 150.9
+        },
+        "output": {
+          "owned": false,
+          "started": 5,
+          "completed": 2,
+          "skipped": 0,
+          "stopped": 3,
+          "echo_frames": 714,
+          "overlap_frames": 10282,
+          "discarded": 0,
+          "last_stop_s": 0.0,
+          "last_reference_duration_s": 60.084,
+          "last_error": null,
+          "text_echo_suppressed": 4,
+          "tts_generation_ms": 21.8,
+          "first_audio_wait_ms": 1500.1,
+          "transcript_guard": [
+            {
+              "decision": "different_words",
+              "candidate_words": 2,
+              "reference_words": 185,
+              "overlap_ratio": 1.0,
+              "shared_words": 0,
+              "edit_distance": null,
+              "capture_audio_ms": 3940,
+              "output_owned_at_check": true
+            }
+          ],
+          "target": "media_player.homepod_obyvak_homepod_obyvak",
+          "transport": "native_raop_mp3_stream",
+          "volume_decision": {
+            "volume": 0.45,
+            "muted": false,
+            "source": "raop",
+            "busy": false
+          },
+          "negotiated_latency_s": 1.5,
+          "sender_scheduling_delay_s": 1.5,
+          "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+          "pending_resource_cleanup": 0,
+          "streaming": {
+            "transport": "native_raop_mp3_stream",
+            "compressed_bytes": 480717,
+            "reference_seconds": 60.084,
+            "first_reference_ms": 2.8,
+            "producer_eof_ms": 24741.3,
+            "producer_done": true,
+            "decoder_done": true,
+            "native_pending_peak": 262144,
+            "reference_pending_peak": 2048,
+            "cleanup_pending": false,
+            "error_type": null,
+            "raw_microphone_saved": false
+          }
+        }
+      },
+      {
+        "timings_ms": {
+          "stt": 550.8,
+          "identity": 0.0,
+          "agent": 150.9
+        },
+        "output": {
+          "owned": false,
+          "started": 6,
+          "completed": 3,
+          "skipped": 0,
+          "stopped": 3,
+          "echo_frames": 714,
+          "overlap_frames": 11512,
+          "discarded": 0,
+          "last_stop_s": 0.0,
+          "last_reference_duration_s": 12.096,
+          "last_error": null,
+          "text_echo_suppressed": 4,
+          "tts_generation_ms": 22.5,
+          "first_audio_wait_ms": 1500.2,
+          "transcript_guard": [
+            {
+              "decision": "different_words",
+              "candidate_words": 2,
+              "reference_words": 185,
+              "overlap_ratio": 1.0,
+              "shared_words": 0,
+              "edit_distance": null,
+              "capture_audio_ms": 3940,
+              "output_owned_at_check": true
+            }
+          ],
+          "target": "media_player.homepod_obyvak_homepod_obyvak",
+          "transport": "native_raop_mp3_stream",
+          "volume_decision": {
+            "volume": 0.45,
+            "muted": false,
+            "source": "raop",
+            "busy": false
+          },
+          "negotiated_latency_s": 1.5,
+          "sender_scheduling_delay_s": 1.5,
+          "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+          "pending_resource_cleanup": 0,
+          "streaming": {
+            "transport": "native_raop_mp3_stream",
+            "compressed_bytes": 96813,
+            "reference_seconds": 12.096,
+            "first_reference_ms": 2.9,
+            "producer_eof_ms": 270.2,
+            "producer_done": true,
+            "decoder_done": true,
+            "native_pending_peak": 35817,
+            "reference_pending_peak": 2048,
+            "cleanup_pending": false,
+            "error_type": null,
+            "raw_microphone_saved": false
+          }
+        }
+      },
+      {
+        "timings_ms": {
+          "stt": 551.3,
+          "identity": 0.0,
+          "agent": 150.2
+        },
+        "output": {
+          "owned": false,
+          "started": 7,
+          "completed": 3,
+          "skipped": 0,
+          "stopped": 4,
+          "echo_frames": 844,
+          "overlap_frames": 14842,
+          "discarded": 0,
+          "last_stop_s": 0.0,
+          "last_reference_duration_s": 60.084,
+          "last_error": null,
+          "text_echo_suppressed": 5,
+          "tts_generation_ms": 22.9,
+          "first_audio_wait_ms": 1500.1,
+          "transcript_guard": [
+            {
+              "decision": "different_words",
+              "candidate_words": 4,
+              "reference_words": 185,
+              "overlap_ratio": 1.0,
+              "shared_words": 1,
+              "edit_distance": null,
+              "capture_audio_ms": 2630,
+              "output_owned_at_check": true
+            }
+          ],
+          "target": "media_player.homepod_obyvak_homepod_obyvak",
+          "transport": "native_raop_mp3_stream",
+          "volume_decision": {
+            "volume": 0.45,
+            "muted": false,
+            "source": "raop",
+            "busy": false
+          },
+          "negotiated_latency_s": 1.5,
+          "sender_scheduling_delay_s": 1.5,
+          "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+          "pending_resource_cleanup": 0,
+          "streaming": {
+            "transport": "native_raop_mp3_stream",
+            "compressed_bytes": 480717,
+            "reference_seconds": 60.084,
+            "first_reference_ms": 3.0,
+            "producer_eof_ms": 24750.9,
+            "producer_done": true,
+            "decoder_done": true,
+            "native_pending_peak": 262144,
+            "reference_pending_peak": 4096,
+            "cleanup_pending": false,
+            "error_type": null,
+            "raw_microphone_saved": false
+          }
+        }
+      },
+      {
+        "timings_ms": {
+          "stt": 551.3,
+          "identity": 0.0,
+          "agent": 150.7
+        },
+        "output": {
+          "owned": false,
+          "started": 8,
+          "completed": 4,
+          "skipped": 0,
+          "stopped": 4,
+          "echo_frames": 844,
+          "overlap_frames": 16668,
+          "discarded": 0,
+          "last_stop_s": 0.0,
+          "last_reference_duration_s": 18.072,
+          "last_error": null,
+          "text_echo_suppressed": 5,
+          "tts_generation_ms": 22.3,
+          "first_audio_wait_ms": 1500.1,
+          "transcript_guard": [
+            {
+              "decision": "different_words",
+              "candidate_words": 4,
+              "reference_words": 185,
+              "overlap_ratio": 1.0,
+              "shared_words": 1,
+              "edit_distance": null,
+              "capture_audio_ms": 2630,
+              "output_owned_at_check": true
+            }
+          ],
+          "target": "media_player.homepod_obyvak_homepod_obyvak",
+          "transport": "native_raop_mp3_stream",
+          "volume_decision": {
+            "volume": 0.45,
+            "muted": false,
+            "source": "raop",
+            "busy": false
+          },
+          "negotiated_latency_s": 1.5,
+          "sender_scheduling_delay_s": 1.5,
+          "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+          "pending_resource_cleanup": 0,
+          "streaming": {
+            "transport": "native_raop_mp3_stream",
+            "compressed_bytes": 144621,
+            "reference_seconds": 18.072,
+            "first_reference_ms": 3.0,
+            "producer_eof_ms": 361.5,
+            "producer_done": true,
+            "decoder_done": true,
+            "native_pending_peak": 79072,
+            "reference_pending_peak": 2048,
+            "cleanup_pending": false,
+            "error_type": null,
+            "raw_microphone_saved": false
+          }
+        }
+      },
+      {
+        "timings_ms": {
+          "stt": 551.0,
+          "identity": 0.0,
+          "agent": 150.4
+        },
+        "output": {
+          "owned": false,
+          "started": 9,
+          "completed": 5,
+          "skipped": 0,
+          "stopped": 4,
+          "echo_frames": 844,
+          "overlap_frames": 22698,
+          "discarded": 0,
+          "last_stop_s": 0.0,
+          "last_reference_duration_s": 60.084,
+          "last_error": null,
+          "text_echo_suppressed": 5,
+          "tts_generation_ms": 22.0,
+          "first_audio_wait_ms": 1500.1,
+          "transcript_guard": [
+            {
+              "decision": "outside_output_interval",
+              "candidate_words": 4,
+              "reference_words": 0,
+              "shared_words": 0,
+              "overlap_ratio": 0.0,
+              "edit_distance": null,
+              "capture_audio_ms": 2570,
+              "output_owned_at_check": false
+            }
+          ],
+          "target": "media_player.homepod_obyvak_homepod_obyvak",
+          "transport": "native_raop_mp3_stream",
+          "volume_decision": {
+            "volume": 0.45,
+            "muted": false,
+            "source": "raop",
+            "busy": false
+          },
+          "negotiated_latency_s": 1.5,
+          "sender_scheduling_delay_s": 1.5,
+          "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+          "pending_resource_cleanup": 0,
+          "streaming": {
+            "transport": "native_raop_mp3_stream",
+            "compressed_bytes": 480717,
+            "reference_seconds": 60.084,
+            "first_reference_ms": 3.0,
+            "producer_eof_ms": 24736.6,
+            "producer_done": true,
+            "decoder_done": true,
+            "native_pending_peak": 262144,
+            "reference_pending_peak": 2048,
+            "cleanup_pending": false,
+            "error_type": null,
+            "raw_microphone_saved": false
+          }
+        }
+      },
+      {
+        "timings_ms": {
+          "stt": 551.3,
+          "identity": 0.0,
+          "agent": 152.8
+        },
+        "output": {
+          "owned": false,
+          "started": 10,
+          "completed": 5,
+          "skipped": 0,
+          "stopped": 5,
+          "echo_frames": 844,
+          "overlap_frames": 24746,
+          "discarded": 0,
+          "last_stop_s": 0.0,
+          "last_reference_duration_s": 57.6,
+          "last_error": null,
+          "text_echo_suppressed": 5,
+          "tts_generation_ms": 26.6,
+          "first_audio_wait_ms": 1500.0,
+          "transcript_guard": [
+            {
+              "decision": "insufficient_overlap",
+              "candidate_words": 4,
+              "reference_words": 185,
+              "overlap_ratio": 0.3866,
+              "shared_words": 1,
+              "edit_distance": null,
+              "capture_audio_ms": 2570,
+              "output_owned_at_check": false
+            }
+          ],
+          "target": "media_player.homepod_obyvak_homepod_obyvak",
+          "transport": "native_raop_mp3_stream",
+          "volume_decision": {
+            "volume": 0.45,
+            "muted": false,
+            "source": "raop",
+            "busy": false
+          },
+          "negotiated_latency_s": 1.5,
+          "sender_scheduling_delay_s": 1.5,
+          "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+          "pending_resource_cleanup": 0,
+          "streaming": {
+            "transport": "native_raop_mp3_stream",
+            "compressed_bytes": 477184,
+            "reference_seconds": 57.6,
+            "first_reference_ms": 2.8,
+            "producer_eof_ms": null,
+            "producer_done": true,
+            "decoder_done": true,
+            "native_pending_peak": 262144,
+            "reference_pending_peak": 2048,
+            "cleanup_pending": false,
+            "error_type": "StreamAborted",
+            "raw_microphone_saved": false
+          }
+        }
+      }
+    ],
+    "diagnostic_errors": 0,
+    "source_closed": true,
+    "capture_errors": 0,
+    "input_modified": false,
+    "raw_microphone_saved": false,
+    "correlation_is_acoustic_proof": false,
+    "waveform": {
+      "scope": "raw_PCM_similarity_only_not_input_decision",
+      "observations": [
+        {
+          "elapsed_capture_s": 292.71,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.59,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 293.71,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.411,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 294.72,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.448,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 295.73,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.505,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 296.73,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.47,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 297.74,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.454,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 298.74,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.588,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 299.75,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.517,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        }
+      ],
+      "latest": {
+        "elapsed_capture_s": 299.75,
+        "status": "no_variation",
+        "comparisons": 0,
+        "processing_ms": 1.517,
+        "kernel": "audioop_findfactor",
+        "acoustic_echo_proof": false
+      },
+      "scheduled": 263,
+      "busy_skips": 0,
+      "errors": 0,
+      "stale_results": 0,
+      "pending": false,
+      "raw_audio_saved": false,
+      "input_modified": false
+    }
+  },
+  "source_closed": true,
+  "input_frame_lateness_peak_ms": 48.927,
+  "gate_buffer_peak_bytes": 24960,
+  "injected_frames": {
+    "human_frames": 1264,
+    "echo_exact_frames": 1126,
+    "echo_asr_fault_frames": 588
+  },
+  "reader_exceptions": [
+    {
+      "pipe": "reference",
+      "requested_bytes": 49197,
+      "pending_bytes": 0,
+      "elapsed_ms": 5436.438,
+      "error_type": "StreamAborted",
+      "message": "speech_stream_aborted"
+    },
+    {
+      "pipe": "reference",
+      "requested_bytes": 49197,
+      "pending_bytes": 0,
+      "elapsed_ms": 3348.728,
+      "error_type": "StreamAborted",
+      "message": "speech_stream_aborted"
+    }
+  ],
+  "stt": [
+    {
+      "event_index": 0,
+      "origin": "human",
+      "fixture_onset_s": 1.0,
+      "transcript": "Tell me a long story.",
+      "at_s": 4.0732
+    },
+    {
+      "event_index": 2,
+      "origin": "echo_exact",
+      "fixture_onset_s": 24.0,
+      "transcript": "They were looking for an island",
+      "at_s": 28.2421
+    },
+    {
+      "event_index": 3,
+      "origin": "echo_asr_fault",
+      "fixture_onset_s": 35.0,
+      "transcript": "really happened",
+      "at_s": 39.062
+    },
+    {
+      "event_index": 4,
+      "origin": "human",
+      "fixture_onset_s": 55.0,
+      "transcript": "Continue the long story.",
+      "at_s": 58.072
+    },
+    {
+      "event_index": 5,
+      "origin": "human",
+      "fixture_onset_s": 80.0,
+      "transcript": "Stop speaking.",
+      "at_s": 82.3123
+    },
+    {
+      "event_index": 6,
+      "origin": "human",
+      "fixture_onset_s": 90.0,
+      "transcript": "Tell the story again.",
+      "at_s": 93.082
+    },
+    {
+      "event_index": 7,
+      "origin": "echo_exact",
+      "fixture_onset_s": 105.0,
+      "transcript": "The morning wind moved the clouds",
+      "at_s": 107.0329
+    },
+    {
+      "event_index": 7,
+      "origin": "echo_exact",
+      "fixture_onset_s": 105.0,
+      "transcript": "The morning wind moved the clouds",
+      "at_s": 108.1828
+    },
+    {
+      "event_index": 7,
+      "origin": "echo_exact",
+      "fixture_onset_s": 105.0,
+      "transcript": "The morning wind moved the clouds",
+      "at_s": 109.2418
+    },
+    {
+      "event_index": 8,
+      "origin": "echo_asr_fault",
+      "fixture_onset_s": 122.0,
+      "transcript": "my favorite",
+      "at_s": 126.2421
+    },
+    {
+      "event_index": 9,
+      "origin": "human",
+      "fixture_onset_s": 145.0,
+      "transcript": "Continue with the island story.",
+      "at_s": 148.1327
+    },
+    {
+      "event_index": 10,
+      "origin": "echo_exact",
+      "fixture_onset_s": 165.0,
+      "transcript": "A narrow path led from the beach",
+      "at_s": 169.2427
+    },
+    {
+      "event_index": 11,
+      "origin": "human",
+      "fixture_onset_s": 180.0,
+      "transcript": "What was Anna carrying?",
+      "at_s": 183.1022
+    },
+    {
+      "event_index": 12,
+      "origin": "human",
+      "fixture_onset_s": 209.0,
+      "transcript": "Finish the long story.",
+      "at_s": 212.032
+    },
+    {
+      "event_index": 13,
+      "origin": "human",
+      "fixture_onset_s": 275.0,
+      "transcript": "Finish the long story.",
+      "at_s": 278.0319
+    }
+  ],
+  "agent": [
+    {
+      "input": "Tell me a long story.",
+      "origin": "human",
+      "event_index": 0,
+      "at_s": 4.0733,
+      "answer": "A small boat left the quiet harbour before sunrise. Anna carried a map, a lantern, and a basket of bread. Her friend Daniel watched the water. They were looking for an island that appeared only on an old family map. The morning wind moved the clouds and the distant shore slowly disappeared. At noon they saw a white tower above the trees. A narrow path led from the beach to a wooden door. Behind the door they found a garden filled with flowers and a friendly keeper who had been waiting for visitors. He offered them tea and explained how people had cared for the island for many years. Every spring they repaired the paths and planted new trees. Anna opened her map and marked the safe route through the rocks. Daniel helped the keeper mend a little bridge. When evening came, the lanterns around the garden began to shine. They sat together and listened to the sea. The next morning they sailed home with a new map and a promise to return. Which part of their journey would you like to hear about next?"
+    },
+    {
+      "input": "really happened",
+      "origin": "echo_asr_fault",
+      "event_index": 3,
+      "at_s": 39.0626,
+      "answer": "The keeper looked after the garden and the little bridge. The visitors helped him before returning to their boat. Would you like another detail about the journey?"
+    },
+    {
+      "input": "Continue the long story.",
+      "origin": "human",
+      "event_index": 4,
+      "at_s": 58.0721,
+      "answer": "A small boat left the quiet harbour before sunrise. Anna carried a map, a lantern, and a basket of bread. Her friend Daniel watched the water. They were looking for an island that appeared only on an old family map. The morning wind moved the clouds and the distant shore slowly disappeared. At noon they saw a white tower above the trees. A narrow path led from the beach to a wooden door. Behind the door they found a garden filled with flowers and a friendly keeper who had been waiting for visitors. He offered them tea and explained how people had cared for the island for many years. Every spring they repaired the paths and planted new trees. Anna opened her map and marked the safe route through the rocks. Daniel helped the keeper mend a little bridge. When evening came, the lanterns around the garden began to shine. They sat together and listened to the sea. The next morning they sailed home with a new map and a promise to return. Which part of their journey would you like to hear about next?"
+    },
+    {
+      "input": "Stop speaking.",
+      "origin": "human",
+      "event_index": 5,
+      "at_s": 82.3135,
+      "answer": "I have stopped. I am listening."
+    },
+    {
+      "input": "Tell the story again.",
+      "origin": "human",
+      "event_index": 6,
+      "at_s": 93.0821,
+      "answer": "A small boat left the quiet harbour before sunrise. Anna carried a map, a lantern, and a basket of bread. Her friend Daniel watched the water. They were looking for an island that appeared only on an old family map. The morning wind moved the clouds and the distant shore slowly disappeared. At noon they saw a white tower above the trees. A narrow path led from the beach to a wooden door. Behind the door they found a garden filled with flowers and a friendly keeper who had been waiting for visitors. He offered them tea and explained how people had cared for the island for many years. Every spring they repaired the paths and planted new trees. Anna opened her map and marked the safe route through the rocks. Daniel helped the keeper mend a little bridge. When evening came, the lanterns around the garden began to shine. They sat together and listened to the sea. The next morning they sailed home with a new map and a promise to return. Which part of their journey would you like to hear about next?"
+    },
+    {
+      "input": "my favorite",
+      "origin": "echo_asr_fault",
+      "event_index": 8,
+      "at_s": 126.2428,
+      "answer": "The keeper looked after the garden and the little bridge. The visitors helped him before returning to their boat. Would you like another detail about the journey?"
+    },
+    {
+      "input": "Continue with the island story.",
+      "origin": "human",
+      "event_index": 9,
+      "at_s": 148.1328,
+      "answer": "A small boat left the quiet harbour before sunrise. Anna carried a map, a lantern, and a basket of bread. Her friend Daniel watched the water. They were looking for an island that appeared only on an old family map. The morning wind moved the clouds and the distant shore slowly disappeared. At noon they saw a white tower above the trees. A narrow path led from the beach to a wooden door. Behind the door they found a garden filled with flowers and a friendly keeper who had been waiting for visitors. He offered them tea and explained how people had cared for the island for many years. Every spring they repaired the paths and planted new trees. Anna opened her map and marked the safe route through the rocks. Daniel helped the keeper mend a little bridge. When evening came, the lanterns around the garden began to shine. They sat together and listened to the sea. The next morning they sailed home with a new map and a promise to return. Which part of their journey would you like to hear about next?"
+    },
+    {
+      "input": "What was Anna carrying?",
+      "origin": "human",
+      "event_index": 11,
+      "at_s": 183.1041,
+      "answer": "Anna was carrying the old map and a lantern. Daniel watched the water and helped repair the bridge. They found a garden rather than treasure, and the keeper shared his tea and his memories with them."
+    },
+    {
+      "input": "Finish the long story.",
+      "origin": "human",
+      "event_index": 12,
+      "at_s": 212.0321,
+      "answer": "A small boat left the quiet harbour before sunrise. Anna carried a map, a lantern, and a basket of bread. Her friend Daniel watched the water. They were looking for an island that appeared only on an old family map. The morning wind moved the clouds and the distant shore slowly disappeared. At noon they saw a white tower above the trees. A narrow path led from the beach to a wooden door. Behind the door they found a garden filled with flowers and a friendly keeper who had been waiting for visitors. He offered them tea and explained how people had cared for the island for many years. Every spring they repaired the paths and planted new trees. Anna opened her map and marked the safe route through the rocks. Daniel helped the keeper mend a little bridge. When evening came, the lanterns around the garden began to shine. They sat together and listened to the sea. The next morning they sailed home with a new map and a promise to return. Which part of their journey would you like to hear about next?"
+    },
+    {
+      "input": "Finish the long story.",
+      "origin": "human",
+      "event_index": 13,
+      "at_s": 278.0321,
+      "answer": "A small boat left the quiet harbour before sunrise. Anna carried a map, a lantern, and a basket of bread. Her friend Daniel watched the water. They were looking for an island that appeared only on an old family map. The morning wind moved the clouds and the distant shore slowly disappeared. At noon they saw a white tower above the trees. A narrow path led from the beach to a wooden door. Behind the door they found a garden filled with flowers and a friendly keeper who had been waiting for visitors. He offered them tea and explained how people had cared for the island for many years. Every spring they repaired the paths and planted new trees. Anna opened her map and marked the safe route through the rocks. Daniel helped the keeper mend a little bridge. When evening came, the lanterns around the garden began to shine. They sat together and listened to the sea. The next morning they sailed home with a new map and a promise to return. Which part of their journey would you like to hear about next?"
+    }
+  ],
+  "events": [
+    {
+      "at_s": 0.0,
+      "event": "run_start",
+      "duration_s": 300.0,
+      "source_fingerprint": "183cec10cdf60ea7bab2c685104e9b102bd749b35eeebc8946aa3a4cba40f70f"
+    },
+    {
+      "at_s": 4.0733,
+      "event": "agent",
+      "origin": "human",
+      "event_index": 0,
+      "input": "Tell me a long story."
+    },
+    {
+      "at_s": 4.2471,
+      "event": "output_start",
+      "answer_index": 1
+    },
+    {
+      "at_s": 39.0622,
+      "event": "output_cancel",
+      "native_bytes": 6107904
+    },
+    {
+      "at_s": 39.0626,
+      "event": "agent",
+      "origin": "echo_asr_fault",
+      "event_index": 3,
+      "input": "really happened"
+    },
+    {
+      "at_s": 39.2349,
+      "event": "output_start",
+      "answer_index": 2
+    },
+    {
+      "at_s": 53.0086,
+      "event": "output_end",
+      "native_bytes": 2121036
+    },
+    {
+      "at_s": 58.0721,
+      "event": "agent",
+      "origin": "human",
+      "event_index": 4,
+      "input": "Continue the long story."
+    },
+    {
+      "at_s": 58.2455,
+      "event": "output_start",
+      "answer_index": 3
+    },
+    {
+      "at_s": 60.001,
+      "event": "checkpoint",
+      "nominal_s": 60.0,
+      "session": {
+        "stage": "speaking",
+        "frames": 6000,
+        "frames_during_output": 4584,
+        "completed_turns": 1,
+        "accepted_turns": 3,
+        "interruptions": 1,
+        "failures": 0,
+        "last_error": null,
+        "truncated": 0,
+        "reason": null,
+        "deferred_turns": 0,
+        "deferred_replaced": 0,
+        "deferred_expired": 0,
+        "suppressed_frames": 0,
+        "input_end": null,
+        "interruption_policy": "completed_transcript_before_stop",
+        "confirmations": 2,
+        "rejected_confirmations": 1,
+        "confirmation_failures": 0,
+        "session_budget_policy": "since_last_accepted_turn"
+      },
+      "output": {
+        "started": 3,
+        "completed": 1,
+        "stopped": 1
+      }
+    },
+    {
+      "at_s": 82.3127,
+      "event": "output_cancel",
+      "native_bytes": 4205696
+    },
+    {
+      "at_s": 82.3135,
+      "event": "agent",
+      "origin": "human",
+      "event_index": 5,
+      "input": "Stop speaking."
+    },
+    {
+      "at_s": 82.4856,
+      "event": "output_start",
+      "answer_index": 4
+    },
+    {
+      "at_s": 87.1484,
+      "event": "output_end",
+      "native_bytes": 546136
+    },
+    {
+      "at_s": 93.0821,
+      "event": "agent",
+      "origin": "human",
+      "event_index": 6,
+      "input": "Tell the story again."
+    },
+    {
+      "at_s": 93.2548,
+      "event": "output_start",
+      "answer_index": 5
+    },
+    {
+      "at_s": 120.0003,
+      "event": "checkpoint",
+      "nominal_s": 120.0,
+      "session": {
+        "stage": "speaking",
+        "frames": 12000,
+        "frames_during_output": 9657,
+        "completed_turns": 2,
+        "accepted_turns": 5,
+        "interruptions": 2,
+        "failures": 0,
+        "last_error": null,
+        "truncated": 0,
+        "reason": null,
+        "deferred_turns": 0,
+        "deferred_replaced": 0,
+        "deferred_expired": 0,
+        "suppressed_frames": 0,
+        "input_end": null,
+        "interruption_policy": "completed_transcript_before_stop",
+        "confirmations": 6,
+        "rejected_confirmations": 4,
+        "confirmation_failures": 0,
+        "session_budget_policy": "since_last_accepted_turn"
+      },
+      "output": {
+        "started": 5,
+        "completed": 2,
+        "stopped": 2
+      }
+    },
+    {
+      "at_s": 126.2424,
+      "event": "output_cancel",
+      "native_bytes": 5775616
+    },
+    {
+      "at_s": 126.2428,
+      "event": "agent",
+      "origin": "echo_asr_fault",
+      "event_index": 8,
+      "input": "my favorite"
+    },
+    {
+      "at_s": 126.4164,
+      "event": "output_start",
+      "answer_index": 6
+    },
+    {
+      "at_s": 140.2014,
+      "event": "output_end",
+      "native_bytes": 2121036
+    },
+    {
+      "at_s": 148.1328,
+      "event": "agent",
+      "origin": "human",
+      "event_index": 9,
+      "input": "Continue with the island story."
+    },
+    {
+      "at_s": 148.3061,
+      "event": "output_start",
+      "answer_index": 7
+    },
+    {
+      "at_s": 180.0011,
+      "event": "checkpoint",
+      "nominal_s": 180.0,
+      "session": {
+        "stage": "speaking",
+        "frames": 18000,
+        "frames_during_output": 14531,
+        "completed_turns": 3,
+        "accepted_turns": 7,
+        "interruptions": 3,
+        "failures": 0,
+        "last_error": null,
+        "truncated": 0,
+        "reason": null,
+        "deferred_turns": 0,
+        "deferred_replaced": 0,
+        "deferred_expired": 0,
+        "suppressed_frames": 0,
+        "input_end": null,
+        "interruption_policy": "completed_transcript_before_stop",
+        "confirmations": 8,
+        "rejected_confirmations": 5,
+        "confirmation_failures": 0,
+        "session_budget_policy": "since_last_accepted_turn"
+      },
+      "output": {
+        "started": 7,
+        "completed": 3,
+        "stopped": 3
+      }
+    },
+    {
+      "at_s": 183.1038,
+      "event": "output_cancel",
+      "native_bytes": 6089600
+    },
+    {
+      "at_s": 183.1041,
+      "event": "agent",
+      "origin": "human",
+      "event_index": 11,
+      "input": "What was Anna carrying?"
+    },
+    {
+      "at_s": 183.2772,
+      "event": "output_start",
+      "answer_index": 8
+    },
+    {
+      "at_s": 203.0355,
+      "event": "output_end",
+      "native_bytes": 3175200
+    },
+    {
+      "at_s": 212.0321,
+      "event": "agent",
+      "origin": "human",
+      "event_index": 12,
+      "input": "Finish the long story."
+    },
+    {
+      "at_s": 212.2046,
+      "event": "output_start",
+      "answer_index": 9
+    },
+    {
+      "at_s": 240.0009,
+      "event": "checkpoint",
+      "nominal_s": 240.0,
+      "session": {
+        "stage": "speaking",
+        "frames": 24000,
+        "frames_during_output": 19297,
+        "completed_turns": 4,
+        "accepted_turns": 9,
+        "interruptions": 4,
+        "failures": 0,
+        "last_error": null,
+        "truncated": 0,
+        "reason": null,
+        "deferred_turns": 0,
+        "deferred_replaced": 0,
+        "deferred_expired": 0,
+        "suppressed_frames": 0,
+        "input_end": null,
+        "interruption_policy": "completed_transcript_before_stop",
+        "confirmations": 9,
+        "rejected_confirmations": 5,
+        "confirmation_failures": 0,
+        "session_budget_policy": "since_last_accepted_turn"
+      },
+      "output": {
+        "started": 9,
+        "completed": 4,
+        "stopped": 4
+      }
+    },
+    {
+      "at_s": 273.989,
+      "event": "output_end",
+      "native_bytes": 10586120
+    },
+    {
+      "at_s": 278.0321,
+      "event": "agent",
+      "origin": "human",
+      "event_index": 13,
+      "input": "Finish the long story."
+    },
+    {
+      "at_s": 278.2116,
+      "event": "output_start",
+      "answer_index": 10
+    },
+    {
+      "at_s": 300.0003,
+      "event": "checkpoint",
+      "nominal_s": 300.0,
+      "session": {
+        "stage": "speaking",
+        "frames": 30000,
+        "frames_during_output": 24726,
+        "completed_turns": 5,
+        "accepted_turns": 10,
+        "interruptions": 4,
+        "failures": 0,
+        "last_error": null,
+        "truncated": 0,
+        "reason": null,
+        "deferred_turns": 0,
+        "deferred_replaced": 0,
+        "deferred_expired": 0,
+        "suppressed_frames": 0,
+        "input_end": null,
+        "interruption_policy": "completed_transcript_before_stop",
+        "confirmations": 9,
+        "rejected_confirmations": 5,
+        "confirmation_failures": 0,
+        "session_budget_policy": "since_last_accepted_turn"
+      },
+      "output": {
+        "started": 10,
+        "completed": 5,
+        "stopped": 4
+      }
+    },
+    {
+      "at_s": 300.1908,
+      "event": "output_cancel",
+      "native_bytes": 3835392
+    }
+  ],
+  "unwanted_echo_agent_turns": 2,
+  "human_agent_turns": 8,
+  "human_inputs_expected": 8,
+  "stream_resources": [
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 480717,
+      "reference_seconds": 60.084,
+      "first_reference_ms": 3.7,
+      "producer_eof_ms": 24661.1,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 6144,
+      "cleanup_pending": false,
+      "error_type": null,
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    },
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 96813,
+      "reference_seconds": 12.096,
+      "first_reference_ms": 2.9,
+      "producer_eof_ms": 253.0,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 51233,
+      "reference_pending_peak": 4096,
+      "cleanup_pending": false,
+      "error_type": null,
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    },
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 477184,
+      "reference_seconds": 57.6,
+      "first_reference_ms": 3.0,
+      "producer_eof_ms": null,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 4096,
+      "cleanup_pending": false,
+      "error_type": "StreamAborted",
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    },
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 24813,
+      "reference_seconds": 3.096,
+      "first_reference_ms": 2.9,
+      "producer_eof_ms": 55.5,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 20480,
+      "reference_pending_peak": 2048,
+      "cleanup_pending": false,
+      "error_type": null,
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    },
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 480717,
+      "reference_seconds": 60.084,
+      "first_reference_ms": 2.8,
+      "producer_eof_ms": 24741.3,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 2048,
+      "cleanup_pending": false,
+      "error_type": null,
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    },
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 96813,
+      "reference_seconds": 12.096,
+      "first_reference_ms": 2.9,
+      "producer_eof_ms": 270.2,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 35817,
+      "reference_pending_peak": 2048,
+      "cleanup_pending": false,
+      "error_type": null,
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    },
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 480717,
+      "reference_seconds": 60.084,
+      "first_reference_ms": 3.0,
+      "producer_eof_ms": 24750.9,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 4096,
+      "cleanup_pending": false,
+      "error_type": null,
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    },
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 144621,
+      "reference_seconds": 18.072,
+      "first_reference_ms": 3.0,
+      "producer_eof_ms": 361.5,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 79072,
+      "reference_pending_peak": 2048,
+      "cleanup_pending": false,
+      "error_type": null,
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    },
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 480717,
+      "reference_seconds": 60.084,
+      "first_reference_ms": 3.0,
+      "producer_eof_ms": 24736.6,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 2048,
+      "cleanup_pending": false,
+      "error_type": null,
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    },
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 477184,
+      "reference_seconds": 57.6,
+      "first_reference_ms": 2.8,
+      "producer_eof_ms": null,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 2048,
+      "cleanup_pending": false,
+      "error_type": "StreamAborted",
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    }
+  ],
+  "boundaries": {
+    "real": [
+      "Session",
+      "Segmenter",
+      "TurnBridge",
+      "TextEcho",
+      "HomePodOutput",
+      "PlaybackObserver",
+      "streaming pipes",
+      "miniaudio1.71",
+      "pyatv0.17 audio source"
+    ],
+    "simulated": [
+      "microphone",
+      "VAD probability",
+      "ASR text and 550ms delay",
+      "identity",
+      "agent response and 150ms delay",
+      "TTS provider",
+      "RAOP receiver/1.5s timing",
+      "room impulse response"
+    ],
+    "not_verified": [
+      "real microphone",
+      "real ASR errors",
+      "speaker identity",
+      "provider latency",
+      "HomePod/network",
+      "actual room acceptance"
+    ]
+  },
+  "real_microphone_opened": false,
+  "household_actions": false,
+  "production_files_changed": false,
+  "synthetic_audio_only": true,
+  "acoustic_fix_proved": false,
+  "checks": {
+    "source_unchanged": true,
+    "duration_reached": true,
+    "no_provider_failure": true,
+    "all_workers_done": true,
+    "all_readers_closed": true,
+    "pipes_within_256k_each": true,
+    "no_echo_self_answers": false,
+    "all_scheduled_human_turns_accepted": true
+  }
+}

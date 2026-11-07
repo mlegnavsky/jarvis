@@ -1,0 +1,46 @@
+{
+  "run.py": {
+    "bytes": 11774,
+    "sha256": "0f5a2711ca32148e6aba80755f0e3e1c78440148be92273d461a61e2d18f0a81"
+  },
+  "results.json": {
+    "bytes": 5966,
+    "sha256": "a85d67794c755bb7c0bb99c70188f2372036fe0c91c1d1744d31874812d200f8"
+  },
+  "OUTCOME.md": {
+    "bytes": 3522,
+    "sha256": "a3b375b150869f7973d9d26d550e0ba23fa90a57416034be59a794ad8d600122"
+  },
+  "attempt-started.json": {
+    "bytes": 40,
+    "sha256": "004b875dfddee8eee2cfac1b49a1b2937491c9934e1b4a9913e49fd61e35f54a"
+  },
+  "library.log": {
+    "bytes": 118,
+    "sha256": "c607c092d62d306046bde4eb26423453bf5e4ad7349bf6515658bd5e0e263987"
+  },
+  "requirements.lock": {
+    "bytes": 379,
+    "sha256": "5d93543a7473e5e9c683eb871d61a4e4f28db19b509a00908564ffd1740748c6"
+  },
+  "source-snapshot/reference_native.py": {
+    "bytes": 5224,
+    "sha256": "06693d6a38dab4122239a3ab2f2467eede25685e0b8542c3bea1b53b0dab451b"
+  },
+  "source-snapshot/reference_probe.py": {
+    "bytes": 12961,
+    "sha256": "d8a0f24b1ec9d315ab5ac3aa864aa221449b3f9e0d6d030573bef39125ec68d1"
+  },
+  "source-snapshot/reference_tap.py": {
+    "bytes": 8612,
+    "sha256": "b3ae52992210544ce17283a391b220acafc58012a1b4a0977818dedff45ec185"
+  },
+  "source-snapshot/reference_timing.py": {
+    "bytes": 7887,
+    "sha256": "f88d33741fcc32b917276dbdea6cb5d24c033bc9cf073254ccf25d73f7998f37"
+  },
+  "source-snapshot/reference_writer.py": {
+    "bytes": 6581,
+    "sha256": "d8b5925a448bef8e359d34d2849245cc6acd0eb5e1f0a78290e6138c30f0b60a"
+  }
+}

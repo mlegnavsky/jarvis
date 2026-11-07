@@ -1,0 +1,9 @@
+# Energy1.0.3 — direct-read timeout recovery
+
+Operational acceptance of1.0.2 found a native-control read timeout followed by a short stale-data interval. Cleanup completed, but the generic error proof did not permit recovery.1.0.2 activated correctly; its first measured export observation was not sufficient evidence of sustained operation. Private operational receipt retains that later failure.
+
+1.0.3 catches only TimeoutError at the native control-refresh boundary and preserves the failed read as unavailable native_controls with exact source/error. The controller recomputes fresh actual health and runs every existing guard, including export cap, mode, price and reserve, before deciding the stop. A simultaneous real protection cannot be relabeled as a transient-only outage. Diagnostic event emission follows protective processing. Stopping or unhealthy telemetry is handled before another diagnostic read. Refresh cadence changes15 to25s within the unchanged30s native-proof lifetime, reducing read traffic; no hardware protection/current/SOC limit is changed.
+
+After confirmed cleanup, existing strict recovery requires unchanged owner intent, matching latest proof, no other guard/conflict,30s fresh health and a fresh ordinary native profile. Unknown/generic errors still do not resume. This allows recovery of a documented transport outage without fabricating an acknowledgement or bypassing a protection.
+
+Regression evidence: reproduced native timeout then permanent inhibit, and timeout plus excess export. Both now pass; real fault+transport evidence remains nontransient. Full suite752 run/20 existing PHP skips/0fail, plus focused post-ordering tests pass. Independent review reproduced and closed the masked-guard finding; protection-before-diagnostic ordering corrected. No third-party Solarman code changed. Deployment/runtime receipt remains separate.

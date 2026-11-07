@@ -1,0 +1,266 @@
+{
+  "status": "active_verified_physical_acceptance_pending",
+  "source_commit": "d148c0ee36c202cf3b05cdd6dafef00a6fe779a8",
+  "runtime_version": "1.0.1",
+  "core_version": "2026.6.4",
+  "source_revision": "9eeed5064e61a2a51c812ddf29853d69de64bb975f5c24b5e2e554b781aa3ee4",
+  "verified_at": "2026-11-01T22:11:52.525049+00:00",
+  "activation": {
+    "id": "local-duplex-v101-apply",
+    "state": "verified",
+    "phase": "active_verified",
+    "finished_at": "2026-11-01T22:10:07.163670+00:00",
+    "backup_slug": "d6c86bfa"
+  },
+  "initial_activation": {
+    "id": "local-duplex-apply-20261101",
+    "state": "verified",
+    "backup_slug": "6661d4a5"
+  },
+  "exact_file_readback": {
+    "passed": 22,
+    "total": 22,
+    "files": [
+      {
+        "path": "custom_components/jarvis_local_duplex/manifest.json",
+        "exact": true,
+        "revision": "973c5b0296903be6d14501429d3127a6a28d2647af70f0d6877058ca6163cff5"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_local_duplex/manifest.json",
+        "exact": true,
+        "revision": "973c5b0296903be6d14501429d3127a6a28d2647af70f0d6877058ca6163cff5"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/segmenter.py",
+        "exact": true,
+        "revision": "64bc37f2aa4f0ed697ee15661f20ed11b1f0ef86e4a198b2e2a90a6d9802653b"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_local_duplex/segmenter.py",
+        "exact": true,
+        "revision": "64bc37f2aa4f0ed697ee15661f20ed11b1f0ef86e4a198b2e2a90a6d9802653b"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/session.py",
+        "exact": true,
+        "revision": "edc47421b23a272f6025004a5d7f8ef3b4f33f2ea025c52ede42bbea1ba5768f"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_local_duplex/session.py",
+        "exact": true,
+        "revision": "edc47421b23a272f6025004a5d7f8ef3b4f33f2ea025c52ede42bbea1ba5768f"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/adapter.py",
+        "exact": true,
+        "revision": "895eaf07f00b9bc1ad9be8a796f09846f0934a40d3d987fddb04974535c90522"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_local_duplex/adapter.py",
+        "exact": true,
+        "revision": "895eaf07f00b9bc1ad9be8a796f09846f0934a40d3d987fddb04974535c90522"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/control.py",
+        "exact": true,
+        "revision": "d2978b751a6b55f3bb92115310463e18b53002af3b841ecce4a9b82e4b6bb3fa"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_local_duplex/control.py",
+        "exact": true,
+        "revision": "d2978b751a6b55f3bb92115310463e18b53002af3b841ecce4a9b82e4b6bb3fa"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/bridge.py",
+        "exact": true,
+        "revision": "f464c14aa72c49859a4c9820c0b4cbeb7bd02d5144ee9e61ba1731a3bd0bd949"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_local_duplex/bridge.py",
+        "exact": true,
+        "revision": "f464c14aa72c49859a4c9820c0b4cbeb7bd02d5144ee9e61ba1731a3bd0bd949"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/ha_io.py",
+        "exact": true,
+        "revision": "fa9bb2dbe6a7e1d728d99ec70b4ad419362a3d92ef64cfb8544959ded65bfbeb"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_local_duplex/ha_io.py",
+        "exact": true,
+        "revision": "fa9bb2dbe6a7e1d728d99ec70b4ad419362a3d92ef64cfb8544959ded65bfbeb"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/__init__.py",
+        "exact": true,
+        "revision": "68e53d22847407429f87831cd7f110263a68c4046e5adee8678bd820351c7ee1"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_local_duplex/__init__.py",
+        "exact": true,
+        "revision": "68e53d22847407429f87831cd7f110263a68c4046e5adee8678bd820351c7ee1"
+      },
+      {
+        "path": "custom_components/extended_openai_conversation/runtime.py",
+        "exact": true,
+        "revision": "182f69d350f33f3209b7f07c9d90ad6e2b2da226dd1d2ef069282a86f55a2d90"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/extended_openai_conversation/runtime.py",
+        "exact": true,
+        "revision": "182f69d350f33f3209b7f07c9d90ad6e2b2da226dd1d2ef069282a86f55a2d90"
+      },
+      {
+        "path": "custom_components/extended_openai_conversation/room_commands.py",
+        "exact": true,
+        "revision": "1bdc7d26ea92baebb8a501cef156254559ae1643f0e86a317c3c0dda51a11e3b"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/extended_openai_conversation/room_commands.py",
+        "exact": true,
+        "revision": "1bdc7d26ea92baebb8a501cef156254559ae1643f0e86a317c3c0dda51a11e3b"
+      },
+      {
+        "path": "configuration.yaml",
+        "exact": true,
+        "revision": "6f98ec0f5c45fec91cb3a9eb5c7c9f38330617d8d92a579423c9661dcda823e9"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/release.json",
+        "exact": true,
+        "revision": "d1c410b46752b3faf4916552abdad2e192c9422aea5ebf73df51380fdcc376f5"
+      }
+    ]
+  },
+  "native_probe": {
+    "status": "passed",
+    "scope": "native_VAD_and_TTS_reference_no_playback",
+    "native_vad_probability": 0.00439656525850296,
+    "native_vad_warmup_frames": 77,
+    "reference_seconds": 3.156125,
+    "microphone_opened": false,
+    "audible_playback": false,
+    "source_revision": "9eeed5064e61a2a51c812ddf29853d69de64bb975f5c24b5e2e554b781aa3ee4",
+    "pipeline_signature": "15bda29d74a655d6786b6250344a9f695f6307fcf2540b7ee6b5150a2f0881e9"
+  },
+  "native_output_test": {
+    "runtime_version": "1.0.0",
+    "status": "passed",
+    "microphone_opened": false,
+    "native_playback": {
+      "owned": false,
+      "started": 1,
+      "completed": 1,
+      "skipped": 0,
+      "stopped": 0,
+      "echo_frames": 0,
+      "overlap_frames": 0,
+      "discarded": 0,
+      "last_stop_s": null,
+      "last_reference_duration_s": 3.156125,
+      "last_error": null
+    },
+    "audibility_confirmed": false,
+    "scope_note": "Identical native playback path;1.0.1 changes VAD priming only"
+  },
+  "live": {
+    "adapter": "active",
+    "status": "configured",
+    "local_player": {
+      "available": true,
+      "state": "idle",
+      "volume": 1,
+      "muted": false
+    },
+    "sessions_observed": 0,
+    "microphone_muted": "off",
+    "primary": "Jarvis",
+    "secondary": "no_wake_word",
+    "satellite": "idle",
+    "led": "off"
+  },
+  "tests": {
+    "duplex": 57,
+    "companion": 63,
+    "homepod": 60,
+    "diagnostics": 28,
+    "identity": 154,
+    "addon": 244,
+    "addon_skipped": 20,
+    "manifest": "passed"
+  },
+  "ci": [
+    {
+      "id": 41355331959,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 41355326073,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "review": {
+    "critical": 0,
+    "important_fixed": 4,
+    "minor": 0
+  },
+  "cloud_audio": "completed_utterances_only",
+  "raw_microphone_saved": false,
+  "idle_cloud_stream": false,
+  "firmware_changed": false,
+  "physical_interruption_verified": false,
+  "noisy_wake_verified": false,
+  "decisions": [
+    {
+      "decision": "Use HA-owned input with existing STT/agent/coordinator",
+      "reason": "Preserve context-bound authorization and avoid new cloud provider",
+      "limit": "Pinned-Core adapter; unsupported version delegates to original behavior"
+    },
+    {
+      "decision": "Remove legacy HomePod output YAML domain; use Voice PE speaker",
+      "reason": "Local reference and no competing routing/startup volume priming",
+      "limit": "Jarvis speech moves away from HomePod; exact prior YAML remains in deployment before-image"
+    },
+    {
+      "decision": "Require observed fresh PLAYING/end and announcement STOP",
+      "reason": "Service acceptance alone is not playback completion",
+      "limit": "Native device-local timer replacement has no ownership ID and may be stopped"
+    },
+    {
+      "decision": "Fixed fresh nonce probe/output_test only",
+      "reason": "Verify providers/output without microphone activation or arbitrary speech",
+      "limit": "Probe/state transitions do not prove audibility"
+    },
+    {
+      "decision": "Household echo/TV/Czech/noisy-wake acceptance remains open",
+      "reason": "No physical microphone/playback overlap was observed",
+      "limit": "Do not claim ordinary-speech interruption or TV rejection proven"
+    },
+    {
+      "decision": "Prime native VAD with synthetic silence until finite probability",
+      "reason": "Pinned pymicro-vad1.0.1 requires74features and returns-1 while warming",
+      "limit": "Does not establish household acoustic recognition"
+    }
+  ],
+  "cleanup": {
+    "preserve_latest": 3,
+    "preserve_protected": true,
+    "deleted": [
+      "a7af12c8",
+      "60a8e25e"
+    ],
+    "jobs": [
+      "duplex-clean-a7af12c8",
+      "duplex-clean-60a8e25e"
+    ]
+  },
+  "lease_released_verified": true,
+  "private_receipt": "jarvis_workspace/local_duplex/deployment-receipt.json",
+  "next_physical_check": "Ask Jarvis for a story; interrupt with a new question without another wake word. Then check immediate short reply and loud-TV activation separately."
+}
+

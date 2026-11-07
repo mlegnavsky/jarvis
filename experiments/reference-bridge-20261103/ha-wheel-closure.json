@@ -1,0 +1,284 @@
+{
+  "requested": "aiosendspin[server]==10.3.0",
+  "target": "CPython 3.14, musllinux_1_2_aarch64, cp314 or abi3",
+  "constraints_source": "https://github.com/home-assistant/core/blob/2026.6.4/homeassistant/package_constraints.txt",
+  "download_exit_code": 0,
+  "count": 23,
+  "wheels": [
+    {
+      "name": "aiohappyeyeballs",
+      "version": "2.7.1",
+      "filename": "aiohappyeyeballs-2.7.1-py3-none-any.whl",
+      "sha256": "9243213661e29250eb41368e5daa826fc017156c3b8a11440826b2e3ed376472",
+      "requires_python": ">=3.10",
+      "requires_dist": []
+    },
+    {
+      "name": "aiohttp",
+      "version": "3.13.5",
+      "filename": "aiohttp-3.13.5-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "6e27ea05d184afac78aabbac667450c75e54e35f62238d44463131bd3f96753d",
+      "requires_python": ">=3.9",
+      "requires_dist": [
+        "aiohappyeyeballs>=2.5.0",
+        "aiosignal>=1.4.0",
+        "async-timeout<6.0,>=4.0; python_version < \"3.11\"",
+        "attrs>=17.3.0",
+        "frozenlist>=1.1.1",
+        "multidict<7.0,>=4.5",
+        "propcache>=0.2.0",
+        "yarl<2.0,>=1.17.0",
+        "aiodns>=3.3.0; extra == \"speedups\"",
+        "Brotli>=1.2; platform_python_implementation == \"CPython\" and extra == \"speedups\"",
+        "brotlicffi>=1.2; platform_python_implementation != \"CPython\" and extra == \"speedups\"",
+        "backports.zstd; (platform_python_implementation == \"CPython\" and python_version < \"3.14\") and extra == \"speedups\""
+      ]
+    },
+    {
+      "name": "aiosendspin",
+      "version": "10.3.0",
+      "filename": "aiosendspin-10.3.0-py3-none-any.whl",
+      "sha256": "1c5b39221c2912792bdf25c1c6a115814d02f36232d174cb5927b15bdd43dff6",
+      "requires_python": ">=3.12",
+      "requires_dist": [
+        "aiohttp>=3.9.2",
+        "cpace>=0.1.0",
+        "cryptography>=42",
+        "mashumaro>=3.14",
+        "noiseprotocol>=0.3.1",
+        "orjson>=3.10.0",
+        "zeroconf>=0.147",
+        "av>=15.0.0; extra == \"server\"",
+        "numpy>=1.26.0; extra == \"server\"",
+        "pillow>=11.0.0; extra == \"server\"",
+        "av>=15.0.0; extra == \"source\"",
+        "numpy>=1.26.0; extra == \"source\"",
+        "av>=15.0.0; extra == \"asrc\"",
+        "numpy>=1.26.0; extra == \"asrc\"",
+        "soxr>=0.5.0; extra == \"asrc\""
+      ]
+    },
+    {
+      "name": "aiosignal",
+      "version": "1.4.0",
+      "filename": "aiosignal-1.4.0-py3-none-any.whl",
+      "sha256": "053243f8b92b990551949e63930a839ff0cf0b0ebbe0597b0f3fb19e1a0fe82e",
+      "requires_python": ">=3.9",
+      "requires_dist": [
+        "frozenlist>=1.1.0",
+        "typing-extensions>=4.2; python_version < \"3.13\""
+      ]
+    },
+    {
+      "name": "attrs",
+      "version": "26.1.0",
+      "filename": "attrs-26.1.0-py3-none-any.whl",
+      "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+      "requires_python": ">=3.9",
+      "requires_dist": []
+    },
+    {
+      "name": "av",
+      "version": "16.0.1",
+      "filename": "av-16.0.1-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "0d6250ab9db80c641b299987027c987f14935ea837ea4c02c5f5182f6b69d9e5",
+      "requires_python": ">=3.10",
+      "requires_dist": []
+    },
+    {
+      "name": "cffi",
+      "version": "2.1.1",
+      "filename": "cffi-2.1.1-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "64faea20f4e2613363a1a9b9c7dd73058f3ecd00133a511e72ad7c511658f527",
+      "requires_python": ">=3.10",
+      "requires_dist": [
+        "pycparser; implementation_name != \"PyPy\""
+      ]
+    },
+    {
+      "name": "cpace",
+      "version": "0.1.0",
+      "filename": "cpace-0.1.0-py3-none-any.whl",
+      "sha256": "9fabb60a711a85934225be4081b3f5994e1ca4cd1335c5b9171770c8f1a2fda3",
+      "requires_python": ">=3.10",
+      "requires_dist": [
+        "cryptography>=42"
+      ]
+    },
+    {
+      "name": "cryptography",
+      "version": "48.0.0",
+      "filename": "cryptography-48.0.0-cp311-abi3-musllinux_1_2_aarch64.whl",
+      "sha256": "59baa2cb386c4f0b9905bd6eb4c2a79a69a128408fd31d32ca4d7102d4156321",
+      "requires_python": ">=3.9, !=3.9.0, !=3.9.1",
+      "requires_dist": [
+        "cffi>=2.0.0 ; platform_python_implementation != 'PyPy'",
+        "typing-extensions>=4.13.2 ; python_full_version < '3.11'",
+        "bcrypt>=3.1.5 ; extra == 'ssh'"
+      ]
+    },
+    {
+      "name": "frozenlist",
+      "version": "1.8.0",
+      "filename": "frozenlist-1.8.0-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "2f05983daecab868a31e1da44462873306d3cbfd76d1f0b5b69c473d21dbb128",
+      "requires_python": ">=3.9",
+      "requires_dist": []
+    },
+    {
+      "name": "idna",
+      "version": "3.20",
+      "filename": "idna-3.20-py3-none-any.whl",
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+      "requires_python": ">=3.9",
+      "requires_dist": [
+        "ruff >= 0.16.0 ; extra == \"all\"",
+        "mypy >= 1.11.2 ; extra == \"all\"",
+        "ty >= 0.0.37 ; extra == \"all\"",
+        "pytest >= 8.3.2 ; extra == \"all\"",
+        "hypothesis >= 6.141.1 ; extra == \"all\"",
+        "coverage >= 7.10.0 ; extra == \"all\""
+      ]
+    },
+    {
+      "name": "ifaddr",
+      "version": "0.2.0",
+      "filename": "ifaddr-0.2.0-py3-none-any.whl",
+      "sha256": "085e0305cfe6f16ab12d72e2024030f5d52674afad6911bb1eee207177b8a748",
+      "requires_python": null,
+      "requires_dist": []
+    },
+    {
+      "name": "mashumaro",
+      "version": "3.23",
+      "filename": "mashumaro-3.23-py3-none-any.whl",
+      "sha256": "a671279ce93119d41c54adcd767753ae68adb32b9473de2f9d5d1720d2376231",
+      "requires_python": ">=3.10",
+      "requires_dist": [
+        "typing_extensions>=4.14.0",
+        "orjson; extra == \"orjson\"",
+        "msgpack>=0.5.6; extra == \"msgpack\"",
+        "pyyaml>=3.13; extra == \"yaml\"",
+        "tomli-w>=1.0; extra == \"toml\"",
+        "tomli>=1.1.0; python_version < \"3.11\" and extra == \"toml\""
+      ]
+    },
+    {
+      "name": "multidict",
+      "version": "6.9.1",
+      "filename": "multidict-6.9.1-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "7814bbee202acd3bd240204c17d8b87a4c48c81064fd8674dbe527d94d5a4290",
+      "requires_python": ">=3.10",
+      "requires_dist": [
+        "typing-extensions>=4.1.0; python_version < \"3.11\""
+      ]
+    },
+    {
+      "name": "noiseprotocol",
+      "version": "0.3.1",
+      "filename": "noiseprotocol-0.3.1-py3-none-any.whl",
+      "sha256": "2e1a603a38439636cf0ffd8b3e8b12cee27d368a28b41be7dbe568b2abb23111",
+      "requires_python": "~=3.5",
+      "requires_dist": [
+        "cryptography (>=2.8)"
+      ]
+    },
+    {
+      "name": "numpy",
+      "version": "2.3.2",
+      "filename": "numpy-2.3.2-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "095737ed986e00393ec18ec0b21b47c22889ae4b0cd2d5e88342e08b01141f58",
+      "requires_python": ">=3.11",
+      "requires_dist": []
+    },
+    {
+      "name": "orjson",
+      "version": "3.11.9",
+      "filename": "orjson-3.11.9-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "a028425d1b440c5d92a6be1e1a020739dfe67ea87d96c6dbe828c1b30041728b",
+      "requires_python": ">=3.10",
+      "requires_dist": []
+    },
+    {
+      "name": "pillow",
+      "version": "12.2.0",
+      "filename": "pillow-12.2.0-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "9aba9a17b623ef750a4d11b742cbafffeb48a869821252b30ee21b5e91392c50",
+      "requires_python": ">=3.10",
+      "requires_dist": [
+        "furo; extra == \"docs\"",
+        "olefile; extra == \"docs\"",
+        "sphinx>=8.2; extra == \"docs\"",
+        "sphinx-autobuild; extra == \"docs\"",
+        "sphinx-copybutton; extra == \"docs\"",
+        "sphinx-inline-tabs; extra == \"docs\"",
+        "sphinxext-opengraph; extra == \"docs\"",
+        "olefile; extra == \"fpx\"",
+        "olefile; extra == \"mic\"",
+        "arro3-compute; extra == \"test-arrow\"",
+        "arro3-core; extra == \"test-arrow\"",
+        "nanoarrow; extra == \"test-arrow\"",
+        "pyarrow; extra == \"test-arrow\"",
+        "check-manifest; extra == \"tests\"",
+        "coverage>=7.4.2; extra == \"tests\"",
+        "defusedxml; extra == \"tests\"",
+        "markdown2; extra == \"tests\"",
+        "olefile; extra == \"tests\"",
+        "packaging; extra == \"tests\"",
+        "pyroma>=5; extra == \"tests\"",
+        "pytest; extra == \"tests\"",
+        "pytest-cov; extra == \"tests\"",
+        "pytest-timeout; extra == \"tests\"",
+        "pytest-xdist; extra == \"tests\"",
+        "trove-classifiers>=2024.10.12; extra == \"tests\"",
+        "defusedxml; extra == \"xmp\""
+      ]
+    },
+    {
+      "name": "propcache",
+      "version": "0.5.2",
+      "filename": "propcache-0.5.2-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "d4dc37dec6c6cdad0b57881a5658fd14fbf53e333b1a86cf86559f190e1d9ec4",
+      "requires_python": ">=3.10",
+      "requires_dist": []
+    },
+    {
+      "name": "pycparser",
+      "version": "3.12",
+      "filename": "pycparser-3.12-py3-none-any.whl",
+      "sha256": "a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e",
+      "requires_python": ">=3.11",
+      "requires_dist": []
+    },
+    {
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "requires_python": ">=3.9",
+      "requires_dist": []
+    },
+    {
+      "name": "yarl",
+      "version": "1.24.2",
+      "filename": "yarl-1.24.2-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "297a2fe352ecf858b30a98f87948746ec16f001d279f84aebdbd3bd965e2f1bd",
+      "requires_python": ">=3.10",
+      "requires_dist": [
+        "idna>=2.0",
+        "multidict>=4.0",
+        "propcache>=0.2.1"
+      ]
+    },
+    {
+      "name": "zeroconf",
+      "version": "0.149.16",
+      "filename": "zeroconf-0.149.16-cp314-cp314-musllinux_1_2_aarch64.whl",
+      "sha256": "ddf6db171e2a44dda0cb68956c50e165a6f106b0f4ec480575ff2ef91134dfef",
+      "requires_python": ">=3.10",
+      "requires_dist": [
+        "ifaddr (>=0.1.7)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,204 @@
+{
+  "rows": 2693,
+  "fits": 96,
+  "elapsed_s": 21.584982489999675,
+  "max_rss_kib": 210432,
+  "groups": {
+    "linear": {
+      "n": 216,
+      "echo_attenuation_db": [
+        1.3354059141294738,
+        14.346712013622843,
+        26.343978822424468
+      ],
+      "guard_bypass": 0,
+      "human_projection_gain": [
+        0.914191809604182,
+        1.0282148460220817
+      ],
+      "human_component_gain": [
+        0.9999999999999998,
+        1.0000000000000004
+      ],
+      "max_human_component_error_ratio": 2.098126885081026e-32,
+      "human_target_snr_db": [
+        -4.685193999150151,
+        26.343978822424475
+      ]
+    },
+    "gain_down": {
+      "n": 216,
+      "echo_attenuation_db": [
+        -5.543543199489611,
+        0.0,
+        0.0
+      ],
+      "guard_bypass": 212,
+      "human_projection_gain": [
+        0.8050197785524339,
+        1.373525729483349
+      ],
+      "human_component_gain": [
+        0.9904189895946368,
+        1.0000000000000004
+      ],
+      "max_human_component_error_ratio": 7.462856883857485,
+      "human_target_snr_db": [
+        -10.245562712290887,
+        1.928654933106574e-15
+      ]
+    },
+    "gain_up": {
+      "n": 216,
+      "echo_attenuation_db": [
+        0.9081489428423734,
+        5.236729846755865,
+        5.973336302116192
+      ],
+      "guard_bypass": 0,
+      "human_projection_gain": [
+        0.9031446399052082,
+        1.188930581363129
+      ],
+      "human_component_gain": [
+        0.9999999999999997,
+        1.0000000000000004
+      ],
+      "max_human_component_error_ratio": 2.2721523127418435e-32,
+      "human_target_snr_db": [
+        -5.112450970437251,
+        5.973336302116195
+      ]
+    },
+    "gate_future": {
+      "n": 216,
+      "echo_attenuation_db": [
+        -7.524617509604752,
+        3.6793199353522326,
+        17.980276766013866
+      ],
+      "guard_bypass": 51,
+      "human_projection_gain": [
+        0.8659857131176099,
+        1.1556777056803644
+      ],
+      "human_component_gain": [
+        0.9999999999999996,
+        1.0978742473218386
+      ],
+      "max_human_component_error_ratio": 17.700999650407006,
+      "human_target_snr_db": [
+        -11.69317696421274,
+        17.980276766013866
+      ]
+    },
+    "agc_all": {
+      "n": 72,
+      "echo_attenuation_db": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "guard_bypass": 0,
+      "human_projection_gain": [
+        0.9388410035946841,
+        1.0286059801096452
+      ],
+      "human_component_gain": [
+        0.9999999999999998,
+        1.0000000000000002
+      ],
+      "max_human_component_error_ratio": 1.3161131018417857e-32,
+      "human_target_snr_db": [
+        -6.020599913279627,
+        -4.821637332766436e-16
+      ]
+    }
+  },
+  "controls": {
+    "stop_from_start": {
+      "n": 8,
+      "ready": 0
+    },
+    "independent": {
+      "n": 8,
+      "ready": 0
+    },
+    "same_envelope": {
+      "n": 8,
+      "ready": 0
+    },
+    "same_F0_phase": {
+      "n": 3,
+      "ready": 0
+    },
+    "silence": {
+      "n": 1,
+      "ready": 0
+    },
+    "dc": {
+      "n": 1,
+      "ready": 0
+    }
+  },
+  "fit_groups": {
+    "none": {
+      "n": 24,
+      "ready": 24,
+      "host_ms": [
+        133.08731799770612,
+        163.150857497385,
+        212.06169899960514
+      ],
+      "validation_error": [
+        0.00010897977542818095,
+        0.0276277772371527
+      ]
+    },
+    "human_half": {
+      "n": 24,
+      "ready": 0,
+      "host_ms": [
+        128.23296400165418,
+        165.02020550251473,
+        204.94044099905295
+      ],
+      "validation_error": [
+        0.1335620790941175,
+        0.37100292403957064
+      ]
+    },
+    "human_equal": {
+      "n": 24,
+      "ready": 0,
+      "host_ms": [
+        137.37877500534523,
+        163.26269300407148,
+        229.613216004509
+      ],
+      "validation_error": [
+        0.3860590880974321,
+        0.8795797089401457
+      ]
+    },
+    "agc_all": {
+      "n": 24,
+      "ready": 0,
+      "host_ms": [
+        136.6570749960374,
+        159.59944350106525,
+        195.90277500537923
+      ],
+      "validation_error": [
+        0.11577979909507596,
+        1.3829102847909207
+      ]
+    }
+  },
+  "heldout_linear_echo": {
+    "n": 36,
+    "min_attenuation_db": 5.259546349872471,
+    "atleast6db": 34,
+    "atleast12db": 27
+  }
+}

@@ -1,0 +1,33 @@
+evaluate:
+  name: Vyhodnotit solární topení
+  description: Vyhodnotí schválené podmínky, bezpečnostní limity a skutečný stav radiátorů.
+set_mode:
+  name: Nastavit režim topení
+  description: Ruční zapnutí, vypnutí s návratem do automatiky nebo automatický režim.
+  fields:
+    room:
+      name: Místnost
+      required: true
+      selector:
+        select:
+          options:
+            - child
+            - living
+    mode:
+      name: Režim
+      required: true
+      selector:
+        select:
+          options:
+            - auto
+            - manual
+            - 'off'
+
+configure:
+  name: Upravit pravidla bez restartu
+  description: Validované nastavení teplot, solárních hranic a prodlev; uloží se trvale.
+  fields:
+    settings:
+      required: true
+      selector:
+        object:

@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "runtime_version": "1.3.3",
+  "source_revision": "183cec10cdf60ea7bab2c685104e9b102bd749b35eeebc8946aa3a4cba40f70f",
+  "scope": "host_synthetic_active_session_lifetime_not_room_acceptance",
+  "regressions": {
+    "old_absolute_wall": "three activity cases failed before fix",
+    "interrupted_budget_bypass": "3 agent calls at max_turns2 before guard, exactly2 after",
+    "focused_tests": 42,
+    "duplex_tests": 237,
+    "addon_tests": 242,
+    "addon_optional_skips": 20,
+    "manifest": "passed",
+    "diff_check": "passed"
+  },
+  "replay": {
+    "file": "experiments/active-session-20261103/result.json",
+    "sha256": "f51c1c3ab880a68bc0f8de0f05c849916d5f5747e3679441019a6372d4f94c07",
+    "wall_seconds": 300.1915,
+    "human_accepted": 8,
+    "human_expected": 8,
+    "session": {
+      "stage": "closed",
+      "frames": 30020,
+      "frames_during_output": 24746,
+      "completed_turns": 5,
+      "accepted_turns": 10,
+      "interruptions": 4,
+      "failures": 0,
+      "last_error": null,
+      "truncated": 0,
+      "reason": "audio_source_ended",
+      "deferred_turns": 0,
+      "deferred_replaced": 0,
+      "deferred_expired": 0,
+      "suppressed_frames": 0,
+      "input_end": {
+        "elapsed_s": 300.191,
+        "stage": "speaking",
+        "output_active": true
+      },
+      "interruption_policy": "completed_transcript_before_stop",
+      "confirmations": 9,
+      "rejected_confirmations": 5,
+      "confirmation_failures": 0,
+      "session_budget_policy": "since_last_accepted_turn"
+    },
+    "checks": {
+      "source_unchanged": true,
+      "duration_reached": true,
+      "no_provider_failure": true,
+      "all_workers_done": true,
+      "all_readers_closed": true,
+      "pipes_within_256k_each": true,
+      "no_echo_self_answers": false,
+      "all_scheduled_human_turns_accepted": true
+    },
+    "planned_source_eof_abort": "final reference reader StreamAborted during owned cleanup, no provider failure"
+  },
+  "acoustic_candidates": {
+    "spectral_mixed_human_false_echo": {
+      "false_echo": 271,
+      "total": 288
+    },
+    "crossfit_fir_mixed_human_false_echo": {
+      "false_echo": 67,
+      "total": 144
+    },
+    "ruling": "reject_both_do_not_deploy",
+    "evidence": "experiments/rejected-spectral-echo-20261103"
+  },
+  "review": {
+    "state": "passed_bounded_lifetime_fix",
+    "reviewed_local_commit": "7c5b50ba17ef23c10c8b9497319336f665e02586",
+    "model": "gpt-6-astra",
+    "fresh_context": true,
+    "critical": 0,
+    "important": 0,
+    "minor": 1,
+    "minor_deferred": [
+      "test_session_activity.py real40ms watchdog/12ms scheduling may be flaky on loaded CI; no runtime defect"
+    ],
+    "independent_checks": [
+      "production fingerprint exact",
+      "archived replay SHA exact",
+      "8 distinct expected human events exact",
+      "rejected candidate counts271/288 and67/144 exact"
+    ],
+    "declined_rulings": [
+      {
+        "behavior": "new async source hook/fallback/PCM cleanup",
+        "ruling": "none introduced; unchanged current path, no new source claim",
+        "cost_if_wrong": "existing acoustic failure remains unresolved"
+      },
+      {
+        "behavior": "80ms mixed human/periodic/shortstop source acceptance",
+        "ruling": "both candidates rejected; no eligible production integration",
+        "cost_if_wrong": "self-answers continue until measured safe approach exists"
+      },
+      {
+        "behavior": "real room/microphone/HomePod/ASR/identity/instant barge/1s latency",
+        "ruling": "not proved by scripted host replay; owner goal stays open",
+        "cost_if_wrong": "host success may not reproduce in room"
+      },
+      {
+        "behavior": "Green1.3.3 activation and remote start authority",
+        "ruling": "must independently verify current activation; remote mic remains unperformed",
+        "cost_if_wrong": "code on disk could differ from running version"
+      },
+      {
+        "behavior": "every automatic room-test detail executable",
+        "ruling": "proposal only; fixed operator route must be implemented and reviewed after new scope",
+        "cost_if_wrong": "one-time test cannot be claimed immediately executable"
+      },
+      {
+        "behavior": "all unchanged decoder/provider/clock paths exhaustively audited",
+        "ruling": "existing relevant tests/full suite and replay evidence are scope; no exhaustive audit claim",
+        "cost_if_wrong": "untested inherited edge cases can remain"
+      }
+    ]
+  },
+  "deployment": {
+    "state": "active_verified",
+    "public_source": "49432b79c04fe50ec4a20cda5f276484bef3f3cf",
+    "native_evidence": "docs/evidence/2026-11-03-active-session133-native-verification.json",
+    "microphone_opened": false
+  },
+  "remaining": [
+    "own_echo_with_mismatching_ASR",
+    "first_syllable_human_interruption",
+    "one_second_natural_response",
+    "paired_room_measurement_needs_new_remote_microphone_scope"
+  ],
+  "microphone_activated": false,
+  "rulings": [
+    {
+      "decision": "reject both acoustic candidates",
+      "reason": "short mixed human preservation failed",
+      "cost_if_wrong": "echo self-answers remain open"
+    },
+    {
+      "decision": "count accepted interrupted turns against24 ceiling",
+      "reason": "bound provider work after removing absolute wall cutoff",
+      "cost_if_wrong": "frequent interruptions reach ceiling earlier"
+    },
+    {
+      "decision": "no remote microphone activation in current scope",
+      "reason": "new remote-start scope absent and current Jarvis policy lacks operation",
+      "cost_if_wrong": "paired room evidence awaits owner decision"
+    }
+  ]
+}

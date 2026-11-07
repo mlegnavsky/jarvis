@@ -1,0 +1,16 @@
+const a=require('node:assert/strict'),m=require('../managed_sources/spot_hub/messages.js');
+a.match(m.translate('Ochrana prodeje: measurement_or_health'),/měření|údaje/);
+a.match(m.translate('switch.inverter_export_surplus: Měnič nepotvrdil registr 145: požadováno 0, naměřeno 1.'),/vypnutí|zapnut/);
+const d=m.stopInfo({reason:'stop_recovery',original_reason:'error',stop_verified:true,error:'registr 145: požadováno 0, naměřeno 1.'});
+a.match(d.outcome,/potvrzen/);a.match(d.cause,/nezaznamen|není doložen/);
+a.doesNotMatch(d.cause,/teplot/);
+a.equal(m.translate('<img onerror=evil()>'),'<img onerror=evil()>');
+console.log('Czech diagnostics: cause vs cleanup, no invented temperature PASS');
+a.match(m.translate('Měnič nepotvrdil registr 145: požadováno 1, naměřeno 0.'),/zapnutí/);
+a.match(m.translate('Měnič nepotvrdil registr 145: požadováno 0, naměřeno None.'),/neurčen|neshod|nelze/);
+a.match(m.stopInfo({mode:'battery',reason:'guard',failure_detail:'_Guard: voltage',stop_verified:false}).cause,/Napětí/);
+a.match(m.translate('_Guard: electrical_stale'),/čerstvé/);
+const precise=m.stopInfo({mode:'battery',reason:'health',stop_verified:true,failure_context:{health:{healthy:false,issues:[{code:'stale',entity_id:'sensor.inverter_battery',age_seconds:31}]}}});
+a.match(precise.cause,/Nabití baterie/);a.match(precise.cause,/31 s/);
+a.match(precise.technical,/failure_context/);
+a.equal(m.healthInfo({healthy:true,issues:[]}).length,0);

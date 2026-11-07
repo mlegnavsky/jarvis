@@ -1,0 +1,9 @@
+forget_profile:
+  name: Smazat hlasový profil
+  description: Správce odstraní vybraný hlasový profil a jeho konverzační poznámky. Vyžaduje přihlášeného správce Home Assistantu.
+  fields:
+    name:
+      name: Jméno profilu
+      required: true
+      selector:
+        text:

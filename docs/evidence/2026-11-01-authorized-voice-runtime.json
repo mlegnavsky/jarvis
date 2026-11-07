@@ -1,0 +1,215 @@
+{
+  "schema": 1,
+  "source_commit": "ef4a75be44084f37aaa58f7d5e09203eacf39232",
+  "core_version": "2026.6.4",
+  "runtime_version": "1.1.0",
+  "deployment_job": "voice11-apply-20261101",
+  "deployment_job_state": "failed",
+  "deployment_job_error": "runtime_check_failed",
+  "backup_slug": "6dfcd769",
+  "reconciliation": {
+    "status": "runtime_verified_by_fresh_readback",
+    "reason": "speaker ready sensor was published after initial deployment check; no mutation replayed",
+    "files_match": true,
+    "file_count": 28,
+    "source_manifest_python_hashes_match": true,
+    "native_intent_guard": true,
+    "profile_count": 1,
+    "authorized_profiles": 1,
+    "anchor_profiles": 1,
+    "native_model_probe": "passed",
+    "runtime_manifest_autorefresh_observed": true,
+    "physical_lock_test": false,
+    "physical_voice_accuracy_test": false
+  },
+  "learning": {
+    "mode": "quarantined_candidates",
+    "promotion": "blocked_pending_independent_validation_and_replay_evidence",
+    "raw_audio_saved": false
+  },
+  "remaining": [
+    "Anicko candidate trained, not installed or household-tested; two lock word candidates still training",
+    "standalone command wake remains blocked pending verified wake audio capture",
+    "replay detector not installed",
+    "household genuine, impostor and replay calibration still required"
+  ],
+  "training": {
+    "branch": "training/anicko-20261101",
+    "run_id": 41266343920,
+    "state": "in_progress",
+    "automatic_flash": false,
+    "targets": {
+      "anicko": "completed_success",
+      "zamkni": "in_progress",
+      "odemkni": "queued"
+    },
+    "artifacts": [
+      {
+        "id": 13068066743,
+        "name": "experimental-czech-anicko",
+        "digest": "sha256:77ffbf1d7129ed716763a87b19e58ef92ca7e295b5ffeef93d4ef6832282de61",
+        "expires_at": "2026-11-08T03:07:04Z",
+        "scope": "experimental_synthetic_candidate_not_firmware_activation"
+      }
+    ]
+  },
+  "verification": {
+    "speaker_tests": 53,
+    "companion_tests": 48,
+    "addon_tests": 239,
+    "addon_environment_skips": 20,
+    "ci_runs": [
+      41267284659,
+      41267281673
+    ],
+    "ci_result": "success"
+  },
+  "readbacks": [
+    {
+      "path": "custom_components/extended_openai_conversation/conversation.py",
+      "matches": true,
+      "revision": "9fc90d4eace4fda7c19cccacae9905a22b23ba1b18aef5f695c050ca3af36377"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/extended_openai_conversation/conversation.py",
+      "matches": true,
+      "revision": "9fc90d4eace4fda7c19cccacae9905a22b23ba1b18aef5f695c050ca3af36377"
+    },
+    {
+      "path": "custom_components/extended_openai_conversation/room_commands.py",
+      "matches": true,
+      "revision": "72b660071a51d9209d1638b77218e1d0a61c81df4ea759a22dbb1a970505e7bf"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/extended_openai_conversation/room_commands.py",
+      "matches": true,
+      "revision": "72b660071a51d9209d1638b77218e1d0a61c81df4ea759a22dbb1a970505e7bf"
+    },
+    {
+      "path": "custom_components/extended_openai_conversation/runtime.py",
+      "matches": true,
+      "revision": "0d65d811613f2b888715939ea69551ca28e89ac9df08d45b66c4cdc1fb61e1aa"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/extended_openai_conversation/runtime.py",
+      "matches": true,
+      "revision": "0d65d811613f2b888715939ea69551ca28e89ac9df08d45b66c4cdc1fb61e1aa"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/__init__.py",
+      "matches": true,
+      "revision": "0b397c69983d209f17459939f6346510f13499c35043314bc3b5f96b5e118e79"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/__init__.py",
+      "matches": true,
+      "revision": "0b397c69983d209f17459939f6346510f13499c35043314bc3b5f96b5e118e79"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/adaptation.py",
+      "matches": true,
+      "revision": "1c7fc0716c4add9b898cf0dab8559bf072f6b3419ce83b1c78d6e799c11c3e59"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/adaptation.py",
+      "matches": true,
+      "revision": "1c7fc0716c4add9b898cf0dab8559bf072f6b3419ce83b1c78d6e799c11c3e59"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/authorization.py",
+      "matches": true,
+      "revision": "4a6ce3721901d0645ed1d7bcc1cbc365eae4134077042212be06b12176d7151d"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/authorization.py",
+      "matches": true,
+      "revision": "4a6ce3721901d0645ed1d7bcc1cbc365eae4134077042212be06b12176d7151d"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/coordinator.py",
+      "matches": true,
+      "revision": "bc0f8fea0f2840759d6daa62fa280bff3d66f10484bfc301405179686c8fcbb3"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/coordinator.py",
+      "matches": true,
+      "revision": "bc0f8fea0f2840759d6daa62fa280bff3d66f10484bfc301405179686c8fcbb3"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/hooks.py",
+      "matches": true,
+      "revision": "0b809702190b5dd7db71c5f4a4ca71a534a577101fc28aeb7b08816e5f81f4d8"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/hooks.py",
+      "matches": true,
+      "revision": "0b809702190b5dd7db71c5f4a4ca71a534a577101fc28aeb7b08816e5f81f4d8"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/manifest.json",
+      "matches": true,
+      "revision": "e7dd75860161ae6d9b9a2dd3f0be1b55da96422c6be658712b07fa41bf4da48c"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.json",
+      "matches": true,
+      "revision": "e7dd75860161ae6d9b9a2dd3f0be1b55da96422c6be658712b07fa41bf4da48c"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/manifest.py",
+      "matches": true,
+      "revision": "ba8ec109ff4f478f524835393b56a7f804044cceaf8e4fe24e168f6be56b2dcb"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.py",
+      "matches": true,
+      "revision": "ba8ec109ff4f478f524835393b56a7f804044cceaf8e4fe24e168f6be56b2dcb"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/policy.py",
+      "matches": true,
+      "revision": "75010aa5396f26b81ebf11db888479e7b6ef9ffd6a966001e9fa50ee1f3f705c"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/policy.py",
+      "matches": true,
+      "revision": "75010aa5396f26b81ebf11db888479e7b6ef9ffd6a966001e9fa50ee1f3f705c"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/pronunciation.py",
+      "matches": true,
+      "revision": "618be1a736e13b6c2a0aec11ace6f3d19504056ef048b347f3eca92320bb4bd7"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/pronunciation.py",
+      "matches": true,
+      "revision": "618be1a736e13b6c2a0aec11ace6f3d19504056ef048b347f3eca92320bb4bd7"
+    },
+    {
+      "path": "configuration.yaml",
+      "matches": true,
+      "revision": "538f76481b15a6ef034053f5289bdbcca6aaeb10c05610d4d034a846f0ebef06"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/release.json",
+      "matches": true,
+      "revision": "569e1d2c63e27dfcd18207763f5acf649cc144aff7f852084502fb49ea9825ce"
+    },
+    {
+      "path": "jarvis_workspace/WORK-MANIFEST.md",
+      "matches": true,
+      "revision": "5d2f0d040f66acfe928003b5f608850e5a9bb50123b4e8ee84a093f3cce5cbe0"
+    },
+    {
+      "path": "jarvis_workspace/operations-manifest.json",
+      "matches": true,
+      "revision": "13fca416bf22832b16a1e9583579fc7c7d07bd89368be6ee988cbd3af1607f8d"
+    }
+  ],
+  "runtime_manifest": "jarvis_workspace/voice-system-manifest.json",
+  "output": {
+    "observed_volume": 0.35,
+    "status": "configured",
+    "audible_test_performed": false
+  }
+}

@@ -1,0 +1,351 @@
+{
+  "source_commit": "2c9685f37aa99740fdd9cefb2edb2bf40165eba9",
+  "archive_branch": "archive/homepod-duplex-experiments-20261104",
+  "deployment": {
+    "id": "half137-apply-20261104",
+    "operation": "deployment_apply",
+    "state": "verified",
+    "result": {
+      "activation": "core_restart",
+      "checks": [
+        {
+          "entity_id": "sensor.jarvis_prerusitelny_hlas",
+          "state": null,
+          "version": "1.3.7"
+        }
+      ],
+      "files": [
+        {
+          "before_revision": "9260773b508a7c46aa4c479593a6755a7aa82dda08269c91db528dd0784e5664",
+          "new_lines": 743,
+          "new_sha256": "88b4a341018625acb653b43e0a99213bf682bc4aad38d6274f4a8457f9a8b8dd",
+          "old_lines": 754,
+          "path": "custom_components/jarvis_local_duplex/__init__.py"
+        },
+        {
+          "before_revision": "64a221c69867abe66138b1e87cea49a01a601e042b1b783ce15a9b91a8593a9c",
+          "new_lines": 222,
+          "new_sha256": "782b16a44e0da5f9e79516f8f57a20b72667ab0dbc19af0c3946d4cb4ecc67ca",
+          "old_lines": 219,
+          "path": "custom_components/jarvis_local_duplex/session.py"
+        },
+        {
+          "before_revision": "missing",
+          "new_lines": 62,
+          "new_sha256": "3746a731f29752291302876e295c1ad1e34cee2171e8ddee266dd336f8a3bb3a",
+          "old_lines": 0,
+          "path": "custom_components/jarvis_local_duplex/half_duplex.py"
+        },
+        {
+          "before_revision": "7d3b088e4513f7f7ee643d2a545d1afe2383cca7e11e6ee3112ade62001f8efc",
+          "new_lines": 1,
+          "new_sha256": "5724a1ef5dbdc2527e8920d1e8eb744e88b358d3d65d3452e708e659cfde8669",
+          "old_lines": 1,
+          "path": "custom_components/jarvis_local_duplex/manifest.json"
+        }
+      ],
+      "id": "half137-prepare-20261104",
+      "phase": "active_verified",
+      "receipt": {
+        "checks": [
+          {
+            "entity_id": "sensor.jarvis_prerusitelny_hlas",
+            "state": "configured",
+            "verified": true,
+            "version": "1.3.7"
+          }
+        ],
+        "core_version": "2026.6.4"
+      },
+      "restart_required": true,
+      "revision": "acae62d8ce9e34cbea09156e756e85e45cd84f5a52c0af8d468cab51568f8408",
+      "source_commit": "2c9685f37aa99740fdd9cefb2edb2bf40165eba9",
+      "verified": true,
+      "versions": {
+        "files_written": true,
+        "runtime_verified": true,
+        "source_commit": "2c9685f37aa99740fdd9cefb2edb2bf40165eba9"
+      }
+    },
+    "backup_slug": "b74d6651",
+    "request_id": "half137-apply-20261104",
+    "created_at": "2026-11-04T08:10:59.802435+00:00",
+    "started_at": "2026-11-04T08:10:59.818225+00:00",
+    "finished_at": "2026-11-04T08:15:42.551689+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "file_readback": [
+    {
+      "path": "custom_components/jarvis_local_duplex/__init__.py",
+      "revision": "88b4a341018625acb653b43e0a99213bf682bc4aad38d6274f4a8457f9a8b8dd",
+      "exact": true
+    },
+    {
+      "path": "custom_components/jarvis_local_duplex/session.py",
+      "revision": "782b16a44e0da5f9e79516f8f57a20b72667ab0dbc19af0c3946d4cb4ecc67ca",
+      "exact": true
+    },
+    {
+      "path": "custom_components/jarvis_local_duplex/half_duplex.py",
+      "revision": "3746a731f29752291302876e295c1ad1e34cee2171e8ddee266dd336f8a3bb3a",
+      "exact": true
+    },
+    {
+      "path": "custom_components/jarvis_local_duplex/manifest.json",
+      "revision": "5724a1ef5dbdc2527e8920d1e8eb744e88b358d3d65d3452e708e659cfde8669",
+      "exact": true
+    }
+  ],
+  "runtime": {
+    "version": "1.3.7",
+    "source_revision": "0d3b048ed8a473a5c9b48ac0c9cdd412b7c7b48f78f5a9fc504bbbedb271bec8",
+    "status": "configured",
+    "updated_at": "2026-11-04T08:16:49.712567+00:00",
+    "interruption_policy": {
+      "interruptions_enabled": false,
+      "remaining_s": null,
+      "auto_restore_seconds": null,
+      "input_during_speech": "discarded_before_vad",
+      "policy": "permanent_half_duplex",
+      "minimum_resume_after_output_ms": 600,
+      "respect_transport_tail": true
+    },
+    "active": null
+  },
+  "native_self_test": {
+    "status": "passed",
+    "scope": "native_VAD_and_TTS_reference_no_playback",
+    "native_vad_probability": 0.00439656525850296,
+    "native_vad_warmup_frames": 77,
+    "reference_seconds": 2.8316875,
+    "reference_signal": {
+      "duration_s": 2.832,
+      "silent": false,
+      "peak_dbfs": -9.07,
+      "rms_dbfs": -23.71
+    },
+    "microphone_opened": false,
+    "audible_playback": false,
+    "source_revision": "0d3b048ed8a473a5c9b48ac0c9cdd412b7c7b48f78f5a9fc504bbbedb271bec8",
+    "pipeline_signature": "7e4a5a90ac21fdfa8394d3fad1cc682875dec1bf74b5a6baab85ac471fdf5f91",
+    "waveform_probe": {
+      "status": "measured",
+      "comparisons": 1216,
+      "processing_ms": 19.843,
+      "kernel": "audioop_findfactor",
+      "acoustic_echo_proof": false,
+      "correlation": 1,
+      "offset_ms": 1250,
+      "peak_margin": 0.7777,
+      "alternative_count": 1195,
+      "reference_window_sample": 0,
+      "window_ms": 400,
+      "search_ms": 2000,
+      "sample_rate": 500,
+      "scope": "generated_reference_only_no_microphone"
+    },
+    "calibration_probe": {
+      "status": "passed",
+      "scope": "generated_reference_only_no_microphone",
+      "processing_ms": 665.039,
+      "facts": {
+        "status": "measured",
+        "source_identity_proof": false,
+        "waveform_lag_samples": 20000,
+        "waveform_correlation": 0.999078,
+        "coherence": 1,
+        "frames": 37,
+        "effective_bins": 7.84,
+        "energy_frame_participation": 16.17,
+        "kernel": "numpy",
+        "waveform_boundary_hit": false,
+        "band_lag_samples": 20000,
+        "band_score": 1,
+        "band_peak_margin": 0.517058,
+        "band_runner_exclusion_ms": 100,
+        "band_waveform_correlation": 0.999078,
+        "band_coherence": 1,
+        "processing_ms": 664.941
+      },
+      "acoustic_echo_proof": false
+    }
+  },
+  "output_test": {
+    "status": "passed",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "microphone_opened": false,
+    "native_playback": {
+      "owned": false,
+      "started": 1,
+      "completed": 1,
+      "skipped": 0,
+      "stopped": 0,
+      "echo_frames": 0,
+      "overlap_frames": 0,
+      "discarded": 0,
+      "last_stop_s": null,
+      "last_reference_duration_s": 16.416,
+      "last_error": null,
+      "text_echo_suppressed": 0,
+      "tts_generation_ms": 1976.5,
+      "first_audio_wait_ms": 2267.6,
+      "transcript_guard": [],
+      "target": "media_player.homepod_obyvak_homepod_obyvak",
+      "transport": "native_raop_mp3_stream",
+      "volume_decision": {
+        "volume": 0.45,
+        "muted": false,
+        "source": "raop",
+        "busy": false
+      },
+      "negotiated_latency_s": 1.5,
+      "sender_scheduling_delay_s": 1.5,
+      "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+      "pending_resource_cleanup": 0,
+      "streaming": {
+        "transport": "native_raop_mp3_stream",
+        "compressed_bytes": 262656,
+        "reference_seconds": 16.416,
+        "first_reference_ms": 1871.6,
+        "producer_eof_ms": 3914.3,
+        "producer_done": true,
+        "decoder_done": true,
+        "native_pending_peak": 197120,
+        "reference_pending_peak": 8448,
+        "cleanup_pending": false,
+        "error_type": null,
+        "raw_microphone_saved": false
+      }
+    },
+    "audibility_confirmed": false
+  },
+  "firmware": {
+    "target": "home-assistant-voice-0a8bde.yaml",
+    "revision": "300e51323520226c1dc481243ec8984c6e03ad9bc6e4ff4e63ae8f70d08c1494",
+    "models": [
+      {
+        "id": "jarvis_cz",
+        "source": "local",
+        "probability_cutoff": 0.8,
+        "model_sha256": "8e2b5d19041e7f865e0c7a7c3078732b017dee824484971a9e606b2ec1d6056c"
+      },
+      {
+        "id": "rozsvit_cz",
+        "source": "remote"
+      },
+      {
+        "id": "zhasni_cz",
+        "source": "remote"
+      }
+    ],
+    "credentials_exposed": false,
+    "reference_profile": {
+      "public_voice_package": {
+        "repository": "esphome/home-assistant-voice-pe",
+        "path": "home-assistant-voice.yaml",
+        "ref": null
+      },
+      "overlay_present": false,
+      "api_encryption_declared": true,
+      "top_level_sendspin": false,
+      "top_level_reference": false
+    }
+  },
+  "ci": [
+    {
+      "id": 126464602614,
+      "name": "tests",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 126464602716,
+      "name": "reference-firmware (compile-fixture.yaml)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 126464602837,
+      "name": "backup-dav",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 126464602981,
+      "name": "energy-chart",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 126464603044,
+      "name": "reference-firmware (compile-fixture-stock.yaml)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 126464603049,
+      "name": "containers (jarvis)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 126464603071,
+      "name": "containers (jarvis_updater)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 126466259329,
+      "name": "publish-laboratory",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "local_tests": {
+    "run": 322,
+    "optional_skipped": 5,
+    "failures": 0
+  },
+  "review": {
+    "blocking_findings": 0,
+    "corrected": "Preserve transport tail before accepting next turn"
+  },
+  "limits": [
+    "No acoustic room recording or new live microphone activation",
+    "Physical audibility and household wake accuracy not independently confirmed",
+    "Provider response latency remains separate"
+  ],
+  "lease": {
+    "job": {
+      "id": "half137-release-20261104",
+      "operation": "deployment_release",
+      "state": "verified",
+      "result": {
+        "verified": true
+      },
+      "backup_slug": null,
+      "request_id": "half137-release-20261104",
+      "created_at": "2026-11-04T08:17:03.473746+00:00",
+      "started_at": "2026-11-04T08:17:03.485399+00:00",
+      "finished_at": "2026-11-04T08:17:03.498842+00:00",
+      "summary": {
+        "changed_fields": [],
+        "expected_version": null,
+        "operation": "deployment_release",
+        "restore_from": null,
+        "target": null
+      }
+    },
+    "status": {
+      "locked": false,
+      "owner": null,
+      "expires_at_epoch": null
+    }
+  }
+}

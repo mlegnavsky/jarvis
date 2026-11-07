@@ -1,0 +1,46 @@
+{
+  "status": "active_verified",
+  "audited": [
+    "configuration.yaml",
+    "automations.yaml",
+    "scripts.yaml",
+    "scenes.yaml",
+    "groups.yaml",
+    "active local duplex TV ownership and legacy HomePod routing"
+  ],
+  "old_homepod_output_domain_enabled": false,
+  "old_output_sensor_present": false,
+  "local_duplex_state": "configured",
+  "conflicting_rules": [
+    {
+      "id": "1783328533537",
+      "entity_id": "automation.stiseni_apple_tv_pri_komunikacis_ai",
+      "effect": "HomePod volume 0.1 on terminal playback"
+    },
+    {
+      "id": "1783328867435",
+      "entity_id": "automation.hlasitost_podomluveni_s_ai_se_vrati_na_45",
+      "effect": "HomePod volume 0.45 after terminal playback"
+    }
+  ],
+  "cause": "Both guards query only the old sensor adapter; an absent sensor yields None != active, leaving both rules enabled in local speaker mode.",
+  "migration": "Set only initial_state false for both exact rules; preserve their definitions and all unrelated bytes. Reload automations and verify both off; preserve solar heating on.",
+  "separate_audio_evidence": {
+    "tts_pcm_peak_dbfs": -6.37,
+    "tts_pcm_rms_dbfs": -21.61,
+    "native_restart_verified": true,
+    "owner_still_hears_no_audio": true
+  },
+  "silent_speaker_cause_proven": false,
+  "physical_disconnection_requested": false,
+  "deployment": {
+    "prepare": "voice-rules-disable-prepare",
+    "apply": "voice-rules-disable-apply",
+    "activation": "automations_reload",
+    "verified_at": "2026-11-01T22:57:30.922078+00:00",
+    "exact_readback": true,
+    "both_legacy_rules": "off",
+    "solar_heating": "on",
+    "core_restart": false
+  }
+}
