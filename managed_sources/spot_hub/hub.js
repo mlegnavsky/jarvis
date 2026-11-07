@@ -21,7 +21,17 @@ function reserveView(sales,fresh){
   reason:p.reason||'Výpočet ještě není dostupný.',quality:p.quality==='unavailable'?'Chybí platné podklady; prodej z baterie čeká.':'Odhad výroby z jedné referenční křivky; spotřeba '+(p.load_quality==='observed'?'průběžně měřená.':'zatím částečná, nejméně8 kWh/den před zásobou.'),
   age:p.forecast_issued_at?new Date(p.forecast_issued_at).toLocaleString('cs-CZ',{timeZone:'Europe/Prague'})+' · stáří '+format(Math.max(0,p.forecast_age_seconds||0)/60,0)+' min':'Předpověď není dostupná.'};
 }
-const math={money,currentNet,shiftDate,moneyChoice,reserveView};if(typeof module!=='undefined')module.exports=math;
+function monitorView(report,fresh,now=Date.now()/1000){
+ const valid=fresh&&number(report?.checked_at)!==null&&now>=report.checked_at&&now-report.checked_at<30;
+ if(!valid)return {summary:'Čekám na čerstvý dohled',result:'Skutečný tok nelze potvrdit.',alerts:[],measurements:[],incidents:[]};
+ const op=report.operation||{},labels={measured_export:'Dodávku hlásí měnič',measured_charging:'Měří se nabíjení baterie',awaiting_export:'Čekám na měřenou dodávku',awaiting_charging:'Čekám na měřené nabíjení',unknown:'Chybí platná čerstvá měření',stopping:'Čekám na potvrzení ukončení',waiting:'Čekání podle plánu'};
+ return {summary:(report.status==='error'?'Chyba · ':report.status==='warning'?'Upozornění · ':'V pořádku · ')+(op.label||'Dohled'),
+  result:labels[op.result]||'Skutečný tok nelze potvrdit.',reason:op.reason||'',notice:op.evidence_notice||'',
+  alerts:(report.alerts||[]).map(a=>a.message),
+  measurements:Object.values(report.measurements||{}).map(v=>[v.label,format(v.value,1)+' '+(v.unit||''),number(v.age_seconds)===null?'—':format(v.age_seconds,1)+' s',v.status==='fresh'?'Čerstvé':v.status==='stale'?'Zastaralé':'Neplatné nebo chybí']),
+  incidents:(report.recent_incidents||[]).slice().reverse().map(v=>[new Date(v.at*1000).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague'}),v.event==='cleared'?'Vyřešeno · '+v.code:v.message])};
+}
+const math={money,currentNet,shiftDate,moneyChoice,reserveView,monitorView};if(typeof module!=='undefined')module.exports=math;
 if(typeof document==='undefined')return;
 const $=id=>document.getElementById(id),today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Prague',year:'numeric',month:'2-digit',day:'2-digit'}).format(Date.now());
 class Hub{
@@ -58,6 +68,14 @@ class Hub{
   $('sale-state').className='muted'+(sales.error||prefs.inhibited?' status-fault':'');
   $('sale-state').textContent=fresh?(stopping?(sales.error||'Čekám na fyzické potvrzení ukončení prodeje.'):state):'Stav řízení není čerstvý; zobrazené údaje se mohou opožďovat.';
   const tr=global.JarvisMessages?.translate||((s)=>s);
+  if($('monitor-summary')){
+   const view=monitorView(sales.supervision,fresh);
+   $('monitor-summary').textContent=view.summary;$('monitor-result').textContent=view.result;
+   $('monitor-reason').textContent=view.reason||'';$('monitor-notice').textContent=view.notice||'';
+   $('monitor-alerts').textContent=view.alerts.join(' ');
+   const rows=(id,items)=>{const root=$(id);root.replaceChildren();for(const values of items){const row=document.createElement('tr');for(const value of values){const cell=document.createElement('td');cell.textContent=value;row.appendChild(cell);}root.appendChild(row);}};
+   rows('monitor-measurements',view.measurements);rows('monitor-incidents',view.incidents);
+  }
   $('sale-state').textContent=tr($('sale-state').textContent);
   const stop=global.JarvisMessages?.stopInfo(sales.diagnostic_stop||sales.last_stop,prefs.last_controller_error);
   if($('stop-summary'))$('stop-summary').textContent=stop?stop.cause+' '+stop.outcome:'Zatím není zaznamenané ukončení prodeje.';
