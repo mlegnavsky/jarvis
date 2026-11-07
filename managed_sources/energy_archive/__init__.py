@@ -17,6 +17,7 @@ CONFIG_SCHEMA=vol.Schema({vol.Optional(DOMAIN):vol.Schema({})},extra=vol.ALLOW_E
 URL='https://laborator.odladeni.cz/energy-archive/index.php'
 IDS=['sensor.inverter_pv_power','sensor.inverter_load_power','sensor.inverter_grid_power','sensor.inverter_battery','sensor.jarvis_spot_ote','sensor.jarvis_vykon_baterie','sensor.inverter_power_losses','sensor.inverter_today_production','sensor.inverter_today_load_consumption','sensor.inverter_today_energy_import','sensor.inverter_today_energy_export','sensor.inverter_total_production','sensor.inverter_total_load_consumption','sensor.inverter_total_energy_import','sensor.inverter_total_energy_export']
 IDS+=['sensor.jarvis_spotreba_domu','select.inverter_work_mode','number.inverter_battery_capacity','sensor.inverter_battery_capacity','sensor.jarvis_solar_dohled','sensor.jarvis_dnes_bilance_site']
+IDS+=['sensor.inverter_external_power','sensor.inverter_internal_power','sensor.inverter_power']
 TZ=ZoneInfo('Europe/Prague')
 IDS+=['sensor.jarvis_dnes_nakoupeno_za','sensor.jarvis_dnes_prodano_za','sensor.inverter_battery_power','sensor.inverter_battery_current','sensor.inverter_battery_voltage','sensor.inverter_battery_temperature','sensor.inverter_temperature','sensor.inverter_dc_temperature','sensor.inverter_battery_soh','sensor.inverter_device_state','sensor.inverter_device_alarm','sensor.inverter_device_fault','sensor.inverter_pv1_power','sensor.inverter_pv2_power','sensor.inverter_today_battery_charge','sensor.inverter_today_battery_discharge','sensor.jarvis_energy_sales','binary_sensor.inverter_battery_alarm','binary_sensor.inverter_battery_fault']
 async def async_setup(hass,config):
@@ -34,7 +35,7 @@ async def async_setup(hass,config):
    return await response.json()
  async def state(status,error=None):
   count=await hass.async_add_executor_job(queue.count)
-  attrs={'friendly_name':'Trvalý energetický archiv','version':'1.2.3','queued_records':count,'last_ack':last_ack,'interval_seconds':10,'server':remote,'retention':'permanent','notice':'Weather rows are issued forecasts, not measured weather. Samples retain source update timestamps.'}
+  attrs={'friendly_name':'Trvalý energetický archiv','version':'1.2.4','queued_records':count,'last_ack':last_ack,'interval_seconds':10,'server':remote,'retention':'permanent','notice':'Weather rows are issued forecasts, not measured weather. Samples retain source update timestamps.'}
   if error:attrs['error']=error
   hass.states.async_set('sensor.jarvis_energy_archive',status,attrs)
  async def capture(_now=None):

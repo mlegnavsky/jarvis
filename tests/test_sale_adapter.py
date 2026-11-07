@@ -362,10 +362,13 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   data['settings']['zero_target_proof']['read_shapes']=[{'single_before':0,'bulk':0,'single_after':0}]*2
   await data['report']()
   self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
-  data['settings']['native_grid_target_w']=1
-  data['settings']['zero_target_proof']={'verified':True,'actual_w':1,'reads':[1]*7,'read_shapes':[{'single_before':1,'bulk':1,'single_after':1}]*2}
+  data['settings']['native_grid_target_w']=20
+  data['settings']['zero_target_proof']={'verified':True,'actual_w':20,'reads':[20]*7,'read_shapes':[{'single_before':20,'bulk':20,'single_after':20}]*2}
   await data['report']()
-  self.assertEqual(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_w'],1)
+  self.assertEqual(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_w'],20)
+  self.assertFalse(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
+  self.device_registers[104]=20
+  await self.ticks[0]();await data['report']()
   self.assertTrue(self.hass.states.get('sensor.jarvis_energy_sales').attributes['grid_target_confirmed'])
 
  async def test_shared_native_clock_range_admits_eleven_second_lag_without_sync(self):
@@ -529,5 +532,12 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   await self.service('start_sale',{'power_w':500,'duration_minutes':3})
   self.assertTrue(data['controller'].active)
   self.assertEqual(data['settings'].get('native_grid_target_w'),20)
+
+ async def test_owner_approved_twenty_watts_has_no_legacy_one_watt_warning(self):
+  data=await self.setup();self.device_registers[104]=20
+  await self.ticks[0]();await data['report']()
+  body=self.hass.states.get('sensor.jarvis_energy_sales').attributes
+  self.assertEqual(body['grid_target_w'],20)
+  self.assertNotIn('grid_target',{a['code'] for a in body['supervision']['alerts']})
 
 if __name__=='__main__':unittest.main()

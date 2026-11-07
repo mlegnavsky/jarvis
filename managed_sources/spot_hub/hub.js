@@ -29,13 +29,23 @@ function monitorView(report,fresh,now=Date.now()/1000){
   result:labels[op.result]||'Skutečný tok nelze potvrdit.',reason:op.reason||'',notice:op.evidence_notice||'',
   alerts:(report.alerts||[]).map(a=>a.message),
   measurements:Object.values(report.measurements||{}).map(v=>[v.label,format(v.value,1)+' '+(v.unit||''),number(v.age_seconds)===null?'—':format(v.age_seconds,1)+' s',v.status==='fresh'?'Čerstvé':v.status==='stale'?'Zastaralé':'Neplatné nebo chybí']),
-  incidents:(report.recent_incidents||[]).slice().reverse().map(v=>[new Date(v.at*1000).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague'}),v.event==='cleared'?'Vyřešeno · '+v.code:v.message])};
+  incidents:(report.recent_incidents||[]).slice().reverse().map(v=>[new Date(v.at*1000).toLocaleString('cs-CZ',{timeZone:'Europe/Prague'}),v.event==='cleared'?'Vyřešeno · '+v.code:v.message])};
 }
-const math={money,currentNet,shiftDate,moneyChoice,reserveView,monitorView};if(typeof module!=='undefined')module.exports=math;
+function dailyEvidenceView(report){
+ const row=report?.latest;if(!row)return {summary:'Pro tento den nejsou nové trvalé přehledy.',energy:'—',money:'—',operation:'',electrical:'',forecast:''};
+ const e=row.energy_kwh||{},f=row.finance||{},v=row.electrical||{},op=row.operation||{},p=row.forecast||{};
+ return {summary:'Doložená část dne · '+(report.snapshots||[]).length+' záznamů · stav '+new Date(row.as_of*1000).toLocaleString('cs-CZ',{timeZone:'Europe/Prague'}),
+  energy:'Výroba '+format(e.production)+' kWh · dům '+format(e.house)+' kWh · nákup '+format(e.import)+' kWh · dodávka '+format(e.export)+' kWh',
+  money:'Nákup '+money(f.purchase_czk??f.known_purchase_czk)+' · prodej po poplatku '+money(f.sale_czk??f.known_sale_czk)+' · bilance '+money(f.cash_balance_czk),
+  operation:(op.active?'Probíhá prodej · ':'')+(op.reason||'')+(op.error?' · '+op.error:''),
+  electrical:'Baterie '+format(v.soc,0)+' % · '+format(v.battery_c,1)+' °C · měnič '+format(v.inverter_c,1)+' °C · bilanční rozdíl '+format(v.loss_residual_w,0)+' W',
+  forecast:'Uložený odhad pro '+(p.forecast_day||'—')+': '+format(p.forecast_pv_kwh,1)+' kWh · učení spotřeby '+format(p.learning_days,0)+' dnů. Záznam uchovává tehdy známý odhad.'};
+}
+const math={money,currentNet,shiftDate,moneyChoice,reserveView,monitorView,dailyEvidenceView};if(typeof module!=='undefined')module.exports=math;
 if(typeof document==='undefined')return;
 const $=id=>document.getElementById(id),today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Prague',year:'numeric',month:'2-digit',day:'2-digit'}).format(Date.now());
 class Hub{
- constructor(){this.period='day';this.date=today();this.request=0;this.lastFinance=0;this.busy=false;this.cards=[];this.config={};this.dead=false;this.mounting=false;}
+ constructor(){this.period='day';this.date=today();this.request=0;this.lastFinance=0;this.lastDaily=0;this.dailyRequest=0;this.busy=false;this.cards=[];this.config={};this.dead=false;this.mounting=false;}
  getHost(){try{const w=global.parent;if(w.location.origin!==global.location.origin)return null;return w.document.querySelector('home-assistant')?.hass||global.__JARVIS_HASS__||null;}catch{return global.__JARVIS_HASS__||null;}}
  async start(){
   document.addEventListener('hass-more-info',event=>{
@@ -119,7 +129,8 @@ class Hub{
    else{const v=this.read(id);value=format(v,0)+(id==='sensor.inverter_battery'?' %':' W');}
    if(label.temperatureValue)label.temperatureValue.textContent=value;else label.textContent=value;
   }
-  if(!this.loadingFinance&&Date.now()-this.lastFinance>60000)this.finance();this.fit();
+  if(!this.loadingFinance&&Date.now()-this.lastFinance>60000)this.finance();
+  if(!this.loadingDaily&&Date.now()-this.lastDaily>60000)this.daily();this.fit();
  }
  renderMonitor(report,fresh){
   if($('monitor-summary')){
@@ -152,7 +163,19 @@ class Hub{
   }catch(e){$('action-error').hidden=false;$('action-error').textContent=e?.message||'Povel se nepodařilo provést.';}
   finally{this.busy=false;document.querySelectorAll('[data-action],#automatic').forEach(b=>b.disabled=false);this.update();}
  }
- select(period,date){this.period=period;this.date=date;$('date').value=date;document.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.period===period)));this.lastFinance=0;this.finance();this.syncChart();}
+ select(period,date){this.period=period;this.date=date;$('date').value=date;document.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.period===period)));this.lastFinance=0;this.finance();this.daily();this.syncChart();}
+ async daily(){
+  if(!this.h||!$('daily-history-summary'))return;
+  const request=++this.dailyRequest,date=this.date;this.loadingDaily=true;this.lastDaily=Date.now();
+  $('daily-history-summary').textContent='Načítám trvalý denní přehled…';
+  for(const id of ['energy','money','operation','electrical','forecast'])$('daily-history-'+id).textContent='';
+  try{
+   const report=await this.h.callApi('GET','jarvis_spot_control/sales/daily?date='+encodeURIComponent(date));
+   if(request!==this.dailyRequest||this.dead)return;
+   const view=dailyEvidenceView(report);for(const [key,value] of Object.entries(view))$('daily-history-'+key).textContent=value;
+  }catch(e){if(request===this.dailyRequest)$('daily-history-summary').textContent='Trvalý denní přehled není dostupný. Historie zůstává uložená.';}
+  finally{if(request===this.dailyRequest)this.loadingDaily=false;this.fit();}
+ }
  async readFinances(){
   const keyOf=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Prague',year:'numeric',month:'2-digit',day:'2-digit'}).format(t);
   const midnight=key=>{let t=Date.parse(key+'T00:00:00Z');for(let i=0;i<2;i++){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Prague',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(t).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));const local=Date.UTC(+parts.year,+parts.month-1,+parts.day,+parts.hour,+parts.minute,+parts.second);t+=Date.parse(key+'T00:00:00Z')-local;}return t;};

@@ -46,3 +46,24 @@ class HistoryViewTests(unittest.IsolatedAsyncioTestCase):
    result=await self.view.get(self.request());self.assertEqual(result.status,503)
    self.assertNotIn('private path',result.text)
   self.assertEqual(len(self.journal.recent()),2)
+
+ async def test_daily_query_is_admin_bounded_and_keeps_missing_days_empty(self):
+  from daily_evidence import date_bounds
+  module=sys.modules.get('history_test_view')
+  # Load through the same HA stub used by the history view.
+  from unittest.mock import patch
+  class Base:
+   def json(self,value):return value
+  http=ModuleType('homeassistant.components.http');http.HomeAssistantView=Base
+  with patch.dict(sys.modules,{'homeassistant':ModuleType('homeassistant'),'homeassistant.components':ModuleType('homeassistant.components'),'homeassistant.components.http':http}):
+   spec=importlib.util.spec_from_file_location('history_daily_view',Path('managed_sources/spot_control/history_view.py'))
+   module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+  self.assertTrue(hasattr(module,'DailyEvidenceView'))
+  view=module.DailyEvidenceView(self.hass,self.journal)
+  self.assertEqual((await view.get(self.request({'date':'2026-11-07'},admin=False))).status,403)
+  self.assertEqual((await view.get(self.request({'date':'bad'}))).status,400)
+  result=await view.get(self.request({'date':'2026-11-07'}));self.assertIsNone(result['latest'])
+  start,_=date_bounds('2026-11-07')
+  self.journal.append('energy_daily_snapshot',{'date':'2026-11-07','as_of':start+100,'finance':None},start+100)
+  result=await view.get(self.request({'date':'2026-11-07'}))
+  self.assertEqual(len(result['snapshots']),1);self.assertIsNone(result['latest']['finance'])

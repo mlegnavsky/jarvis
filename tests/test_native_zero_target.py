@@ -1,4 +1,4 @@
-"""The requested1W grid bias needs delayed native proof, never HA optimism."""
+"""The accepted20W grid bias needs delayed native proof, never HA optimism."""
 import asyncio
 import unittest
 try:from native_zero_target import set_zero_target
@@ -7,7 +7,7 @@ except ImportError:set_zero_target=None
 class Device:
  def __init__(self,ignore=False):
   self.modbus=self;self._semaphore=asyncio.Lock();self.ignore=ignore;self.calls=[]
-  self.r={0:5,98:1,111:1,130:0,142:2,145:0,146:255,104:20}
+  self.r={0:5,98:1,111:1,130:0,142:2,145:0,146:255,104:40}
   for i in range(6):self.r.update({166+i:30,172+i:0})
  async def get_response(self,code,address,count=1,data=None):
   assert self._semaphore.locked();self.calls.append((code,address,data))
@@ -27,23 +27,23 @@ class ZeroTargetTests(unittest.IsolatedAsyncioTestCase):
   async def sleep(seconds):await asyncio.sleep(0)
   result=await set_zero_target(device,ready or (lambda:True),event or audit,sleep=sleep)
   return device,result
- async def test_one_watt_is_the_only_write_and_delayed_reads_prove_it(self):
+ async def test_twenty_watts_is_the_only_write_and_delayed_reads_prove_it(self):
   d,r=await self.run_probe()
-  self.assertTrue(r['verified']);self.assertEqual(r['before_w'],20);self.assertEqual(r['actual_w'],1)
-  self.assertEqual([c for c in d.calls if c[0]==16],[(16,104,[1])])
+  self.assertTrue(r['verified']);self.assertEqual(r['before_w'],40);self.assertEqual(r['actual_w'],20)
+  self.assertEqual([c for c in d.calls if c[0]==16],[(16,104,[20])])
   self.assertGreaterEqual(sum(c[0]==3 and c[1]==104 for c in d.calls),3)
  async def test_ignored_write_reports_actual_twenty_without_fake_success(self):
   _,r=await self.run_probe(Device(ignore=True))
-  self.assertFalse(r['verified']);self.assertEqual(r['actual_w'],20)
+  self.assertFalse(r['verified']);self.assertEqual(r['actual_w'],40)
  async def test_single_read_echo_cannot_hide_disagreeing_bulk_read(self):
   class ShapeDependent(Device):
    async def get_response(self,code,address,count=1,data=None):
     result=await super().get_response(code,address,count,data)
-    if code==3 and address==98 and count==14:result[6]=20
+    if code==3 and address==98 and count==14:result[6]=40
     return result
   _,r=await self.run_probe(ShapeDependent())
-  self.assertFalse(r['verified']);self.assertEqual(r['actual_w'],20)
-  self.assertTrue(any(p['single_before']==1 and p['bulk']==20 and p['single_after']==1 for p in r['read_shapes']))
+  self.assertFalse(r['verified']);self.assertEqual(r['actual_w'],40)
+  self.assertTrue(any(p['single_before']==20 and p['bulk']==40 and p['single_after']==20 for p in r['read_shapes']))
  async def test_active_unhealthy_or_changed_native_program_never_writes(self):
   for change in ({142:0},{145:1},{130:1},{166:60},{172:1},{0:6}):
    d=Device();d.r.update(change);_,r=await self.run_probe(d)
@@ -62,3 +62,11 @@ class ZeroTargetTests(unittest.IsolatedAsyncioTestCase):
  async def test_unsupported_transport_never_falls_back_to_unverified_write(self):
   _,r=await self.run_probe(object())
   self.assertFalse(r['verified']);self.assertFalse(r['supported'])
+
+class TargetStatusTests(unittest.TestCase):
+ def test_failed_refresh_and_old_reads_never_reconfirm_saved_target(self):
+  from native_zero_target import target_confirmed
+  self.assertTrue(target_confirmed({'register_104':20,'captured_at':1000},1080))
+  self.assertFalse(target_confirmed({'error':'TimeoutError'},1080))
+  self.assertFalse(target_confirmed({'register_104':20,'captured_at':1000},1090))
+  self.assertFalse(target_confirmed({'register_104':40,'captured_at':1000},1080))

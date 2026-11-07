@@ -101,15 +101,15 @@ class Changes:
   return added,cleared
 
 class Supervisor:
- def __init__(self,hass,clock=time.time):
+ def __init__(self,hass,clock=time.time,incidents=None):
   self.hass=hass;self.clock=clock;self.started=clock();self.changes=Changes()
   self.pending={};self.notifying=False;self.next_attempt=0;self.notification_error='';self.initial=True
-  self.monitor=Monitor(self.started);self.incidents=[]
+  self.monitor=Monitor(self.started);self.incidents=list(incidents or [])[-20:];self.pending_history=[]
  def publish(self,body):
   now=self.clock();evidence=self.monitor.update(body,now)
   alerts=evaluate(body,now,self.started)+evidence['alerts'];added,cleared=self.changes.update(alerts)
-  for alert in added:self.incidents.append({'at':now,'event':'raised',**alert})
-  for code in cleared:self.incidents.append({'at':now,'event':'cleared','code':code})
+  changes=[{'at':now,'event':'raised',**a} for a in added]+[{'at':now,'event':'cleared','code':code} for code in cleared]
+  self.incidents.extend(changes);self.pending_history.extend(changes)
   self.incidents=self.incidents[-20:]
   if self.initial:
    cleared+=list(set(CODES)-{a['code'] for a in alerts});self.initial=False
@@ -118,7 +118,7 @@ class Supervisor:
   if self.pending and not self.notifying and now>=self.next_attempt:
    self.notifying=True;self.hass.async_create_task(self._notify())
   state='error' if any(a['level']=='error' for a in alerts) else 'warning' if alerts else 'ready' if body.get('ready') else 'starting'
-  result={'version':'1.1.0','status':state,'checked_at':now,'alerts':alerts,'last_cycle':body.get('last_cycle',{}),
+  result={'version':'1.1.1','status':state,'checked_at':now,'alerts':alerts,'last_cycle':body.get('last_cycle',{}),
           'measurements':evidence['measurements'],'operation':evidence['operation'],'recent_incidents':list(self.incidents),
           'notification_error':self.notification_error,'notification_pending':len(self.pending),
           'notice':'Dohled sleduje důkazy; nenahrazuje nativní ochrany měniče.'}

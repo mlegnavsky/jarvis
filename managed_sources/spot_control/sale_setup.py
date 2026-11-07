@@ -13,7 +13,8 @@ from homeassistant.helpers.storage import Store
 from .sales import measurement_guard,price_at,market_rows,number,after_stop
 from .sale_controller import SaleController
 from .journal import Journal
-from .history_view import HistoryView,DiagnosticsView
+from .history_view import HistoryView,DiagnosticsView,DailyEvidenceView
+from .daily_evidence import daily_snapshot
 from .diagnostics import diagnostic_snapshot
 from .native_window import NativeWindow,WRITABLE
 from .planning_setup import async_setup_planning
@@ -24,7 +25,7 @@ from .battery_native import BatterySaleController,WRITABLE as BATTERY_WRITABLE
 from .native_clock import sync_native_clock
 from .native_snapshot import read_snapshot
 from .native_plan import native_clock_acceptable
-from .native_zero_target import set_zero_target, GRID_TARGET_W
+from .native_zero_target import set_zero_target, GRID_TARGET_W, target_confirmed
 from .solar_inputs import capacity_basis, house_power, cycle_acceptance
 from .supervision import Supervisor
 from .commissioning_completion import finish as finish_verification
@@ -35,7 +36,7 @@ from .owner_settings import DEFAULTS as POLICY_DEFAULTS,validate as validate_pol
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='1.1.1'
+VERSION='1.1.2'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -44,7 +45,7 @@ async def async_setup_sales(hass,config,charge_controller):
  # Export First/CAP20 limited AC supply to home in the live installation.
  # Preserve automatic PV/scheduled intent; ordinary CT mode supplies the home.
  prefs['bias_enabled']=False
- prefs['bias_disabled_reason']='Malý přetok je pozastaven: režim Export First s limitem20 W omezoval napájení domu. Běžný domácí režim má přednost.'
+ prefs['bias_disabled_reason']='Běžný provoz: nativní cíl odběru20 W. Malý trvalý prodej vypnutý; napájení domu má přednost, prodávají se přebytky a podle cenového plánu.'
  prefs.setdefault('policy',dict(POLICY_DEFAULTS))
  def policy():return {**POLICY_DEFAULTS,**prefs.get('policy',{})}
  def cap():return policy()['max_w']
@@ -61,7 +62,9 @@ async def async_setup_sales(hass,config,charge_controller):
   prefs.update(automatic=False,battery_verified=False,inhibited=True)
  journal=await hass.async_add_executor_job(Journal,Path(hass.config.path('.storage','jarvis_energy_sales.sqlite')))
  lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();report_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={};window=None;battery=None;last_native_read=0;planning=None;last_power_adjust=0;weather_planning=None;measurement_healthy_since=None;house_profile_confirmed=False;profile_issues=[]
- supervisor=Supervisor(hass)
+ incidents=await hass.async_add_executor_job(journal.recent_kind,'supervision_incident',20)
+ supervisor=Supervisor(hass,incidents=[r['payload'] for r in incidents])
+ last_daily_bucket=None;daily_error=''
  archive_error='';runtime_error='';report_error='';last_health_signature=None
  def home_plan():
   try:
@@ -610,13 +613,13 @@ async def async_setup_sales(hass,config,charge_controller):
    'battery_sale':{k:v for k,v in battery.record.items() if k not in ('before','expected','pending')},'battery_sale_error':battery.error,'native_start':battery.record.get('start'),'selected_block':prefs.get('selected_block'),'next_plan':build_next_plan(quotes(),time.time(),policy()['block_minutes']),'sale_policy':'block_and_soc','automatic_battery_policy':'scheduled_weather_reserve','automatic_battery_requires_commission':False,'sale_floor_soc':sale_floor(),
    'bias_status':({'average_grid_w':c.record.get('bias_average_w'),'target_export_w':policy()['bias_w']} if c.active and c.record.get('mode')=='bias' else None),'bias_policy':{'enabled':prefs.get('bias_enabled',True),'disabled_reason':prefs.get('bias_disabled_reason',''),'target_export_w':policy()['bias_w'],'minimum_soc':home_floor(),'resume_soc':policy()['resume_soc'],'verified':prefs.get('bias_verified',False),'ha_required':True},'charging_active':charge_controller.active,'capacity':capacity(),'house_power_w':house(),'last_cycle':cycle_acceptance(prefs.get('battery_sale_proof')),'settings':dict(prefs),'policy':policy(),'policy_revision':policy_revision(policy()),'automatic_requested':bool(prefs.get('requested_automatic')),'autonomous_verification':autonomous_state(),'measurement_recovery':dict(prefs.get('measurement_recovery') or {}),'pv_surplus_soc':policy()['pv_soc'],'last_stop':prefs.get('last_sale_stop'),'diagnostic_stop':prefs.get('last_diagnostic_stop') or prefs.get('last_sale_stop'),'reason':('Ověřovací test baterie · '+window.record.get('phase','')+f" · 500 W / 5 minut / rezerva {window.record.get('minimum_soc',95)} %." if window.active else 'Automatika pozastavena po zásahu ochrany. '+(c.error or battery.error or 'Čeká na odeznění příčiny a potvrzení bezpečného režimu.') if prefs.get('inhibited') else last_reason),'error':window.error if window.active else battery.error if battery.active else c.error or runtime_error,'price':p,
    'mode':'battery_commission' if window.active else 'battery' if battery.active else c.record.get('mode'),'power_w':500 if window.active else battery.record.get('power_w') if battery.active else c.record.get('power_w'),'deadline':window.record.get('end') if window.active else battery.record.get('end') if battery.active else c.record.get('deadline'),
-   'grid_target_w':GRID_TARGET_W,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':prefs.get('zero_target_proof',{}).get('verified') is True and len(prefs.get('zero_target_proof',{}).get('read_shapes',[]))==2 and prefs.get('zero_target_proof',{}).get('actual_w')==GRID_TARGET_W and prefs.get('native_grid_target_w')==GRID_TARGET_W,'grid_import_policy':(prefs['bias_disabled_reason'] if not prefs.get('bias_enabled') else f"Malý přetok {policy()['bias_w']:g} W; domácí rezerva {home_floor():g} %; plánovaný prodej do {policy()['sale_soc']:g} %."),'automatic_limit_w':cap(),'healthy':healthy(),'health':health_report(),'profile_issues':list(profile_issues),'completed_battery_plan':prefs.get('completed_battery_plan'),'battery_soc':number(entity.state) if entity else None,
+   'grid_target_w':GRID_TARGET_W,'native_grid_target_w':prefs.get('native_grid_target_w'),'grid_target_confirmed':target_confirmed(native_program,time.time()),'grid_import_policy':(prefs['bias_disabled_reason'] if not prefs.get('bias_enabled') else f"Malý přetok {policy()['bias_w']:g} W; domácí rezerva {home_floor():g} %; plánovaný prodej do {policy()['sale_soc']:g} %."),'automatic_limit_w':cap(),'healthy':healthy(),'health':health_report(),'profile_issues':list(profile_issues),'completed_battery_plan':prefs.get('completed_battery_plan'),'battery_soc':number(entity.state) if entity else None,
    'telemetry':telemetry_snapshot(),'history_error':archive_error,'report_error':report_error,'planning':home_plan(),'weather_reserve':weather_plan(),'notice':'Časové ukončení vyžaduje běžící řízení; při jeho výpadku může pokračovat PV export pod nativním limitem.'}
  def write_report(body):
   path=Path(hass.config.path('jarvis_workspace','sales-runtime.json'));path.parent.mkdir(exist_ok=True)
   temp=path.with_suffix('.tmp');temp.write_text(json.dumps(body,ensure_ascii=False,allow_nan=False));temp.replace(path)
  async def report(_now=None):
-  nonlocal last_report,report_error,last_health_signature,archive_error
+  nonlocal last_report,report_error,last_health_signature,archive_error,last_daily_bucket,daily_error
   if report_lock.locked():return
   async with report_lock:
    body=snapshot()
@@ -635,6 +638,20 @@ async def async_setup_sales(hass,config,charge_controller):
    except Exception as exc:
     body['supervision']={'status':'error','alerts':[],'error':type(exc).__name__}
     hass.states.async_set('sensor.jarvis_solar_dohled','error',{'friendly_name':'Dohled nad solárem','error':type(exc).__name__})
+   try:
+    while supervisor.pending_history:
+     incident=supervisor.pending_history[0]
+     await event('supervision_incident',incident)
+     supervisor.pending_history.pop(0)
+    now=time.time();bucket=int(now//300)
+    if last_daily_bucket!=bucket:
+     finance=hass.data.get('jarvis_energy_finance',{}).get('snapshot')
+     daily=daily_snapshot(hass.states.get,body,finance() if callable(finance) else None,now)
+     await hass.async_add_executor_job(journal.append_periodic,'energy_daily_snapshot',daily,now)
+     await flush_history();last_daily_bucket=bucket
+    daily_error=''
+   except Exception as exc:daily_error='Trvalá historie dohledu čeká: '+type(exc).__name__
+   body['evidence_history']={'retention':'permanent','snapshot_seconds':300,'error':daily_error,'notice':'Detailní10s průběh je v soukromém archivu; přehledy a události v místní trvalé historii.'}
    hass.states.async_set('sensor.jarvis_energy_sales',body['phase'],{'friendly_name':'Prodej elektřiny',**body})
    states=read();source_ok=prefs['source'] in ('pv','battery') and not house_profile_issues(states)
    base_ok=states.get('select.inverter_work_mode')=='Zero Export To CT' and states.get('switch.inverter_export_surplus')=='off' and number(states.get('number.inverter_export_surplus_power')) is not None
@@ -881,6 +898,7 @@ async def async_setup_sales(hass,config,charge_controller):
  async_register_admin_service(hass,DOMAIN,'set_sales_automatic',service_auto,vol.Schema({vol.Required('enabled'):bool}))
  hass.http.register_view(HistoryView(hass,journal,snapshot))
  hass.http.register_view(DiagnosticsView(snapshot))
+ hass.http.register_view(DailyEvidenceView(hass,journal))
  hass.data[KEY]={'controller':c,'window':window,'battery_controller':battery,'battery_sale':battery,'controllers':[c,battery,window],
   'busy':lambda:lock.locked(),'clock_sync_active':False,'settings':prefs,'configure':configure,'configure_policy':configure_policy,'report':report,'journal':journal,'start':start_sale,'stop':stop_sale,'bias_probe':bias_probe,'commission_battery':commission_battery,'zero_import_target':zero_import_target}
  for platform in ('number','select','switch'):hass.async_create_task(discovery.async_load_platform(hass,platform,DOMAIN,{},config))

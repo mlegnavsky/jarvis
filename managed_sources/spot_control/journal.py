@@ -42,6 +42,19 @@ class Journal:
   with self.db() as db:rows=db.execute('SELECT id,t,kind,payload FROM events WHERE id>? ORDER BY id LIMIT ?',(cursor,limit)).fetchall()
   return [{'id':r[0],'t':r[1],'kind':r[2],'payload':json.loads(r[3])} for r in rows]
 
+ def recent_kind(self,kind,limit=20):
+  if not isinstance(kind,str) or not 1<=len(kind)<=64 or type(limit) is not int or not 1<=limit<=1000:raise ValueError('Invalid history filter')
+  with self.db() as db:rows=db.execute('SELECT id,t,kind,payload FROM events WHERE kind=? ORDER BY id DESC LIMIT ?',(kind,limit)).fetchall()
+  return [{'id':r[0],'t':r[1],'kind':r[2],'payload':json.loads(r[3])} for r in reversed(rows)]
+ def append_periodic(self,kind,payload,t,seconds=300):
+  if type(seconds) is not int or seconds<1 or not math.isfinite(t) or t<0:raise ValueError('Invalid period')
+  if not isinstance(kind,str) or not 1<=len(kind)<=64:raise ValueError('Invalid event kind')
+  encoded=json.dumps(payload,ensure_ascii=False,separators=(',',':'),allow_nan=False)
+  low=math.floor(t/seconds)*seconds
+  with self.db() as db:
+   cursor=db.execute('INSERT INTO events(t,kind,payload) SELECT ?,?,? WHERE NOT EXISTS (SELECT 1 FROM events WHERE kind=? AND t>=? AND t<?)',(t,kind,encoded,kind,low,low+seconds))
+   return cursor.lastrowid if cursor.rowcount else None
+
  def claim_command(self,body):
   key=body['id'];encoded=json.dumps(body,sort_keys=True,allow_nan=False)
   with self.db() as db:

@@ -62,3 +62,18 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
   body['native_program']['register_104']=1;s.publish(body);await asyncio.gather(*tasks)
   self.assertEqual(calls[-1][1],'dismiss')
   self.assertEqual(calls[-1][2]['notification_id'],'jarvis_solar_grid_target')
+
+class DurableIncidentsTests(unittest.TestCase):
+ def test_restart_restores_history_without_replaying_current_alerts(self):
+  from supervision import Supervisor
+  hass=types.SimpleNamespace(states=types.SimpleNamespace(async_set=lambda *a:None),async_create_task=lambda c:c.close())
+  old={'at':900,'event':'raised','code':'grid_target','level':'warning','message':'Old target'}
+  s=Supervisor(hass,clock=lambda:1000,incidents=[old])
+  self.assertEqual(s.incidents,[old])
+  self.assertEqual(s.pending_history,[])
+  body=SupervisionTests().body(grid_target_w=20,native_program={'register_104':20})
+  result=s.publish(body)
+  self.assertEqual(result['recent_incidents'],[old])
+  self.assertEqual(result['alerts'],[])
+  body['native_program']['register_104']=40;s.publish(body)
+  self.assertEqual(s.pending_history[-1]['code'],'grid_target')

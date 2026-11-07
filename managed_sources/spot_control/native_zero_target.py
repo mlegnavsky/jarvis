@@ -1,8 +1,19 @@
 """Fixed native grid-bias maintenance; never changes modes or export limits."""
+from datetime import datetime
 import asyncio
 import time
 
-GRID_TARGET_W=1
+GRID_TARGET_W=20
+
+
+def target_confirmed(program,now):
+ # Native program is sampled every60s when idle; this is parameter evidence,
+ # separate from the strict30s electrical/control-health gate.
+ try:
+  stamp=program.get('captured_at')
+  stamp=datetime.fromisoformat(stamp).timestamp() if isinstance(stamp,str) else float(stamp)
+  return program.get('register_104')==GRID_TARGET_W and 0<=now-stamp<90
+ except (TypeError,ValueError,OverflowError):return False
 
 
 def _value(raw,count):
