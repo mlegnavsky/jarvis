@@ -1,3 +1,8 @@
+# 3.12.8
+
+- Select an existing official OpenAI conversation entity in a native Assist pipeline with CAS, unchanged audio providers, full native readback and private before-image restore. Native local intents handle ordinary supported commands first.
+- No custom audio transport, voice identity hook, prompt/credential changes or Core version upgrade.
+
 # 3.12.7
 
 - Carry bounded, credential-filtered error summaries from failed native firmware jobs. The companion Core firmware bridge1.0.1 can read a terminal sidecar for an already authorized device.
