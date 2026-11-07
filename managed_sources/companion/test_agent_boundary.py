@@ -113,6 +113,26 @@ class MethodTests(unittest.IsolatedAsyncioTestCase):
       'OpenAIError':type('OpenAIError',(Exception,),{}),'HomeAssistantError':type('HAError',(Exception,),{}),'TemplateError':type('TemplateError',(Exception,),{})}
   exec(compile(ast.Module(body=[fn],type_ignores=[]),'actual-agent-method','exec'),ns)
   return ns[name]
+ async def test_native_time_answer_with_tv_playing_is_spoken(self):
+  prepared=[]
+  class Companion:
+   async def prepare(self,*a):
+    prepared.append(True);return NS(reset_history=False,principal='p',local_reply=None,prompt='memory')
+  agent=NS(hass=NS(data={},states=NS(get=lambda _:NS(state='playing'))),_companion=Companion(),
+    _history_principals={},history={},get_exposed_entities=lambda:[],_recent_devices={},_dialogue_started={},_dialogue_turns={},
+    _generate_system_message=lambda *a:(_ for _ in ()).throw(AssertionError('clock must not use model')))
+  user=NS(text='Kolik je hodin?',language='cs',satellite_id='assist_satellite.home_assistant_voice_0a8bde_assist_satellite',
+    device_id='6275b9b88bb104060b637664f4cc7be8',context=NS(id='native-button'))
+  result=await self.method('_async_handle_message')(agent,user,NS(conversation_id='native-clock'))
+  self.assertEqual(result.response.text,'Je 7 hodin a 5 minut.');self.assertEqual(prepared,[True])
+
+ async def test_homepod_transport_and_bound_context_keep_their_tv_guard(self):
+  user=NS(satellite_id='assist_satellite.home_assistant_voice_0a8bde_assist_satellite',device_id='mic',context=NS(id='c'))
+  hass=NS(data={'jarvis_local_duplex':object()},states=NS(get=lambda _:NS(state='playing')))
+  self.assertFalse(voice_input_allowed(hass,user))
+  hass.data={'jarvis_voice_input_guards':{'c':lambda:False}}
+  self.assertFalse(voice_input_allowed(hass,user))
+
  async def test_voice_time_answer_prepares_identity_then_skips_model(self):
   prepared=[]
   class Companion:

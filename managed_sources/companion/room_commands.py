@@ -36,6 +36,10 @@ def voice_input_allowed(hass,user):
     primary=(getattr(user,'satellite_id',None)=='assist_satellite.home_assistant_voice_0a8bde_assist_satellite'
              or getattr(user,'device_id',None)=='6275b9b88bb104060b637664f4cc7be8')
     if not primary:return True
+    # Native Assist admits a turn through its own button/wake-word lifecycle.
+    # Only the custom HomePod transport requires TV playback to be paused.
+    # A bound per-turn guard above remains authoritative in either mode.
+    if data.get('jarvis_local_duplex') is None:return True
     try:state=hass.states.get('media_player.obyvaci_pokoj_obyvaci_pokoj')
     except Exception:return False
     return bool(state and state.state in ('paused','off','idle','standby'))
