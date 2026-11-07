@@ -10,6 +10,7 @@ from types import SimpleNamespace as NS
 import time
 import unittest
 from engine import Controller,ROOMS,numeric
+from resource_bridge import refresh_resource
 
 class Context:
  count=0
@@ -31,7 +32,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   source=Path(__file__).parents[1].joinpath('__init__.py').read_text();tree=ast.parse(source)
   constants=[n for n in tree.body if isinstance(n,ast.Assign)]
   fn=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='async_setup')
-  g=dict(hashlib=hashlib,json=json,asyncio=asyncio,datetime=datetime,timezone=timezone,logging=logging,time=time,vol=Vol(),Context=Context,callback=lambda f:f,Store=Store,Controller=Controller,ROOMS=ROOMS,numeric=numeric,EVENT_HOMEASSISTANT_STARTED='start',EVENT_HOMEASSISTANT_STOP='stop')
+  g=dict(refresh_resource=refresh_resource,hashlib=hashlib,json=json,asyncio=asyncio,datetime=datetime,timezone=timezone,logging=logging,time=time,vol=Vol(),Context=Context,callback=lambda f:f,Store=Store,Controller=Controller,ROOMS=ROOMS,numeric=numeric,EVENT_HOMEASSISTANT_STARTED='start',EVENT_HOMEASSISTANT_STOP='stop')
   self.handlers=[];self.bus={};self.registered={};self.tasks=[];self.states={};self.calls=[]
   def set_state(entity,state,attrs=None,context=None):
    old=self.states.get(entity);ctx=context or Context()
@@ -69,7 +70,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Ze soláru')
  async def test_physical_off_returns_auto_and_holds_cooldown(self):
   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
-  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Ručně vypnuto do půlnoci')
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Stop pro dnešek')
  async def test_manual_on_then_temperature_safety(self):
   self.set_state('switch.aqara_smart_plug_eu_2','on');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_living'].state,'Ručně')
@@ -82,7 +83,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
  async def test_late_switch_confirmation_clears_previous_error(self):
   self.defer_switch=True
   self.set_state(self.g['SENSORS']['temp'],'23.6');await self.drain()
-  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Chyba ovládání')
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Čeká na vypnutí')
   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Dosaženo 23,5 °C')
   self.assertIsNone(self.states['sensor.jarvis_topeni_child'].attributes['last_error'])
@@ -115,3 +116,24 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   for cb in self.bus['call_service']:cb(NS(data={'domain':'switch','service':'turn_off','service_data':{'entity_id':'switch.aqara_smart_plug_eu'}},context=Context()))
   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].attributes['mode'],'manual_off')
+
+ async def test_user_context_off_is_not_swallowed_by_matching_automatic_pending(self):
+  self.defer_switch=True
+  self.set_state(self.g['SENSORS']['temp'],'23.6');await self.drain()
+  context=Context();context.user_id='owner'
+  self.set_state('switch.aqara_smart_plug_eu','off',context=context);await self.drain()
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].attributes['mode'],'manual_off')
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Stop pro dnešek')
+ async def test_explicit_mode_off_while_already_off_stops_for_today_and_persists(self):
+  await self.registered[('jarvis_solar_heating','set_mode')](NS(data={'room':'living','mode':'off'}))
+  self.assertEqual(self.states['sensor.jarvis_topeni_living'].state,'Stop pro dnešek')
+  self.assertEqual(self.states['sensor.jarvis_topeni_living'].attributes['mode'],'manual_off')
+ async def test_delayed_confirmation_is_waiting_before_it_is_an_error(self):
+  from unittest.mock import patch
+  self.defer_switch=True;now=time.time()
+  self.set_state(self.g['SENSORS']['temp'],'23.6');await self.drain()
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Čeká na vypnutí')
+  self.assertIsNone(self.states['sensor.jarvis_topeni_child'].attributes['last_error'])
+  with patch.object(time,'time',return_value=now+16):
+   await self.registered[('jarvis_solar_heating','evaluate')](None)
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Chyba ovládání')

@@ -36,7 +36,7 @@ class HeatingTests(unittest.TestCase):
   c=self.make();c.external('child',False,1000)
   self.assertFalse(self.run_at(c,1299)['child']['on'])
   self.assertFalse(self.run_at(c,1300)['child']['on'])
-  self.assertEqual(self.run_at(c,1300)['child']['reason'],'Ručně vypnuto do půlnoci')
+  self.assertEqual(self.run_at(c,1300)['child']['reason'],'Stop pro dnešek')
  def test_battery_exception_hysteresis(self):
   c=Controller();self.assertTrue(self.run_at(c,soc=90,pv=0)['child']['on'])
   self.assertTrue(self.run_at(c,soc=86,pv=0,child=True)['child']['on'])

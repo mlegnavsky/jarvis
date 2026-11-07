@@ -80,7 +80,7 @@ class Controller:
   for room,on_threshold,off_threshold,watts in [('child',cfg['child_on_w'],cfg['child_off_w'],950),('living',cfg['living_on_w'],cfg['living_off_w'],2200)]:
    on=actual[room];desired=on;reason='Čeká na slunce'
    if now<self.manual_off_until[room]:
-    desired=False;reason='Ručně vypnuto do půlnoci';self.manual[room]=False
+    desired=False;reason='Stop pro dnešek';self.manual[room]=False
    elif not temp_ok:
     desired=False;reason='Chybí teplota';self.manual[room]=False
    elif temp>cfg['temp_off']:
