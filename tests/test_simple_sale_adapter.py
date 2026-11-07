@@ -310,13 +310,13 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   q=math.ceil(self.clock[0]/900)*900;self.clock[0]=q;self.prices(q)
   self.hass.states.async_set('sensor.inverter_battery',85);self.refresh();await self.ticks[0]()
   self.assertTrue(data['battery_controller'].starts,str(self.hass.states.get('sensor.jarvis_energy_sales').attributes.get('weather_reserve')))
-  self.assertEqual(data['battery_controller'].starts[-1][2],75)
+  self.assertEqual(data['battery_controller'].starts[-1][2],60)
   self.weather_kwh=1;self.refresh();await self.ticks[0]()
   self.assertIn('reserve',data['battery_controller'].stops)
 
  async def test_weather_unavailable_does_not_stop_explicit_manual_battery_sale(self):
   data=await self.setup();b=data['battery_controller']
-  data['weather_planning']['snapshot']=lambda *args:{'required_soc':100,'reason':'Chybí počasí'}
+  data['weather_planning']['snapshot']=lambda *args,**kwargs:{'required_soc':100,'reason':'Chybí počasí'}
   b.record={'id':'manual','purpose':'manual','before':{'143':9300},'phase':'running','start':self.clock[0],'end':self.clock[0]+600,'power_w':500,'maximum_power_w':500,'minimum_soc':60}
   self.hass.states.async_set('sensor.inverter_battery',90);self.refresh();await self.ticks[0]()
   self.assertTrue(b.active);self.assertFalse(b.stops)
@@ -616,7 +616,7 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
    values.update({f'number.inverter_program_{i}_soc':30,f'number.inverter_program_{i}_power':10000,
     f'select.inverter_program_{i}_charging':'Disabled',f'time.inverter_program_{i}_time':f'{(i-1)*4:02d}:00:00'})
   for key,value in values.items():self.hass.states.async_set(key,value)
-  registers={0:5,98:1,109:175,111:1,130:0,142:2,143:9300,145:0,146:255,213:200,219:200,340:12000}
+  registers={0:5,98:1,108:175,109:175,111:1,130:0,142:2,143:9300,145:0,146:255,212:200,213:200,218:300,219:200,340:12000}
   for address in range(98,112):registers.setdefault(address,0)
   for address in range(142,178):registers.setdefault(address,0)
   for i in range(6):registers.update({148+i:i*400,154+i:10000,166+i:30,172+i:0})
@@ -933,5 +933,15 @@ class SimpleAdapterTests(unittest.IsolatedAsyncioTestCase):
   self.assertTrue(data['battery_controller'].active)
   self.assertTrue(data['settings']['automatic'])
 
+
+
+ async def test_future_charge_proof_is_archived_and_bad_temperature_removes_credit(self):
+  data=await self.setup();q=math.ceil(self.clock[0]/900)*900;self.clock[0]=q;self.prices(q);self.refresh();await self.ticks[0]()
+  p=self.hass.states.get('sensor.jarvis_energy_sales').attributes['weather_reserve']
+  self.assertGreater(p['charge_limit_kw'],0);self.assertEqual(p['charge_evidence']['registers'][108],175)
+  self.assertIsInstance(p['charge_evidence']['voltage_reported_at'],float)
+  self.hass.states.async_set('sensor.inverter_battery_temperature',60);self.refresh();await self.ticks[0]()
+  p=self.hass.states.get('sensor.jarvis_energy_sales').attributes['weather_reserve']
+  self.assertEqual(p['charge_limit_kw'],0);self.assertEqual(p['battery_charge_credit_kwh'],0)
 
 if __name__=='__main__':unittest.main()

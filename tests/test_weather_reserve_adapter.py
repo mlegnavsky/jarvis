@@ -18,13 +18,13 @@ class ReserveAdapter(unittest.IsolatedAsyncioTestCase):
   self.h=types.SimpleNamespace(data={},states=self.states)
  async def test_bootstrap_counter_durable_history_and_higher_consumption(self):
   p=await self.mod.async_setup_weather_reserve(self.h);r=p['snapshot'](self.block,23.552)
-  self.assertEqual(r['required_soc'],75);self.assertGreaterEqual(r['house_daily_kwh'],8);self.assertEqual(r['load_quality'],'bootstrap_or_partial')
+  self.assertEqual(r['house_daily_kwh'],6);self.assertEqual(r['load_quality'],'owner_baseline')
   self.states.async_set('sensor.inverter_today_load_consumption',18);r=p['snapshot'](self.block,23.552)
-  self.assertGreaterEqual(r['required_soc'],90)
+  self.assertEqual(r['house_daily_kwh'],6) # Partial counter must never be extrapolated.
   await p['sample']();self.assertTrue(self.store.data['days']);self.assertTrue(self.store.data['history'])
  async def test_unavailable_weather_does_not_reuse_old_forecast(self):
   p=await self.mod.async_setup_weather_reserve(self.h)
-  self.assertEqual(p['snapshot'](self.block,23.552)['required_soc'],75)
+  self.assertEqual(p['snapshot'](self.block,23.552)['quality'],'estimated')
   self.states.async_set('sensor.jarvis_pocasi_zitenice','unavailable')
   self.assertEqual(p['snapshot'](self.block,23.552)['required_soc'],100)
  async def test_storage_failure_is_visible_and_keeps_safe_calculation(self):
@@ -38,4 +38,13 @@ class ReserveAdapter(unittest.IsolatedAsyncioTestCase):
   self.now+=60;self.states.async_set('sensor.jarvis_spotreba_domu',100000);p['snapshot'](self.block,23.552)
   self.now+=60;self.states.async_set('sensor.jarvis_spotreba_domu',300);r=p['snapshot'](self.block,23.552)
   self.assertEqual(r['load_covered_hours'],0)
-  self.assertEqual(r['required_soc'],75)
+  self.assertEqual(r['quality'],'estimated')
+
+ async def test_only_verified_complete_days_raise_owner_baseline(self):
+  self.store.data={'days':{'2026-11-06':{'counter_kwh':99,'integrated_kwh':30,'covered_seconds':86400}},'verified_days_v2':{'2026-11-06':{'integrated_kwh':10,'covered_seconds':86400}}}
+  p=await self.mod.async_setup_weather_reserve(self.h);r=p['snapshot'](self.block,23.552)
+  self.assertEqual(r['house_daily_kwh'],10);self.assertEqual(r['load_quality'],'complete_measured_days');self.assertEqual(r['learning_days'],1)
+ async def test_legacy_and_incomplete_days_never_inflate_daily_average(self):
+  self.store.data={'days':{'2026-11-06':{'counter_kwh':99,'integrated_kwh':30,'covered_seconds':86400}},'verified_days_v2':{'2026-11-06':{'integrated_kwh':18,'covered_seconds':36000}}}
+  p=await self.mod.async_setup_weather_reserve(self.h);r=p['snapshot'](self.block,23.552)
+  self.assertEqual(r['house_daily_kwh'],6);self.assertEqual(r['learning_days'],0)

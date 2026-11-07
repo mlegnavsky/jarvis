@@ -19,6 +19,7 @@ from .diagnostics import diagnostic_snapshot
 from .native_window import NativeWindow,WRITABLE
 from .planning_setup import async_setup_planning
 from .weather_reserve_setup import async_setup_weather_reserve
+from .charge_credit import charge_limit
 from .simple_sales import choose_daily_block,size_sale
 from .upcoming_plan import build_next_plan,valid_prepared_block
 from .battery_native import BatterySaleController,WRITABLE as BATTERY_WRITABLE
@@ -36,7 +37,7 @@ from .owner_settings import DEFAULTS as POLICY_DEFAULTS,validate as validate_pol
 
 DOMAIN='jarvis_spot_control'
 KEY=DOMAIN+'_sales'
-VERSION='1.1.2'
+VERSION='1.1.3'
 AUTO_EXPORT_LIMIT=9300
 
 async def async_setup_sales(hass,config,charge_controller):
@@ -61,7 +62,7 @@ async def async_setup_sales(hass,config,charge_controller):
  if cycle_acceptance(prefs.get('battery_sale_proof'))['failed']:
   prefs.update(automatic=False,battery_verified=False,inhibited=True)
  journal=await hass.async_add_executor_job(Journal,Path(hass.config.path('.storage','jarvis_energy_sales.sqlite')))
- lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();report_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={};window=None;battery=None;last_native_read=0;planning=None;last_power_adjust=0;weather_planning=None;measurement_healthy_since=None;house_profile_confirmed=False;profile_issues=[]
+ lock=asyncio.Lock();command_lock=asyncio.Lock();history_lock=asyncio.Lock();report_lock=asyncio.Lock();ready=False;last_reason='Připravuji měření.';last_decision=None;last_report=0;native_program={};charge_evidence={'registers':{},'captured_at':0};window=None;battery=None;last_native_read=0;planning=None;last_power_adjust=0;weather_planning=None;measurement_healthy_since=None;house_profile_confirmed=False;profile_issues=[]
  incidents=await hass.async_add_executor_job(journal.recent_kind,'supervision_incident',20)
  supervisor=Supervisor(hass,incidents=[r['payload'] for r in incidents])
  last_daily_bucket=None;daily_error=''
@@ -80,7 +81,12 @@ async def async_setup_sales(hass,config,charge_controller):
    if block is None:
     selected=prefs.get('selected_block')
     block=selected if isinstance(selected,dict) and number(selected.get('end')) is not None and selected['end']>time.time() else (build_next_plan(quotes(),time.time(),policy()['block_minutes']).get('block'))
-   if weather_planning:return weather_planning['snapshot'](block,capacity()['capacity_kwh'],policy()['sale_soc'])
+   if weather_planning:
+    limit=charge_limit(charge_evidence['registers'],charge_evidence['captured_at'],time.time(),fresh_number('sensor.inverter_battery_voltage'),fresh_number('sensor.inverter_battery_temperature'))
+    result=weather_planning['snapshot'](block,capacity()['capacity_kwh'],policy()['sale_soc'],charge_limit_kw=limit)
+    result['charge_evidence_at']=charge_evidence['captured_at']
+    result['charge_evidence']={'registers':dict(charge_evidence['registers']),'captured_at':charge_evidence['captured_at'],'voltage_v':fresh_number('sensor.inverter_battery_voltage'),'temperature_c':fresh_number('sensor.inverter_battery_temperature'),'voltage_reported_at':source_stamp('sensor.inverter_battery_voltage'),'temperature_reported_at':source_stamp('sensor.inverter_battery_temperature')}
+    return result
   except Exception:pass
   return {'required_soc':100,'quality':'unavailable','reason':'Výpočet rezervy podle počasí není dostupný; baterii ponechávám domu.'}
  def sale_floor(block=None):
@@ -126,6 +132,10 @@ async def async_setup_sales(hass,config,charge_controller):
    if not 0<=time.time()-issued<=2100:return None
    return price_at(a.get('rows',[]),time.time(),a.get('rate'),policy()['sale_fee'])
   except (KeyError,TypeError,ValueError):return None
+ def source_stamp(entity_id):
+  state=hass.states.get(entity_id)
+  at=(getattr(state,'last_reported',None) or getattr(state,'last_updated',None)) if state else None
+  return at.timestamp() if at else None
  def fresh_number(entity_id,max_age=30):
   state=hass.states.get(entity_id)
   if state is None:return None
@@ -298,6 +308,7 @@ async def async_setup_sales(hass,config,charge_controller):
    date=datetime(2000+(clock[0]>>8),clock[0]&255,clock[1]>>8,clock[1]&255,clock[2]>>8,clock[2]&255,tzinfo=ZoneInfo('Europe/Prague'))
    native_program={'captured_at':datetime.now(timezone.utc).isoformat(),'clock_local':date.isoformat(),'clock_error_seconds':date.timestamp()-time.time(),'clock_registers':clock,'registers_146_177':program,'max_pv_power_raw':pv[0],'bms_discharge_limit_a':bms[1],'bms_max_discharge_limit_a':bms[7],
     'register_104':controls[6],'register_109':controls[11],'native_grid_target_w':controls[6],'configured_discharge_current_a':controls[11]}
+   charge_evidence.update(registers={108:controls[10],212:bms[0],218:bms[6]},captured_at=time.time())
    prefs['native_grid_target_w']=controls[6]
   except Exception as exc:native_program={'error':type(exc).__name__+': '+str(exc)[:120]}
  async def write(entity,value,readback_required=True):
@@ -342,7 +353,9 @@ async def async_setup_sales(hass,config,charge_controller):
   if runtime is None:raise ValueError('Inverter is not ready')
   return runtime.device
  async def native_test_read():
-  return await read_snapshot(native_device())
+  result=await read_snapshot(native_device())
+  charge_evidence.update(registers={k:result['registers'].get(k) for k in (108,212,218)},captured_at=time.time())
+  return result
  async def native_test_write(address,value):
   if address not in WRITABLE|BATTERY_WRITABLE:raise ValueError('Native register is outside commissioning scope')
   device=native_device()

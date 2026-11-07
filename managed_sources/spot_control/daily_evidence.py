@@ -48,5 +48,5 @@ def daily_snapshot(get,body,finance,now):
   'electrical':{key:read(entity,30) for key,entity in ELECTRICAL.items()},'finance':f,
   'plan':{key:plan.get(key) for key in ('day','start','end','average_net')},
   'operation':{'active':bool(body.get('active')),'mode':body.get('mode'),'phase':body.get('phase'),'reason':body.get('reason'),'error':body.get('error'),'minimum_soc':body.get('sale_floor_soc'),'completed':body.get('completed_battery_plan')},
-  'forecast':{key:weather.get(key) for key in ('forecast_day','forecast_pv_kwh','forecast_issued_at','house_daily_kwh','required_soc','load_quality','learning_days')},
+  'forecast':{key:weather.get(key) for key in ('forecast_day','forecast_days','forecast_pv_kwh','forecast_issued_at','house_daily_kwh','required_soc','load_quality','learning_days','horizon_start','horizon_end','night_usage_soc','night_with_margin_soc','charge_limit_kw','battery_charge_credit_kwh','lowest_soc','feasible','intervals','capacity_kwh','owner_floor_soc','weather_tier_soc','energy_floor_soc','charge_evidence','solar_times','house_profile','forecast_haircut_percent','house_margin_percent')},
   'notice':'Průběžné denní čítače a okamžité hodnoty po5 minutách; nejde o5minutové průměry ani úplný den. Ztráty jsou bilanční rozdíl, nikoli měřená účinnost.'}
