@@ -310,6 +310,13 @@
       ],
       "source": "jarvis/app/workspace_admin.py"
     },
+    "voice_latency_probe": {
+      "arguments": [
+        "expected_revision",
+        "pipeline_id"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
     "voice_pipeline_agent": {
       "arguments": [
         "conversation_engine",

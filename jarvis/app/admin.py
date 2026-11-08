@@ -15,6 +15,7 @@ from .ha import UpstreamError
 from .policy import APIError
 
 FIELDS = {
+    'voice_latency_probe': {'pipeline_id','expected_revision'},
     'voice_pipeline_agent': {'pipeline_id','conversation_engine','expected_revision'},
     'voice_pipeline_restore': {'backup_id','expected_revision'},
     'voice_pipeline_settings': {'pipeline_id','tts_voice','expected_revision'},
@@ -341,6 +342,8 @@ class Admin:
             return await workspace_admin.perform(self, key, operation, args)
         if operation == 'voice_pipeline_settings':
             return await voice_settings.change(self,key,args)
+        if operation == 'voice_latency_probe':
+            return await voice_settings.probe(self,key,args)
         if operation == 'voice_pipeline_agent':
             return await voice_settings.change_agent(self,key,args)
         if operation == 'voice_pipeline_restore':

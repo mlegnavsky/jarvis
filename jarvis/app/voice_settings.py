@@ -9,6 +9,45 @@ from . import integration_admin
 
 VOICES={'alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','shimmer','verse','marin','cedar'}
 
+async def probe(admin, key, args):
+ """One fixed greeting, text-only through the existing official native agent."""
+ target=args['pipeline_id']
+ if not isinstance(target,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}',target):
+  raise APIError(400,'invalid_voice_pipeline')
+ before=await read(admin,target)
+ if before['revision']!=args['expected_revision']:raise APIError(409,'voice_pipeline_changed')
+ if before['pipeline'].get('conversation_engine')!='conversation.openai_conversation':
+  raise APIError(400,'native_conversation_agent_required')
+ ws=None;times={}
+ try:
+  async with asyncio.timeout(admin.sup.timeout):
+   ws=await admin.sup._websocket()
+   await ws.send_json({'id':1,'type':'assist_pipeline/run','pipeline':target,
+    'start_stage':'intent','end_stage':'intent',
+    'input':{'text':'Ahoj, jak se máš? Odpověz jednou krátkou větou.'}})
+   for _ in range(200):
+    value=await ws.receive_json()
+    if value.get('id')!=1:continue
+    if value.get('type')=='result' and not value.get('success'):
+     raise APIError(502,'voice_probe_native_rejected')
+    event=value.get('event') or {}
+    kind=event.get('type')
+    if kind=='error':raise APIError(502,'voice_probe_native_error')
+    if kind in ('run-start','intent-start','intent-end','run-end'):
+     stamp=datetime.fromisoformat(event['timestamp'])
+     if stamp.tzinfo is None:raise APIError(502,'voice_probe_invalid_timestamp')
+     times[kind]=stamp
+    if kind=='run-end':break
+   if not all(k in times for k in ('run-start','intent-start','intent-end','run-end')):
+    raise APIError(502,'voice_probe_incomplete')
+   duration=(times['intent-end']-times['intent-start']).total_seconds()
+   total=(times['run-end']-times['run-start']).total_seconds()
+   if duration<0 or total<0:raise APIError(502,'voice_probe_invalid_timestamp')
+   return {'verified':True,'intent_s':round(duration,3),'total_s':round(total,3),
+    'physical_playback_performed':False,'microphone_used':False,'transcripts_exposed':False}
+ finally:
+  if ws:await ws.close()
+
 async def runs(admin, target):
  """Read existing native runs only; never capture audio or expose provider data."""
  if not isinstance(target,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}',target):

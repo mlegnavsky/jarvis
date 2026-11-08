@@ -65,6 +65,18 @@ class IntegrationAdminTests(unittest.IsolatedAsyncioTestCase):
         value = public_form({'type': 'form', 'data_schema': [{'name': 'nested', 'schema': [{'name': 'arbitrary', 'default': 'secret', 'description': {'suggested_value': 'secret'}}]}]})
         self.assertNotIn('secret', str(value))
 
+    async def test_only_typed_performance_settings_are_visible_for_readback(self):
+        from app.integration_admin import public_form
+        value = public_form({'type':'form','data_schema':[
+            {'name':'chat_model','default':'gpt-4o-mini','description':{'suggested_value':'gpt-4.1-nano'}},
+            {'name':'max_tokens','default':3000,'description':{'suggested_value':256}},
+            {'name':'prompt','default':'private instructions'},
+            {'name':'password','default':'secret'}]})
+        self.assertEqual(value.get('performance_settings'),{'model':'gpt-4.1-nano','output_limit':256})
+        self.assertNotIn('private instructions',str(value));self.assertNotIn('secret',str(value))
+        bad = public_form({'data_schema':[{'name':'chat_model','default':'private-api-key'},{'name':'max_tokens','default':'secret'}]})
+        self.assertEqual(bad.get('performance_settings'),{})
+
     async def test_subentry_settings_use_owned_native_subentry_route(self):
         sub = (await self.worker.read('integration_subentries', 'entry1'))['items'][0]
         opened = await self.complete('integration_subentry_options_start', {'entry_id': 'entry1', 'subentry_id': 'sub1', 'expected_revision': sub['revision']}, 'sub-open')

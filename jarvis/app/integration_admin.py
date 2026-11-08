@@ -57,6 +57,18 @@ def public_form(value):
     # Nested expandable/selector schemas can also hold private defaults.
     form['data_schema'] = without_defaults(value.get('data_schema', []))
     form = redact(form)
+    performance = {}
+    models = {'gpt-4o-mini','gpt-4o','gpt-4.1-nano','gpt-4.1-mini','gpt-4.1','gpt-5-mini','gpt-5-nano'}
+    for field in value.get('data_schema', []):
+        if not isinstance(field, dict):
+            continue
+        description = field.get('description') or {}
+        selected = description.get('suggested_value', field.get('default')) if isinstance(description, dict) else field.get('default')
+        if field.get('name') == 'chat_model' and isinstance(selected, str) and selected in models:
+            performance['model'] = selected
+        if field.get('name') == 'max_tokens' and type(selected) is int and 1 <= selected <= 1000000:
+            performance['output_limit'] = selected
+    form['performance_settings'] = performance
     form['revision'] = revision(value)
     return form
 

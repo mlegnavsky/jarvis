@@ -1,3 +1,8 @@
+# 3.12.10
+
+- Verify native conversation latency with a fixed text-only greeting, no microphone or playback.
+- Expose only allowlisted model identifiers and bounded integer output limits from native options forms for settings readback; retain credential and prompt redaction.
+
 # 3.12.9
 
 - Read the last five existing native Assist runs as bounded event timestamps and stage durations. No audio capture, transcripts, provider payloads or voice runtime changes.
