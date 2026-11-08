@@ -1,3 +1,7 @@
+# 3.12.9
+
+- Read the last five existing native Assist runs as bounded event timestamps and stage durations. No audio capture, transcripts, provider payloads or voice runtime changes.
+
 # 3.12.8
 
 - Select an existing official OpenAI conversation entity in a native Assist pipeline with CAS, unchanged audio providers, full native readback and private before-image restore. Native local intents handle ordinary supported commands first.

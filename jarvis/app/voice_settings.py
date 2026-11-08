@@ -2,11 +2,47 @@
 import asyncio
 import re
 import json
+from datetime import datetime
 from .diagnostics import websocket_query
 from .policy import APIError
 from . import integration_admin
 
 VOICES={'alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','shimmer','verse','marin','cedar'}
+
+async def runs(admin, target):
+ """Read existing native runs only; never capture audio or expose provider data."""
+ if not isinstance(target,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}',target):
+  raise APIError(400,'invalid_voice_pipeline')
+ listing=await websocket_query(admin.sup,'assist_pipeline/pipeline_debug/list',{'pipeline_id':target})
+ history=listing.get('pipeline_runs',[])
+ allowed={'run-start','stt-start','stt-vad-start','stt-vad-end','stt-end','intent-start','intent-end','tts-start','tts-end','run-end','error'}
+ output=[]
+ for item in history[-5:]:
+  run_id=item.get('pipeline_run_id')
+  if not isinstance(run_id,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}',run_id):continue
+  value=await websocket_query(admin.sup,'assist_pipeline/pipeline_debug/get',{'pipeline_id':target,'pipeline_run_id':run_id})
+  timeline=[];times={}
+  for event in value.get('events',[])[:200]:
+   kind=event.get('type')
+   if kind not in allowed:continue
+   try:
+    stamp=datetime.fromisoformat(event['timestamp'])
+    if stamp.tzinfo is None:continue
+   except (KeyError,TypeError,ValueError):continue
+   timeline.append({'type':kind,'timestamp':stamp.isoformat()})
+   times.setdefault(kind,stamp)
+  def span(a,b):
+   if a not in times or b not in times:return None
+   delta=(times[b]-times[a]).total_seconds()
+   return round(delta,3) if delta>=0 else None
+  output.append({'id':run_id,'timeline':timeline,'complete':'run-end' in times,
+   'error':any(e.get('type')=='error' for e in value.get('events',[])[:200]),
+   'timings_s':{'capture_until_vad_end':span('stt-start','stt-vad-end'),
+    'stt_processing':span('stt-vad-end','stt-end'),'intent':span('intent-start','intent-end'),
+    'tts':span('tts-start','tts-end'),'vad_end_to_tts_ready':span('stt-vad-end','tts-end'),
+    'total_pipeline':span('run-start','run-end')}})
+ return {'pipeline_id':target,'runs':output,'truncated':len(history)>5,
+  'physical_playback_measured':False,'raw_audio_exposed':False,'transcripts_exposed':False}
 
 async def native_agent_entry(admin,entity_id):
  registry=await admin.sup.registry('entity')

@@ -164,6 +164,8 @@ class Admin:
             return integration_admin.public_form(await integration_admin.get_form(self, target))
         if query == 'voice_pipeline':
             return await voice_settings.read(self,target)
+        if query == 'voice_runs':
+            return await voice_settings.runs(self,target)
         if query == 'voice_pipelines':
             value = await diagnostics.websocket_query(self.sup, 'assist_pipeline/pipeline/list')
             return redact(value)
