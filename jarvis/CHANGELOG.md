@@ -1,3 +1,7 @@
+# 3.12.11
+
+- Adjust native end-of-speech sensitivity only on an already authorized ESPHome Assist device, with revision check and actual state readback. No firmware flash or custom voice hooks.
+
 # 3.12.10
 
 - Verify native conversation latency with a fixed text-only greeting, no microphone or playback.

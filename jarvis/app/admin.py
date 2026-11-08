@@ -15,6 +15,7 @@ from .ha import UpstreamError
 from .policy import APIError
 
 FIELDS = {
+    'voice_endpoint_settings': {'entity_id','option','expected_revision'},
     'voice_latency_probe': {'pipeline_id','expected_revision'},
     'voice_pipeline_agent': {'pipeline_id','conversation_engine','expected_revision'},
     'voice_pipeline_restore': {'backup_id','expected_revision'},
@@ -165,6 +166,8 @@ class Admin:
             return integration_admin.public_form(await integration_admin.get_form(self, target))
         if query == 'voice_pipeline':
             return await voice_settings.read(self,target)
+        if query == 'voice_endpoint':
+            return await voice_settings.endpoint(self,target)
         if query == 'voice_runs':
             return await voice_settings.runs(self,target)
         if query == 'voice_pipelines':
@@ -332,6 +335,8 @@ class Admin:
     async def perform(self, key, operation, args):
         self.allowed(write=True)
         operations.guard(self,operation,args)
+        if operation == 'voice_endpoint_settings':
+            return await voice_settings.endpoint_change(self,key,args)
         if operation in deployments.FIELDS:
             return await deployments.perform(self,key,operation,args)
         if operation in operations.FIELDS:

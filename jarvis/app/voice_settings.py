@@ -9,6 +9,39 @@ from . import integration_admin
 
 VOICES={'alloy','ash','ballad','coral','echo','fable','nova','onyx','sage','shimmer','verse','marin','cedar'}
 
+async def endpoint(admin, target):
+ """Native end-of-speech select on an already authorized Assist device only."""
+ from .admin import revision
+ if not isinstance(target,str) or not re.fullmatch(r'select\.[a-z0-9_]{1,150}',target):
+  raise APIError(400,'invalid_voice_endpoint')
+ registry=await admin.sup.registry('entity')
+ item=next((e for e in registry if e.get('entity_id')==target),{})
+ device=item.get('device_id')
+ allowed=admin.options.get('allowed_entities',[])
+ if (not device or item.get('platform')!='esphome' or item.get('disabled_by')
+     or not str(item.get('unique_id','')).endswith('-vad_sensitivity')
+     or not any(e.get('device_id')==device and e.get('platform')=='esphome'
+       and not e.get('disabled_by') and str(e.get('unique_id','')).endswith('-pipeline')
+       and e.get('entity_id') in allowed for e in registry)):
+  raise APIError(403,'authorized_voice_device_required')
+ state=await admin.sup.request('GET','/core/api/states/'+target)
+ options=state.get('attributes',{}).get('options',[])
+ if state.get('entity_id')!=target or set(options)!={'default','relaxed','aggressive'} or state.get('state') not in options:
+  raise APIError(409,'voice_endpoint_unavailable')
+ value={'entity_id':target,'state':state['state'],'options':options}
+ return {**value,'revision':revision(value)}
+
+async def endpoint_change(admin,key,args):
+ if args['option'] not in ('default','relaxed','aggressive'):raise APIError(400,'invalid_voice_endpoint_option')
+ if not hasattr(admin,'_voice_settings_lock'):admin._voice_settings_lock=asyncio.Lock()
+ async with admin._voice_settings_lock:
+  before=await endpoint(admin,args['entity_id'])
+  if before['revision']!=args['expected_revision']:raise APIError(409,'voice_endpoint_changed')
+  admin.remember(key,before)
+  await admin.sup.request('POST','/core/api/services/select/select_option',{'entity_id':args['entity_id'],'option':args['option']})
+  after=await endpoint(admin,args['entity_id'])
+  return {**after,'verified':after['state']==args['option'],'restart_required':False}
+
 async def probe(admin, key, args):
  """One fixed greeting, text-only through the existing official native agent."""
  target=args['pipeline_id']

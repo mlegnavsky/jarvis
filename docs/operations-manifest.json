@@ -310,6 +310,14 @@
       ],
       "source": "jarvis/app/workspace_admin.py"
     },
+    "voice_endpoint_settings": {
+      "arguments": [
+        "entity_id",
+        "expected_revision",
+        "option"
+      ],
+      "source": "jarvis/app/admin.py"
+    },
     "voice_latency_probe": {
       "arguments": [
         "expected_revision",
