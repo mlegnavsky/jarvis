@@ -23,7 +23,7 @@ async def async_setup(hass,config):
         if any(getattr(controller,'active',False) for controller in controllers):return False
         if sales.get('clock_sync_active'):return False
         busy=sales.get('busy')
-        if callable(busy) and busy():return False
+        if callable(busy) and busy() and not (c.active and c.record.get('purpose')=='heating'):return False
         now=dt_util.utcnow()
         for e in ('sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_grid_power','sensor.inverter_battery_temperature','number.inverter_battery_max_charging_current'):
             s=hass.states.get(e)
@@ -57,7 +57,7 @@ async def async_setup(hass,config):
         return result
     def report():
         phase=c.record.get('phase','idle')
-        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.6.6','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'active':c.active,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
+        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.6.7','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'purpose':c.record.get('purpose'),'target_w':c.record.get('target_w'),'charge_amps':c.record.get('amps'),'active':c.active,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
     async def start(call):
         if not ready or not healthy():raise HomeAssistantError('Čekám na aktuální měření měniče.')
         now=dt_util.now()

@@ -13,11 +13,11 @@ def controls(entity,room,name):
    "{% if is_state('"+entity+"','on') and state_attr('"+status+"','mode') == 'grid_manual' %}"
    '**Ruční topení ze sítě je zapnuté.**'
    '{% else %}**Stav:** {{ states(\''+status+"') }}{% endif %}\n\n"
-   'Vypne se při **24 °C v dětském pokoji** nebo tlačítkem Vypnout. Rezerva baterie **30 % zůstává zachovaná**.\n\n'
+   'Současně se baterie dobíjí přibližně **1 kW ze sítě**. Vypne se při **24 °C v dětském pokoji** nebo tlačítkem Vypnout. Rezerva baterie **30 % zůstává zachovaná**.\n\n'
    "{% if not state_attr('"+status+"','grid_ready') %}"
    "{{ state_attr('"+status+"','grid_reason') or 'Čeká na aktuální údaje měniče.' }}{% endif %}"},
   {'type':'grid','columns':2,'square':False,'cards':[
-   {'type':'button','name':'Zapnout topení ze sítě','icon':'mdi:transmission-tower','show_state':False,'tap_action':{'action':'perform-action','perform_action':'jarvis_solar_heating.set_mode','data':{'room':room,'mode':'grid_manual'}},'hold_action':{'action':'none'}},
+   {'type':'button','name':'Zapnout topení a dobíjení 1 kW','icon':'mdi:transmission-tower','show_state':False,'tap_action':{'action':'perform-action','perform_action':'jarvis_solar_heating.set_mode','data':{'room':room,'mode':'grid_manual'}},'hold_action':{'action':'none'}},
    {'type':'button','name':'Vypnout radiátor','icon':'mdi:radiator-off','show_state':False,'tap_action':{'action':'perform-action','perform_action':'jarvis_solar_heating.set_mode','data':{'room':room,'mode':'off'}},'hold_action':{'action':'none'}}]},
   {'type':'entities','title':'Aktuální stav','show_header_toggle':False,'entities':[
    {'entity':status,'name':'Řízení topení'},
@@ -79,7 +79,7 @@ def patch_entrypoints(text):
   if any(line.rstrip()==marker for line in lines[start:end]):continue
   at=next(i for i in range(start,end) if lines[i].rstrip()=='  cards:')+1
   grid=controls(entity,room,name)[1]
-  grid['cards'][0]['name']='Zapnout ze sítě do 24 °C'
+  grid['cards'][0]['name']='Zapnout topení + dobíjení 1 kW'
   generated=yaml.safe_dump([grid],allow_unicode=True,sort_keys=False,width=140)
   lines[at:at]=[marker+'\n']+['  '+line+'\n' for line in generated.splitlines()]
  return ''.join(lines)

@@ -34,6 +34,8 @@ class Controller:
   s=saved or {};self.settings=dict(DEFAULTS);self.configure(s.get('settings',{}));self.samples=s.get('samples',[])
   self.manual={r:bool(s.get('manual',{}).get(r,False)) for r in ROOMS}
   self.grid_manual={r:bool(s.get('grid_manual',{}).get(r,False)) for r in ROOMS}
+  self.grid_stop={r:str(s.get('grid_stop',{}).get(r,'')) for r in ROOMS}
+  self.grid_discharge_since={r:s.get('grid_discharge_since',{}).get(r) for r in ROOMS}
   self.manual_off_until={r:float(s.get('manual_off_until',{}).get(r,0)) for r in ROOMS}
   self.off_until={r:float(s.get('off_until',{}).get(r,0)) for r in ROOMS}
   self.on_since={r:float(s.get('on_since',{}).get(r,0)) for r in ROOMS}
@@ -48,12 +50,14 @@ class Controller:
   if not all(60<=new[k]<=3600 for k in ('min_off_s','living_delay_s','living_shed_s','child_shed_s')) or new['child_shed_s']<=new['living_shed_s'] or not 50<=new['discharge_w']<=3000:raise ValueError('invalid_timing_settings')
   self.settings=new
  def dump(self):
-  return {k:getattr(self,k) for k in ('settings','samples','manual','grid_manual','manual_off_until','off_until','on_since','full','demand','discharge_since')}
+  return {k:getattr(self,k) for k in ('settings','samples','manual','grid_manual','grid_stop','grid_discharge_since','manual_off_until','off_until','on_since','full','demand','discharge_since')}
  def request_grid(self,room,now):
   if room not in ROOMS:raise ValueError('invalid_room')
-  self.external(room,True,now);self.manual[room]=False;self.grid_manual[room]=True
+  self.external(room,True,now);self.manual[room]=False;self.grid_manual[room]=True;self.grid_stop[room]='';self.grid_discharge_since[room]=None
  def external(self,room,on,now):
   self.grid_manual[room]=False
+  self.grid_discharge_since[room]=None
+  self.grid_stop[room]='Ručně vypnuto' if not on else ''
   self.manual[room]=on
   if not on:self.manual_off_until[room]=next_midnight(now);self.off_until[room]=now+self.settings['min_off_s'];self.on_since[room]=0
   else:self.manual_off_until[room]=0;self.on_since[room]=now
@@ -84,6 +88,10 @@ class Controller:
   out={}
   for room,on_threshold,off_threshold,watts in [('child',cfg['child_on_w'],cfg['child_off_w'],950),('living',cfg['living_on_w'],cfg['living_off_w'],2200)]:
    on=actual[room];desired=on;reason='Čeká na slunce'
+   was_grid=self.grid_manual[room]
+   if was_grid and numeric(soc) and soc<=30 and numeric(discharge) and discharge>cfg['discharge_w']:
+    if self.grid_discharge_since[room] is None or self.grid_discharge_since[room]>now:self.grid_discharge_since[room]=now
+   else:self.grid_discharge_since[room]=None
    if now<self.manual_off_until[room]:
     desired=False;reason='Stop pro dnešek';self.manual[room]=False;self.grid_manual[room]=False
    elif not temp_ok:
@@ -93,7 +101,9 @@ class Controller:
      desired=False;reason='Dosaženo 24 °C';self.grid_manual[room]=False
     elif not grid_ready:
      desired=False;reason=grid_reason;self.grid_manual[room]=False
-    else:desired=True;reason='Ručně · síť · do 24 °C'
+    elif self.grid_discharge_since[room] is not None and now-self.grid_discharge_since[room]>=30:
+     desired=False;reason='Ochrana 30 % · síť nepotvrdila převzetí spotřeby';self.grid_manual[room]=False
+    else:desired=True;reason='Ručně · '+energy_source(pv,discharge,load)+' · do 24 °C'
    elif temp>cfg['temp_off']:
     desired=False;reason='Dosaženo '+str(cfg['temp_off']).replace('.',',')+' °C';self.manual[room]=False
    elif self.manual[room]:
@@ -117,6 +127,7 @@ class Controller:
    elif not self.full and (discharge>cfg['discharge_w'] or pv-load<watts):
     desired=False;reason='Čeká na volný výkon'
    else:desired=True;reason=energy_source(pv,discharge,load)
+   if was_grid and not self.grid_manual[room]:self.grid_stop[room]=reason;self.grid_discharge_since[room]=None
    if on and not desired:
     self.off_until[room]=now+self.settings['min_off_s'];self.on_since[room]=0
    elif desired and not on:

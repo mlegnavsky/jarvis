@@ -1,4 +1,4 @@
-"""Read-only grid admission: never claim grid-only with usable battery reserve."""
+"""Manual override admission with connected grid and native minimum reserve."""
 import math
 ENTITIES=('binary_sensor.inverter_grid','select.inverter_work_mode','select.inverter_time_of_use','switch.inverter_export_surplus','sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_grid_power','binary_sensor.inverter_battery_alarm','binary_sensor.inverter_battery_fault',*(f'number.inverter_program_{i}_soc' for i in range(1,7)))
 
@@ -18,6 +18,9 @@ def check(get,now):
   floors=[float(values[f'number.inverter_program_{i}_soc']) for i in range(1,7)]
   if not all(math.isfinite(v) for v in [soc,power,grid,*floors]) or not 0<=soc<=100 or any(not 0<=v<=100 for v in floors):raise ValueError()
  except (ValueError,TypeError):return False,'Chybí stav baterie nebo rezervy měniče'
- if min(floors)<soc:return False,'Pro síťové topení musí být baterie na rezervě měniče'
- if power>100 or grid < -100:return False,'Síťové topení zastaveno: baterie se vybíjí nebo běží export'
+ # Explicit manual heat bypasses the heating-only 50% admission, not the
+ # inverter's independent reserve. SOC may rise or be above30% legitimately.
+ # Instant power is not a mode switch: transfer transients are handled over
+ # time by the policy, while the inverter continues to enforce its reserve.
+ if min(floors)<30:return False,'Nativní rezerva měniče je nižší než 30 %'
  return True,'Síť připravena'

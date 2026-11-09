@@ -153,10 +153,14 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
     controllers[key].active=False
    controllers['busy']=lambda:True
    self.assertFalse(charge.healthy(),'sale preparation owns control before active record exists')
+   charge.record={'before':{'owned':'value'},'purpose':'heating'}
+   self.assertTrue(charge.healthy(),'owned heating tolerates sales read lock')
+   controllers['controller'].active=True;self.assertFalse(charge.healthy(),'actual sale remains exclusive');controllers['controller'].active=False
+   charge.record={}
    controllers['busy']=lambda:False
    controllers['clock_sync_active']=True
    self.assertFalse(charge.healthy(),'RTC synchronization owns control')
-  self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.6')
+  self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.7')
  async def test_active_owner_conflict_latches_automatic_off_before_cleanup_finishes(self):
   from unittest.mock import AsyncMock
   data=await self.setup();await self.ticks[0]()

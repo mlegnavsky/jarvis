@@ -2,6 +2,10 @@
 import asyncio
 import time
 import math
+try:
+    from .heating_charge import HeatingChargeMixin
+except ImportError:
+    from heating_charge import HeatingChargeMixin
 TEST_CURRENT_LIMIT=175
 CURRENT='number.inverter_battery_grid_charging_current'
 SWITCH='switch.inverter_battery_grid_charging'
@@ -46,7 +50,7 @@ def equal(a,b):
     x,y=finite(a),finite(b)
     return x==y if x is not None and y is not None else a==b
 
-class Controller:
+class Controller(HeatingChargeMixin):
     def __init__(self,read,write,save,saved=None,clock=time.time,healthy=lambda:True):
         self.read,self.write,self.save,self.clock=read,write,save,clock
         self.healthy=healthy
@@ -74,6 +78,7 @@ class Controller:
     async def stop(self):
         async with self.lock: await self._restore()
     async def _restore(self):
+        if self.record.get('purpose')=='heating':return await self._restore_heating()
         if not self.active: return
         self.record['phase']='restoring'
         try:await self.save(self.record)
@@ -101,6 +106,7 @@ class Controller:
             return
         self.record={}
     async def tick(self,healthy=True):
+        if self.record.get('purpose')=='heating':return await self.tick_heating(healthy)
         if not self.active:return
         s=self.read();soc=finite(s.get('sensor.inverter_battery'))
         grid=finite(s.get('sensor.inverter_grid_power'));batt=finite(s.get('sensor.inverter_battery_power'))

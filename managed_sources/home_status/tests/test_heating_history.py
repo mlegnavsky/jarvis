@@ -48,7 +48,7 @@ class HistoryTests(unittest.TestCase):
   self.assertEqual(result.count('mode: \'off\''),2)
   self.assertIn('room: child',result);self.assertIn('room: living',result)
   self.assertEqual(result.count('entity: sensor.aqara_temp_humidity_sensor_t1_teplota'),2)
-  self.assertIn('Zapnout topení ze sítě',result)
+  self.assertIn('Zapnout topení a dobíjení 1 kW',result)
   self.assertIn('24 °C',result);self.assertIn('30 %',result)
  def test_idempotent_patch_and_missing_target_rejected(self):
   result=patch(FIXTURE);self.assertEqual(patch(result),result)
