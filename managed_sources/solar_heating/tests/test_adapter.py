@@ -3,13 +3,15 @@ import ast
 import hashlib
 import json
 import asyncio
-from datetime import datetime,timezone
+from datetime import datetime,timezone,timedelta
 import logging
 from pathlib import Path
 from types import SimpleNamespace as NS
 import time
 import unittest
 from engine import Controller,ROOMS,numeric
+from resource_bridge import refresh_resource
+from grid_guard import check as grid_check, ENTITIES as GRID_ENTITIES
 
 class Context:
  count=0
@@ -31,11 +33,13 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   source=Path(__file__).parents[1].joinpath('__init__.py').read_text();tree=ast.parse(source)
   constants=[n for n in tree.body if isinstance(n,ast.Assign)]
   fn=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='async_setup')
-  g=dict(hashlib=hashlib,json=json,asyncio=asyncio,datetime=datetime,timezone=timezone,logging=logging,time=time,vol=Vol(),Context=Context,callback=lambda f:f,Store=Store,Controller=Controller,ROOMS=ROOMS,numeric=numeric,EVENT_HOMEASSISTANT_STARTED='start',EVENT_HOMEASSISTANT_STOP='stop')
+  g=dict(timedelta=timedelta,grid_check=grid_check,GRID_ENTITIES=GRID_ENTITIES,refresh_resource=refresh_resource,hashlib=hashlib,json=json,asyncio=asyncio,datetime=datetime,timezone=timezone,logging=logging,time=time,vol=Vol(),Context=Context,callback=lambda f:f,Store=Store,Controller=Controller,ROOMS=ROOMS,numeric=numeric,EVENT_HOMEASSISTANT_STARTED='start',EVENT_HOMEASSISTANT_STOP='stop')
+  self.periodic=[]
+  g['async_track_time_interval']=lambda h,cb,interval:self.periodic.append((cb,interval))
   self.handlers=[];self.bus={};self.registered={};self.tasks=[];self.states={};self.calls=[]
   def set_state(entity,state,attrs=None,context=None):
    old=self.states.get(entity);ctx=context or Context()
-   new=NS(state=state,attributes=attrs or {},last_changed=datetime.now(timezone.utc),context=ctx)
+   new=NS(state=state,attributes=attrs or {},last_changed=datetime.now(timezone.utc),last_updated=datetime.now(timezone.utc),context=ctx)
    self.states[entity]=new
    for entities,cb in self.handlers:
     if entity in entities and (not old or old.state!=state):cb(NS(data={'entity_id':entity,'old_state':old,'new_state':new},context=ctx))
@@ -63,13 +67,55 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    pending=[t for t in self.tasks if not t.done()]
    if not pending:break
    await asyncio.gather(*pending)
+ async def prepare_grid(self):
+  v={'binary_sensor.inverter_grid':'on','select.inverter_work_mode':'Zero Export To CT','select.inverter_time_of_use':'Week','switch.inverter_export_surplus':'off','sensor.inverter_battery':'30','sensor.inverter_battery_power':'-40','sensor.inverter_grid_power':'340','binary_sensor.inverter_battery_alarm':'off','binary_sensor.inverter_battery_fault':'off'}
+  v.update({f'number.inverter_program_{i}_soc':'30' for i in range(1,7)})
+  for e,value in v.items():self.set_state(e,value)
+  self.set_state(self.g['SENSORS']['pv'],'0');await self.drain()
+ async def test_grid_mode_at30_stops_at_exact24_and_never_writes_inverter(self):
+  await self.prepare_grid()
+  c=self.hass.data['jarvis_solar_heating']['controller'];c.configure({'temp_on':21,'temp_off':22})
+  mode=self.registered[('jarvis_solar_heating','set_mode')]
+  await mode(NS(data={'room':'child','mode':'grid_manual'}));await self.drain()
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].attributes['mode'],'grid_manual')
+  self.assertEqual(self.states['switch.aqara_smart_plug_eu'].state,'on')
+  self.set_state(self.g['SENSORS']['temp'],'23.9');await self.drain()
+  self.assertEqual(self.states['switch.aqara_smart_plug_eu'].state,'on')
+  self.set_state(self.g['SENSORS']['temp'],'24');await self.drain()
+  self.assertEqual(self.states['switch.aqara_smart_plug_eu'].state,'off');self.assertFalse(c.grid_manual['child'])
+  self.assertFalse(any('.inverter_' in call[2].get('entity_id','') for call in self.calls))
+ async def test_grid_loss_stops_override_and_manual_off_locks(self):
+  await self.prepare_grid();mode=self.registered[('jarvis_solar_heating','set_mode')]
+  await mode(NS(data={'room':'living','mode':'grid_manual'}));await self.drain()
+  self.set_state('binary_sensor.inverter_grid','off');await self.drain()
+  self.assertEqual(self.states['switch.aqara_smart_plug_eu_2'].state,'off')
+  self.set_state('binary_sensor.inverter_grid','on');await self.drain()
+  await mode(NS(data={'room':'living','mode':'grid_manual'}));await self.drain()
+  await mode(NS(data={'room':'living','mode':'off'}));await self.drain()
+  self.assertEqual(self.states['sensor.jarvis_topeni_living'].attributes['mode'],'manual_off')
+ async def test_failed_grid_intent_save_does_not_leave_override_armed(self):
+  from unittest.mock import patch
+  await self.prepare_grid();mode=self.registered[('jarvis_solar_heating','set_mode')]
+  async def fail(*args):raise OSError('disk full')
+  with patch.object(Store,'async_save',fail):
+   with self.assertRaises(OSError):await mode(NS(data={'room':'child','mode':'grid_manual'}))
+  self.assertFalse(self.hass.data['jarvis_solar_heating']['controller'].grid_manual['child'])
+ async def test_frozen_telemetry_stops_without_any_state_change(self):
+  from unittest.mock import patch
+  await self.prepare_grid();mode=self.registered[('jarvis_solar_heating','set_mode')]
+  self.set_state(self.g['AUTOMATION'],'off');await self.drain()
+  await mode(NS(data={'room':'child','mode':'grid_manual'}));await self.drain()
+  self.assertTrue(self.periodic,'Independent manual safety watchdog required')
+  with patch.object(time,'time',return_value=time.time()+75):
+   await self.periodic[0][0](None);await self.drain()
+  self.assertEqual(self.states['switch.aqara_smart_plug_eu'].state,'off')
  async def test_auto_switch_context_does_not_enable_manual(self):
   c=self.hass.data['jarvis_solar_heating']['controller']
   self.assertFalse(c.manual['child']);self.assertEqual(self.states['switch.aqara_smart_plug_eu'].state,'on')
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Ze soláru')
  async def test_physical_off_returns_auto_and_holds_cooldown(self):
   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
-  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Ručně vypnuto do půlnoci')
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Stop pro dnešek')
  async def test_manual_on_then_temperature_safety(self):
   self.set_state('switch.aqara_smart_plug_eu_2','on');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_living'].state,'Ručně')
@@ -82,7 +128,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
  async def test_late_switch_confirmation_clears_previous_error(self):
   self.defer_switch=True
   self.set_state(self.g['SENSORS']['temp'],'23.6');await self.drain()
-  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Chyba ovládání')
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Čeká na vypnutí')
   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Dosaženo 23,5 °C')
   self.assertIsNone(self.states['sensor.jarvis_topeni_child'].attributes['last_error'])
@@ -115,3 +161,24 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
   for cb in self.bus['call_service']:cb(NS(data={'domain':'switch','service':'turn_off','service_data':{'entity_id':'switch.aqara_smart_plug_eu'}},context=Context()))
   self.set_state('switch.aqara_smart_plug_eu','off');await self.drain()
   self.assertEqual(self.states['sensor.jarvis_topeni_child'].attributes['mode'],'manual_off')
+
+ async def test_user_context_off_is_not_swallowed_by_matching_automatic_pending(self):
+  self.defer_switch=True
+  self.set_state(self.g['SENSORS']['temp'],'23.6');await self.drain()
+  context=Context();context.user_id='owner'
+  self.set_state('switch.aqara_smart_plug_eu','off',context=context);await self.drain()
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].attributes['mode'],'manual_off')
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Stop pro dnešek')
+ async def test_explicit_mode_off_while_already_off_stops_for_today_and_persists(self):
+  await self.registered[('jarvis_solar_heating','set_mode')](NS(data={'room':'living','mode':'off'}))
+  self.assertEqual(self.states['sensor.jarvis_topeni_living'].state,'Stop pro dnešek')
+  self.assertEqual(self.states['sensor.jarvis_topeni_living'].attributes['mode'],'manual_off')
+ async def test_delayed_confirmation_is_waiting_before_it_is_an_error(self):
+  from unittest.mock import patch
+  self.defer_switch=True;now=time.time()
+  self.set_state(self.g['SENSORS']['temp'],'23.6');await self.drain()
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Čeká na vypnutí')
+  self.assertIsNone(self.states['sensor.jarvis_topeni_child'].attributes['last_error'])
+  with patch.object(time,'time',return_value=now+16):
+   await self.registered[('jarvis_solar_heating','evaluate')](None)
+  self.assertEqual(self.states['sensor.jarvis_topeni_child'].state,'Chyba ovládání')

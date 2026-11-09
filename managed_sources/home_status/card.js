@@ -1,11 +1,46 @@
 /* Live home status: display only except explicitly tapped existing switch actions. */
 class JarvisDeviceStatus extends HTMLElement {
- setConfig(cfg){this.cfg=cfg;if(!this.shadowRoot)this.attachShadow({mode:'open'});this.onpointerdown=()=>{this.held=false;this.holdTimer=setTimeout(()=>{if(this.cfg.hold_action?.action==='navigate'){this.held=true;history.pushState(null,'',this.cfg.hold_action.navigation_path);window.dispatchEvent(new Event('location-changed'));}},600);};this.onpointerup=this.onpointercancel=this.onpointerleave=()=>clearTimeout(this.holdTimer);}
+ setConfig(cfg){
+  clearTimeout(this.holdTimer);this.cfg=cfg;if(!this.shadowRoot)this.attachShadow({mode:'open'});
+  this.onpointerdown=e=>{
+   if(e.button!==undefined&&e.button!==0)return;
+   clearTimeout(this.holdTimer);this.held=false;this.pointerHolding=true;this.holdOrigin={x:e.clientX,y:e.clientY};
+   this.holdTimer=setTimeout(()=>{
+    clearTimeout(this.holdTimer);
+    if(this.heatingRoom()){
+     this.held=true;this.activateGrid().catch(e=>{this.actionError=String(e?.message||'Síťové topení nelze spustit.').slice(0,160);this.render();});
+    }else if(this.cfg.hold_action?.action==='navigate'){
+     this.held=true;history.pushState(null,'',this.cfg.hold_action.navigation_path);window.dispatchEvent(new Event('location-changed'));
+    }
+   },this.heatingRoom()?3000:600);
+  };
+  this.onpointerup=()=>{clearTimeout(this.holdTimer);this.pointerHolding=false;if(this.held)this.render();};
+  this.onpointercancel=this.onpointerleave=()=>{clearTimeout(this.holdTimer);const active=this.pointerHolding;this.held=true;this.pointerHolding=false;if(active)this.render();};
+  this.onpointermove=e=>{if(this.holdOrigin&&Math.hypot(e.clientX-this.holdOrigin.x,e.clientY-this.holdOrigin.y)>10){clearTimeout(this.holdTimer);this.held=true;}};
+  this.oncontextmenu=e=>{if(this.heatingRoom())e.preventDefault();};
+ }
+ disconnectedCallback(){clearTimeout(this.holdTimer);}
+ heatingRoom(){return {'sensor.jarvis_topeni_child':'child','sensor.jarvis_topeni_living':'living'}[this.cfg?.heating_entity];}
+ async activateGrid(){
+  const room=this.heatingRoom();if(!room||this.describe().state!=='off')return;
+  const attrs=this.h.states[this.cfg.heating_entity]?.attributes;
+  if(attrs?.grid_ready===false)throw new Error(attrs.grid_reason||'Síťové topení není dostupné.');
+  this.actionError='';await this.h.callService('jarvis_solar_heating','set_mode',{room,mode:'grid_manual'});
+ }
  set hass(h){this.h=h;this.render();}
  number(v){if(v===null||v===undefined||String(v).trim()==='')return null;const n=Number(v);return Number.isFinite(n)?n:null;}
  describe(){const c=this.cfg,s=this.h.states[c.entity],state=s?.state,b=this.number(this.h.states[c.battery_entity]?.state),low=b!==null&&b<25,hold=this.h.states[c.heating_entity]?.attributes?.mode==='manual_off';const faulty=['jammed','unavailable','unknown'].includes(state)||!s||(c.fault_entities||[]).some(id=>this.h.states[id]?.state==='on');let icon=c.icon||'mdi:information',color=low||faulty?'#ef5350':c.kind==='label'?'#fff':state==='on'?'#ffcc19':'#4b7ca1';if(c.kind==='lock'){icon=state==='locked'?'mdi:lock':state==='unlocked'?'mdi:lock-open-variant':'mdi:lock-alert';color=low||faulty?'#ef5350':state==='locked'?'#4caf50':'#f5a623';}if(hold){icon='mdi:lock';if(!faulty&&!low)color='#f5a623';}return {state,battery:b,low,hold,faulty,icon,color};}
  escape(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
- render(){if(!this.h||!this.cfg||!this.shadowRoot)return;const d=this.describe(),c=this.cfg,s=this.h.states[c.entity],unit=s?.attributes?.unit_of_measurement||'',label=c.kind==='label',n=this.number(s?.state),text=n===null?s?.state||'Nedostupné':n.toLocaleString('cs-CZ',{maximumFractionDigits:2});this.style.setProperty('--status-color',d.color);this.shadowRoot.innerHTML=`<style>:host{display:block}button{display:flex;align-items:center;justify-content:center;gap:4px;position:relative;padding:0;border:0;background:transparent;color:var(--status-color);font:inherit;cursor:pointer;min-width:24px;min-height:24px}ha-icon{--mdc-icon-size:var(--status-icon-size,30px)}small{font-size:10px;white-space:nowrap}.badge{position:absolute;bottom:-10px;right:-8px;background:#b71c1c;color:white;border-radius:5px;padding:1px 3px;font-size:10px}button:focus-visible{outline:2px solid #fff;outline-offset:4px}</style><button aria-label="${this.escape(c.title||s?.attributes?.friendly_name||c.entity)}${d.hold?' · ručně vypnuto do půlnoci':''}${d.low?' · slabá baterie '+d.battery+' %':''}" title="${this.escape(c.title||c.entity)}${d.low?' · baterie '+d.battery+' %':''}">${label?`<span>${this.escape(text)} ${this.escape(unit)}</span>`:`<ha-icon icon="${d.icon}"></ha-icon>`}${d.low?`<small class="badge">${d.battery} %</small>`:''}</button>`;this.shadowRoot.querySelector('button').onclick=()=>{if(this.held){this.held=false;return;}if(c.tap_action?.action==='toggle'&&['on','off'].includes(d.state))this.h.callService(c.entity.split('.')[0],d.state==='on'?'turn_off':'turn_on',{entity_id:c.entity});else this.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:c.entity}}));};}
+ async activate(){
+  this.actionError='';
+  const c=this.cfg,d=this.describe();
+  if(c.tap_action?.action==='toggle'&&['on','off'].includes(d.state)){
+   const room={'sensor.jarvis_topeni_child':'child','sensor.jarvis_topeni_living':'living'}[c.heating_entity];
+   if(room)await this.h.callService('jarvis_solar_heating','set_mode',{room,mode:d.state==='on'?'off':'manual'});
+   else await this.h.callService(c.entity.split('.')[0],d.state==='on'?'turn_off':'turn_on',{entity_id:c.entity});
+  }else this.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:c.entity}}));
+ }
+ render(){if(!this.h||!this.cfg||!this.shadowRoot||this.pointerHolding)return;const d=this.describe(),c=this.cfg,s=this.h.states[c.entity],unit=s?.attributes?.unit_of_measurement||'',label=c.kind==='label',n=this.number(s?.state),text=n===null?s?.state||'Nedostupné':n.toLocaleString('cs-CZ',{maximumFractionDigits:2});this.style.setProperty('--status-color',d.color);this.shadowRoot.innerHTML=`<style>:host{display:block}button{display:flex;align-items:center;justify-content:center;gap:4px;position:relative;padding:0;border:0;background:transparent;color:var(--status-color);font:inherit;cursor:pointer;min-width:24px;min-height:24px}ha-icon{--mdc-icon-size:var(--status-icon-size,30px)}small{font-size:10px;white-space:nowrap}.badge{position:absolute;bottom:-10px;right:-8px;background:#b71c1c;color:white;border-radius:5px;padding:1px 3px;font-size:10px}button:focus-visible{outline:2px solid #fff;outline-offset:4px}</style><button aria-label="${this.escape(c.title||s?.attributes?.friendly_name||c.entity)}${d.hold?' · ručně vypnuto do půlnoci':''}${d.low?' · slabá baterie '+d.battery+' %':''}" title="${this.escape(c.title||c.entity)}${this.heatingRoom()?' · podrž 3 s pro síťové topení do 24 °C':''}${d.low?' · baterie '+d.battery+' %':''}">${label?`<span>${this.escape(text)} ${this.escape(unit)}</span>`:`<ha-icon icon="${d.icon}"></ha-icon>`}${this.h.states[c.heating_entity]?.attributes?.mode==='grid_manual'?`<small class="badge">Síť · 24 °C</small>`:''}${d.low?`<small class="badge">${d.battery} %</small>`:''}${this.actionError?`<small role="alert">${this.escape(this.actionError)}</small>`:''}</button>`;this.shadowRoot.querySelector('button').onclick=()=>{if(this.held){this.held=false;return;}this.activate().catch(()=>{this.actionError='Povel se nepodařilo provést.';this.render();});};}
 }
 class JarvisBatteryOverview extends HTMLElement {
  setConfig(cfg){this.cfg=cfg;if(!this.shadowRoot)this.attachShadow({mode:'open'});}

@@ -21,6 +21,7 @@ set_mode:
           options:
             - auto
             - manual
+            - grid_manual
             - 'off'
 
 configure:
