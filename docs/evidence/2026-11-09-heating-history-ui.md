@@ -7,3 +7,5 @@ No backend/controller/inverter setting change. Grid-only admission and24C stop r
 Validation:3 patcher tests passed; actual255529-byte dashboard parsed with all !include references preserved; exact semantic comparison confirmed only four radiator element types/custom-only fields and six added cards differ. Idempotence confirmed. Manifest/diff checks pass. Native HA perform-action syntax and service data use the installed1.3.0 contract. No physical heater commands or artificial temperature changes performed. No iPhone visual acceptance claimed.
 
 Deployment: pending supported CAS single-dashboard bundle, activation none, no Core restart. Exact receipt to follow.
+
+Verified deployment: heat-history-apply-20261109 state verified, phase file_written, activation none. Exact fresh dashboard readback matches generated output; revision cb99537850060f8bdcac2ab40885066453c49daf85161b757f48f4fa974cfa00. Source083f4c1fd6c1c3ff76478d41e358b7e9cc38ca78. No Core restart, backend changes or physical heater commands. Client must refresh dashboard to fetch native radiator icons and history cards; actual phone rendering remains owner's acceptance.
