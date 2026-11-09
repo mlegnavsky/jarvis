@@ -13,3 +13,5 @@ Architecture: retain live 1.2.3 fixes; new grid_manual engine state and read-onl
 Deployment blocker found:0.9 GiB free, minimum2.0. No deletion or bypass authorized. Before final activation offer exact obsolete unprotected backups for owner's deletion approval, preserving newest backup. Do not write half a live deployment while restart is blocked.
 
 Execution: tasks1–4 complete,46 Python and3 JS suites green. Review fixes: independent15s watchdog and held-button error render. Disk blocker resolved by owner, fresh3.4GiB; task5 activation in progress.
+
+Task5 complete: supported backed-up restart, active_verified receipt20:07:45UTC; runtime1.3.0 forboth rooms/UI ready, all7files exact and unchanged21/22settings/native30reserve. No physical24C test.
