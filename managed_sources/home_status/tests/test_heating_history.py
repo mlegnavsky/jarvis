@@ -1,5 +1,5 @@
 import unittest
-from heating_history import patch
+from heating_history import patch,patch_entrypoints
 
 FIXTURE='''title: Home
 views:
@@ -53,3 +53,16 @@ class HistoryTests(unittest.TestCase):
  def test_idempotent_patch_and_missing_target_rejected(self):
   result=patch(FIXTURE);self.assertEqual(patch(result),result)
   with self.assertRaises(ValueError):patch('views: []\n')
+ def test_room_status_labels_route_to_controls_and_buttons_are_visible_in_rooms(self):
+  import yaml
+  fixture='views:\n'
+  for room,path in [('child','pokoj-detsky'),('living','pokoj-obyvak')]:
+   fixture+='- title: Room\n  path: '+path+'\n  cards:\n  - type: picture-elements\n    elements:\n    - type: state-label\n      entity: sensor.jarvis_topeni_'+room+'\n      tap_action:\n        action: more-info\n'
+  result=patch_entrypoints(fixture);d=yaml.safe_load(result)
+  for view,entity in zip(d['views'],['switch.aqara_smart_plug_eu','switch.aqara_smart_plug_eu_2']):
+   self.assertEqual(view['cards'][0]['type'],'grid')
+   self.assertEqual(view['cards'][0]['cards'][0]['tap_action']['data']['mode'],'grid_manual')
+   label=view['cards'][1]['elements'][0]
+   for action in ('tap_action','hold_action'):
+    self.assertEqual(label[action],{'action':'navigate','navigation_path':'/hlavni-prehled/historie-'+entity.replace('.','-')})
+  self.assertEqual(patch_entrypoints(result),result)

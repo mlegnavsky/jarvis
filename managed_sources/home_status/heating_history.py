@@ -1,6 +1,7 @@
 """Add native, explicit heating controls to existing history views only."""
 import re
 import yaml
+from textwrap import dedent
 
 ROOMS={'switch.aqara_smart_plug_eu':('child','Dětský pokoj'),'switch.aqara_smart_plug_eu_2':('living','Obývák')}
 MARKER='  # grid-heating-history-v1'
@@ -49,4 +50,36 @@ def patch(text):
   generated=yaml.safe_dump(controls(entity,room,name),allow_unicode=True,sort_keys=False,width=140)
   addition=[MARKER+'\n']+['  '+line+'\n' if line else '\n' for line in generated.splitlines()]
   at=positions[0]+1;lines[at:at]=addition
+ return ''.join(lines)
+
+def patch_entrypoints(text):
+ """Route the actual status-label entry points and expose room buttons."""
+ labels={'sensor.jarvis_topeni_'+room:entity for entity,(room,_) in ROOMS.items()}
+ lines=text.splitlines(keepends=True);i=0
+ while i<len(lines):
+  match=re.fullmatch(r'( *)- type: state-label\n?',lines[i])
+  if not match:i+=1;continue
+  indent=match[1];j=i+1
+  while j<len(lines) and (not lines[j].strip() or len(lines[j])-len(lines[j].lstrip(' '))>len(indent)):j+=1
+  block=lines[i:j]
+  target=next((entity for label,entity in labels.items() if indent+'  entity: '+label+'\n' in block),None)
+  if target:
+   item=yaml.safe_load(dedent(''.join(block)))[0]
+   action={'action':'navigate','navigation_path':'/hlavni-prehled/historie-'+target.replace('.','-')}
+   item.update(tap_action=dict(action),hold_action=dict(action))
+   replacement=[indent+line+'\n' for line in yaml.safe_dump([item],allow_unicode=True,sort_keys=False,width=140).splitlines()]
+   lines[i:j]=replacement;j=i+len(replacement)
+  i=j
+ for entity,(room,name) in ROOMS.items():
+  path='pokoj-detsky' if room=='child' else 'pokoj-obyvak'
+  matches=[i for i,line in enumerate(lines) if line.rstrip()=='  path: '+path]
+  if len(matches)!=1:raise ValueError('Expected room view: '+path)
+  start=matches[0];end=next((i for i in range(start+1,len(lines)) if lines[i].startswith('- ')),len(lines))
+  marker='  # grid-heating-visible-room-v1'
+  if any(line.rstrip()==marker for line in lines[start:end]):continue
+  at=next(i for i in range(start,end) if lines[i].rstrip()=='  cards:')+1
+  grid=controls(entity,room,name)[1]
+  grid['cards'][0]['name']='Zapnout ze sítě do 24 °C'
+  generated=yaml.safe_dump([grid],allow_unicode=True,sort_keys=False,width=140)
+  lines[at:at]=[marker+'\n']+['  '+line+'\n' for line in generated.splitlines()]
  return ''.join(lines)
