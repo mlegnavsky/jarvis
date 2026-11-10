@@ -65,6 +65,7 @@ class HeatingChargeMixin:
   if type(heaters) is not int or heaters not in (1,2):raise ValueError('Počet radiátorů musí být1nebo2.')
   async with self.lock:
    if not self.active or self.record.get('purpose')!='heating':return
+   if self.connection_grace():return # Defer resize until telemetry recovers.
    if not self.heating_ready():raise ValueError('Dobíjení není připravené na změnu výkonu.')
    try:await self._resize_heating(heaters)
    except Exception as exc:self.error=str(exc);await self._restore_heating();raise
@@ -78,6 +79,7 @@ class HeatingChargeMixin:
      except Exception as exc:self.error=str(exc);await self._restore_heating();raise
      return
     raise ValueError('Nejprve ukonči předchozí nabíjení nebo obnovu.')
+   self.offline_since=None
    s=self.read();voltage=number(s.get('sensor.inverter_battery_voltage'));cap=number(s.get('number.inverter_battery_max_charging_current'));temp=number(s.get('sensor.inverter_battery_temperature'));soc=number(s.get('sensor.inverter_battery'))
    if not self.healthy() or temp is None or not 0<=temp<45 or voltage is None or not 44<=voltage<=58 or cap is None or cap<=0 or soc is None or not 0<=soc<=100:raise ValueError('Čekám na bezpečné měření baterie a napětí.')
    if s.get('select.inverter_work_mode')!='Zero Export To CT' or s.get('switch.inverter_export_surplus')!='off' or s.get('select.inverter_time_of_use') not in ('Week','Enabled'):raise ValueError('Nabíjení vyžaduje běžný domácí režim bez přetoků.')
@@ -123,10 +125,11 @@ class HeatingChargeMixin:
   if conflicts:self.error='heating_restore_conflict: '+','.join(conflicts);return
   try:await self.save({})
   except Exception:self.error='heating_restore_journal_pending';return
-  self.record={};self.error=''
+  self.record={};self.offline_since=None;self.error=''
 
  async def tick_heating(self,healthy=True,minute=None):
   if not self.active or self.record.get('purpose')!='heating':return
+  if self.connection_grace():return
   s=self.read();temp=number(s.get('sensor.inverter_battery_temperature'))
   if not healthy or temp is None or not 0<=temp<45 or s.get('select.inverter_work_mode')!='Zero Export To CT' or s.get('switch.inverter_export_surplus')!='off' or self.record.get('phase')=='restoring':
    await self.stop();return

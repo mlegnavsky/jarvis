@@ -27,6 +27,8 @@ class ChargeLink:
    return readings['grid_power']>100 and (readings['battery_power']<=-max(200,c.record.get('target_w',1000)*.7) or readings['battery']>=c.record['target'])
   except (KeyError,ValueError,TypeError,AttributeError):return False
  def ready(self):
+  c=self.controller()
+  if self.confirmed_start==c.record.get('started_at') and callable(getattr(c,'connection_grace',None)) and c.connection_grace():return True
   if not self.settings_ready():return False
   if self.confirmed_start!=self.controller().record.get('started_at'):return False
   if self.flow_ok():self.flow_lost_since=None;return True

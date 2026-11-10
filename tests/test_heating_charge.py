@@ -67,3 +67,22 @@ class HeatingChargeTests(unittest.IsolatedAsyncioTestCase):
    with self.assertRaises(ValueError):await self.c.start_heating(60,heaters=count)
   self.values['number.inverter_battery_max_charging_current']='30'
   await self.c.start_heating(60,heaters=2);self.assertEqual(self.values[CURRENT],'30')
+ async def test_wifi_gap_keeps_charge_179_seconds_then_restores(self):
+  await self.c.start_heating(60)
+  self.c.communication_ok=lambda:False
+  self.c.healthy=lambda:False
+  await self.c.tick_heating(False,minute=60)
+  self.assertTrue(self.c.active)
+  self.c.clock=lambda:1179
+  await self.c.tick_heating(False,minute=60);self.assertTrue(self.c.active)
+  self.c.clock=lambda:1180
+  await self.c.tick_heating(False,minute=60);self.assertFalse(self.c.active)
+ async def test_wifi_gap_does_not_delay_known_overtemperature(self):
+  await self.c.start_heating(60);self.c.communication_ok=lambda:False;self.c.healthy=lambda:False
+  self.values['sensor.inverter_battery_temperature']='45'
+  await self.c.tick_heating(False,minute=60);self.assertFalse(self.c.active)
+ async def test_missing_settings_are_tolerated_but_known_disabled_tou_is_not(self):
+  await self.c.start_heating(60);self.c.communication_ok=lambda:False;self.c.healthy=lambda:False
+  self.assertTrue(self.c.connection_grace())
+  self.values['select.inverter_time_of_use']='Disabled'
+  self.assertFalse(self.c.connection_grace())

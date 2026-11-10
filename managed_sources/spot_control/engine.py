@@ -51,15 +51,37 @@ def equal(a,b):
     return x==y if x is not None and y is not None else a==b
 
 class Controller(HeatingChargeMixin):
-    def __init__(self,read,write,save,saved=None,clock=time.time,healthy=lambda:True):
+    def __init__(self,read,write,save,saved=None,clock=time.time,healthy=lambda:True,communication_ok=lambda:True,permitted=lambda:True):
         self.read,self.write,self.save,self.clock=read,write,save,clock
-        self.healthy=healthy
+        self.healthy=healthy;self.communication_ok=communication_ok;self.permitted=permitted;self.offline_since=None
         self.record=saved or {}; self.lock=asyncio.Lock(); self.error='';self.observed=False
+    def connection_grace(self):
+        """Only an already running session may bridge missing telemetry."""
+        if not self.active or self.record.get('phase')!='running' or not self.permitted():return False
+        s=self.read()
+        temp=finite(s.get('sensor.inverter_battery_temperature'))
+        cap=finite(s.get('number.inverter_battery_max_charging_current'))
+        if temp is not None and not 0<=temp<45 or cap is not None and cap<=0:return False
+        for e,allowed in [('select.inverter_work_mode',('Zero Export To CT',)),('switch.inverter_export_surplus',('off',)),('select.inverter_time_of_use',('Week','Enabled')),('binary_sensor.inverter_grid',('on',)),('binary_sensor.inverter_battery_alarm',('off',)),('binary_sensor.inverter_battery_fault',('off',))]:
+            v=s.get(e)
+            if v not in (None,'unknown','unavailable') and v not in allowed:return False
+        for i in range(1,7):
+            floor=finite(s.get(f'number.inverter_program_{i}_soc'))
+            if floor is not None and floor<30:return False
+        if self.record.get('purpose')=='heating':
+            for e,v in self.record.get('applied',{}).items():
+                if s.get(e) not in (None,'unknown','unavailable') and not equal(s[e],v):return False
+        soc=finite(s.get('sensor.inverter_battery'))
+        if self.record.get('purpose')!='heating' and soc is not None and soc>=self.record.get('target',100):return False
+        if self.communication_ok():self.offline_since=None;return False
+        if self.offline_since is None:self.offline_since=self.clock()
+        return 0<=self.clock()-self.offline_since<180
     @property
     def active(self): return bool(self.record.get('before'))
     async def start(self,minute):
         async with self.lock:
             if self.active: raise ValueError('Nejprve zastav předchozí test a obnov nastavení.')
+            self.offline_since=None
             states=self.read(); steps,goal,slot=plan(states,minute)
             self.record={'before':{e:states[e] for e,v in steps},'steps':steps,'deadline':self.clock()+600,'target':goal,'slot':slot,'phase':'starting'}
             await self.save(self.record) # durable before any inverter write
@@ -104,10 +126,11 @@ class Controller(HeatingChargeMixin):
         except Exception:
             self.error='Hodnoty vráceny, ale záznam obnovy se nepodařilo uzavřít.'
             return
-        self.record={}
+        self.record={};self.offline_since=None
     async def tick(self,healthy=True):
         if self.record.get('purpose')=='heating':return await self.tick_heating(healthy)
         if not self.active:return
+        if self.connection_grace() and self.clock()<self.record.get('deadline',0):return
         s=self.read();soc=finite(s.get('sensor.inverter_battery'))
         grid=finite(s.get('sensor.inverter_grid_power'));batt=finite(s.get('sensor.inverter_battery_power'))
         if grid is not None and batt is not None and grid>100 and batt < -100:self.observed=True

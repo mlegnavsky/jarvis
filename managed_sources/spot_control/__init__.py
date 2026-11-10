@@ -16,7 +16,7 @@ async def async_setup(hass,config):
     store=Store(hass,1,DOMAIN+'.transaction')
     saved=await store.async_load() or {}
     def read():return {s.entity_id:s.state for s in hass.states.async_all() if '.inverter_' in s.entity_id}
-    def healthy():
+    def permitted():
         sales=hass.data.get(DOMAIN+'_sales',{})
         controllers=list(sales.get('controllers') or [])
         controllers.extend(sales.get(key) for key in ('controller','window','battery_controller','battery_sale'))
@@ -24,12 +24,21 @@ async def async_setup(hass,config):
         if sales.get('clock_sync_active'):return False
         busy=sales.get('busy')
         if callable(busy) and busy() and not (c.active and c.record.get('purpose')=='heating'):return False
+        return True
+    def communication_ok():
         now=dt_util.utcnow()
         for e in ('sensor.inverter_battery','sensor.inverter_battery_power','sensor.inverter_grid_power','sensor.inverter_battery_temperature','number.inverter_battery_max_charging_current'):
             s=hass.states.get(e)
             t=getattr(s,'last_reported',None) or getattr(s,'last_updated',None)
-            if s is None or finite(s.state) is None or t is None or (now-t).total_seconds()>120:return False
-        return charge_limits_ok(read())
+            if s is None or finite(s.state) is None or t is None or (now-t).total_seconds()>60:return False
+        fields=set(c.record.get('applied',{})) | {'select.inverter_work_mode','switch.inverter_export_surplus'}
+        if c.active and c.record.get('purpose')=='heating':
+            fields.update({'binary_sensor.inverter_grid','binary_sensor.inverter_battery_alarm','binary_sensor.inverter_battery_fault','select.inverter_time_of_use',*(f'number.inverter_program_{i}_soc' for i in range(1,7))})
+        for e in fields:
+            s=hass.states.get(e);t=(getattr(s,'last_reported',None) or getattr(s,'last_updated',None)) if s else None
+            if s is None or s.state in ('unknown','unavailable') or t is None or not 0<=(now-t).total_seconds()<=60:return False
+        return True
+    def healthy():return permitted() and communication_ok() and charge_limits_ok(read())
     async def write(entity,value):
         domain=entity.split('.')[0]
         if domain=='number':service='set_value';data={'value':float(value)}
@@ -45,7 +54,7 @@ async def async_setup(hass,config):
             reported=(getattr(s,'last_reported',None) or getattr(s,'last_updated',None)) if s else None
             if s and reported and reported>issued and equal(s.state,value):return
         raise HomeAssistantError('Měnič nepotvrdil nastavení '+entity)
-    c=Controller(read,write,store.async_save,saved,healthy=healthy)
+    c=Controller(read,write,store.async_save,saved,healthy=healthy,communication_ok=communication_ok,permitted=permitted)
     ready=False
     def telemetry():
         result={}
@@ -57,7 +66,7 @@ async def async_setup(hass,config):
         return result
     def report():
         phase=c.record.get('phase','idle')
-        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.6.8','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'purpose':c.record.get('purpose'),'target_w':c.record.get('target_w'),'heaters':c.record.get('heaters'),'charge_amps':c.record.get('amps'),'active':c.active,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
+        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.6.9','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'purpose':c.record.get('purpose'),'target_w':c.record.get('target_w'),'heaters':c.record.get('heaters'),'charge_amps':c.record.get('amps'),'active':c.active,'connection_grace_s':180,'connection_lost_at':c.offline_since,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
     async def start(call):
         if not ready or not healthy():raise HomeAssistantError('Čekám na aktuální měření měniče.')
         now=dt_util.now()

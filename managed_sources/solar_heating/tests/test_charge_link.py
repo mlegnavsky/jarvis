@@ -47,3 +47,10 @@ class LinkTests(unittest.IsolatedAsyncioTestCase):
    v['sensor.inverter_battery_power'].state='-1900'
   with patch('charge_link.asyncio.sleep',new=measured):await link.start(heaters=2)
   self.assertTrue(link.flow_ok());self.assertEqual(c.record['target_w'],2000)
+
+ async def test_confirmed_running_heater_survives_communication_grace_only(self):
+  link,c,v=self.make();await link.start()
+  c.connection_grace=lambda:True;c.healthy=lambda:False;c.heating_ready=lambda **kw:False
+  self.assertTrue(link.ready())
+  c.connection_grace=lambda:False;self.assertFalse(link.ready())
+  c.connection_grace=lambda:True;link.confirmed_start=None;self.assertFalse(link.ready())

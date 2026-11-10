@@ -16,7 +16,7 @@ from .grid_guard import check as grid_check, ENTITIES as GRID_ENTITIES
 from .charge_link import ChargeLink
 
 DOMAIN='jarvis_solar_heating'
-VERSION='1.3.2'
+VERSION='1.3.3'
 AUTOMATION='automation.jarvis_solarni_topeni'
 SWITCHES={'child':'switch.aqara_smart_plug_eu','living':'switch.aqara_smart_plug_eu_2'}
 SENSORS={'temp':'sensor.aqara_temp_humidity_sensor_t1_teplota','pv':'sensor.inverter_pv_power','soc':'sensor.inverter_battery','discharge':'sensor.inverter_battery_power','load':'sensor.inverter_load_power'}
@@ -63,6 +63,9 @@ async def async_setup(hass,config):
     if state and state.state=='on' and not controller.on_since[r]:
      controller.on_since[r]=state.last_changed.timestamp()
    grid_ready,grid_reason=grid_check(hass.states.get,now)
+   if any(controller.grid_manual.values()) and charge_link.ready():
+    c=charge_link.controller() if callable(getattr(charge_link,'controller',None)) else None
+    if callable(getattr(c,'connection_grace',None)) and c.connection_grace():grid_ready=True;grid_reason='Výpadek spojení · tolerance 3 min'
    if any(controller.grid_manual.values()) and not charge_link.ready():grid_ready=False;grid_reason='Dobíjení baterie není potvrzené'
    temp_state=hass.states.get(SENSORS['temp'])
    temp_stamp=(getattr(temp_state,'last_reported',None) or getattr(temp_state,'last_updated',None)) if temp_state else None

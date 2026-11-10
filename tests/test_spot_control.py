@@ -79,4 +79,17 @@ class Tests(unittest.IsolatedAsyncioTestCase):
   self.assertEqual(plan(self.s,0)[2],6)
   self.s['time.inverter_program_2_time']='bad'
   with self.assertRaises(ValueError):plan(self.s,0)
+ async def test_wifi_grace_recovery_resets_timer(self):
+  c=self.controller();await c.start(960);now=[100];c.clock=lambda:now[0]
+  online=[False];c.communication_ok=lambda:online[0];c.healthy=lambda:online[0]
+  await c.tick(False);self.assertTrue(c.active)
+  now[0]=279;await c.tick(False);self.assertTrue(c.active)
+  online[0]=True;await c.tick(True);self.assertIsNone(c.offline_since)
+  online[0]=False;now[0]=300;await c.tick(False);self.assertTrue(c.active)
+  now[0]=480;await c.tick(False);self.assertFalse(c.active)
+ async def test_explicit_stop_and_target_are_immediate_during_gap(self):
+  c=self.controller();await c.start(960);c.communication_ok=lambda:False;c.healthy=lambda:False
+  self.s['sensor.inverter_battery']=str(c.record['target']);await c.tick(False);self.assertFalse(c.active)
+  self.s.update(self.before);c=self.controller();await c.start(960);c.communication_ok=lambda:False
+  await c.stop();self.assertFalse(c.active);self.assertIsNone(c.offline_since)
 if __name__=='__main__':unittest.main()
