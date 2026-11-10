@@ -13,7 +13,7 @@ def controls(entity,room,name):
    "{% if is_state('"+entity+"','on') and state_attr('"+status+"','mode') == 'grid_manual' %}"
    '**Ruční topení ze sítě je zapnuté.**'
    '{% else %}**Stav:** {{ states(\''+status+"') }}{% endif %}\n\n"
-   'Současně se baterie dobíjí přibližně **1 kW ze sítě**. Vypne se při **24 °C v dětském pokoji** nebo tlačítkem Vypnout. Rezerva baterie **30 % zůstává zachovaná**.\n\n'
+   'Každý radiátor v ručním režimu přidává přibližně **1 kW dobíjení baterie ze sítě**; dva radiátory **2 kW**. Vypne se při **24 °C v dětském pokoji** nebo tlačítkem Vypnout. Rezerva baterie **30 % zůstává zachovaná**.\n\n'
    "{% if not state_attr('"+status+"','grid_ready') %}"
    "{{ state_attr('"+status+"','grid_reason') or 'Čeká na aktuální údaje měniče.' }}{% endif %}"},
   {'type':'grid','columns':2,'square':False,'cards':[

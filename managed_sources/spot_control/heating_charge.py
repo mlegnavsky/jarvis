@@ -52,10 +52,31 @@ class HeatingChargeMixin:
   await self._heat_write(charge,'Grid')
   self.record['slots'].append(slot);self.record['slot']=slot;await self.save(self.record)
 
- async def start_heating(self,minute):
+ async def _resize_heating(self,heaters):
+  r=self.record
+  if r.get('heaters',1)==heaters and r.get('target_w')==1000*heaters:return
+  s=self.read();voltage=number(s.get('sensor.inverter_battery_voltage'));cap=number(s.get('number.inverter_battery_max_charging_current'))
+  if not self.healthy() or voltage is None or not 44<=voltage<=58 or cap is None or cap<1:raise ValueError('Chybí bezpečné napětí nebo nabíjecí limit.')
+  amps=max(1,min(math.floor(heaters*1000/voltage+.5),math.floor(cap)))
+  r.update(heaters=heaters,target_w=1000*heaters,amps=amps,power_changed_at=self.clock())
+  await self.save(r);await self._heat_write(CURRENT,amps)
+
+ async def resize_heating(self,heaters):
+  if type(heaters) is not int or heaters not in (1,2):raise ValueError('Počet radiátorů musí být1nebo2.')
+  async with self.lock:
+   if not self.active or self.record.get('purpose')!='heating':return
+   if not self.heating_ready():raise ValueError('Dobíjení není připravené na změnu výkonu.')
+   try:await self._resize_heating(heaters)
+   except Exception as exc:self.error=str(exc);await self._restore_heating();raise
+
+ async def start_heating(self,minute,heaters=1):
+  if type(heaters) is not int or heaters not in (1,2):raise ValueError('Počet radiátorů musí být1nebo2.')
   async with self.lock:
    if self.active:
-    if self.heating_ready():return
+    if self.heating_ready():
+     try:await self._resize_heating(heaters)
+     except Exception as exc:self.error=str(exc);await self._restore_heating();raise
+     return
     raise ValueError('Nejprve ukonči předchozí nabíjení nebo obnovu.')
    s=self.read();voltage=number(s.get('sensor.inverter_battery_voltage'));cap=number(s.get('number.inverter_battery_max_charging_current'));temp=number(s.get('sensor.inverter_battery_temperature'));soc=number(s.get('sensor.inverter_battery'))
    if not self.healthy() or temp is None or not 0<=temp<45 or voltage is None or not 44<=voltage<=58 or cap is None or cap<=0 or soc is None or not 0<=soc<=100:raise ValueError('Čekám na bezpečné měření baterie a napětí.')
@@ -66,8 +87,8 @@ class HeatingChargeMixin:
     target=f'number.inverter_program_{i}_soc';charge=f'select.inverter_program_{i}_charging';floor=number(s.get(target))
     if floor is None or not 30<=floor<=100 or s.get(charge)!='Disabled':raise ValueError('Předchozí nabíjení nebo bezpečná rezerva není potvrzena.')
     fields.extend((target,charge))
-   slot=slot_at(s,minute);amps=max(1,min(math.floor(1000/voltage+.5),math.floor(cap)))
-   r={'purpose':'heating','phase':'starting','before':{e:s[e] for e in fields},'applied':{},'pending':None,'order':[],'slots':[],'target':max(90,math.ceil(soc)),'target_w':1000,'amps':amps,'started_at':self.clock()}
+   slot=slot_at(s,minute);amps=max(1,min(math.floor(heaters*1000/voltage+.5),math.floor(cap)))
+   r={'purpose':'heating','phase':'starting','before':{e:s[e] for e in fields},'applied':{},'pending':None,'order':[],'slots':[],'target':max(90,math.ceil(soc)),'target_w':1000*heaters,'heaters':heaters,'amps':amps,'started_at':self.clock(),'power_changed_at':self.clock()}
    # Failure to save intent must leave no in-memory active transaction either.
    await self.save(r);self.record=r
    try:

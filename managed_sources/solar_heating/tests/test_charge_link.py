@@ -13,7 +13,7 @@ class LinkTests(unittest.IsolatedAsyncioTestCase):
   return link,c,values
  async def test_wait_for_actual_charge_before_heater_can_be_admitted(self):
   link,c,v=self.make();c.heating_ready=lambda **kw:False
-  async def started(_):c.heating_ready=lambda **kw:True
+  async def started(_,**kw):c.heating_ready=lambda **kw:True
   c.start_heating=started
   await link.start();self.assertTrue(c.observed);self.assertFalse(c.stop.called)
  async def test_stale_power_cannot_confirm_new_charge(self):
@@ -37,3 +37,13 @@ class LinkTests(unittest.IsolatedAsyncioTestCase):
   with patch('charge_link.asyncio.sleep',new=AsyncMock()):
    with self.assertRaises(ValueError):await link.start()
   c.stop.assert_awaited_once()
+ async def test_two_heaters_require_fresh_higher_charging_power(self):
+  link,c,v=self.make();await link.start()
+  async def resize(_,heaters):
+   c.record.update(heaters=heaters,target_w=1000*heaters,power_changed_at=time.time())
+  c.start_heating=resize
+  async def measured(_):
+   for state in v.values():state.last_updated=datetime.now(timezone.utc)
+   v['sensor.inverter_battery_power'].state='-1900'
+  with patch('charge_link.asyncio.sleep',new=measured):await link.start(heaters=2)
+  self.assertTrue(link.flow_ok());self.assertEqual(c.record['target_w'],2000)

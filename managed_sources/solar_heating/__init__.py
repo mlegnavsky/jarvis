@@ -16,7 +16,7 @@ from .grid_guard import check as grid_check, ENTITIES as GRID_ENTITIES
 from .charge_link import ChargeLink
 
 DOMAIN='jarvis_solar_heating'
-VERSION='1.3.1'
+VERSION='1.3.2'
 AUTOMATION='automation.jarvis_solarni_topeni'
 SWITCHES={'child':'switch.aqara_smart_plug_eu','living':'switch.aqara_smart_plug_eu_2'}
 SENSORS={'temp':'sensor.aqara_temp_humidity_sensor_t1_teplota','pv':'sensor.inverter_pv_power','soc':'sensor.inverter_battery','discharge':'sensor.inverter_battery_power','load':'sensor.inverter_load_power'}
@@ -29,6 +29,7 @@ async def async_setup(hass,config):
  controller=Controller(saved)
  lock=asyncio.Lock();own_contexts=set();pending_commands={};ready=False
  charge_link=ChargeLink(hass);intent_generation={r:0 for r in ROOMS};preparing={};charge_operations=asyncio.Lock()
+ charge_members={r for r in ROOMS if controller.grid_manual[r]}
  last_error={r:None for r in ROOMS};resource_status={'status':'starting'}
  hass.data[DOMAIN]={'controller':controller,'version':VERSION}
  def value(key):
@@ -40,11 +41,17 @@ async def async_setup(hass,config):
  def is_on(room):
   state=hass.states.get(SWITCHES[room]);return bool(state and state.state=='on')
  def persist():store.async_delay_save(controller.dump,2)
+ def charge_count():
+  charge_members.difference_update(r for r in tuple(charge_members) if not controller.grid_manual[r] and r not in preparing and not is_on(r))
+  return len({r for r in ROOMS if controller.grid_manual[r] or r in preparing or r in charge_members and is_on(r)})
  async def cleanup_charge():
-  if any(controller.grid_manual.values()) or preparing or any(is_on(r) for r in ROOMS):return
+  if preparing:return
   async with charge_operations:
-   if not any(controller.grid_manual.values()) and not preparing and not any(is_on(r) for r in ROOMS):
-    try:await charge_link.stop()
+   if not preparing:
+    count=charge_count()
+    try:
+     if count:await charge_link.resize(count)
+     else:await charge_link.stop()
     except Exception:LOGGER.warning('Heating charge restoration remains pending')
  async def evaluate(_call=None):
   if not ready:return
@@ -164,7 +171,8 @@ async def async_setup(hass,config):
    try:
     async with charge_operations:
      if generation!=intent_generation[room]:return
-     await charge_link.start()
+     count=charge_count()
+     await charge_link.start(heaters=count)
     async with lock:
      if generation!=intent_generation[room]:return
      ok,reason=grid_check(hass.states.get,time.time());temp=value('temp')
@@ -176,6 +184,7 @@ async def async_setup(hass,config):
      except Exception:
       for key,v in previous.items():setattr(controller,key,v)
       raise
+     charge_members.add(room)
    finally:
     if preparing.get(room)==generation:preparing.pop(room,None)
     await cleanup_charge()

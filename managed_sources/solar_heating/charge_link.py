@@ -21,10 +21,10 @@ class ChargeLink:
    for name in ('battery_power','grid_power','battery'):
     state=self.hass.states.get('sensor.inverter_'+name)
     stamp=(getattr(state,'last_reported',None) or getattr(state,'last_updated',None)) if state else None
-    if stamp is None or not c.record['started_at']<=stamp.timestamp()<=time.time() or time.time()-stamp.timestamp()>60:return False
+    if stamp is None or not c.record.get('power_changed_at',c.record['started_at'])<=stamp.timestamp()<=time.time() or time.time()-stamp.timestamp()>60:return False
     readings[name]=float(state.state)
    if not all(math.isfinite(v) for v in readings.values()):return False
-   return readings['grid_power']>100 and (readings['battery_power']<-200 or readings['battery']>=c.record['target'])
+   return readings['grid_power']>100 and (readings['battery_power']<=-max(200,c.record.get('target_w',1000)*.7) or readings['battery']>=c.record['target'])
   except (KeyError,ValueError,TypeError,AttributeError):return False
  def ready(self):
   if not self.settings_ready():return False
@@ -35,12 +35,14 @@ class ChargeLink:
  def status(self):
   try:
    c=self.controller();r=c.record
-   return {'phase':r.get('phase','idle'),'purpose':r.get('purpose'),'target_w':r.get('target_w'),'amps':r.get('amps'),'error':c.error,'observed':c.observed}
+   return {'phase':r.get('phase','idle'),'purpose':r.get('purpose'),'target_w':r.get('target_w'),'heaters':r.get('heaters'),'amps':r.get('amps'),'error':c.error,'observed':c.observed}
   except Exception:return {'phase':'unavailable'}
- async def start(self):
-  if self.ready() and self.flow_ok():return
+ async def start(self,heaters=1):
+  if self.ready() and self.flow_ok() and self.controller().record.get('heaters',1)==heaters:return
   c=self.controller();now=datetime.now(ZoneInfo('Europe/Prague'))
-  await c.start_heating(now.hour*60+now.minute)
+  previous_change=c.record.get('power_changed_at')
+  await c.start_heating(now.hour*60+now.minute,heaters=heaters)
+  if c.record.get('power_changed_at')!=previous_change:self.flow_lost_since=None
   try:
    for _ in range(90):
     if not self.settings_ready():raise ValueError('Dobíjení baterie nebo jeho bezpečné nastavení nebylo potvrzeno.')
@@ -56,3 +58,9 @@ class ChargeLink:
   if c.active and c.record.get('purpose')=='heating':
    await c.stop()
    if c.active:raise ValueError(c.error or 'Obnova nabíjení čeká na potvrzení měniče.')
+ async def resize(self,heaters):
+  c=self.controller()
+  if c.active and c.record.get('purpose')=='heating':
+   previous_change=c.record.get('power_changed_at')
+   await c.resize_heating(heaters)
+   if c.record.get('power_changed_at')!=previous_change:self.flow_lost_since=None

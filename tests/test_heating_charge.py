@@ -54,3 +54,16 @@ class HeatingChargeTests(unittest.IsolatedAsyncioTestCase):
    if e=='number.inverter_program_2_soc':self.assertTrue(self.c.heating_ready(include_pending=True));self.assertFalse(self.c.heating_ready())
    await original(e,v)
   self.c.write=check;await self.c.tick_heating(True,minute=300);self.assertTrue(self.c.heating_ready())
+ async def test_count_1_2_1_preserves_one_before_image_and_then_restores_zero(self):
+  await self.c.start_heating(60,heaters=1);before=dict(self.c.record['before'])
+  self.assertEqual(self.c.record['target_w'],1000)
+  await self.c.start_heating(60,heaters=2)
+  self.assertEqual(self.c.record['target_w'],2000);self.assertEqual(self.c.record['heaters'],2)
+  self.assertEqual(self.values[CURRENT],'38');self.assertEqual(self.c.record['before'],before)
+  await self.c.resize_heating(1);self.assertEqual(self.values[CURRENT],'19');self.assertEqual(self.c.record['target_w'],1000)
+  await self.c.stop();self.assertEqual(self.values,self.before)
+ async def test_count_validation_and_cap_are_respected(self):
+  for count in (0,3,True,1.5):
+   with self.assertRaises(ValueError):await self.c.start_heating(60,heaters=count)
+  self.values['number.inverter_battery_max_charging_current']='30'
+  await self.c.start_heating(60,heaters=2);self.assertEqual(self.values[CURRENT],'30')

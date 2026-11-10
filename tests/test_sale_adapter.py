@@ -160,7 +160,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
    controllers['busy']=lambda:False
    controllers['clock_sync_active']=True
    self.assertFalse(charge.healthy(),'RTC synchronization owns control')
-  self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.7')
+  self.assertEqual(self.hass.states.get('sensor.jarvis_spot_control').attributes['version'],'0.6.8')
  async def test_active_owner_conflict_latches_automatic_off_before_cleanup_finishes(self):
   from unittest.mock import AsyncMock
   data=await self.setup();await self.ticks[0]()
