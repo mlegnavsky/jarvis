@@ -18,7 +18,8 @@ class JarvisRoomPanel extends HTMLElement {
   history.pushState(null,'',room.path);window.dispatchEvent(new Event('location-changed'));
  }
  async build(){
-  const c=this.cfg;
+  const c=this.cfg,heater=c.picture?.elements?.find(e=>e.icon==='mdi:radiator'&&e.entity?.startsWith('switch.'));
+  const heaterX=Math.max(0,Math.min(100,parseFloat(heater?.style?.left)||0)),heaterY=Math.max(0,Math.min(100,parseFloat(heater?.style?.top)||0));
   this.shadowRoot.innerHTML=`<style>
    :host{display:block;max-width:680px;margin:auto;touch-action:pan-y;font-family:var(--paper-font-body1_-_font-family,system-ui)}
    ha-card{display:block;overflow:hidden;border-radius:20px;background:var(--ha-card-background,var(--card-background-color,#fff))}
@@ -28,10 +29,10 @@ class JarvisRoomPanel extends HTMLElement {
    #stage{position:relative}#picture{overflow:hidden;border-radius:14px;margin:0 8px;touch-action:none;overscroll-behavior:contain}#picture>*{display:block}
    #status{padding:10px 14px;color:var(--secondary-text-color);font-size:13px;line-height:1.4;background:var(--secondary-background-color,#edf2f7);margin:10px 12px;border-radius:10px}
    .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 12px}.action{padding:10px 6px;min-height:56px;font-size:13px;font-weight:600}.action:first-child{background:#0b527a;color:white}.action small{display:block;font-weight:400;margin-top:3px;font-size:11px}.error{color:#b71c1c;padding:0 12px;font-size:13px}
-   #extra{padding:0 12px 8px}.hidden{display:none}
+   .heater-state{position:absolute;z-index:3;transform:translateX(-50%);font-size:11px;background:rgba(3,19,39,.9);color:white;padding:3px 7px;border-radius:6px;pointer-events:none;white-space:nowrap}#extra{padding:0 12px 8px}.hidden{display:none}
   </style><ha-card>
    <div class="actions">${(c.actions||[]).map((a,i)=>`<button class="action" data-action="${i}">${this.esc(a.label)}${a.subtitle?`<small>${this.esc(a.subtitle)}</small>`:''}</button>`).join('')}</div><div class="error" role="alert"></div>
-   <div id="stage"><div id="picture"></div>
+   <div id="stage"><div id="picture"></div>${heater&&c.status_entity?`<span id="heater-state" class="heater-state" style="left:${heaterX}%;top:calc(${heaterY}% + 30px)"></span>`:''}
    <div class="metrics">${(c.metrics||[]).map((m,i)=>`<button class="metric" data-metric="${i}" aria-label="${this.esc(m.name)}"><b>—</b></button>`).join('')}</div></div>
    <div id="status" class="${c.status_entity?'':'hidden'}"></div>
    <div id="extra"></div>
@@ -74,6 +75,12 @@ class JarvisRoomPanel extends HTMLElement {
   this.update();
  }
  set hass(h){this.h=h;for(const card of this.childrenCards||[])card.hass=h;this.update();}
+ heatingStatus(){
+  const report=this.h?.states[this.cfg.status_entity],actual=this.h?.states[report?.attributes?.switch||this.cfg.heater_entity]?.state;
+  const state={on:'Zapnuto',off:'Vypnuto'}[actual]||'Nedostupné';
+  const reason=report?.state;
+  return state+(reason&&!['unknown','unavailable'].includes(reason)?' · '+reason:'');
+ }
  update(){
   if(!this.h||!this.shadowRoot)return;
   (this.cfg.metrics||[]).forEach((m,i)=>{
@@ -81,7 +88,8 @@ class JarvisRoomPanel extends HTMLElement {
    const b=this.shadowRoot.querySelector(`[data-metric="${i}"] b`);
    if(b)b.textContent=valid?n.toLocaleString('cs-CZ',{maximumFractionDigits:1})+' '+(s.attributes?.unit_of_measurement||''):'Nedostupné';
   });
-  const status=this.shadowRoot.querySelector('#status');if(status&&this.cfg.status_entity){const s=this.h.states[this.cfg.status_entity];status.textContent='Topení · '+(s?.state||'Nedostupné');}
+  const status=this.shadowRoot.querySelector('#status');if(status&&this.cfg.status_entity){status.textContent='Topení · '+this.heatingStatus();}
+  const badge=this.shadowRoot.querySelector('#heater-state');if(badge)badge.textContent=this.heatingStatus().split(' · ')[0];
  }
  getCardSize(){return 8;}
 }
