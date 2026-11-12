@@ -3,3 +3,5 @@ const classes={};vm.runInNewContext(fs.readFileSync('managed_sources/home_status
 const C=classes['jarvis-device-status'];
 function status(state,battery,mode){let c=new C;c.cfg={entity:'lock.door',kind:'lock',battery_entity:'sensor.battery',heating_entity:'sensor.heat'};c.h={states:{'lock.door':{state},'sensor.battery':{state:battery},'sensor.heat':{attributes:{mode}}}};return c.describe();}
 assert.equal(status('locked',35).color,'#4caf50');assert.equal(status('unlocked',35).icon,'mdi:lock-open-variant');assert.equal(status('unlocked',35).color,'#f5a623');assert.equal(status('locked',24).color,'#ef5350');assert.equal(status('locked',25).color,'#4caf50');assert.equal(status('locked',0).low,true);assert.equal(status('jammed',35,'manual_off').color,'#ef5350');assert.equal(status('locked','unknown').low,false);console.log('8 device status checks passed');
+
+const h=new C();h.cfg={format:'heating',switch_entity:'switch.radiator'};h.h={states:{'switch.radiator':{state:'off'}}};assert.equal(h.reading({state:'Čeká na slunce'}),'Vypnuto · Čeká na slunce');h.h.states['switch.radiator'].state='on';assert.equal(h.reading({state:'Ze sítě'}),'Zapnuto · Ze sítě');
