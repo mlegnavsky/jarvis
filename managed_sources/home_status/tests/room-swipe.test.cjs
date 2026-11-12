@@ -29,6 +29,8 @@ console.log('Room swipe: four directions, threshold, diagonal, hold and spatial 
  const html=p.shadowRoot.innerHTML;
  assert.ok(html.indexOf('<div class="actions">')<html.indexOf('<div id="stage"'),'controls above room picture');
  assert.ok(html.indexOf('<div class="metrics">')>html.indexOf('<div id="picture">'),'readings at bottom of picture');
+ assert.ok(!html.includes('data-direction=')&&!html.includes('data-room=')&&!html.includes('class="home"'),'no room labels, room chips or duplicate home button');
+ assert.ok(html.includes('flex-direction:column')&&html.includes('font-size:13px'),'small stacked centered readings');
  assert.ok(html.includes('touch-action:none'),'four-direction swipe surface must not be cancelled by browser vertical panning');
  const event=(x,y,time,path=[{id:'picture'}])=>({clientX:x,clientY:y,timeStamp:time,pointerId:1,composedPath:()=>path,preventDefault(){},stopPropagation(){}});
  p.onpointerdown(event(50,50,0));p.onpointerup(event(160,50,200));assert.equal(visited.at(-1),'/hlavni-prehled/pokoj-detsky');
