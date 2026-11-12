@@ -34,6 +34,13 @@ class JarvisDeviceStatus extends HTMLElement {
  async activate(){
   this.actionError='';
   const c=this.cfg,d=this.describe();
+  if(c.kind==='lock'&&d.state==='unlocked'){
+   if(this.lockPending)return;
+   this.lockPending=true;
+   try{await this.h.callService('lock','lock',{entity_id:c.entity});}
+   finally{this.lockPending=false;}
+   return;
+  }
   if(c.tap_action?.action==='toggle'&&['on','off'].includes(d.state)){
    const room={'sensor.jarvis_topeni_child':'child','sensor.jarvis_topeni_living':'living'}[c.heating_entity];
    if(room)await this.h.callService('jarvis_solar_heating','set_mode',{room,mode:d.state==='on'?'off':'manual'});
