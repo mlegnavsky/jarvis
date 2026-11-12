@@ -28,9 +28,11 @@ p.h.states['switch.heat'].state='unavailable';assert.equal(p.heatingStatus(),'Ne
 console.log('Room swipe: four directions, threshold, diagonal, hold and spatial boundaries passed');
 (async()=>{
  const nodes=new Map();p.shadowRoot={innerHTML:'',querySelector:s=>{if(!nodes.has(s))nodes.set(s,{appendChild(){}});return nodes.get(s)},querySelectorAll:()=>[]};p.childrenCards=[];p.addEventListener=()=>{};
- p.cfg.title='Obývák';p.cfg.picture={type:'picture-elements'};
+ p.cfg.metrics=[{name:'Teplota',entity:'sensor.temp',icon:'mdi:thermometer'},{name:'Vlhkost',entity:'sensor.humidity',icon:'mdi:water-percent'}];p.cfg.title='Obývák';p.cfg.picture={type:'picture-elements'};
  await p.build();
  const html=p.shadowRoot.innerHTML;
+ assert.ok(html.includes('mdi:thermometer')&&html.includes('mdi:water-percent'),'each metric renders its own icon');
+ assert.ok(html.includes('gap:5px')&&html.includes('border-radius:8px;background:rgba'),'separate small metric buttons');
  assert.ok(html.indexOf('<div class="actions">')<html.indexOf('<div id="stage"'),'controls above room picture');
  assert.ok(html.indexOf('<div class="metrics">')>html.indexOf('<div id="picture">'),'readings at bottom of picture');
  assert.ok(!html.includes('data-direction=')&&!html.includes('data-room=')&&!html.includes('class="home"'),'no room labels, room chips or duplicate home button');

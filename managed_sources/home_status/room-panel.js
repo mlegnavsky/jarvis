@@ -25,7 +25,7 @@ class JarvisRoomPanel extends HTMLElement {
    ha-card{display:block;overflow:hidden;border-radius:20px;background:var(--ha-card-background,var(--card-background-color,#fff))}
    button{font:inherit;cursor:pointer;border:0;border-radius:12px;min-height:44px;background:var(--secondary-background-color,#edf2f7);color:var(--primary-text-color,#142c42)}
    button:focus-visible{outline:3px solid #1b9dcc;outline-offset:-3px}button:disabled{opacity:.45;cursor:default}
-   .metrics{display:flex;flex-direction:column;align-items:center;gap:2px;position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:4;background:rgba(3,19,39,.78);border-radius:8px;padding:5px 10px;max-width:80%}.metric{min-height:20px;min-width:80px;border-radius:0;background:transparent;color:#edf4fa;text-align:center;padding:0;line-height:1.35;cursor:pointer}.metric b{font-size:13px;font-weight:400;white-space:nowrap}
+   .metrics{display:flex;flex-direction:column;align-items:center;gap:5px;position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:4;max-width:80%}.metric{display:flex;align-items:center;justify-content:center;gap:5px;min-height:28px;min-width:92px;border-radius:8px;background:rgba(3,19,39,.82);color:#edf4fa;text-align:center;padding:3px 9px;line-height:1.35;cursor:pointer}.metric ha-icon{--mdc-icon-size:14px;flex:none}.metric b{font-size:13px;font-weight:400;white-space:nowrap}
    #stage{position:relative}#picture{overflow:hidden;border-radius:14px;margin:0 8px;touch-action:none;overscroll-behavior:contain}#picture>*{display:block}
    #status{padding:10px 14px;color:var(--secondary-text-color);font-size:13px;line-height:1.4;background:var(--secondary-background-color,#edf2f7);margin:10px 12px;border-radius:10px}
    .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 12px}.action{padding:10px 6px;min-height:56px;font-size:13px;font-weight:600}.action:first-child{background:#0b527a;color:white}.action small{display:block;font-weight:400;margin-top:3px;font-size:11px}.error{color:#b71c1c;padding:0 12px;font-size:13px}
@@ -33,7 +33,7 @@ class JarvisRoomPanel extends HTMLElement {
   </style><ha-card>
    <div class="actions">${(c.actions||[]).map((a,i)=>`<button class="action" data-action="${i}">${this.esc(a.label)}${a.subtitle?`<small>${this.esc(a.subtitle)}</small>`:''}</button>`).join('')}</div><div class="error" role="alert"></div>
    <div id="stage"><div id="picture"></div>${heater&&c.status_entity?`<span id="heater-state" class="heater-state" style="left:${heaterX}%;top:calc(${heaterY}% + 30px)"></span>`:''}
-   <div class="metrics">${(c.metrics||[]).map((m,i)=>`<button class="metric" data-metric="${i}" aria-label="${this.esc(m.name)}"><b>—</b></button>`).join('')}</div></div>
+   <div class="metrics">${(c.metrics||[]).map((m,i)=>`<button class="metric" data-metric="${i}" aria-label="${this.esc(m.name)}"><ha-icon icon="${this.esc(m.icon||(/vlhk|humid/i.test(m.name+' '+m.entity)?'mdi:water-percent':'mdi:thermometer'))}" aria-hidden="true"></ha-icon><b>—</b></button>`).join('')}</div></div>
    <div id="status" class="${c.status_entity?'':'hidden'}"></div>
    <div id="extra"></div>
   </ha-card>`;

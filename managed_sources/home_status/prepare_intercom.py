@@ -23,6 +23,13 @@ def module():
     return (root / 'home-message.js').read_text() + '\n\n' + (root / 'intercom.js').read_text()
 
 
+def status_module():
+    # Register floorplan elements in the same resource as the room panel.
+    # An old cached extra_module_url must not leave a missing custom element.
+    root = Path(__file__).parent
+    return '\n\n'.join((root / name).read_text() for name in ('card.js', 'intercom.js', 'room-panel.js'))
+
+
 if __name__ == '__main__':
     source, target, javascript = map(Path, sys.argv[1:])
     target.write_text(patch(source.read_text()))
