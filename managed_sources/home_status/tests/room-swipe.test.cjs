@@ -21,6 +21,10 @@ p.navigate({path:'/hlavni-prehled/pokoj-detsky'});
 assert.deepEqual(visited,['/hlavni-prehled/pokoj-detsky']);
 assert.deepEqual(events,['location-changed']);
 p.navigate({path:'https://untrusted.example'});assert.equal(visited.length,1);
+p.cfg.status_entity='sensor.heat';p.h={states:{'sensor.heat':{state:'Čeká na slunce',attributes:{switch:'switch.heat'}},'switch.heat':{state:'off'}}};
+assert.equal(p.heatingStatus(),'Vypnuto · Čeká na slunce');
+p.h.states['switch.heat'].state='on';assert.equal(p.heatingStatus(),'Zapnuto · Čeká na slunce');
+p.h.states['switch.heat'].state='unavailable';assert.equal(p.heatingStatus(),'Nedostupné · Čeká na slunce');
 console.log('Room swipe: four directions, threshold, diagonal, hold and spatial boundaries passed');
 (async()=>{
  const nodes=new Map();p.shadowRoot={innerHTML:'',querySelector:s=>{if(!nodes.has(s))nodes.set(s,{appendChild(){}});return nodes.get(s)},querySelectorAll:()=>[]};p.childrenCards=[];p.addEventListener=()=>{};
