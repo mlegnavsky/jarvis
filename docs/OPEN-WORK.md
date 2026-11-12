@@ -799,3 +799,7 @@ Owner requested180s tolerance for running grid heaters and standalone charge. Se
 
 ## WiFi tolerance 1.3.3 ACTIVE — 10 November 2026
 Source419371f0706f3da0341a462b927463bbe600b554; wifi180-apply verified/active_verified, Core2026.6.4 unchanged. Heating1.3.3/charge0.6.9/UIready confirmed.785root tests PASS/20skips,64heating;manifest/diff pass. Runningmanualgridheat andstandalonecharge tolerate missingtelemetry180s afterdetection (staleness60s); recoveryresets timer. Knownhazards/OFF remainimmediate; native30reserve unchanged. No physicalWiFi disconnect test. Bothheaters restored topriorgrid_manualON with2kWcharge requested/observed; one-shotresume removed, originalautomations restored byte-for-byte and reloadverified. Private receipt jarvis_workspace/wifi180-receipt.json.
+
+
+## Room panels and lock tap — 12 November 2026
+Six room panels deployed with metrics separated from image, compact heating controls, direct swipe/arrow/chip room navigation. Unlocked lock icon sends lock.lock on explicit tap; no tap-to-unlock added. Five targeted Node suites pass. Module and private dashboard CAS writes verified with independent exact readback. Existing frontend resource retained; client reload required. Phone visual/gesture acceptance and physical locking remain unverified. See docs/evidence/2026-11-12-room-layout-swipe-lock.md; preserve card.js + room-panel.js bundling on future module refreshes. No Core restart or heating policy change.
