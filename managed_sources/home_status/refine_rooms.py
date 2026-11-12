@@ -20,6 +20,7 @@ def refine(text):
         next_view=re.search(r'^- (?:title:|!include)',text[match.end():],re.M)
         end=match.end()+next_view.start() if next_view else len(text)
         view=yaml.safe_load(text[match.start():end])[0]
+        view['back_path']='/hlavni-prehled/domov'
         panel=view['cards'][0]
         if panel.get('type')!='custom:jarvis-room-panel':raise ValueError('Room panel expected')
         panel['neighbors']={d:'/hlavni-prehled/pokoj-'+r for d,r in NEIGHBORS[match[1]].items()}
