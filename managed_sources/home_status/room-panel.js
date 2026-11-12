@@ -22,28 +22,21 @@ class JarvisRoomPanel extends HTMLElement {
   this.shadowRoot.innerHTML=`<style>
    :host{display:block;max-width:680px;margin:auto;touch-action:pan-y;font-family:var(--paper-font-body1_-_font-family,system-ui)}
    ha-card{display:block;overflow:hidden;border-radius:20px;background:var(--ha-card-background,var(--card-background-color,#fff))}
-   nav{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:8px;gap:6px}
    button{font:inherit;cursor:pointer;border:0;border-radius:12px;min-height:44px;background:var(--secondary-background-color,#edf2f7);color:var(--primary-text-color,#142c42)}
    button:focus-visible{outline:3px solid #1b9dcc;outline-offset:-3px}button:disabled{opacity:.45;cursor:default}
-   .arrow{font-size:26px}.room{text-align:center;color:var(--primary-text-color);font-size:19px;font-weight:700}.hint{display:block;font-size:11px;font-weight:400;color:var(--secondary-text-color);margin-top:2px}
-   .metrics{display:flex;gap:8px;position:absolute;bottom:12px;left:20px;right:20px;z-index:4}.metric{flex:1;border-radius:12px;background:#0b263e;color:#fff;text-align:center;padding:9px 5px;cursor:pointer}.metric small{display:block;font-size:11px;opacity:.76;margin-bottom:3px}.metric b{font-size:22px;font-weight:650;white-space:nowrap}
+   .metrics{display:flex;flex-direction:column;align-items:center;gap:2px;position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:4;background:rgba(3,19,39,.78);border-radius:8px;padding:5px 10px;max-width:80%}.metric{min-height:20px;min-width:80px;border-radius:0;background:transparent;color:#edf4fa;text-align:center;padding:0;line-height:1.35;cursor:pointer}.metric b{font-size:13px;font-weight:400;white-space:nowrap}
    #stage{position:relative}#picture{overflow:hidden;border-radius:14px;margin:0 8px;touch-action:none;overscroll-behavior:contain}#picture>*{display:block}
    #status{padding:10px 14px;color:var(--secondary-text-color);font-size:13px;line-height:1.4;background:var(--secondary-background-color,#edf2f7);margin:10px 12px;border-radius:10px}
    .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 12px}.action{padding:10px 6px;min-height:56px;font-size:13px;font-weight:600}.action:first-child{background:#0b527a;color:white}.action small{display:block;font-weight:400;margin-top:3px;font-size:11px}.error{color:#b71c1c;padding:0 12px;font-size:13px}
-   .rooms{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 12px;scrollbar-width:none}.rooms button{flex:0 0 auto;min-height:36px;padding:0 12px;font-size:12px;white-space:nowrap}.rooms button[aria-current=true]{background:#0b527a;color:white}
-   .direction{position:absolute;z-index:5;background:rgba(8,29,48,.88);color:white;min-height:36px;padding:5px 10px;max-width:42%;font-size:12px;box-shadow:0 2px 8px #0004}.direction.up{top:10px;left:50%;transform:translateX(-50%)}.direction.down{bottom:10px;left:50%;transform:translateX(-50%)}.with-metrics .direction.down{bottom:94px}.direction.left{left:14px;top:45%;transform:translateY(-50%)}.direction.right{right:14px;top:45%;transform:translateY(-50%)}#extra{padding:0 12px 8px} .hidden{display:none}
+   #extra{padding:0 12px 8px}.hidden{display:none}
   </style><ha-card>
-   <nav aria-label="Místnost"><button class="home" aria-label="Celý dům">⌂</button><div class="room">${this.esc(c.title)}<span class="hint">Přecházení podle půdorysu domu</span></div><span></span></nav>
    <div class="actions">${(c.actions||[]).map((a,i)=>`<button class="action" data-action="${i}">${this.esc(a.label)}${a.subtitle?`<small>${this.esc(a.subtitle)}</small>`:''}</button>`).join('')}</div><div class="error" role="alert"></div>
-   <div id="stage" class="${c.metrics?.length?'with-metrics':''}"><div id="picture"></div>${['up','left','right','down'].map(direction=>{const target=this.neighbor(direction);const arrow={up:'↑',left:'←',right:'→',down:'↓'}[direction];return target?`<button class="direction ${direction}" data-direction="${direction}" aria-label="${this.esc(target.title)}">${arrow} ${this.esc(target.title)}</button>`:'';}).join('')}
-   <div class="metrics">${(c.metrics||[]).map((m,i)=>`<button class="metric" data-metric="${i}" aria-label="${this.esc(m.name)}"><small>${this.esc(m.name)}</small><b>—</b></button>`).join('')}</div></div>
+   <div id="stage"><div id="picture"></div>
+   <div class="metrics">${(c.metrics||[]).map((m,i)=>`<button class="metric" data-metric="${i}" aria-label="${this.esc(m.name)}"><b>—</b></button>`).join('')}</div></div>
    <div id="status" class="${c.status_entity?'':'hidden'}"></div>
-   <div id="extra"></div><div class="rooms" aria-label="Místnosti">${c.rooms.map((r,i)=>`<button data-room="${i}" aria-current="${i===c.room_index}">${this.esc(r.title)}</button>`).join('')}</div>
+   <div id="extra"></div>
   </ha-card>`;
   const root=this.shadowRoot;
-  root.querySelector('.home').onclick=()=>{history.pushState(null,'','/hlavni-prehled/domov');window.dispatchEvent(new Event('location-changed'));};
-  root.querySelectorAll('[data-direction]').forEach(b=>b.onclick=()=>this.navigate(this.neighbor(b.dataset.direction)));
-  root.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>this.navigate(c.rooms[Number(b.dataset.room)]));
   root.querySelectorAll('[data-metric]').forEach(b=>b.onclick=()=>this.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:c.metrics[Number(b.dataset.metric)].entity}})));
   root.querySelectorAll('[data-action]').forEach(b=>b.onclick=async()=>{
    b.disabled=true;root.querySelector('.error').textContent='';
