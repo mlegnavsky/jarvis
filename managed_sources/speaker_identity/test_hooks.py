@@ -1,0 +1,78 @@
+from types import SimpleNamespace as NS
+import unittest
+from hooks import install
+
+class HookTests(unittest.IsolatedAsyncioTestCase):
+ async def test_bare_fallback_requires_native_silence_and_no_started_continuation(self):
+  for started,silence,want in [(True,True,''),(False,False,''),(False,True,'zhasni')]:
+   with self.subTest(started=started,silence=silence):
+    calls=[]
+    class Pipeline:
+     async def _speech_to_text_stream(self,audio_stream,stt_vad,sample_rate=16000,sample_width=2):
+      async for chunk in audio_stream:yield chunk.audio
+     async def speech_to_text(self,metadata,stream):
+      async for _ in self._speech_to_text_stream(stream,object()):pass
+      return 'context:'
+    class Coordinator:
+     async def complete(self,*args):calls.append(args)
+    hass=object();install(hass,Pipeline,Coordinator(),'2026.6.4','p','s')
+    run=Pipeline();run.hass=hass;run.pipeline=NS(id='p');run._satellite_id='s'
+    run._jarvis_direct_command_prefix='zhasni';run._jarvis_direct_continuation_started=started
+    run._jarvis_initial_silence_expired=silence
+    async def audio():
+     for _ in range(4):yield NS(audio=bytes(32000),speech_probability=.55)
+    self.assertEqual(await run.speech_to_text(NS(sample_rate=16000),audio()),want)
+ async def test_complete_room_suffix_is_normalized_before_identity_or_grant(self):
+  calls=[]
+  class Pipeline:
+   async def _speech_to_text_stream(self,audio_stream,stt_vad,sample_rate=16000,sample_width=2):
+    async for chunk in audio_stream:yield chunk.audio
+   async def speech_to_text(self,metadata,stream):
+    async for _ in self._speech_to_text_stream(stream,object()):pass
+    return 'v dětském pokoji'
+  class Coordinator:
+   async def complete(self,*args):calls.append(args)
+  hass=object();install(hass,Pipeline,Coordinator(),'2026.6.4','p','s')
+  run=Pipeline();run.hass=hass;run.pipeline=NS(id='p');run._satellite_id='s';run._jarvis_direct_command_prefix='zhasni'
+  run._jarvis_direct_continuation_started=True
+  async def audio():
+   for _ in range(4):yield NS(audio=bytes(32000),speech_probability=.9)
+  text=await run.speech_to_text(NS(sample_rate=16000),audio())
+  self.assertEqual(text,'zhasni v detskem pokoji');self.assertEqual(calls[-1][3],text)
+ async def test_native_local_intents_are_disabled_and_restored_for_target_microphone(self):
+  from dataclasses import dataclass
+  @dataclass(frozen=True)
+  class Config:
+   id:str='p'
+   prefer_local_intents:bool=True
+  class Pipeline:
+   async def _speech_to_text_stream(self,audio_stream,stt_vad,sample_rate=16000,sample_width=2):yield None
+   async def speech_to_text(self,*a):return ''
+   async def recognize_intent(self,*a):return self.pipeline.prefer_local_intents,self._intent_agent_only
+  hass=object();install(hass,Pipeline,NS(),'2026.6.4','p','s')
+  run=Pipeline();run.hass=hass;run.pipeline=Config();run._satellite_id='s';run._intent_agent_only=False;run.intent_agent=NS(id='conversation.extended_openai_conversation')
+  self.assertEqual(await run.recognize_intent('zhasni','c',None),(False,True))
+  self.assertTrue(run.pipeline.prefer_local_intents);self.assertFalse(run._intent_agent_only)
+ async def test_only_target_pipeline_collects_real_pcm_and_releases_buffer(self):
+  calls=[];hass=object()
+  class Pipeline:
+   async def _speech_to_text_stream(self,audio_stream,stt_vad,sample_rate=16000,sample_width=2):
+    async for chunk in audio_stream:yield chunk.audio
+   async def speech_to_text(self,metadata,stream):
+    async for _ in self._speech_to_text_stream(stream,object()):pass
+    return 'Mluvená věta'
+  class Coordinator:
+   async def complete(self,*args):calls.append(args)
+  self.assertEqual(install(hass,Pipeline,Coordinator(),'2026.6.4','p','s'),'active')
+  async def audio():
+   for _ in range(4):yield NS(audio=bytes(32000),speech_probability=.9)
+  run=Pipeline();run.hass=hass;run.pipeline=NS(id='other');run._satellite_id='s'
+  await run.speech_to_text(NS(sample_rate=16000),audio());self.assertFalse(calls)
+  run.pipeline.id='p'
+  text=await run.speech_to_text(metadata=NS(sample_rate=16000),stream=audio())
+  self.assertEqual(text,'Mluvená věta');self.assertEqual(len(calls[0][1]),128000)
+  self.assertEqual(calls[0][2],4);self.assertFalse(hasattr(run,'_jarvis_identity_capture'))
+ async def test_unsupported_core_never_modifies_pipeline(self):
+  class Pipeline:pass
+  self.assertEqual(install(None,Pipeline,None,'future','p','s'),'unsupported_core')
+  self.assertFalse(hasattr(Pipeline,'_jarvis_speaker_adapter'))

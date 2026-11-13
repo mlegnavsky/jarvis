@@ -1,0 +1,140 @@
+"""Pure, persisted two-radiator policy; watts positive for battery discharge."""
+import math
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+def next_midnight(now):
+ d=datetime.fromtimestamp(now,ZoneInfo('Europe/Prague'));return (d.replace(hour=0,minute=0,second=0,microsecond=0)+timedelta(days=1)).timestamp()
+
+def energy_source(pv,discharge,load):
+ if not all(numeric(v) for v in (pv,discharge,load)):return 'Zdroj neurčen'
+ if discharge>50:return 'Solár + baterie' if pv>50 else 'Z baterie'
+ if pv>50 and pv>=load-100:return 'Ze soláru'
+ if pv>50:return 'Solár / síť'
+ return 'Ze sítě' if load>50 else 'Zdroj neurčen'
+
+ROOMS=('child','living')
+DEFAULTS=dict(temp_on=22,temp_off=23.5,child_on_w=1200,child_off_w=1000,living_on_w=3500,living_off_w=3100,battery_on=90,battery_off=85,manual_stop_soc=50,min_off_s=300,living_delay_s=120,discharge_w=300,living_shed_s=120,child_shed_s=240)
+
+def numeric(value):
+ return isinstance(value,(float,int)) and not isinstance(value,bool) and math.isfinite(value)
+
+def mean_power(samples, now):
+ points=sorted((float(t),float(p)) for t,p in samples if numeric(t) and numeric(p) and t<=now)
+ if not points:return None
+ start=max(now-300,points[0][0]);area=0;duration=now-start
+ if duration<=0:return points[-1][1]
+ for i,(t,p) in enumerate(points):
+  end=points[i+1][0] if i+1<len(points) else now
+  area+=max(0,end-max(t,start))*p
+ return area/duration
+
+class Controller:
+ def __init__(self,saved=None):
+  s=saved or {};self.settings=dict(DEFAULTS);self.configure(s.get('settings',{}));self.samples=s.get('samples',[])
+  self.manual={r:bool(s.get('manual',{}).get(r,False)) for r in ROOMS}
+  self.grid_manual={r:bool(s.get('grid_manual',{}).get(r,False)) for r in ROOMS}
+  self.grid_stop={r:str(s.get('grid_stop',{}).get(r,'')) for r in ROOMS}
+  self.grid_discharge_since={r:s.get('grid_discharge_since',{}).get(r) for r in ROOMS}
+  self.manual_off_until={r:float(s.get('manual_off_until',{}).get(r,0)) for r in ROOMS}
+  self.off_until={r:float(s.get('off_until',{}).get(r,0)) for r in ROOMS}
+  self.on_since={r:float(s.get('on_since',{}).get(r,0)) for r in ROOMS}
+  self.full=bool(s.get('full',False));self.demand=bool(s.get('demand',False));self.discharge_since=s.get('discharge_since')
+ def configure(self,changes):
+  if not isinstance(changes,dict) or set(changes)-set(DEFAULTS):raise ValueError('invalid_settings')
+  new={**self.settings,**changes}
+  if not all(numeric(v) for v in new.values()):raise ValueError('invalid_settings')
+  if not (5<=new['temp_on']<new['temp_off']<=28 and new['temp_off']-new['temp_on']>=.5):raise ValueError('invalid_temperature_settings')
+  if not (0<=new['child_off_w']<new['child_on_w']<=new['living_on_w']<=20000 and 0<=new['living_off_w']<new['living_on_w']):raise ValueError('invalid_power_settings')
+  if not (20<=new['manual_stop_soc']<new['battery_off']<new['battery_on']<=100):raise ValueError('invalid_battery_settings')
+  if not all(60<=new[k]<=3600 for k in ('min_off_s','living_delay_s','living_shed_s','child_shed_s')) or new['child_shed_s']<=new['living_shed_s'] or not 50<=new['discharge_w']<=3000:raise ValueError('invalid_timing_settings')
+  self.settings=new
+ def dump(self):
+  return {k:getattr(self,k) for k in ('settings','samples','manual','grid_manual','grid_stop','grid_discharge_since','manual_off_until','off_until','on_since','full','demand','discharge_since')}
+ def request_grid(self,room,now):
+  if room not in ROOMS:raise ValueError('invalid_room')
+  self.external(room,True,now);self.manual[room]=False;self.grid_manual[room]=True;self.grid_stop[room]='';self.grid_discharge_since[room]=None
+ def external(self,room,on,now):
+  self.grid_manual[room]=False
+  self.grid_discharge_since[room]=None
+  self.grid_stop[room]='Ručně vypnuto' if not on else ''
+  self.manual[room]=on
+  if not on:self.manual_off_until[room]=next_midnight(now);self.off_until[room]=now+self.settings['min_off_s'];self.on_since[room]=0
+  else:self.manual_off_until[room]=0;self.on_since[room]=now
+ def evaluate(self,now,*,temp,pv,soc,discharge,load,child,living,grid_ready=False,grid_reason='Síťové topení není dostupné'):
+  cfg=self.settings
+  actual={'child':child,'living':living}
+  self.samples=[s for s in self.samples if now-600<=s[0]<=now]
+  if numeric(pv) and 0<=pv<=50000:
+   if self.samples and self.samples[-1][0]==now:self.samples[-1]=[now,pv]
+   else:self.samples.append([now,pv])
+  # Retain one preceding sample for exact left-edge weighting, bound storage.
+  older=[s for s in self.samples if s[0]<now-300]
+  self.samples=older[-1:]+[s for s in self.samples if s[0]>=now-300]
+  self.samples=self.samples[-2048:]
+  average=mean_power(self.samples,now) if numeric(pv) else None
+  temp_ok=numeric(temp) and -20<=temp<=60
+  energy_ok=all(numeric(v) for v in (pv,soc,discharge,load)) and 0<=soc<=100 and pv>=0 and load>=0
+  if not numeric(soc):self.full=False
+  elif soc>=cfg['battery_on']:self.full=True
+  elif soc<cfg['battery_off']:self.full=False
+  if temp_ok:
+   if temp<cfg['temp_on']:self.demand=True
+   elif temp>cfg['temp_off']:self.demand=False
+  if energy_ok and discharge>cfg['discharge_w'] and not self.full:
+   if self.discharge_since is None:self.discharge_since=now
+  else:self.discharge_since=None
+  elapsed=now-self.discharge_since if self.discharge_since is not None else 0
+  out={}
+  for room,on_threshold,off_threshold,watts in [('child',cfg['child_on_w'],cfg['child_off_w'],950),('living',cfg['living_on_w'],cfg['living_off_w'],2200)]:
+   on=actual[room];desired=on;reason='Čeká na slunce'
+   was_grid=self.grid_manual[room]
+   if was_grid and numeric(soc) and soc<=30 and numeric(discharge) and discharge>cfg['discharge_w']:
+    if self.grid_discharge_since[room] is None or self.grid_discharge_since[room]>now:self.grid_discharge_since[room]=now
+   else:self.grid_discharge_since[room]=None
+   if now<self.manual_off_until[room]:
+    desired=False;reason='Stop pro dnešek';self.manual[room]=False;self.grid_manual[room]=False
+   elif not temp_ok:
+    desired=False;reason='Chybí teplota';self.manual[room]=False;self.grid_manual[room]=False
+   elif self.grid_manual[room]:
+    if temp>=24:
+     desired=False;reason='Dosaženo 24 °C';self.grid_manual[room]=False
+    elif not grid_ready:
+     desired=False;reason=grid_reason;self.grid_manual[room]=False
+    elif self.grid_discharge_since[room] is not None and now-self.grid_discharge_since[room]>=30:
+     desired=False;reason='Ochrana 30 % · síť nepotvrdila převzetí spotřeby';self.grid_manual[room]=False
+    else:desired=True;reason='Ručně · '+energy_source(pv,discharge,load)+' · do 24 °C'
+   elif temp>cfg['temp_off']:
+    desired=False;reason='Dosaženo '+str(cfg['temp_off']).replace('.',',')+' °C';self.manual[room]=False
+   elif self.manual[room]:
+    if not numeric(soc) or soc<=cfg['manual_stop_soc']:
+     desired=False;reason='Limit baterie '+str(cfg['manual_stop_soc'])+' %' if numeric(soc) else 'Chybí stav baterie';self.manual[room]=False
+    else:desired=True;reason='Ručně'
+   elif not self.demand:
+    desired=False;reason='Teplota vyhovuje'
+   elif not energy_ok:
+    desired=False;reason='Chybí energetická data'
+   elif on:
+    if not self.full and elapsed >= (cfg['living_shed_s'] if room=='living' else cfg['child_shed_s']):
+     desired=False;reason='Ochrana baterie'
+    elif not self.full and (average is None or average<off_threshold):
+     desired=False;reason='Málo slunce'
+    else:desired=True;reason=energy_source(pv,discharge,load)
+   elif now<self.off_until[room]:desired=False;reason='Pauza po vypnutí'
+   elif not self.full and (average is None or average<=on_threshold):desired=False
+   elif room=='living' and (not child or now-self.on_since['child']<cfg['living_delay_s']):
+    desired=False;reason='Přednost dětského pokoje'
+   elif not self.full and (discharge>cfg['discharge_w'] or pv-load<watts):
+    desired=False;reason='Čeká na volný výkon'
+   else:desired=True;reason=energy_source(pv,discharge,load)
+   if was_grid and not self.grid_manual[room]:self.grid_stop[room]=reason;self.grid_discharge_since[room]=None
+   if on and not desired:
+    self.off_until[room]=now+self.settings['min_off_s'];self.on_since[room]=0
+   elif desired and not on:
+    # Actual on_since is recorded on confirmed state change by HA adapter.
+    pass
+   out[room]={'on':desired,'reason':reason,'manual':self.manual[room],'actual_on':on}
+  out['average']=round(average,1) if average is not None else None
+  out['coverage_seconds']=min(300,max(0,now-self.samples[0][0])) if self.samples else 0
+  out['full_battery']=self.full
+  return out

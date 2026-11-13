@@ -1,0 +1,114 @@
+{
+  "source_commit": "7be6d5645c2a4eda6ccd2d484dc9cd57bcc5b556",
+  "verified_at": "2026-11-01T14:36:13.031219+00:00",
+  "runtime": {
+    "version": "1.2.1",
+    "status": "ready",
+    "command_policy": "canonical_local_verified_success_silent_v1",
+    "authorization": {
+      "authorized_profiles": 1,
+      "anchor_profiles": 1
+    },
+    "bank_revision": "c18052f5d63d3d9e825e23ab5448442813fe73cdb0d50b3b4763e6b4729a82d4",
+    "homepod_version": "1.1.0",
+    "homepod_status": "configured",
+    "microphone": "idle_unmuted"
+  },
+  "owner_real_tests": {
+    "recognized_and_authorized": 2,
+    "whole_scores": [
+      0.5749,
+      0.7034
+    ],
+    "cause": "Recognized polite commands bypassed exact local handler; later STT prompt echoes caused misleading short-voice denials."
+  },
+  "changes": [
+    "Finite courtesy canonicalization before one-use grant issuance; target-bound local execution",
+    "Verified local action success is silent and closes followup",
+    "Exact observed STT prompt echoes are silent before speaker/LLM processing"
+  ],
+  "verification": {
+    "speaker_tests": 130,
+    "companion_tests": 51,
+    "addon_tests": 240,
+    "addon_skipped": 20,
+    "manifest_check": "passed",
+    "independent_review": "No Important or Critical findings",
+    "ci_pr_run": 41316559319,
+    "ci_push_run": 41316553446,
+    "ci": "success",
+    "laboratory_publication": "success",
+    "postboot_readback": [
+      {
+        "path": "custom_components/extended_openai_conversation/dialogue.py",
+        "exact": true,
+        "revision": "c1c8c89557f9740a2404e4cc5afb288537e42c3ed6c0a026a276b145eae6e88d"
+      },
+      {
+        "path": "custom_components/extended_openai_conversation/room_commands.py",
+        "exact": true,
+        "revision": "c8f4680cf96e1be2d7bc72b2692fdf8a596124fcc67d872213e7b0b5b8a049a7"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/__init__.py",
+        "exact": true,
+        "revision": "df4ee92867d67c8053cbb7a166df2cd15d5b77c097c813ec6a0e0d848ca7734a"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/authorization.py",
+        "exact": true,
+        "revision": "19b7d4f99e887abf5420ade2ffabf5c52d6e295d45ba1d9822976f0101c11018"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/coordinator.py",
+        "exact": true,
+        "revision": "650411db1f8ffd7785eaae0331eabdb9b7390f625b2f89ff4b41059b5110a9d5"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.json",
+        "exact": true,
+        "revision": "0fb25d33a7a0115f10176449cbf81dfd40d055e345ddfb01a21705132915d948"
+      }
+    ]
+  },
+  "deployment": {
+    "job": {
+      "id": "handoff121-apply-20261101",
+      "operation": "deployment_apply",
+      "state": "unknown",
+      "result": {
+        "error": "admin_upstream_outcome_unknown",
+        "retry_with_new_key": false
+      },
+      "backup_slug": "31d932a5",
+      "request_id": "handoff121-apply-20261101",
+      "created_at": "2026-11-01T14:31:09.583737+00:00",
+      "started_at": "2026-11-01T14:31:09.599033+00:00",
+      "finished_at": "2026-11-01T14:35:25.997481+00:00",
+      "summary": {
+        "changed_fields": [],
+        "expected_version": null,
+        "operation": "deployment_apply",
+        "restore_from": null,
+        "target": null
+      }
+    },
+    "interpretation": "Apply outcome unknown after upstream timeout; did not retry. Independently verified active1.2.1 runtime and exact6-file postboot readback.",
+    "backup": "31d932a5",
+    "lease_release_job": "handoff121-release-20261101"
+  },
+  "retention": {
+    "deleted_exact_old_backups": [
+      "49a4ece2",
+      "798f89b2"
+    ],
+    "newest_three_and_protected_preserved": true
+  },
+  "remaining": {
+    "native_homepod_abort_source": "unresolved",
+    "physical_postfix_command_test": "pending",
+    "short_commands": "Minimum2.5s voiced speech unchanged; short commands may require longer confirmation",
+    "household_accuracy_guaranteed": false,
+    "additional_calibration_requested": false
+  }
+}

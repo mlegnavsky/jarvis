@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "source_commit": "aa31241150115ca0b6ab1118d2acb833109b55ee",
+  "live_failure": {
+    "question_transcribed": true,
+    "identity_rejected": true,
+    "matching_reason": "unavailable_followup_overwrote_last_turn",
+    "recognition_fixed": false
+  },
+  "deployment_job": {
+    "id": "hist7-apply-20261101",
+    "operation": "deployment_apply",
+    "state": "failed",
+    "result": {
+      "error": "runtime_check_failed"
+    },
+    "backup_slug": "1733c28d",
+    "request_id": "hist7-apply-20261101",
+    "created_at": "2026-11-01T10:30:51.838945+00:00",
+    "started_at": "2026-11-01T10:30:51.855042+00:00",
+    "finished_at": "2026-11-01T10:34:55.034843+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "independent_verification": {
+    "captured_at": "2026-11-01T10:34:58.981059+00:00",
+    "runtime_version": "1.1.7",
+    "status": "ready",
+    "recent_turns": [],
+    "source_readback": [
+      {
+        "path": "custom_components/jarvis_speaker_identity/coordinator.py",
+        "match": true,
+        "revision": "b9e6c51ff07ad443c8938061c178e9a1c37e70d7c25d4b16c9de05423f47fd28"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/coordinator.py",
+        "match": true,
+        "revision": "b9e6c51ff07ad443c8938061c178e9a1c37e70d7c25d4b16c9de05423f47fd28"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/__init__.py",
+        "match": true,
+        "revision": "6f5c1b894526a732eae7ab8426ed18e5a7c60c6b493b99bddb28d8e8b60f7a26"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/__init__.py",
+        "match": true,
+        "revision": "6f5c1b894526a732eae7ab8426ed18e5a7c60c6b493b99bddb28d8e8b60f7a26"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.json",
+        "match": true,
+        "revision": "c9744960c9b96f72eb46f8b3382682a4369df9331c69a2052d551fb21858e8bf"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.json",
+        "match": true,
+        "revision": "c9744960c9b96f72eb46f8b3382682a4369df9331c69a2052d551fb21858e8bf"
+      }
+    ],
+    "authorization": {
+      "authorized_profiles": 1,
+      "anchor_profiles": 1
+    },
+    "matching_policy": "top_two_mean_calibrated_v1",
+    "profile_revision": "77a888761bccde3953e3c7970bf6a2e7d509dae5121d761febcd9ad6ad471b3c",
+    "homepod_status": "configured",
+    "homepod_volume": 0.45
+  },
+  "tests": {
+    "speaker": 99,
+    "ci": "success",
+    "review": "no remaining Critical or Important findings"
+  },
+  "next": "One owner normal identity question via microphone button; inspect retained whole/window numeric scores before further policy change."
+}

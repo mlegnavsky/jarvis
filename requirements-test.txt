@@ -1,0 +1,17 @@
+# Test-only interoperability client; never installed in the Green images.
+mcp==2.3.0
+PyYAML==6.0.3
+
+Jinja2==3.1.6
+
+# Exact WebDAV client bundled with Home Assistant Core 2026.6.4
+aiowebdav2==0.6.2
+
+# Real streamed-reference codec used by the installed pyatv path; tests only.
+miniaudio==1.71
+
+# Pinned native RAOP transport exercised by interoperability tests.
+pyatv==0.17.0
+
+# Actual public-identity and transport SDK contract used by the native candidate.
+aiosendspin[server]==10.3.0

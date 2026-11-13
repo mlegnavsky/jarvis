@@ -1,0 +1,104 @@
+{
+  "source_commit": "e95c9e90cf0d6c5b35fdb85ade7d7917511aef31",
+  "apply_job": "vol-apply-20261031",
+  "state": "verified",
+  "phase": "active_verified",
+  "finished_at": "2026-10-31T17:36:03.073608+00:00",
+  "backup": "fc76d3f2",
+  "readbacks": [
+    {
+      "path": "custom_components/jarvis_homepod_output/routing.py",
+      "matches": true,
+      "revision": "abb0da1771b998cddfba0448ac29394629ac45d6ae34b74d2a67a48d2308f58f"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/routing.py",
+      "matches": true,
+      "revision": "abb0da1771b998cddfba0448ac29394629ac45d6ae34b74d2a67a48d2308f58f"
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/__init__.py",
+      "matches": true,
+      "revision": "d7d43d7c83837a165b7f7e2635923efd9bb3487f5d13efbb99676921783ce2bb"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/__init__.py",
+      "matches": true,
+      "revision": "d7d43d7c83837a165b7f7e2635923efd9bb3487f5d13efbb99676921783ce2bb"
+    }
+  ],
+  "output": {
+    "version": 3,
+    "started_at": "2026-10-31T17:35:52.981644+00:00",
+    "adapter": "active",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "volume_policy": "follow_homepod",
+    "legacy_fixed_volume_ignored": 0.35,
+    "native_abort_resume": "active",
+    "microphone": "assist_satellite.home_assistant_voice_0a8bde_assist_satellite",
+    "speech_volume": 0,
+    "terminal_spoken_output": false,
+    "audible_test_performed": false,
+    "arbitrary_speech_barge_in": false,
+    "cancel_current_answer_hook": true,
+    "wake_or_stop_word_physical_test": "deferred_until_user_home",
+    "echo_reference_for_external_homepod": "not_available_on_stock_voice_pe",
+    "followup_gate": "native_RAOP_completion_then_silent_satellite_completion",
+    "player_available": true,
+    "raop_stream_file": true,
+    "player_state": "off",
+    "satellite_media_player_url": true,
+    "observed_volume": 0,
+    "observed_muted": null,
+    "status": "configured",
+    "updated_at": "2026-10-31T17:36:13.008037+00:00",
+    "playback": {
+      "started": 0,
+      "completed": 0,
+      "cancelled": 0,
+      "failed": 0,
+      "active": false,
+      "last_error": null
+    },
+    "television": {
+      "owned": false,
+      "paused": 0,
+      "resumed": 0,
+      "resume_requested": 0,
+      "discarded": 0,
+      "failed": 0,
+      "last_error": null
+    },
+    "television_entity": "media_player.obyvaci_pokoj_obyvaci_pokoj",
+    "interrupt_resume": {
+      "resumed": 0,
+      "blocked": 0,
+      "failed": 0,
+      "pending": false,
+      "last_reason": null
+    },
+    "last_volume_decision": {}
+  },
+  "storage": {
+    "disk_free": 2.9,
+    "disk_total": 28,
+    "disk_used": 23.9,
+    "unit": "GiB",
+    "backup_minimum_free_gib": 2,
+    "backup_ready": true
+  },
+  "local_homepod_tests": 38,
+  "ci_runs": [
+    41224820337,
+    41224826220
+  ],
+  "physical_audio_test": false,
+  "remaining": [
+    "household_profile_count_0",
+    "anicko_acoustic_model_absent",
+    "arbitrary_speech_barge_in_absent",
+    "anonymous_per_turn_context_restriction",
+    "automatic_backup_failed_warning",
+    "host_resources_unavailable"
+  ]
+}

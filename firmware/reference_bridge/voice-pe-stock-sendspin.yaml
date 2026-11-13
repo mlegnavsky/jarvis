@@ -1,0 +1,7 @@
+# Retain the stock media source for normal servers and route only the configured
+# reference identity to the silent endpoint. Exact private target compile and
+# hardware acceptance remain required before installation.
+packages:
+  jarvis_reference_common: !include voice-pe-common.yaml
+jarvis_reference:
+  existing_player: sendspin_media_source

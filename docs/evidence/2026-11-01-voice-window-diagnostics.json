@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "source_commit": "3aca793a72c945a5e652887afadbf03d9325ad7e",
+  "scope": "diagnostic_feedback_fix_not_household_accuracy",
+  "deployment_job": {
+    "id": "voice-diag-apply-20261101",
+    "operation": "deployment_apply",
+    "state": "failed",
+    "result": {
+      "error": "runtime_check_failed"
+    },
+    "backup_slug": "812f3bce",
+    "request_id": "voice-diag-apply-20261101",
+    "created_at": "2026-11-01T07:12:15.510219+00:00",
+    "started_at": "2026-11-01T07:12:15.522370+00:00",
+    "finished_at": "2026-11-01T07:16:53.135686+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "independent_runtime_verification": {
+    "runtime_version": "1.1.1",
+    "status": "ready",
+    "native_probe": {
+      "passed": true,
+      "embedding_dimensions": 192,
+      "inference_ms": 1573.1,
+      "scope": "HA HTTP -> real local embedding model -> temporary fictional profile persistence/deletion; no household profiles changed"
+    },
+    "profiles": 1,
+    "authorization": {
+      "authorized_profiles": 1,
+      "anchor_profiles": 1
+    },
+    "manifest_source_revision": "f697be144f02fb6c14fc1b7974b5853fd4d7d2c2447b29ca114eaf8d341512d3",
+    "readback": [
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.json",
+        "match": true,
+        "revision": "55fc05abdb5688123949eba766ce558f22025c3a6484d063bbc79fb0e0efe13f"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.json",
+        "match": true,
+        "revision": "55fc05abdb5688123949eba766ce558f22025c3a6484d063bbc79fb0e0efe13f"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/policy.py",
+        "match": true,
+        "revision": "c1afde361cb15908973cf7ad4566b0e5071de5d4668f6a19907a3aa165f3ef1e"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/policy.py",
+        "match": true,
+        "revision": "c1afde361cb15908973cf7ad4566b0e5071de5d4668f6a19907a3aa165f3ef1e"
+      },
+      {
+        "path": "custom_components/extended_openai_conversation/conversation.py",
+        "match": true,
+        "revision": "cc8cde125ea49786778894e2b6e73bffcbd59df20b98ad63ef52a050682f2ce0"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/__init__.py",
+        "match": true,
+        "revision": "296fc18f0b1e557c09e46913ceb2ebe10ddde5968e5e56485dc3f301a4494ccd"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/extended_openai_conversation/conversation.py",
+        "match": true,
+        "revision": "cc8cde125ea49786778894e2b6e73bffcbd59df20b98ad63ef52a050682f2ce0"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/__init__.py",
+        "match": true,
+        "revision": "296fc18f0b1e557c09e46913ceb2ebe10ddde5968e5e56485dc3f301a4494ccd"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/coordinator.py",
+        "match": true,
+        "revision": "00656dd160b9253e1b72ad216d6926095c683cde4cfb09b480dcc5abf9a3233d"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/coordinator.py",
+        "match": true,
+        "revision": "00656dd160b9253e1b72ad216d6926095c683cde4cfb09b480dcc5abf9a3233d"
+      },
+      {
+        "path": "custom_components/extended_openai_conversation/runtime.py",
+        "match": true,
+        "revision": "86b2a7b9ba579342de51e9f36c7cb67087a97a37eaabbc70c891ea776b6ded21"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/extended_openai_conversation/runtime.py",
+        "match": true,
+        "revision": "86b2a7b9ba579342de51e9f36c7cb67087a97a37eaabbc70c891ea776b6ded21"
+      }
+    ]
+  },
+  "tests": {
+    "speaker": 56,
+    "companion": 49,
+    "addon": 239,
+    "addon_skipped": 20,
+    "ci_run": 41283802230,
+    "ci_all_jobs": "success",
+    "review": "No Critical/Important findings; minor outage reply becomes generic after retry stop."
+  },
+  "cleanup": {
+    "deleted": [
+      "aee76900",
+      "1f1a5cc3"
+    ],
+    "preserved": "three previous latest plus protected automatic backup; new backup812f3bce created",
+    "storage": {
+      "disk_free": 2.1,
+      "disk_total": 28,
+      "disk_used": 24.7,
+      "unit": "GiB",
+      "backup_minimum_free_gib": 2,
+      "backup_ready": true
+    }
+  },
+  "known_remaining": [
+    "Household whole/window score test required before tuning; no recognition-accuracy claim.",
+    "HomePod post-restart volume missing. volume_set requestvoice-diag-volume35-20261101 returned unknown_do_not_replay; readback did not establish35%. No new mutation key used.",
+    "Original anchors, .75 threshold, .12 margin and window veto unchanged."
+  ]
+}

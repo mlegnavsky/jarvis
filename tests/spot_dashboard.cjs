@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');global.HTMLElement=class{};
+const {value,flow,price}=require('../managed_sources/spot_dashboard/card.js');
+const now=Date.now(),st=(state)=>({state:String(state),last_updated:new Date(now).toISOString()});
+assert.equal(value({},'x'),null);assert.equal(value({x:st('unavailable')},'x'),null);
+assert.equal(value({x:{state:'4',last_updated:'2000-01-01'}},'x'),null);
+assert.equal(value({x:st('')},'x'),null);assert.equal(value({x:st(0)},'x'),0);
+assert.equal(price({'sensor.jarvis_spot_ote':{attributes:{rows:[{time:new Date(now-1000).toISOString(),price:-2}]}}},now),-2);
+assert.equal(price({'sensor.jarvis_spot_ote':{attributes:{rows:[{time:new Date(now-900001).toISOString(),price:4}]}}},now),null);
+assert.equal(flow({}).valid,false);
+const states={};for(const [id,v]of Object.entries({pv_power:5000,load_power:1000,grid_power:-3000,battery_power:-800,battery:60}))states['sensor.inverter_'+id]=st(v);
+const f=flow(states,now);assert.equal(f.valid,true);assert.equal(f.grid,-3000);assert.equal(f.battery,-800);
+console.log('PASS: missing/stale telemetry, zero, negative/expired OTE, flow directions');

@@ -1,0 +1,154 @@
+{
+  "scope": "host_real_time_simulation_not_room_acceptance",
+  "version": "1.3.2",
+  "runtime_fingerprint": "0188c6b6f946487e975cd7d7cdd8d7ec62610ed32202bc76717831b3b6b99750",
+  "reviewed_commit": "854010773f014772e8e3f51fed8be613dd4f711d",
+  "simulation": {
+    "wall_seconds": 240.0024,
+    "frames": 24001,
+    "human_inputs_accepted": 7,
+    "unwanted_echo_agent_turns": 2,
+    "output_started": 9,
+    "output_completed": 4,
+    "output_stopped": 5,
+    "accepted_interruptions": 4,
+    "provider_or_decoder_failures": 0,
+    "close_reason": "session_limit",
+    "checks": {
+      "source_unchanged": true,
+      "duration_reached": true,
+      "no_provider_failure": true,
+      "all_workers_done": true,
+      "all_readers_closed": true,
+      "pipes_within_256k_each": true,
+      "no_echo_self_answers": false,
+      "all_seven_human_turns_accepted": true
+    },
+    "file": "experiments/simulated-dialogue-20261103/result.json",
+    "scripted_boundaries": [
+      "microphone",
+      "VAD probability",
+      "ASR text and 550ms delay",
+      "identity",
+      "agent response and 150ms delay",
+      "TTS provider",
+      "RAOP receiver/1.5s timing",
+      "room impulse response"
+    ]
+  },
+  "transport_control": {
+    "wall_seconds": 70.1922,
+    "decoded_reference_seconds": 60.084,
+    "completed": 1,
+    "stopped": 0,
+    "checks": {
+      "source_unchanged": true,
+      "duration_reached": true,
+      "no_provider_failure": true,
+      "all_workers_done": true,
+      "all_readers_closed": true,
+      "pipes_within_256k_each": true,
+      "no_echo_self_answers": true,
+      "all_seven_human_turns_accepted": null
+    },
+    "file": "experiments/simulated-dialogue-20261103/transport-control.json"
+  },
+  "regression": {
+    "baseline_seconds": [
+      17.7719,
+      17.7606
+    ],
+    "reference_read_requested_bytes": 49248,
+    "valid_pending_bytes": 17907,
+    "false_stall_ms": 5000.203,
+    "fix": "bounded short reads and shared playback pause/resume-aware reader budget; full queue waits on consumer with existing owner deadline/abort",
+    "red_green_tests": [
+      "valid bytes available under large codec request",
+      "paired pipes slow native consumer"
+    ],
+    "duplex_tests": 232,
+    "addon_tests": 242,
+    "addon_skipped": 20,
+    "manifest": "passed",
+    "diff": "passed"
+  },
+  "review": {
+    "model": "gpt-6-astra/high",
+    "critical": 0,
+    "important": 0,
+    "minor": 3,
+    "minor_fixed": [
+      "annotate historical vacuous attempt-2 boolean; preserve raw record",
+      "accurate harness header and mandatory explicit source pin"
+    ],
+    "deferred_minor": "add deterministic synchronized resumed_at deadline-race unit test; current slowconsumer regression and real long controls pass",
+    "exclusion_rulings": [
+      {
+        "area": "unchanged gate/calibration acoustic effectiveness",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "real ASR/VAD/identity",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "likelihood of injected ASR errors",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "room/microphone/firmware/HomePod/RAOP network",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "provider speed/one-second latency",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "voice authorization/household actions",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "live Green activation",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "interim af68 source_unchanged=false result",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "240s final run before result",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "multiple producers not present in production",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "planned StreamAborted cancellations",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      },
+      {
+        "area": "unbounded standalone feed outside owned production deadlines",
+        "ruling": "accept scope exclusion; no success claim inferred"
+      }
+    ],
+    "final_run_root_verification": "final0188 source unchanged and240.0024s observed after review; no source behavior changed"
+  },
+  "limits": {
+    "echo_self_answer_fixed": false,
+    "first_syllable_barge_in_fixed": false,
+    "one_second_response_verified": false,
+    "existing_session_limit_seconds": 240,
+    "actual_microphone_opened": false,
+    "physical_household_action": false,
+    "Green_activation": "pending"
+  },
+  "rulings": [
+    "User asked self simulation because nobodyhome; use host test adapters and generated speech, never auto-open live microphone.",
+    "Prior owner software/deploy/public Git consent covers narrow reproduced transport fix; no repeated consent required.",
+    "Do not change acoustic suppression from injected ASR fixtures: real source/identity still unproved.",
+    "Keep 256KiB caps and original owner deadlines; a full queue is intentional flow control, not an inactivity failure.",
+    "The240s hard session cutoff is separately exposed and retained, not counted as an unexpected stream failure.",
+    "Exclude interim Event-only candidate from final proof because runtime files changed during that older run."
+  ]
+}

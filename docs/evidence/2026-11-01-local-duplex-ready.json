@@ -1,0 +1,32 @@
+{
+  "status": "source_ready_activation_pending",
+  "local_head": "b3bf972",
+  "runtime_version": "1.0.0",
+  "core": "2026.6.4",
+  "firmware_changed": false,
+  "review": {
+    "critical": 0,
+    "important": 4,
+    "important_fixed": 4,
+    "minor": 0
+  },
+  "tests": {
+    "duplex": 55,
+    "companion": 63,
+    "homepod": 60,
+    "diagnostics": 28,
+    "identity": 154,
+    "addon": 244,
+    "addon_skipped": 20,
+    "manifest": "passed",
+    "diff": "passed"
+  },
+  "physical_acceptance_verified": false,
+  "noisy_wake_verified": false,
+  "notes": [
+    "Native existing connection retained; completed utterance STT only",
+    "Own speaker for assistant; AppleTV/HomePod television unchanged",
+    "Fixed probe/output_test never open microphone",
+    "Device-local timer announcement ownership is not identified by native interface"
+  ]
+}

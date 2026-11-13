@@ -1,0 +1,5 @@
+# Expandable battery and inverter details — 5 November 2026
+
+Source13790306758e9a56a750c3c528f8f6e6446170fa adds built-in markdown details/summary in Spoty, battery SOC/temp/voltage/unsigned current/power and charge limits; inverter temperature/losses/work mode and controller status. Alarm-on is explicit, alarm-off reads no alarm reported, unavailable never implies healthy. Includes earlier authorized unsigned power/unit rendering and green/red native tile controls. No new custom element, controller change, restart, inverter write or charge test.
+
+Validation: real Jinja rendered numeric and signed values, alarm-on and unavailable cases; generated JSON structure, original live house composite preserved, Python syntax and diff check passed. Live job mobile-device-details-write-20261105 verified; exact full readback confirmed revision 8fb5e557f43844f1fa041d7c306f0a9a22a536dc8b8d6b1cad95f79b3de8969e. Smartphone visual acceptance remains unverified; saved configuration does not claim device rendering proof.

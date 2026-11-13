@@ -1,0 +1,228 @@
+{
+  "schema": 1,
+  "status": "active_native_kernel_and_fixed_output_verified_room_acceptance_pending",
+  "version": "1.2.8",
+  "source_commit": "feb65f1cd0c9d29b7225869ac3b3d4848f765097",
+  "reviewed_local_commit": "28ae0f331b9f781507646305eea458a66549855c",
+  "source_tree": "cf6aa892b8537a1cdf673218da6047e75b889a11",
+  "runtime_source_revision": "7bfaf3bb6f884effeb579e357e1b3ec52222d11441af96f818bb219f8cf8c6de",
+  "core_version": "2026.6.4",
+  "purpose": "usable_in_memory_scalar_waveform_observation",
+  "input_decisions_changed": false,
+  "raw_microphone_saved": false,
+  "microphone_opened_by_diagnostics": false,
+  "tests": {
+    "duplex": 195
+  },
+  "review": {
+    "critical": 0,
+    "important": 0,
+    "minor": 0,
+    "independent_duplex": 195,
+    "scope": "native_kernel_followup_not_duplicate_prior_review"
+  },
+  "prior_diagnostic": {
+    "version": "1.2.7",
+    "source": "6ff5306e219145c8431e8cd2863a06b161da021472c03da3a0881dae88ccad4a",
+    "activation_job": "wave127-apply-20261103",
+    "backup": "cf7385ba",
+    "native_waveform_status": "work_budget_exhausted",
+    "comparisons": 288,
+    "processing_ms": 25.223,
+    "lease_release_job": "wave127-release-20261103",
+    "lease_release_verified": true
+  },
+  "native_dependency": {
+    "source": "Core2026.6.4 pyproject",
+    "declared": "audioop-lts==0.2.2",
+    "new_install": false
+  },
+  "host_only_benchmark": {
+    "runs": 20,
+    "kernel": "audioop_findfactor",
+    "median_ms": 4.2975,
+    "max_ms": 6.903,
+    "comparisons": 2001,
+    "not_green_proof": true
+  },
+  "limitations": {
+    "room_acceptance": false,
+    "human_separation": false,
+    "latency_improved": false,
+    "absolute_clock_calibration": false,
+    "full_2001_position_native_worst_case": false,
+    "big_endian_hardware_tested": false
+  },
+  "cleanup": {
+    "old_unprotected_backups_deleted": [
+      "0989c12e",
+      "8c59a22b"
+    ],
+    "newest_three_and_protected_preserved": true
+  },
+  "activation": {
+    "plan": "wave128-prepare-20261103",
+    "apply_job": "wave128-apply-20261103",
+    "state": "verified",
+    "phase": "active_verified",
+    "backup_slug": "42b6d49d",
+    "finished_at": "2026-11-03T05:30:54.080623+00:00",
+    "runtime_files_exact_on_fresh_read": 3
+  },
+  "native_probe": {
+    "status": "passed",
+    "scope": "native_VAD_and_TTS_reference_no_playback",
+    "native_vad_probability": 0.00439656525850296,
+    "native_vad_warmup_frames": 77,
+    "reference_seconds": 2.8316875,
+    "reference_signal": {
+      "duration_s": 2.832,
+      "silent": false,
+      "peak_dbfs": -9.07,
+      "rms_dbfs": -23.71
+    },
+    "microphone_opened": false,
+    "audible_playback": false,
+    "source_revision": "7bfaf3bb6f884effeb579e357e1b3ec52222d11441af96f818bb219f8cf8c6de",
+    "pipeline_signature": "7e4a5a90ac21fdfa8394d3fad1cc682875dec1bf74b5a6baab85ac471fdf5f91",
+    "waveform_probe": {
+      "status": "measured",
+      "comparisons": 1216,
+      "processing_ms": 19.651,
+      "kernel": "audioop_findfactor",
+      "acoustic_echo_proof": false,
+      "correlation": 1,
+      "offset_ms": 1250,
+      "peak_margin": 0.7777,
+      "alternative_count": 1195,
+      "reference_window_sample": 0,
+      "window_ms": 400,
+      "search_ms": 2000,
+      "sample_rate": 500,
+      "scope": "generated_reference_only_no_microphone"
+    }
+  },
+  "fixed_output": {
+    "status": "passed",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "microphone_opened": false,
+    "native_playback": {
+      "owned": false,
+      "started": 1,
+      "completed": 1,
+      "skipped": 0,
+      "stopped": 0,
+      "echo_frames": 0,
+      "overlap_frames": 0,
+      "discarded": 0,
+      "last_stop_s": null,
+      "last_reference_duration_s": 2.8316875,
+      "last_error": null,
+      "text_echo_suppressed": 0,
+      "tts_generation_ms": 36.1,
+      "first_audio_wait_ms": 2315.3,
+      "transcript_guard": [],
+      "target": "media_player.homepod_obyvak_homepod_obyvak",
+      "transport": "native_raop_local_file",
+      "volume_decision": {
+        "volume": 0.45,
+        "muted": false,
+        "source": "raop",
+        "busy": false
+      },
+      "negotiated_latency_s": 1.5,
+      "sender_scheduling_delay_s": 1.5,
+      "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+      "pending_resource_cleanup": 0
+    },
+    "audibility_confirmed": false
+  },
+  "microphone": {
+    "checked_at": "2026-11-03T05:33:13.858782+00:00",
+    "mute": "off",
+    "satellite": "idle",
+    "recording_started": false
+  },
+  "ci": {
+    "push": {
+      "id": 41583856360,
+      "conclusion": "success"
+    },
+    "pull_request": {
+      "id": 41583861894,
+      "conclusion": "success"
+    },
+    "laboratory_job": {
+      "id": 125745015230,
+      "conclusion": "success"
+    }
+  },
+  "lease_release_job_id": "wave128-release-20261103",
+  "lease_release_verified_at": "2026-11-03T05:36:17.550787+00:00",
+  "operational_recovery": {
+    "problem": "latest_real_session_blocked_before_microphone_by_unavailable_Apple_TV",
+    "failed_session": {
+      "run_id": "01M6FYKA7NP508ASN410VM6FSG",
+      "reason": "television_not_quiet",
+      "frames": 0,
+      "outputs_started": 0
+    },
+    "observed_error": "pyatv FetchAttentionState ProtocolError then BlockedStateError(device_info)",
+    "operation": "integration_reload",
+    "job_id": "voice-tv-reload-20261103",
+    "job_state": "verified",
+    "backup_slug": "ba75b0ef",
+    "finished_at": "2026-11-03T05:47:43.389934+00:00",
+    "integration_state": "loaded",
+    "require_restart": false,
+    "current_entities": [
+      {
+        "entity_id": "media_player.obyvaci_pokoj_obyvaci_pokoj",
+        "state": "playing",
+        "last_updated": "2026-11-03T05:47:50.510206+00:00"
+      },
+      {
+        "entity_id": "remote.obyvaci_pokoj_obyvaci_pokoj",
+        "state": "on",
+        "last_updated": "2026-11-03T05:47:43.336988+00:00"
+      }
+    ],
+    "television_paused_for_this_recovery": false,
+    "source_revision_unchanged": "7bfaf3bb6f884effeb579e357e1b3ec52222d11441af96f818bb219f8cf8c6de",
+    "idle_microphone_checked_at": "2026-11-03T05:48:12.379916+00:00",
+    "raw_recording_started": false,
+    "old_unprotected_backup_deleted": {
+      "slug": "ecbb9b17",
+      "job": "voice-tv-prune-ecbb9b17-20261103",
+      "state": "verified",
+      "newest_three_and_protected_preserved": true
+    },
+    "lease_release_job_id": "voice-tv-release-20261103",
+    "room_acceptance": false,
+    "lease_release": {
+      "id": "voice-tv-release-20261103",
+      "state": "verified",
+      "finished_at": "2026-11-03T05:48:40.269909+00:00",
+      "final_locked": false
+    }
+  },
+  "receipt": {
+    "path": "jarvis_workspace/local_duplex/waveform-observation-receipt.json",
+    "revision": "e6646d3500006fcb887f3672f2429c91cebf4798f9adad07a25495ccf41150f5",
+    "exact_readback": true,
+    "write_job": "voice-tv-receipt-write-20261103",
+    "state": "verified"
+  },
+  "lease_release": {
+    "id": "wave128-release-20261103",
+    "state": "verified",
+    "finished_at": "2026-11-03T05:36:17.550787+00:00"
+  },
+  "room_test": {
+    "status": "pending_real_wake_and_conversation",
+    "latest_session_has_no_microphone_data": true,
+    "prior_1_2_6_room_acceptance": "failed_owner_confirmed_autonomous_stops",
+    "next": "Owner wakes Jarvis, asks for a roughly one-minute story, and allows it to finish without speaking; inspect scalar waveform observations and output/interrupt counters."
+  },
+  "claim_boundary": "Diagnostic measurement and software/device recovery only. No room acoustic separation, natural human barge-in, audibility of latest fixed output, calibrated absolute delay, native full-search worst case, or one-second response claim."
+}
