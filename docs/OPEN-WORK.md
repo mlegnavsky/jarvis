@@ -792,3 +792,5 @@ Owner explicitly authorized GitHub publication in the following turn. Publishing
 
 ## Spot buttons and standalone charge — 13 November 2026
 Exact standalone charge failure reproduced and fixed in source; see docs/evidence/2026-11-13-spot-buttons.md. Backend0.6.10 activation is blocked by backup preflight (0.3GiB free). Do not claim charging repaired on Green before activation and live proof. Preserve newest/protected backups; three specific older partial backups proposed for owner approval. Frontend1.3.1 reconciles installed1.3.0 features and adds actual-state Play/Stop buttons.
+
+Spot button deployment follow-up: frontend3/3 exact readbacks verified via spotfix-ui-apply-20261113, refresh required. Backend plan spotfix-backend-prepare-20261113 prepared only; activation revisiona6e8f157cf8071bbeb5ff637772d9dbf770c5d48f1475114d509bbff8d7b1534, requires reacquired lease/fresh source and storage check before apply. Three older partial backups listed in evidence await explicit owner deletion approval; no deletion/restart performed.819 tests OK/20 skips;174 targeted OK.
