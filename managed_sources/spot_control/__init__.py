@@ -23,7 +23,10 @@ async def async_setup(hass,config):
         if any(getattr(controller,'active',False) for controller in controllers):return False
         if sales.get('clock_sync_active'):return False
         busy=sales.get('busy')
-        if callable(busy) and busy() and not (c.active and c.record.get('purpose')=='heating'):return False
+        # The sales poll holds this lock while observing an owned charge too.
+        # Actual sales and clock writes remain excluded above; this lock alone
+        # must not abort either standalone or heating charging mid-transaction.
+        if callable(busy) and busy() and not c.active:return False
         return True
     def communication_ok():
         now=dt_util.utcnow()
@@ -66,7 +69,7 @@ async def async_setup(hass,config):
         return result
     def report():
         phase=c.record.get('phase','idle')
-        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.6.9','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'purpose':c.record.get('purpose'),'target_w':c.record.get('target_w'),'heaters':c.record.get('heaters'),'charge_amps':c.record.get('amps'),'active':c.active,'connection_grace_s':180,'connection_lost_at':c.offline_since,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
+        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.6.10','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'purpose':c.record.get('purpose'),'target_w':c.record.get('target_w'),'heaters':c.record.get('heaters'),'charge_amps':c.record.get('amps'),'active':c.active,'connection_grace_s':180,'connection_lost_at':c.offline_since,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
     async def start(call):
         if not ready or not healthy():raise HomeAssistantError('Čekám na aktuální měření měniče.')
         now=dt_util.now()

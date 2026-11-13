@@ -1,4 +1,4 @@
-/* Spoty hub1.2.0. Render/read operations never invoke a device service. */
+/* Spoty hub1.3.1. Render/read operations never invoke a device service. */
 (function(global){
 'use strict';
 const number=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
@@ -13,11 +13,39 @@ function shiftDate(key,period,step){
  if(period==='month'||period==='year'){const base=new Date(Date.UTC(year,month,1));year=base.getUTCFullYear();month=base.getUTCMonth();day=Math.min(day,new Date(Date.UTC(year,month+1,0)).getUTCDate());}
  return new Date(Date.UTC(year,month,day,12)).toISOString().slice(0,10);
 }
-const math={money,currentNet,shiftDate,moneyChoice};if(typeof module!=='undefined')module.exports=math;
+function reserveView(sales,fresh){
+ const p=sales?.weather_reserve||{};const valid=fresh&&number(p.required_soc)!==null;
+ return {summary:!fresh?'Čekám na čerstvá data':!valid?'Čekám na výpočet rezervy':p.required_soc>=100?'Z baterie neprodávat':`Ponechat nejméně ${format(Math.max(p.required_soc,sales.sale_floor_soc||0),0)} %`,
+  day:p.forecast_days?.length?p.forecast_days.map(d=>d.day).join(' / '):p.forecast_day||'—',production:p.forecast_days?.length?p.forecast_days.map(d=>format(d.forecast_pv_kwh,1)).join(' / ')+' kWh':format(p.forecast_pv_kwh,1)+' kWh',conservative:p.forecast_days?.length?p.forecast_days.map(d=>format(d.conservative_pv_kwh,1)).join(' / ')+' kWh':format(p.conservative_pv_kwh,1)+' kWh',
+  house:format(p.house_with_margin_kwh,1)+' kWh',base:format(p.house_daily_kwh,1)+' kWh +25 % zásoba',capacity:format(p.capacity_kwh,2)+' kWh',
+  reason:p.reason||'Výpočet ještě není dostupný.',quality:p.quality==='unavailable'?'Chybí platné podklady; prodej z baterie čeká.':'Odhad výroby z jedné referenční křivky. Spotřeba '+(p.load_quality==='complete_measured_days'?'z úplných měřených dní.':'podle tvého odhadu6 kWh/den.')+' Noc nejméně20 % baterie +25 % zásoba; výhled48 hodin. Dobíjení započteno do '+format(p.charge_limit_kw,1)+' kW podle čerstvých limitů měniče a BMS.',
+  age:p.forecast_issued_at?new Date(p.forecast_issued_at).toLocaleString('cs-CZ',{timeZone:'Europe/Prague'})+' · stáří '+format(Math.max(0,p.forecast_age_seconds||0)/60,0)+' min':'Předpověď není dostupná.'};
+}
+function monitorView(report,fresh,now=Date.now()/1000){
+ const valid=fresh&&number(report?.checked_at)!==null&&now>=report.checked_at&&now-report.checked_at<30;
+ if(!valid)return {summary:'Čekám na čerstvý dohled',result:'Skutečný tok nelze potvrdit.',alerts:[],measurements:[],incidents:[]};
+ const op=report.operation||{},labels={measured_export:'Dodávku hlásí měnič',measured_charging:'Měří se nabíjení baterie',awaiting_export:'Čekám na měřenou dodávku',awaiting_charging:'Čekám na měřené nabíjení',unknown:'Chybí platná čerstvá měření',stopping:'Čekám na potvrzení ukončení',waiting:'Čekání podle plánu'};
+ return {summary:(report.status==='error'?'Chyba · ':report.status==='warning'?'Upozornění · ':'V pořádku · ')+(op.label||'Dohled'),
+  result:labels[op.result]||'Skutečný tok nelze potvrdit.',reason:op.reason||'',notice:op.evidence_notice||'',
+  alerts:(report.alerts||[]).map(a=>a.message),
+  measurements:Object.values(report.measurements||{}).map(v=>[v.label,format(v.value,1)+' '+(v.unit||''),number(v.age_seconds)===null?'—':format(v.age_seconds,1)+' s',v.status==='fresh'?'Čerstvé':v.status==='stale'?'Zastaralé':'Neplatné nebo chybí']),
+  incidents:(report.recent_incidents||[]).slice().reverse().map(v=>[new Date(v.at*1000).toLocaleString('cs-CZ',{timeZone:'Europe/Prague'}),v.event==='cleared'?'Vyřešeno · '+v.code:v.message])};
+}
+function dailyEvidenceView(report){
+ const row=report?.latest;if(!row)return {summary:'Pro tento den nejsou nové trvalé přehledy.',energy:'—',money:'—',operation:'',electrical:'',forecast:''};
+ const e=row.energy_kwh||{},f=row.finance||{},v=row.electrical||{},op=row.operation||{},p=row.forecast||{};
+ return {summary:'Doložená část dne · '+(report.snapshots||[]).length+' záznamů · stav '+new Date(row.as_of*1000).toLocaleString('cs-CZ',{timeZone:'Europe/Prague'}),
+  energy:'Výroba '+format(e.production)+' kWh · dům '+format(e.house)+' kWh · nákup '+format(e.import)+' kWh · dodávka '+format(e.export)+' kWh',
+  money:'Nákup '+money(f.purchase_czk??f.known_purchase_czk)+' · prodej po poplatku '+money(f.sale_czk??f.known_sale_czk)+' · bilance '+money(f.cash_balance_czk),
+  operation:(op.active?'Probíhá prodej · ':'')+(op.reason||'')+(op.error?' · '+op.error:''),
+  electrical:'Baterie '+format(v.soc,0)+' % · '+format(v.battery_c,1)+' °C · měnič '+format(v.inverter_c,1)+' °C · bilanční rozdíl '+format(v.loss_residual_w,0)+' W',
+  forecast:'Uložený odhad pro '+(p.forecast_day||'—')+': '+format(p.forecast_pv_kwh,1)+' kWh · učení spotřeby '+format(p.learning_days,0)+' dnů. Záznam uchovává tehdy známý odhad.'};
+}
+const math={money,currentNet,shiftDate,moneyChoice,reserveView,monitorView,dailyEvidenceView};if(typeof module!=='undefined')module.exports=math;
 if(typeof document==='undefined')return;
 const $=id=>document.getElementById(id),today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Prague',year:'numeric',month:'2-digit',day:'2-digit'}).format(Date.now());
 class Hub{
- constructor(){this.period='day';this.date=today();this.request=0;this.lastFinance=0;this.busy=false;this.cards=[];this.config={};this.dead=false;this.mounting=false;}
+ constructor(){this.period='day';this.date=today();this.request=0;this.lastFinance=0;this.lastDaily=0;this.dailyRequest=0;this.busy=false;this.cards=[];this.config={};this.dead=false;this.mounting=false;}
  getHost(){try{const w=global.parent;if(w.location.origin!==global.location.origin)return null;return w.document.querySelector('home-assistant')?.hass||global.__JARVIS_HASS__||null;}catch{return global.__JARVIS_HASS__||null;}}
  async start(){
   document.addEventListener('hass-more-info',event=>{
@@ -37,7 +65,7 @@ class Hub{
  }
  fit(){if(this.fitPending)return;this.fitPending=true;requestAnimationFrame(()=>{this.fitPending=false;try{const f=global.frameElement;if(!f)return;const height=Math.ceil($('app').getBoundingClientRect().height+4);if(Math.abs((this.frameHeight||0)-height)<3)return;this.frameHeight=height;f.style.height=height+'px';f.style.position='relative';f.style.display='block';const container=f.parentElement;if(container){container.style.paddingTop='0px';container.style.height=height+'px';}}catch{}});}
  update(){
-  const h=this.getHost();if(!h){$('connection').textContent='Čekám na připojení HA';$('connection').className='live stale';return;}this.h=h;
+  const h=this.getHost();if(!h){this.renderMonitor(null,false);$('connection').textContent='Čekám na připojení HA';$('connection').className='live stale';return;}this.h=h;
   const entity=h.states['sensor.jarvis_energy_sales'],sales=entity?.attributes||{},prefs=sales.settings||{},requested=sales.automatic_requested??prefs.requested_automatic??prefs.automatic;
   const stamp=Date.parse(entity?.last_reported||entity?.last_updated||'');const fresh=Number.isFinite(stamp)&&Date.now()-stamp<60000&&stamp<=Date.now()+5000;
   $('connection').textContent=fresh?'● Živá data':'Čekám na čerstvá data';$('connection').className=fresh?'live':'live stale';
@@ -50,6 +78,7 @@ class Hub{
   $('sale-state').className='muted'+(sales.error||prefs.inhibited?' status-fault':'');
   $('sale-state').textContent=fresh?(stopping?(sales.error||'Čekám na fyzické potvrzení ukončení prodeje.'):state):'Stav řízení není čerstvý; zobrazené údaje se mohou opožďovat.';
   const tr=global.JarvisMessages?.translate||((s)=>s);
+  this.renderMonitor(sales.supervision,fresh);
   $('sale-state').textContent=tr($('sale-state').textContent);
   const stop=global.JarvisMessages?.stopInfo(sales.diagnostic_stop||sales.last_stop,prefs.last_controller_error);
   if($('stop-summary'))$('stop-summary').textContent=stop?stop.cause+' '+stop.outcome:'Zatím není zaznamenané ukončení prodeje.';
@@ -60,13 +89,37 @@ class Hub{
   if($('diagnostic-live'))$('diagnostic-live').textContent=JSON.stringify(diagnosis,null,2);
   const detail=global.JarvisMessages?.healthInfo(sales.health)||[];
   if(fresh&&detail.length)$('sale-state').textContent=detail.join(' ');
+  this.renderActions(sales,fresh);
   const policy=sales.policy||{};
-  if($('plan-limits'))$('plan-limits').textContent='Rezerva '+(policy.sale_soc??60)+' % · nejvýše '+format((policy.max_w??9300)/1000,1)+' kW · konec při rezervě nebo na konci plánu.';
+  if($('plan-limits'))$('plan-limits').textContent='Rezerva '+(sales.sale_floor_soc??policy.sale_soc??60)+' % · nejvýše '+format((policy.max_w??9300)/1000,1)+' kW · konec při rezervě nebo na konci plánu.';
   if($('sale-fee'))$('sale-fee').textContent='Po poplatku '+format(policy.sale_fee??.3)+' Kč/kWh';
   if($('purchase-price'))$('purchase-price').textContent=format(policy.purchase_rate??5)+' Kč/kWh';
   const block=sales.selected_block,clock=v=>new Date(v*1000).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague',hour:'2-digit',minute:'2-digit'});
   $('today-plan').textContent=block?.day===today()?'Dnešní plán: '+clock(block.start)+'–'+clock(block.end)+' · průměr '+format(block.average_net)+' Kč/kWh':'Dnešní cenový plán zatím není dostupný.';
-  $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Rezerva plánu '+(policy.sale_soc??60)+' %, domácnosti '+(policy.home_soc??30)+' %, obnovení malého přetoku '+(policy.resume_soc??31)+' %. Maximální dodávka '+format((policy.max_w??9300)/1000,1)+' kW.';
+  if(sales.completed_battery_plan?.day===today())$('today-plan').textContent='Dnešní plán splněn.';
+  const civil=today().split('-').map(Number),tomorrow=new Date(Date.UTC(civil[0],civil[1]-1,civil[2]+1)).toISOString().slice(0,10),next=sales.next_plan;
+  if($('next-plan')){
+   const ready=next?.day===tomorrow&&next.status==='ready'&&next.block?.day===tomorrow;
+   $('next-plan').textContent=ready?'Další okno: zítra '+clock(next.block.start)+'–'+clock(next.block.end):next?.day===tomorrow&&next.status==='no_window'?'Zítra není vhodné prodejní okno.':'Čekáme na zítřejší ceny.';
+   if($('next-plan-detail'))$('next-plan-detail').textContent=ready?'Nejvýhodnější okno z úplných zítřejších cen · průměr '+format(next.block.average_net)+' Kč/kWh po poplatku. '+(prefs.inhibited?'Automatika je pozastavená; zkontroluj důvod.':requested?'Spuštění automaticky po ověření baterie a ochran.':'Automatický prodej je vypnutý.'):'Plán se připraví po načtení úplných cen s kladným výkupem.';
+  }
+  if($('control-alert')){
+   const alert=$('control-alert');alert.hidden=!stopping&&!prefs.inhibited&&sales.healthy!==false&&fresh&&!sales.measurement_recovery?.pending&&!sales.error&&!sales.profile_issues?.length;
+   alert.textContent=sales.measurement_recovery?.pending?'Obnova po výpadku dat…':stopping?'Ověřuji bezpečné ukončení…':prefs.inhibited?'Automatika pozastavená · podrobnosti níže.':sales.error||sales.profile_issues?.length?'Řízení hlásí problém · podrobnosti níže.':'Čekáme na čerstvá data…';
+  }
+  if($('weather-summary')){
+   const p=sales.weather_reserve||{},view=reserveView(sales,fresh);
+   for(const [id,key] of Object.entries({'weather-summary':'summary','weather-day':'day','weather-production':'production','weather-conservative':'conservative','weather-house':'house','weather-base':'base','weather-capacity':'capacity','weather-reason':'reason','weather-quality':'quality','weather-issued':'age'}))$(id).textContent=view[key];
+   const date=t=>new Date(t*1000).toLocaleString('cs-CZ',{timeZone:'Europe/Prague',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
+   $('weather-horizon').textContent=p.horizon_start?date(p.horizon_start)+' → '+date(p.horizon_end):'Čekám na prodejní okno.';
+   const table=(id,rows)=>{const body=$(id);body.replaceChildren();for(const values of rows){const tr=document.createElement('tr');for(const value of values){const td=document.createElement('td');td.textContent=value;tr.appendChild(td);}body.appendChild(tr);}};
+   const signature=JSON.stringify([p.forecast_issued_at,p.required_soc,p.house_daily_kwh,p.horizon_start,p.recent_decisions?.length]);
+   if(this.weatherSignature!==signature){this.weatherSignature=signature;
+    table('weather-hours',(p.intervals||[]).map(v=>[date(v.start)+'–'+date(v.end),format(v.pv_kwh,2),format(v.house_kwh,2)]));
+    table('weather-history',(p.recent_decisions||[]).slice().reverse().map(v=>[v.at?new Date(v.at).toLocaleTimeString('cs-CZ',{timeZone:'Europe/Prague',hour:'2-digit',minute:'2-digit'}):'—',v.forecast_day||'—',(v.reserve_soc>=100?'Bez prodeje':v.reserve_soc+' %'),format(v.forecast_pv_kwh,1)]));
+   }
+  }
+  $('limits').textContent='Přebytky od '+(sales.pv_surplus_soc??97)+' % baterie při kladném výkupu. Rezerva plánu '+(sales.sale_floor_soc??policy.sale_soc??60)+' %, domácnosti '+(policy.home_soc??30)+' %. '+(sales.bias_policy?.enabled===false?(sales.bias_policy.disabled_reason||'Malý přetok je pozastaven.')+' ':'Obnovení malého přetoku '+(policy.resume_soc??31)+' %. ')+'Maximální dodávka '+format((policy.max_w??9300)/1000,1)+' kW.';
   $('recovery').textContent=sales.error?'Řízení hlásí: '+tr(sales.error):(sales.measurement_recovery?.pending?'Po výpadku měření čeká HA na stabilní data a potvrzení domácího režimu.':'');
   $('updated').textContent='Živý stav · '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · průběžné částky nejsou fakturace';
   if(!this.houseMounted&&!this.houseLoading)this.mountHouse();if(!this.cardsMounted&&!this.mounting)this.mountCards();for(const card of this.cards)card.hass=h;
@@ -77,7 +130,18 @@ class Hub{
    else{const v=this.read(id);value=format(v,0)+(id==='sensor.inverter_battery'?' %':' W');}
    if(label.temperatureValue)label.temperatureValue.textContent=value;else label.textContent=value;
   }
-  if(!this.loadingFinance&&Date.now()-this.lastFinance>60000)this.finance();this.fit();
+  if(!this.loadingFinance&&Date.now()-this.lastFinance>60000)this.finance();
+  if(!this.loadingDaily&&Date.now()-this.lastDaily>60000)this.daily();this.fit();
+ }
+ renderMonitor(report,fresh){
+  if($('monitor-summary')){
+   const view=monitorView(report,fresh);
+   $('monitor-summary').textContent=view.summary;$('monitor-result').textContent=view.result;
+   $('monitor-reason').textContent=view.reason||'';$('monitor-notice').textContent=view.notice||'';
+   $('monitor-alerts').textContent=view.alerts.join(' ');
+   const rows=(id,items)=>{const root=$(id);root.replaceChildren();for(const values of items){const row=document.createElement('tr');for(const value of values){const cell=document.createElement('td');cell.textContent=value;row.appendChild(cell);}root.appendChild(row);}};
+   rows('monitor-measurements',view.measurements);rows('monitor-incidents',view.incidents);
+  }
  }
  read(id){
   const s=this.h?.states[id],sales=this.h?.states['sensor.jarvis_energy_sales'],sample=sales?.attributes?.telemetry?.[id];
@@ -86,21 +150,61 @@ class Hub{
   const fresh=candidates.map(x=>({...x,t:Date.parse(x.stamp||'')})).filter(x=>x.value!==null&&Number.isFinite(x.t)&&Date.now()-x.t<60000&&x.t<=Date.now()+5000).sort((a,b)=>b.t-a.t);
   return fresh[0]?.value??null;
  }
+ renderActions(sales,fresh){
+  const chargeEntity=this.h?.states['sensor.jarvis_spot_control'];
+  const stamp=Date.parse(chargeEntity?.last_reported||chargeEntity?.last_updated||'');
+  const chargeFresh=Number.isFinite(stamp)&&Date.now()-stamp<60000&&stamp<=Date.now()+5000;
+  const charge=chargeEntity?.attributes||{};
+  const chargeOn=chargeFresh&&charge.active===true;
+  const pvOn=fresh&&sales.active===true&&sales.mode==='pv';
+  const manualOn=fresh&&sales.active===true&&sales.mode==='battery';
+  const states={surplus:[pvOn,pvOn?'■ Stop přebytků':'▶ Prodat přebytky'],charge:[chargeOn,chargeOn?'■ Stop dobíjení':'▶ Dobít baterii'],manual:[manualOn,manualOn?'■ Stop vlastního prodeje':'▶ Vlastní prodej'],stop:[false,'■ Zastavit vše']};
+  document.querySelectorAll('[data-action]').forEach(button=>{
+   const entry=states[button.dataset.action];if(!entry)return;
+   button.setAttribute('aria-pressed',String(entry[0]));
+   button.className=(button.dataset.action==='stop'?'danger ':'')+(entry[0]?'running':'');
+   button.textContent=entry[1];button.disabled=this.busy;
+  });
+  if(chargeOn){
+   const phase=chargeEntity.state;
+   $('sale-state').textContent=phase==='restoring'?'Ukončuji dobíjení a obnovuji nastavení…':phase==='starting'?'Spouštím dobíjení…':charge.charging_observed?'Dobíjení běží · potvrzeno měřením.':'Dobíjení zapnuto · čekám na naměřený výkon.';
+  }
+ }
  async action(kind){
   if(this.busy||!this.h)return;
-  if(kind==='manual'){const w=global.parent;w.history.pushState(null,'','/hlavni-prehled/vlastni-prodej');w.dispatchEvent(new w.Event('location-changed'));return;}
+  const sales=this.h.states['sensor.jarvis_energy_sales']?.attributes||{};
+  const charge=this.h.states['sensor.jarvis_spot_control']?.attributes||{};
+  if(kind==='manual'&&!(sales.active&&sales.mode==='battery')){const w=global.parent;w.history.pushState(null,'','/hlavni-prehled/vlastni-prodej');w.dispatchEvent(new w.Event('location-changed'));return;}
   this.busy=true;this.error='';$('action-error').hidden=true;document.querySelectorAll('[data-action],#automatic').forEach(b=>b.disabled=true);
   try{
-   if(kind==='enable'||kind==='disable'||kind==='surplus')await this.h.callService('jarvis_spot_control','set_sales_automatic',{enabled:kind!=='disable'});
-   else if(kind==='charge')await this.h.callService('jarvis_spot_control','start_test',{});
+   if(kind==='enable'||kind==='disable')await this.h.callService('jarvis_spot_control','set_sales_automatic',{enabled:kind==='enable'});
+   else if(kind==='surplus')await this.h.callService('jarvis_spot_control',sales.active&&sales.mode==='pv'?'stop_sale':'start_sale',sales.active&&sales.mode==='pv'?{}:{mode:'pv',power_w:sales.policy?.max_w??9300,duration_minutes:15});
+   else if(kind==='manual')await this.h.callService('jarvis_spot_control','stop_sale',{});
+   else if(kind==='charge')await this.h.callService('jarvis_spot_control',charge.active?'stop_restore':'start_test',{});
    else if(kind==='stop'){
-    if(this.h.states['sensor.jarvis_spot_control']?.attributes?.active)await this.h.callService('jarvis_spot_control','stop_restore',{});
-    await this.h.callService('jarvis_spot_control','stop_sale',{});
+    const errors=[];
+    // Always try both independent stops, even if one reports a failure.
+    for(const service of ['stop_sale','stop_restore']){
+     try{await this.h.callService('jarvis_spot_control',service,{});}catch(e){errors.push(e?.message||service);}
+    }
+    if(errors.length)throw Error(errors.join(' · '));
    }
   }catch(e){$('action-error').hidden=false;$('action-error').textContent=e?.message||'Povel se nepodařilo provést.';}
   finally{this.busy=false;document.querySelectorAll('[data-action],#automatic').forEach(b=>b.disabled=false);this.update();}
  }
- select(period,date){this.period=period;this.date=date;$('date').value=date;document.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.period===period)));this.lastFinance=0;this.finance();this.syncChart();}
+ select(period,date){this.period=period;this.date=date;$('date').value=date;document.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.period===period)));this.lastFinance=0;this.finance();this.daily();this.syncChart();}
+ async daily(){
+  if(!this.h||!$('daily-history-summary'))return;
+  const request=++this.dailyRequest,date=this.date;this.loadingDaily=true;this.lastDaily=Date.now();
+  $('daily-history-summary').textContent='Načítám trvalý denní přehled…';
+  for(const id of ['energy','money','operation','electrical','forecast'])$('daily-history-'+id).textContent='';
+  try{
+   const report=await this.h.callApi('GET','jarvis_spot_control/sales/daily?date='+encodeURIComponent(date));
+   if(request!==this.dailyRequest||this.dead)return;
+   const view=dailyEvidenceView(report);for(const [key,value] of Object.entries(view))$('daily-history-'+key).textContent=value;
+  }catch(e){if(request===this.dailyRequest)$('daily-history-summary').textContent='Trvalý denní přehled není dostupný. Historie zůstává uložená.';}
+  finally{if(request===this.dailyRequest)this.loadingDaily=false;this.fit();}
+ }
  async readFinances(){
   const keyOf=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Prague',year:'numeric',month:'2-digit',day:'2-digit'}).format(t);
   const midnight=key=>{let t=Date.parse(key+'T00:00:00Z');for(let i=0;i<2;i++){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Prague',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(t).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));const local=Date.UTC(+parts.year,+parts.month-1,+parts.day,+parts.hour,+parts.minute,+parts.second);t+=Date.parse(key+'T00:00:00Z')-local;}return t;};

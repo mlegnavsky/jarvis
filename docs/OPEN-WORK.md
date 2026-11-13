@@ -788,3 +788,7 @@ Owner screenshot shows an error element at the new bullhorn. Live home-message b
 Deployment: room-sensors-module-20261112 verified file_write, independently read back exactly; revision4428979fe44c14b349d1202a9ab45d900d36ab79e120e9dd725e0140a680c42d. No restart. iPhone refresh/visual acceptance and microphone/playback remain unverified. Source local commit32278f7; combined commit/push command was rejected by automatic approval review for missing explicit publication authorization/unverified destination trust. Do not treat source as published. No alternate publication route attempted.
 
 Owner explicitly authorized GitHub publication in the following turn. Publishing verified source through the connected GitHub API; ordinary git push lacks credentials in this workspace.
+
+
+## Spot buttons and standalone charge — 13 November 2026
+Exact standalone charge failure reproduced and fixed in source; see docs/evidence/2026-11-13-spot-buttons.md. Backend0.6.10 activation is blocked by backup preflight (0.3GiB free). Do not claim charging repaired on Green before activation and live proof. Preserve newest/protected backups; three specific older partial backups proposed for owner approval. Frontend1.3.1 reconciles installed1.3.0 features and adds actual-state Play/Stop buttons.
