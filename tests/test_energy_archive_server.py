@@ -2,6 +2,27 @@
 import hashlib,json,shutil
 from tests import test_backup_dav as fixtures
 class EnergyArchiveServerTests(fixtures.BackupDAVTests):
+ def test_midday_archive_is_not_a_complete_day(self):
+  import subprocess
+  code="require 'testing/energy-archive/finance.php'; [$s,$e]=cash_day('2026-11-14'); $rows=[]; foreach([[36000,0],[36010,6.2]] as [$dt,$v]){$t=$s+$dt; $rows[]=['t'=>$t,'values'=>['sensor.inverter_today_energy_export'=>['value'=>$v,'source_updated'=>gmdate('c',(int)$t),'source_changed'=>gmdate('c',(int)$t)]]];} $r=cash_calculate($rows,[(int)floor(($s+36000)/900)*900=>4.0],'2026-11-14'); echo json_encode($r);"
+  r=json.loads(subprocess.check_output(['php','-r',code]));self.assertIsNone(r['sale_czk'],'A day ending at noon is not final revenue');self.assertEqual(r['quality'],'partial')
+ def test_closed_day_finance_is_materialized_from_meter_increments(self):
+  import datetime as dt
+  from zoneinfo import ZoneInfo
+  day=dt.datetime.now(ZoneInfo('Europe/Prague')).date()-dt.timedelta(days=1)
+  start=dt.datetime.combine(day,dt.time(),ZoneInfo('Europe/Prague')).timestamp()
+  stamp=lambda t:dt.datetime.fromtimestamp(t,dt.timezone.utc).isoformat()
+  prices=[{'time':stamp(start+i*900),'eur_mwh':152 if i<49 else 192} for i in range(96)]
+  records=[{'kind':'spot','t':start,'issued_at':stamp(start),'attributes':{'rate':25,'rows':prices}}]
+  for t,energy in [(start+12*3600,0),(start+12*3600+10,2.4),(start+12*3600+901,2.4),(start+12*3600+911,6.2),(start+86400-30,6.2)]:
+   values={}
+   for kind,value in [('export',energy),('import',.23)]:
+    values['sensor.inverter_today_energy_'+kind]={'value':str(value),'source_updated':stamp(t),'source_changed':stamp(t)}
+   records.append({'kind':'sample','t':t,'values':values})
+  raw=json.dumps(records).encode();status,_,body=self.req('POST',data=raw,headers={'X-Batch-SHA256':hashlib.sha256(raw).hexdigest()});self.assertEqual(status,200,body)
+  status,_,body=self.req();self.assertEqual(status,200,body);report=json.loads(body)['finance'];self.assertEqual(report['schema'],2)
+  row=next(d for d in report['days'] if d['date']==day.isoformat());self.assertAlmostEqual(row['export_kwh'],6.2);self.assertAlmostEqual(row['sale_czk'],25.5);self.assertEqual(row['quality'],'estimate')
+  status,_,body=self.req();self.assertEqual(json.loads(body)['finance']['built_days'],0,'Unchanged days reuse durable materialized results')
  def setUp(self):
   super().setUp()
   shutil.copytree('testing/energy-archive',self.web/'energy-archive')

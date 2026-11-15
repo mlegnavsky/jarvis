@@ -74,6 +74,7 @@ jobs:
           php -l testing/backup-dav/index.php
           php -l testing/backup-dav/setup.php
           php -l testing/energy-archive/index.php
+          php -l testing/energy-archive/finance.php
           python -m unittest tests.test_backup_dav tests.test_energy_archive_server -v
   containers:
     runs-on: ubuntu-latest

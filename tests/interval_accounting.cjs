@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const A=require('../managed_sources/spot_hub/accounting.js');
+const start=Date.parse('2026-11-13T23:00:00Z'),end=start+86400000;
+const prices=[{last_updated:new Date(start+36000000).toISOString(),state:'3.8'},{last_updated:new Date(start+36900000).toISOString(),state:'4.8'}];
+const exported=[{start:start+36000000,end:start+36300000,change:2.4},{start:start+36900000,end:start+37200000,change:3.8}];
+let r=A.calculate({start,end,exported,imported:[{start:start+36000000,end:start+36300000,change:.23}],prices,energy:[{start,change:6.2}],importEnergy:[{start,change:.23}]});
+assert.ok(Math.abs(r.known_sale_czk-(2.4*3.5+3.8*4.5))<1e-9);assert.equal(r.export_kwh,6.2);assert.equal(r.quality,'estimate');assert.ok(Math.abs(r.purchase_czk-1.15)<1e-9);
+r=A.calculate({start,end,exported:exported.slice(0,1),imported:[],prices,energy:[{start,change:6.2}]});assert.equal(r.sale_czk,null);assert.equal(r.export_kwh,6.2);assert.ok(Math.abs(r.unpriced_export_kwh-3.8)<1e-9);
+r=A.calculate({start,end,exported:[{start:start+36000000,end:start+37800000,change:6.2}],imported:[],prices,energy:[{start,change:6.2}]});assert.equal(r.sale_czk,null,'Cannot distribute an energy interval across different spot quarters');
+r=A.calculate({start,end,exported:[{start:start+36000000,end:start+36300000,change:1}],imported:[],prices:[{last_updated:new Date(start+35000000).toISOString(),state:'7'}],energy:[{start,change:1}]});assert.equal(r.sale_czk,null,'A quote from another quarter is expired');
+assert.equal(A.groups(Array.from({length:12},(_,i)=>({date:`2026-${String(i+1).padStart(2,'0')}-01`,known_sale_czk:i,known_purchase_czk:1})),true).length,12);
+console.log('Time-matched meter energy, fees, missing coverage, quote expiry and year groups PASS');

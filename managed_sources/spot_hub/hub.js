@@ -217,6 +217,7 @@ class Hub{
   const start=midnight(first),end=midnight(last),now=Date.now(),current=today();
   const empty={first,last,expected_days:0,available_days:0,quality:start>=now?'future':'partial',sale_czk:null,purchase_czk:null,known_sale_czk:null,known_purchase_czk:null,cash_balance_czk:null,known_cash_balance_czk:null,export_kwh:null,import_kwh:null};if(start>=now)return empty;
   let expected=0;for(let key=first;key<last&&key<=current;key=shiftDate(key,'day',1))expected++;
+  if(global.JarvisAccounting&&this.h.callWS){const measured=await global.JarvisAccounting.read(this.h,{start,end},now);return {...empty,...measured,first,last,expected_days:measured.expected_days??expected};}
   const ids=['sensor.jarvis_dnes_prodano_za','sensor.jarvis_dnes_nakoupeno_za'];let rows=[];
   // These sensors are cumulative for their dated day. Their monetary state can
   // remain unknown while known_* attributes grow: significant-only history loses it.
@@ -245,17 +246,32 @@ class Hub{
   }
   const ks=saleCount?knownSale:null,kp=purchaseCount?knownPurchase:null;return {...empty,expected_days:expected,available_days:days.size,quality:complete?'complete':'partial',known_sale_czk:ks,known_purchase_czk:kp,sale_czk:complete?ks:null,purchase_czk:complete?kp:null,known_cash_balance_czk:ks!==null&&kp!==null?ks-kp:null,cash_balance_czk:complete&&ks!==null&&kp!==null?ks-kp:null,export_kwh:exportCount?exported:null,import_kwh:importCount?imported:null};
  }
+ showFinances(r){
+  $('sale-money').textContent=money(moneyChoice(r,'sale_czk','known_sale_czk'));$('purchase-money').textContent=money(moneyChoice(r,'purchase_czk','known_purchase_czk'));
+  const balance=moneyChoice(r,'cash_balance_czk','known_cash_balance_czk');$('balance-money').textContent=(number(balance)!==null&&balance>0?'+':'')+money(balance);$('balance-money').style.color=balance!==null&&balance<0?'#ad2929':'#148126';
+  $('export-energy').textContent=format(number(r.export_kwh))+' kWh';$('import-energy').textContent=format(number(r.import_kwh))+' kWh';
+  $('period-label').textContent=r.first===this.date&&this.period==='day'?new Date(this.date+'T12:00:00Z').toLocaleDateString('cs-CZ',{day:'numeric',month:'long',year:'numeric'}):r.first+' – '+shiftDate(r.last,'day',-1);
+  $('finance-status').textContent=r.quality==='future'?'Pro budoucí období zatím nejsou naměřená data.':!r.available_days?'Pro toto období nejsou dostupná uložená měření.':['meter_statistics_5minute_and_historical_quarter_price','private_archive_timed_daily_meter_increments'].includes(r.source)?(r.quality==='estimate'?'Odhad z časovaných přírůstků měřené dodávky a cen příslušných čtvrthodin, po poplatku obchodníka.':'NEÚPLNÉ OCENĚNÍ · částka jen za oceněných '+format(number(r.priced_export_kwh))+' z '+format(number(r.export_kwh))+' kWh · '+r.available_days+' z '+r.expected_days+' dnů s daty. Zbytek není započítán jako nula.'):(r.quality==='complete'?'Průběžný odhad z uložených čtvrthodin.':'Doložená část období · '+r.available_days+' z '+r.expected_days+' dnů s daty. Historie nebo ocenění není úplné.');
+  this.renderFinanceChart(r);
+ }
+ renderFinanceChart(r){
+  const host=$('finance-plot');if(!host)return;
+  const rows=global.JarvisAccounting?.groups(r.daily||[],this.period==='year')||[];
+  if(!rows.length){host.innerHTML='<p class="muted">Peněžní graf čeká na časově oceněná měření; chybějící údaje nejsou nula.</p>';return;}
+  const w=700,h=190,l=48,right=12,top=25,bottom=32,lo=Math.min(0,...rows.flatMap(d=>[d.known_sale_czk,d.known_purchase_czk])),hi=Math.max(1,...rows.flatMap(d=>[d.known_sale_czk,d.known_purchase_czk]))*1.1,ph=h-top-bottom,y=v=>top+(hi-v)/(hi-lo)*ph,group=(w-l-right)/rows.length,bw=Math.min(22,group*.32),step=Math.max(1,Math.ceil(rows.length/8));
+  host.innerHTML='<p class="muted"><b>Výnosy a náklady · '+({day:'den',week:'týden',month:'měsíc',year:'rok'}[this.period])+'</b> · zelená prodej, modrá nákup · Kč'+(r.quality==='partial'?' · jen oceněná část':'')+'</p>'+`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Peněžní graf vybraného období" style="display:block;width:100%;height:auto;min-height:140px"><text x="2" y="15" font-size="12">Kč</text>${[lo,hi/2,hi].map(v=>`<line x1="${l}" x2="${w-right}" y1="${y(v)}" y2="${y(v)}" stroke="#8796aa" opacity=".2"/><text x="${l-5}" y="${y(v)+4}" text-anchor="end" font-size="10">${format(v,1)}</text>`).join('')}${rows.map((d,i)=>`<g>${['known_sale_czk','known_purchase_czk'].map((field,j)=>number(d[field])===null?'':`<rect x="${l+(i+.5)*group+(j-1)*bw}" y="${Math.min(y(0),y(d[field]))}" width="${bw*.9}" height="${Math.max(1,Math.abs(y(d[field])-y(0)))}" fill="${j?'#4667d5':'#199b7b'}"><title>${d.date} · ${j?'nákup':'prodej'} ${format(d[field])} Kč</title></rect>`).join('')}${i%step===0?`<text x="${l+(i+.5)*group}" y="${h-8}" text-anchor="middle" font-size="10">${d.date.slice(this.period==='year'?5:8)}</text>`:''}</g>`).join('')}</svg>`;
+ }
  async finance(){
-  if(!this.h)return;const request=++this.request;this.loadingFinance=true;this.lastFinance=Date.now();
-  for(const id of ['sale-money','purchase-money','balance-money'])$(id).textContent='— Kč';$('export-energy').textContent='— kWh';$('import-energy').textContent='— kWh';$('finance-status').textContent='Načítám uložené finanční záznamy…';
+  if(!this.h)return;const request=++this.request,cacheKey=this.period+':'+this.date;this.loadingFinance=true;this.lastFinance=Date.now();this.financeViews??=new Map();
+  let cached=this.financeViews.get(cacheKey);
+  if(!cached)try{const saved=JSON.parse(global.localStorage?.getItem('jarvis-finance-v2:'+(this.h.user?.id||'local')+':'+cacheKey)||'null');if(saved&&Date.now()-saved.saved<3600000)cached=saved.value;}catch{}
+  if(cached)this.showFinances(cached);else{for(const id of ['sale-money','purchase-money','balance-money'])$(id).textContent='— Kč';$('export-energy').textContent='— kWh';$('import-energy').textContent='— kWh';$('finance-status').textContent='Načítám časová měření a ceny…';if($('finance-plot'))$('finance-plot').textContent='Načítám peněžní graf…';}
   try{
    const r=await this.readFinances();if(request!==this.request||this.dead)return;
-   $('sale-money').textContent=money(moneyChoice(r,'sale_czk','known_sale_czk'));$('purchase-money').textContent=money(moneyChoice(r,'purchase_czk','known_purchase_czk'));
-   const balance=moneyChoice(r,'cash_balance_czk','known_cash_balance_czk');$('balance-money').textContent=(number(balance)!==null&&balance>0?'+':'')+money(balance);$('balance-money').style.color=balance!==null&&balance<0?'#ad2929':'#148126';
-   $('export-energy').textContent=format(number(r.export_kwh))+' kWh';$('import-energy').textContent=format(number(r.import_kwh))+' kWh';
-   $('period-label').textContent=r.first===this.date&&this.period==='day'?new Date(this.date+'T12:00:00Z').toLocaleDateString('cs-CZ',{day:'numeric',month:'long',year:'numeric'}):r.first+' – '+shiftDate(r.last,'day',-1);
-   $('finance-status').textContent=r.quality==='future'?'Pro budoucí období zatím nejsou naměřená data.':!r.available_days?'Pro toto období nejsou uložené finanční záznamy.':r.quality==='complete'?'Průběžný odhad z uložených čtvrthodin.':'Doložená část období · '+r.available_days+' z '+r.expected_days+' dnů s daty. Historie nebo ocenění není úplné; rozsah závisí na uložené historii HA.';
-  }catch(e){if(request!==this.request)return;$('finance-status').textContent='Finanční přehled není dostupný. Zkus změnit období nebo stránku obnovit.';}
+   this.financeViews.set(cacheKey,r);while(this.financeViews.size>40)this.financeViews.delete(this.financeViews.keys().next().value);
+   try{global.localStorage?.setItem('jarvis-finance-v2:'+(this.h.user?.id||'local')+':'+cacheKey,JSON.stringify({saved:Date.now(),value:r}));}catch{}
+   this.showFinances(r);
+  }catch(e){if(request!==this.request)return;$('finance-status').textContent=cached?'Zobrazuji uložený výsledek; nové ověření dat se nepodařilo.':'Výpočet není dostupný: '+String(e.message||e).slice(0,120)+'. Uložená měření zůstávají zachovaná.';}
   finally{if(request===this.request)this.loadingFinance=false;this.fit();}
  }
  async mountHouse(){
@@ -292,7 +308,7 @@ class Hub{
   }catch(e){$('chart-card').textContent=e.message;}
   finally{this.mounting=false;this.fit();}
  }
- syncChart(){if(!this.chart)return;this.chart.selectedDate=this.date;this.chart.period=this.period;this.chart.statsKey=null;this.chart.updated=0;this.chart.chartWindow=null;if(this.period==='day')this.chart.fetchHistory();else this.chart.fetchStats();this.chart.render();}
+ syncChart(){if(!this.chart)return;this.chart.selectedDate=this.date;this.chart.period=this.period;this.chart.statsKey=null;this.chart.updated=0;this.chart.chartWindow=null;this.chart.dateRenderPending=false;if(this.period==='day')this.chart.fetchHistory();else this.chart.fetchStats();this.chart.render(true);}
  async mountLegacy(){if(this.legacyMounted)return;if(!this.helpers){if(!global.parent.loadCardHelpers)return;this.helpers=await global.parent.loadCardHelpers();}this.legacyMounted=true;for(const cfg of this.config.advanced||[]){const card=this.helpers.createCardElement(cfg);card.hass=this.h;$('advanced-cards').appendChild(card);this.cards.push(card);}this.fit();}
 }
 global.SpotHubMath=math;global.spotHub=new Hub();global.spotHub.start();
