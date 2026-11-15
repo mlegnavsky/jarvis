@@ -22,7 +22,7 @@ def patch(content):
     result = re.sub(r'^      - type:.*\n(?:^ {8}[^\n]*\n|^\n)*', element, content, flags=re.M)
     if moves not in (0, 4):
         raise ValueError(f'Unexpected moved label count: {moves}')
-    if 'Ložnice – teplota: bez údajů' not in result:
+    if "!include 'bedroom-temperature-placeholder.yaml'" not in result:
         for label, top in [('teplota', 73), ('vlhkost', 78)]:
             text = f'{label.capitalize()}: bez údajů'
             svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="240" height="40"><rect width="240" height="40" rx="9" fill="#071c32" fill-opacity=".92"/><text x="120" y="26" text-anchor="middle" font-family="sans-serif" font-size="17" fill="white">{text}</text></svg>'
@@ -32,5 +32,6 @@ def patch(content):
             marker = '      - type: custom:jarvis-home-intercom\n'
             if marker not in result:
                 raise ValueError('Overview marker missing')
-            result = result.replace(marker, block + marker, 1)
+            filename = 'bedroom-temperature-placeholder.yaml' if label == 'teplota' else 'bedroom-humidity-placeholder.yaml'
+            result = result.replace(marker, f"      - !include '{filename}'\n" + marker, 1)
     return result
