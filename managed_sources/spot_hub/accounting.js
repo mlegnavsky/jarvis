@@ -39,7 +39,7 @@ function ledgerRead(h,{start,end},now){
  const rows=ledger.days.filter(row=>row.date>=key(start)&&row.date<=key(Math.min(end,now)-1));
  const current=key(now);if(start<=now&&now<end){
   const state=h.states?.['sensor.jarvis_dnes_prodano_za'],buy=h.states?.['sensor.jarvis_dnes_nakoupeno_za'];
-  if(state?.attributes?.date===current){const a=state.attributes,b=buy?.attributes||{};rows.push({date:current,known_sale_czk:finite(state.state)??finite(a.known_sale_czk),known_purchase_czk:finite(buy?.state)??finite(b.known_purchase_czk),export_kwh:finite(h.states?.['sensor.inverter_today_energy_export']?.state),import_kwh:finite(h.states?.['sensor.inverter_today_energy_import']?.state),priced_export_kwh:finite(a.export_kwh),quality:a.quality==='estimate'?'estimate':'partial'});}
+  if(state?.attributes?.date===current){const a=state.attributes,b=buy?.attributes||{};rows.push({date:current,known_sale_czk:finite(state.state)??finite(a.known_sale_czk),known_purchase_czk:finite(buy?.state)??finite(b.known_purchase_czk),export_kwh:finite(h.states?.['sensor.inverter_today_energy_export']?.state),import_kwh:finite(h.states?.['sensor.inverter_today_energy_import']?.state),priced_export_kwh:finite(a.export_kwh)===null?null:Math.max(0,finite(a.export_kwh)-(finite(a.unpriced_export_kwh)??0)),quality:a.quality==='estimate'?'estimate':'partial'});}
  }
  if(!rows.length)return null;
  const sum=field=>{const values=rows.map(row=>finite(row[field])).filter(v=>v!==null);return values.length?values.reduce((a,b)=>a+b,0):null;};

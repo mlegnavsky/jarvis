@@ -2,6 +2,18 @@
 import hashlib,json,shutil
 from tests import test_backup_dav as fixtures
 class EnergyArchiveServerTests(fixtures.BackupDAVTests):
+ def test_samples_without_export_measurements_do_not_imply_zero_revenue(self):
+  import subprocess
+  code="require 'testing/energy-archive/finance.php'; [$s,$e]=cash_day('2026-11-14'); echo json_encode(cash_calculate([['t'=>$s+36000,'values'=>[]]],[],'2026-11-14'));"
+  r=json.loads(subprocess.check_output(['php','-r',code]));self.assertIsNone(r['known_sale_czk']);self.assertIsNone(r['export_kwh'])
+ def test_receipt_delay_does_not_move_export_to_another_price_quarter(self):
+  import subprocess
+  code="require 'testing/energy-archive/finance.php'; [$s,$e]=cash_day('2026-11-14'); $q=$s+36000; $rows=[]; foreach([[880,880,0],[910,890,1]] as [$receipt,$stamp,$v]){$rows[]=['t'=>$q+$receipt,'values'=>['sensor.inverter_today_energy_export'=>['value'=>$v,'source_updated'=>gmdate('c',(int)($q+$stamp)),'source_changed'=>gmdate('c',(int)($q+$stamp))]]];} echo json_encode(cash_calculate($rows,[(int)$q=>1.0,(int)$q+900=>10.0],'2026-11-14'));"
+  r=json.loads(subprocess.check_output(['php','-r',code]));self.assertAlmostEqual(r['known_sale_czk'],.7);self.assertEqual(r['quarters'][0]['start'],1794646800)
+ def test_import_counter_reset_keeps_purchase_incomplete(self):
+  import subprocess
+  code="require 'testing/energy-archive/finance.php'; [$s,$e]=cash_day('2026-11-14'); $rows=[]; foreach([[$s+36000,2.0],[$e-30,.2]] as [$t,$v]){$rows[]=['t'=>$t,'values'=>['sensor.inverter_today_energy_import'=>['value'=>$v,'source_updated'=>gmdate('c',(int)$t),'source_changed'=>gmdate('c',(int)$t)]]];} echo json_encode(cash_calculate($rows,[],'2026-11-14'));"
+  r=json.loads(subprocess.check_output(['php','-r',code]));self.assertTrue(r['counter_reset']);self.assertIsNone(r['purchase_czk'])
  def test_midday_archive_is_not_a_complete_day(self):
   import subprocess
   code="require 'testing/energy-archive/finance.php'; [$s,$e]=cash_day('2026-11-14'); $rows=[]; foreach([[36000,0],[36010,6.2]] as [$dt,$v]){$t=$s+$dt; $rows[]=['t'=>$t,'values'=>['sensor.inverter_today_energy_export'=>['value'=>$v,'source_updated'=>gmdate('c',(int)$t),'source_changed'=>gmdate('c',(int)$t)]]];} $r=cash_calculate($rows,[(int)floor(($s+36000)/900)*900=>4.0],'2026-11-14'); echo json_encode($r);"
