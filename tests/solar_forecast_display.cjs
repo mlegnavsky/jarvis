@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+let Card;const ctx={HTMLElement:class{},customElements:{get:()=>false,define:(n,c)=>Card=c},Date,Math,Intl,setTimeout,clearTimeout};vm.createContext(ctx);vm.runInContext(fs.readFileSync('managed_sources/energy_weather/power-sun.js','utf8'),ctx);
+const c=new Card(),day=c.dayBounds(Date.parse('2026-11-16T12:00:00Z')),now=day.start-3600000;
+const rows=Array.from({length:24},(_,i)=>({time:new Date(day.start+(i+1)*3600000).toISOString(),global_tilted_irradiance:i===11?1000:0,shortwave_radiation:i===11?500:0}));
+c.h={states:{'sensor.jarvis_pocasi_zitenice':{state:'ready',attributes:{fetched_at:new Date(now).toISOString(),rows}}}};
+assert.equal(typeof c.solarForecast,'function','The future graph needs an actual PV forecast reader, not only sun elevation');
+let f=c.solarForecast(day,now);assert.ok(f);assert.equal(f.points.length,48);assert.ok(Math.abs(f.kwh-10.12*.8054584854081006)<1e-9);assert.ok(Math.abs(f.conservativeKwh-f.kwh*.8)<1e-9);assert.equal(f.peakIrradiance,1000);
+assert.ok(c.solarForecastHTML(day,now).includes('Odhad výroby'));assert.ok(c.solarForecastHTML(day,now).includes('kWh'));assert.ok(c.solarForecastHTML(day,now).includes('W/m²'));
+assert.equal(c.solarForecast(day,now+3600001),null,'Stale forecast must not appear current');
+rows[2].global_tilted_irradiance=null;assert.equal(c.solarForecast(day,now),null,'Missing radiation must not become zero');rows[2].global_tilted_irradiance=0;rows.pop();assert.equal(c.solarForecast(day,now),null,'Incomplete day must not claim a complete daily estimate');
+const hub=require('../managed_sources/spot_hub/hub.js');const view=hub.reserveView({sale_floor_soc:100,weather_reserve:{required_soc:100,forecast_days:[{day:'2026-11-16',forecast_pv_kwh:6.867,conservative_pv_kwh:5.494}]}},true);
+assert.ok(view.summary.includes('6,9'),'Collapsed reserve must expose forecast even when battery sales are blocked');
+assert.ok(view.summary.includes('Z baterie neprodávat'));assert.ok(view.summary.includes('16. 11.'));
+assert.ok(hub.reserveView({},false).summary.includes('čerstvá'));
+console.log('Future solar forecast, missing data, freshness and separate reserve states PASS');

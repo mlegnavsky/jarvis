@@ -15,7 +15,9 @@ function shiftDate(key,period,step){
 }
 function reserveView(sales,fresh){
  const p=sales?.weather_reserve||{};const valid=fresh&&number(p.required_soc)!==null;
- return {summary:!fresh?'Čekám na čerstvá data':!valid?'Čekám na výpočet rezervy':p.required_soc>=100?'Z baterie neprodávat':`Ponechat nejméně ${format(Math.max(p.required_soc,sales.sale_floor_soc||0),0)} %`,
+ const tomorrow=p.forecast_days?.[0],date=tomorrow?.day&&/^\d{4}-\d{2}-\d{2}$/.test(tomorrow.day)?new Date(tomorrow.day+'T12:00:00Z').toLocaleDateString('cs-CZ',{timeZone:'Europe/Prague',day:'numeric',month:'numeric'}):'';
+ const forecastSummary=fresh&&number(tomorrow?.forecast_pv_kwh)!==null?' · '+date+' odhad '+format(tomorrow.forecast_pv_kwh,1)+' kWh':'';
+ return {summary:(!fresh?'Čekám na čerstvá data':!valid?'Čekám na výpočet rezervy':p.required_soc>=100?'Z baterie neprodávat':`Ponechat nejméně ${format(Math.max(p.required_soc,sales.sale_floor_soc||0),0)} %`)+forecastSummary,
   day:p.forecast_days?.length?p.forecast_days.map(d=>d.day).join(' / '):p.forecast_day||'—',production:p.forecast_days?.length?p.forecast_days.map(d=>format(d.forecast_pv_kwh,1)).join(' / ')+' kWh':format(p.forecast_pv_kwh,1)+' kWh',conservative:p.forecast_days?.length?p.forecast_days.map(d=>format(d.conservative_pv_kwh,1)).join(' / ')+' kWh':format(p.conservative_pv_kwh,1)+' kWh',
   house:format(p.house_with_margin_kwh,1)+' kWh',base:format(p.house_daily_kwh,1)+' kWh +25 % zásoba',capacity:format(p.capacity_kwh,2)+' kWh',
   reason:p.reason||'Výpočet ještě není dostupný.',quality:p.quality==='unavailable'?'Chybí platné podklady; prodej z baterie čeká.':'Odhad výroby z jedné referenční křivky. Spotřeba '+(p.load_quality==='complete_measured_days'?'z úplných měřených dní.':'podle tvého odhadu6 kWh/den.')+' Noc nejméně20 % baterie +25 % zásoba; výhled48 hodin. Dobíjení započteno do '+format(p.charge_limit_kw,1)+' kW podle čerstvých limitů měniče a BMS.',
@@ -100,8 +102,8 @@ class Hub{
   const civil=today().split('-').map(Number),tomorrow=new Date(Date.UTC(civil[0],civil[1]-1,civil[2]+1)).toISOString().slice(0,10),next=sales.next_plan;
   if($('next-plan')){
    const ready=next?.day===tomorrow&&next.status==='ready'&&next.block?.day===tomorrow;
-   $('next-plan').textContent=ready?'Další okno: zítra '+clock(next.block.start)+'–'+clock(next.block.end):next?.day===tomorrow&&next.status==='no_window'?'Zítra není vhodné prodejní okno.':'Čekáme na zítřejší ceny.';
-   if($('next-plan-detail'))$('next-plan-detail').textContent=ready?'Nejvýhodnější okno z úplných zítřejších cen · průměr '+format(next.block.average_net)+' Kč/kWh po poplatku. '+(prefs.inhibited?'Automatika je pozastavená; zkontroluj důvod.':requested?'Spuštění automaticky po ověření baterie a ochran.':'Automatický prodej je vypnutý.'):'Plán se připraví po načtení úplných cen s kladným výkupem.';
+   $('next-plan').textContent=ready?'Další okno: zítra '+clock(next.block.start)+'–'+clock(next.block.end):next?.day===tomorrow&&next.status==='no_window'?'Zítra není vhodné prodejní okno.':'Zítřejší cenový plán: čekáme na zveřejnění cen OTE.';
+   if($('next-plan-detail'))$('next-plan-detail').textContent=ready?'Nejvýhodnější okno z úplných zítřejších cen · průměr '+format(next.block.average_net)+' Kč/kWh po poplatku. '+(prefs.inhibited?'Automatika je pozastavená; zkontroluj důvod.':requested?'Spuštění automaticky po ověření baterie a ochran.':'Automatický prodej je vypnutý.'):'Cenové okno se sestaví po načtení úplných cen OTE. Předpověď výroby a rezerva baterie se počítají samostatně; chybějící ceny neznamenají chybějící předpověď slunce.';
   }
   if($('control-alert')){
    const alert=$('control-alert');alert.hidden=!stopping&&!prefs.inhibited&&sales.healthy!==false&&fresh&&!sales.measurement_recovery?.pending&&!sales.error&&!sales.profile_issues?.length;
