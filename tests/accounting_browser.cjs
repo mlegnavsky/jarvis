@@ -22,12 +22,12 @@ const {chromium}=require('playwright'),fs=require('node:fs'),assert=require('nod
   await page.waitForFunction(()=>document.querySelector('#export-energy').textContent==='6,20 kWh');
   assert.equal(await page.locator('#sale-money').textContent(),'21,70 Kč');
   for(const period of ['week','month','year']){
-   const begin=Date.now();await page.locator(`[data-period="${period}"]`).click();
+   const begin=Date.now();await page.locator(`.trading-head [data-period="${period}"]`).click();
    await page.waitForFunction(p=>document.querySelector('#finance-plot').textContent.includes({week:'týden',month:'měsíc',year:'rok'}[p]),period);
    assert.ok(Date.now()-begin<2000,'Archive period totals must not wait for recorder history');
    await page.locator('jarvis-power-sun').locator('svg[aria-label="Energetická bilance v kWh"]').waitFor();
   }
-  await page.setViewportSize({width:390,height:844});await page.locator('[data-period="month"]').click();
+  await page.setViewportSize({width:390,height:844});await page.locator('.trading-head [data-period="month"]').click();
   assert.ok(await page.locator('#finance-plot svg').isVisible());assert.deepEqual(errors,[]);
   console.log('Browser: yesterday meter-matched revenue, week/month/year money and energy charts, mobile layout, no device writes PASS');
  }finally{await browser.close();}

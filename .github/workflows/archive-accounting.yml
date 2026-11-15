@@ -6,6 +6,7 @@ on:
       - testing/energy-archive/**
       - managed_sources/spot_hub/accounting.js
       - tests/accounting_integration.cjs
+      - tests/accounting_browser.cjs
       - .github/workflows/archive-accounting.yml
 permissions:
   contents: write
