@@ -19,24 +19,24 @@ function cash_calculate(iterable $samples, array $prices, string $day): array {
             $value=cash_number($item['value']??null);$stamp=strtotime($item['source_updated']??'');
             $changed=strtotime($item['source_changed']??'');
             if($value===null||$value<0||$stamp===false||$t-$stamp<0||$t-$stamp>120||($value>0&&($changed===false||$changed<$start)))continue;
-            if($kind==='import'){$bought=$value;$importAt=$stamp;continue;}
+            if($kind==='import'){if($bought!==null&&$value<$bought)$reset=true;$bought=$value;$importAt=$stamp;continue;}
             $exportAt=$stamp;
             $meter=max($meter??0.,$value);if($last!==null&&$value<$last['value'])$reset=true;
             if($last!==null&&$value>=$last['value']){
                 $delta=$value-$last['value'];
-                if($delta>0){
+                if($delta>0&&$stamp>$last['t']){
                     // A counter increment crossing a quarter can be priced only
                     // when every touched quarter has the same known price.
-                    $rates=[];for($q=(int)floor($last['t']/900)*900;$q<=$t;$q+=900){
+                    $rates=[];for($q=(int)floor($last['t']/900)*900;$q<$stamp;$q+=900){
                         if(!array_key_exists($q,$prices)){$rates=[];break;}$rates[]=$prices[$q];
                     }
-                    if($rates&&(max($rates)-min($rates)<.0000001||$t-$last['t']<=30)){
+                    if($rates&&(max($rates)-min($rates)<.0000001||$stamp-$last['t']<=30)){
                         $gross=$rates[0];
-                        if(count($rates)>1&&$t>$last['t']){
-                            $gross=0.;for($q=(int)floor($last['t']/900)*900;$q<=$t;$q+=900){$seconds=max(0.,min($t,$q+900)-max($last['t'],$q));$gross+=$prices[$q]*$seconds/($t-$last['t']);}
+                        if(count($rates)>1&&$stamp>$last['t']){
+                            $gross=0.;for($q=(int)floor($last['t']/900)*900;$q<$stamp;$q+=900){$seconds=max(0.,min($stamp,$q+900)-max($last['t'],$q));$gross+=$prices[$q]*$seconds/($stamp-$last['t']);}
                         }
                         $net=$gross-.30;$money=$delta*$net;$sale+=$money;$priced+=$delta;
-                        $q=(int)floor($t/900)*900;$out=$quarters[$q]??['start'=>$q,'export_kwh'=>0.,'sale_czk'=>0.];
+                        $q=(int)floor(($stamp-.000001)/900)*900;$out=$quarters[$q]??['start'=>$q,'export_kwh'=>0.,'sale_czk'=>0.];
                         $out['export_kwh']+=$delta;$out['sale_czk']+=$money;$quarters[$q]=$out;
                     }
                 }
@@ -45,9 +45,9 @@ function cash_calculate(iterable $samples, array $prices, string $day): array {
         }
     }
     $missing=$meter===null?null:max(0.,$meter-$priced);$covered=!$reset&&$meter!==null&&$exportAt!==null&&$exportAt>=$end-180&&abs($meter-$priced)<.000001;
-    $purchaseCovered=$bought!==null&&$importAt!==null&&$importAt>=$end-180;
+    $purchaseCovered=!$reset&&$bought!==null&&$importAt!==null&&$importAt>=$end-180;
     return ['date'=>$day,'export_kwh'=>$meter,'import_kwh'=>$bought,'priced_export_kwh'=>$priced,
-        'unpriced_export_kwh'=>$missing,'known_sale_czk'=>$seen?$sale:null,'sale_czk'=>$covered?$sale:null,
+        'unpriced_export_kwh'=>$missing,'known_sale_czk'=>$priced>0||$meter===0.?$sale:null,'sale_czk'=>$covered?$sale:null,
         'known_purchase_czk'=>$bought===null?null:$bought*5,'purchase_czk'=>$purchaseCovered?$bought*5:null,
         'cash_balance_czk'=>$covered&&$purchaseCovered?$sale-$bought*5:null,
         'last_export_measurement'=>$exportAt,'last_import_measurement'=>$importAt,'counter_reset'=>$reset,'quality'=>$covered&&$purchaseCovered?'estimate':'partial','samples'=>$seen,'quarters'=>array_values($quarters),
@@ -68,21 +68,21 @@ function cash_prices(PDO $db,float $start,float $end): array {
     return $prices;
 }
 function cash_status(PDO $db,?float $first,int $budget=4): array {
-    $db->exec('CREATE TABLE IF NOT EXISTS cash_days_v3(day TEXT PRIMARY KEY, count INTEGER, last REAL, price_last REAL, body TEXT NOT NULL)');
+    $db->exec('CREATE TABLE IF NOT EXISTS cash_days_v4(day TEXT PRIMARY KEY, count INTEGER, last REAL, price_last REAL, body TEXT NOT NULL)');
     $now=new DateTimeImmutable('now',new DateTimeZone('Europe/Prague'));$days=[];$pending=0;$built=0;
     // Latest completed day first; older history is warmed within a bounded budget.
     for($i=1;$i<=400;$i++){
         $day=$now->modify('-'.$i.' days')->format('Y-m-d');[$start,$end]=cash_day($day);if($first===null||$end<=$first)break;
         $q=$db->prepare('SELECT count(*),max(t) FROM samples WHERE t>=? AND t<?');$q->execute([$start,$end]);[$count,$last]=$q->fetch(PDO::FETCH_NUM);if(!$count)continue;
         $q=$db->prepare("SELECT max(issued) FROM publications WHERE kind='spot' AND issued>=? AND issued<?");$q->execute([$start-86400,$end]);$priceLast=$q->fetchColumn();
-        $q=$db->prepare('SELECT count,last,price_last,body FROM cash_days_v3 WHERE day=?');$q->execute([$day]);$old=$q->fetch(PDO::FETCH_ASSOC);
+        $q=$db->prepare('SELECT count,last,price_last,body FROM cash_days_v4 WHERE day=?');$q->execute([$day]);$old=$q->fetch(PDO::FETCH_ASSOC);
         $dirty=!$old||(int)$old['count']!==(int)$count||(float)$old['last']!==(float)$last||(float)$old['price_last']!==(float)$priceLast;
         if($dirty&&$built<$budget){
             $prices=cash_prices($db,$start,$end);$q=$db->prepare('SELECT data FROM samples WHERE t>=? AND t<? ORDER BY t');$q->execute([$start,$end]);
             $rows=(function()use($q){while(($row=$q->fetchColumn())!==false)yield $row;})();
             $out=cash_calculate($rows,$prices,$day);$out['built_at']=time();
             $body=json_encode($out,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
-            $q=$db->prepare('INSERT OR REPLACE INTO cash_days_v3 VALUES(?,?,?,?,?)');$q->execute([$day,$count,$last,$priceLast,$body]);$built++;$dirty=false;
+            $q=$db->prepare('INSERT OR REPLACE INTO cash_days_v4 VALUES(?,?,?,?,?)');$q->execute([$day,$count,$last,$priceLast,$body]);$built++;$dirty=false;
             $old=['body'=>$body];
         }
         if($dirty){$pending++;continue;}
