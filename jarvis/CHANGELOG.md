@@ -1,3 +1,7 @@
+# 3.12.12
+
+- Read one dated private energy-accounting result through the existing maintenance connection, exposing only bounded numeric totals and coverage. No arbitrary URL, credentials or device writes.
+
 # 3.12.11
 
 - Adjust native end-of-speech sensitivity only on an already authorized ESPHome Assist device, with revision check and actual state readback. No firmware flash or custom voice hooks.

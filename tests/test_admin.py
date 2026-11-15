@@ -88,6 +88,18 @@ class AdminTests(unittest.IsolatedAsyncioTestCase):
         await asyncio.gather(*tuple(self.worker.tasks))
         return self.worker.job(job['id'])
 
+    async def test_energy_finance_read_is_fixed_read_only_maintenance_query(self):
+        calls=[]
+        async def request(method,path,body=None):
+            calls.append((method,path))
+            return {'state':'ready','attributes':{'server':{'finance':{'days':[{'date':'2026-11-14','export_kwh':6.2,'known_sale_czk':21.7,'quality':'partial'}]}}}}
+        self.sup.request=request
+        result=await self.worker.read('energy_finance','2026-11-14')
+        self.assertEqual(result['day']['known_sale_czk'],21.7)
+        self.assertIsNone(result['day']['sale_czk'])
+        self.assertEqual(calls,[('GET','/core/api/states/sensor.jarvis_energy_archive')])
+        self.assertEqual(self.sup.effects,[])
+
     async def test_install_backup_and_verified_version_with_no_replay(self):
         result = await self.complete('addon_install', {'slug': 'core_new', 'expected_version': '1.2'}, 'install')
         self.assertEqual(result['state'], 'verified', result)

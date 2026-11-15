@@ -134,6 +134,9 @@ class Admin:
         self.allowed()
         if not isinstance(query, str) or not isinstance(target, str) or len(target) > 400:
             raise APIError(400, 'invalid_admin_query')
+        if query == 'energy_finance':
+            from .energy_finance import read
+            return await read(self.sup,target)
         if query == 'deployment':
             return deployments.public(deployments.get(self,target))
         if query in operations.READS:
