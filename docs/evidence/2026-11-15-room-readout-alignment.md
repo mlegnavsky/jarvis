@@ -1,0 +1,1 @@
+Align overview living-room temperature/humidity to child-room rows 73%/78%, room names to84%. Add bedroom static badges explicitly stating missing temperature/humidity data; no sensor values invented. Private YAML parsed, labels counted, patch idempotence verified. No device/control writes; client refresh needed for visual acceptance.
