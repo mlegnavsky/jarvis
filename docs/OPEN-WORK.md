@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 31642)
+Total output lines: 800
+
 Warning: truncated output (original token count: 33215)
 Total output lines: 819
 
@@ -323,165 +326,7 @@ Owner explicitly requested45% after cold start. HomePod output1.0.2 primes45% on
 
 ## Calibration resume1.1.3 — source preparation
 
-Owner reported last phrase fell back to unverified-voice reply. Evidence: four accepted embeddings remain in expired owner session; last STT began08:04:09UTC before deadline08:04:21, but intent matching began08:04:24 after deadline. Do not ask to repeat the first four. Fresh authenticated control action resume now reopens only the latest unfinished session for the same authorized stable voice_id and fixed satellite, preserving samples and deduplication; completed sessions cannot reopen. Each newly accepted sample refreshes600s inactivity deadline; duplicates/rejects do not. With only five accepted samples, automatic extension remains finite. No identity grant, template/threshold/anchor change or promotion.72 speaker tests pass. One cancelled HomePod playback is recorded, but old output report has no cancellation run/reason; exact cause of reported cut word remains unconfirmed and is not claimed fixed by this timeout change.
-
-## Supervised read-only review1.1.4 — source preparation
-
-Collected5 owner training,5 owner validation and5 owner-attested other-speaker comparison embeddings in separate sessions. Existing template rejects all5 new owner holdouts (scores0.6415–0.74), while comparison person scores0.2082–0.2841; scores are cosine similarities, not probabilities. New review.py consumes the private authenticated review-plan.json with three distinct owner-attested completed sessions for the same stable authorized reference and satellite, rejects utterance overlap, and evaluates one predeclared50:50 immutable-anchor/training-centroid candidate against independent holdouts at unchanged0.75 threshold/0.12 margin. It requires5/5 owner accepts, improvement, and0/5 comparison accepts before recommending a separate window test. No model, anchor or permission writes, no automatic promotion, no waveform or vector exposure. Window/replay validation remains unperformed and is not represented as household accuracy.77 speaker tests,44 HomePod,49 companion,239 addon tests pass (20addon skipped). Runtime result must be read before claiming improvement.
-
-## Supervised multi-reference matching1.1.5 — source preparation
-
-Owner authorized completing recognition after fixed blended candidate accepted3/5 positives and0/5 comparison samples. New predeclared score is the mean of the two best numerically distinct reference matches, using immutable anchors plus only owner training samples. Threshold0.75, margin0.12, model and stable identity/permissions unchanged; one close reference is insufficient. Independent owner/comparison sets remain excluded from templates. Legacy profiles use centroid until explicit authenticated activation. MatchingControl accepts fresh120s unique admin activate/rollback requests in jarvis_workspace/speaker_identity/review-control.json with expected evidence/model revision and acknowledgement of the previously owner-accepted replay limitation. Activation requires5/5 positives, strict improvement and0/5 comparison accepts. All file/DB evidence is rechecked under a SQLite write transaction; before-image, policy, template and idempotency receipt commit atomically. Eight private versions retained; profile deletion erases these templates. Centroid-only adaptive promotion/rollback cannot overwrite a multi-reference model. Automatic live learning and replay detection are not claimed. Runtime window checks still require every segment to identify the same profile and are not removed. Actual acoustic household verification follows any qualifying controlled activation; no physical door actions in testing.90speaker44HomePod49companion239addon tests pass20addon skipped. A regression test fails against legacy blending and passes with multi-reference matching.
-
-Review follow-up: all scoring inputs and the activation fingerprint are read within one SQLite read transaction. Concurrent holdout-write regression reproduced mixed-snapshot revision and now preserves the reviewed snapshot; subsequent changed data rejects activation.
-
-## Calibrated recognition1.1.6 — source preparation
-
-Uncalibrated centroid0.75 accepted0/5 owner heldouts, fixed anchor blend3/5, mean-of-two0.75 accepted2/5. All candidates rejected5/5 comparison utterances. Investigation found0.75 was an engineering default, not a calibrated biometric confidence: official sherpa speaker-identification Python example exposes --threshold and defaults0.6 (illustrative, not authentication guidance). New explicit top_two_mean_calibrated_v1 policy uses0.65 for conversation/lights, requires second distinct reference support>=0.6, unchanged0.12 inter-profile margin,5/5 supervised positives,0/5 comparison accepts andpositive-negative score gap>=0.2 before controlled activation. Report labels household threshold calibration and leaves household_accuracy_verified=false; these five tests are not an unbiased general false-acceptance estimate. Locks and voice-profile deletion retain>=0.75 on whole and every window. Lock check happens after command confirmation and pronunciation alias resolution; unrelated LLM service paths still cannot bind a token. No physical lock actions during tests. Pending short-command challenge now lasts60s to include spoken instructions+capture+inference; one-use executed grants remain15s and target/text/device-bound. Native recognition still needs long enough speech; wake models/full duplex are separate.
-
-
-## Voice diagnostic retention1.1.7
-
-Live owner identity question at10:26UTC was correctly transcribed but rejected. A subsequent0.2s follow-up replaced last_turn before60s report refresh, destroying numeric evidence; exact match failure remains unknown. Coordinator now retains the last16 completed decisions with numeric match/window scores, capture sequence, UTC timestamp and authorization result, without transcript, vector, voice_id or token. Regression reproduces original loss and tests follow-up isolation/bounded privacy. Recognition policy and thresholds unchanged. New live utterance required after deployment; do not claim acoustic recognition fixed from recorded holdouts.
-
-
-## Native abort callback1.0.3 and live recognition failure
-
-Owner physical identity utterance11:18UTC was fully transcribed;6.31s audio/5.47s voiced, whole match0.628<0.65 rejected. No threshold or profile change. HomePod started1/completed0/cancelled1; original cancellation source was not recorded, so do not claim cause of cut word proven. Found independent real setup-order bug: esphome subscribes a bound handle_pipeline_stop before late companion hook installation; replacing class method misses that saved callback. Regression reproduces absent resume with prebound callback. Hook now targets synchronous dynamic _abort_pipeline, still target-scoped, stopping before single same-conversation continuation with fresh session checks. Adds native abort count, last playback outcome/elapsed/task cancel count and known native-abort/new-run attribution; no media URL/token/audio. Other cancellations still never restart microphone. Physical post-deploy check required.
-
-
-## Scoped cancellation cleanup1.0.4
-
-User confirmed silence/no button at native abort. Cause inside firmware remains unproven; wake sensitivity already lowest, no silent weakening of voice policy or mic muting. Independent review found resume incorrectly required exact native/output task equality, and cancellation left native satellite RESPONDING because held TTS-end was never sent. Bind run by bound native event receiver, capture both task layers, await their completion and confirmed HomePod stop, then require same latest run/native task/conversation, no announcement and allowed live target. Call native tts_response_finished and same-run TV cleanup even without eligible continuation; only same-session captured continuation can resume. Tests reproduce distinct task layers, no-continuation cleanup and foreign callback isolation.48 HomePod tests pass. This repairs lifecycle recovery; it is not proof the original acoustic false stop or voice rejection is fixed. Last owner score0.6304<0.65; original model remains unchanged.
-
-
-## Duration-aware supervised repair1.1.8
-
-Repeated real owner turns score0.50–0.63 while old long heldouts5/5 pass. This disproves claims of operational recognition; duration/channel mismatch is a hypothesis, not proven. Add fresh owner-started repair action:2clean6s+ utterances with two consistent model windows, private SQLite storage/mode migration and bounded retention/deletion. Schema2 review trains only first new utterance+its windows and validates second whole+every window alongside original5owner holdouts and5comparison samples. Require6/6 owners, every repair holdout window,strict improvement,0/5comparison andgap0.2. Recognition0.65/secondref0.6/margin0.12 andlocks/delete0.75 unchanged. Read transaction/evidence CAS bind every mode/window; original anchors, stable identity and permissions unchanged. No automatic activation, no raw audio, no global accuracy/replay claims. Pending owner two actual utterances and truthful attestation before candidate review/activation. HomePod1.0.4 reports2cancel cleanups/1resume, but native false abort persists; firmware trigger unproven and is not fixed by recognition change. VoicePE has2mics/XU316; current mono pipeline provides no DoA measurement.
-
-## Cohort recognition1.2.0, family guide and HomePod1.1.0
-
-Owner requested replacement after another failed real test and no more calibration recordings. Critical operational failure acknowledged: repair collection expired10min before user's two utterances, so zero repair samples were stored; late utterances only numeric evidence remain. Do not ask them to repeat these samples. New cohort_margin_v1 uses existing positive anchors/training and owner-attested other-speaker exclusion references. Whole0.55/window0.50, two distinct positives with second>=0.50, exclusion gap>=0.20 and inter-profile margin0.12; raw whole/every window lock/delete0.75 retained. Schema3 independent owner5holdouts and negative5leave-one-utterance-out folds, no regression and raw separation>=0.2, explicitly owner-authorized policy migration. Manual activation only, complete structured bank CAS/rollback; no new audio or blanket authentication claim. Physical recognition still unproven until ordinary use.
-
-Guided family workflow trigger “Nauč se nového člena rodiny”: recognized full-scope owner, name+consent,5training answers,3independent controls+windows; percent is completion, not identity probability. Persistent private state across restart, safe pause/cancel, bounded attempts, no training actuation, new profile unprivileged. Fresh operator family-control.json authorizes/revokes lights only using validation proof and ide…3215 tokens truncated…dence/2026-11-03-room134-actual-measurement.json.
-
-
-## One actual room test completed; runtime1.3.5 recovered —3Nov2026
-
-This supersedes pending/error snapshots, not the recorded failed jobs. The SINGLE consented remote test ran once under1.3.4:2945frames/29.4037s native window/30.0007s request watchdog;27.44s paired audio retained only in RAM/peak2239128B. Fixed HomePod text15.09875s completed/no stop/error, current45% preserved, sender firstaudioestimate2350.3ms. No STT/identity/agent/household commands or cloud microphone. Scalar analysis exhausted30.636s budget after22windows and wiped allPCM/retained0; do not widen budgets or re-run capture to obtain a green result. Physical receiver state after test satelliteidle/HomePodoff/TVidle. Actualevidence docs/evidence/2026-11-03-room134-actual-measurement.json.
-
-The135 runtime fix is PUBLIC a57f2619dceb06ad9a4fac3d692e8dc4c0e35081/tree4e2e56a01c73d24015e15e034ae1023f00755012, local9b29e6c exact.265duplex/manifest/diff andCIpush41632182532/PR41632191855 success, lab125904925722 immutablepublishsuccess. Root fixed its own nonexistent APIClient.is_connected assumption using pinned45.3.1 PUBLIC connected_address/api_version (unknown failsclosed); actualshape RED1failure+1AttributeError thenGREEN. Source d98c0d748d5d5ed5c3414889f54c805594a20a57d90ddba7c98502f7ca286f7f.
-
-room135-apply-20261103 was submitted ONCE12:03:11UTC, automatic check FAILED runtime_check_failed12:07:27/backupb77ec1cd/planactivation_failed. Do NOT reapply to repair bookkeeping. Independent fresh exact3files + report afterstartup12:07:57/12:09:12/12:11:03 show1.3.5/configured/adapteractive/source d98/caliboffPCM0/isolationfalse/sessions0; fresh135nonce native77frameVAD/Marin2.8316875s nonsilent/generatedwaveform19.965ms/NumPy760.06ms/corr.999078/constructed1250ms passed. This independently verifies actual activation without renaming failedjob or inventing phase active_verified. Sensorconfigured, satelliteidle/TVidle/HomePodoff/TVintegrationloaded. Fullnativeproof docs/evidence/2026-11-03-room135-native-recovery.json.
-
-Persistedisolationfalse/fresh_native_connection exactrevision4b50e116b314601a7982a9ddab704a7b13b20251226f4f0a7444a22205203bdb. Durable one-shotSTILL consumed same nonce/revision92ec14400d32af3e95cb3ed3df3a3e9f002f880c559d8e74239fd7942acae840; no further remote microphone start authorized. Private combined receipt exactrevisiond1be6ec59a6c96e9491991645b1187e20795d84d1b56828f780a6b47aad9391d (snapshot beforelease release). room134-release verified12:00:26UTC then135acquire12:01UTC; room135-release verified12:19:08UTC/freshlockedfalse/private expiredmeasurement control andtokensremoved. Oldunprotectedcf7385ba and42b6d49d namedCASdeleteverified/newest3+protectedkept, backupready space restored. No repeatedapply, no newmic or firmware/Core/provider/profile changes.
-
-Original acoustic/immediatehumanbarge/1s goal remains OPEN. Actualpartialrawcorrelation0–.496/bandscore.724–.938/coherence.451–.923; band lag380.44–386.13ms is additional to sender estimate, not receiver/physical propagation proof. VAD>=.5 in1399/2744 retainedframes; no measured realASR failures in this diagnostic. Do not claim self-interruption fixed from one fixed playback test.
-
-Read-only hardware-reference feasibility found a digital preDAC/preAMP VoicePE→XMOS reference path, DAC mute preserving reference, GPIO47 separate amp and channel1 AEC-stage capability. Installed firmware stage/version notverified. Stock40ms micdelay/main150ms/shadow75ms filter cannot cover unaligned~380ms offset. No synchronized externalHomePod referencefeeder exists; ordinary two play_media calls are insufficient. Save exact primarysources and boundary in docs/superpowers/specs/2026-11-03-homepod-hardware-reference-feasibility.md. No hardware change or newMic. Numerical helper is separately checking a causal past-trained/frozen FIR subtractor (not the rejected per-window fitted classifier); no productionintegration/eligibility assumed.
-
-
-## Additional causal subtractor also rejected —3Nov2026
-
-Independent read-only numerical helper tested a genuinely past-trained/frozen future-waveform predictor, not the earlier per-current-window fitted classifier.96fits/2693scalarcases: stable linear future echo attenuation1.34–26.34dB and frozen current-human component preserved; all contaminated/AGC bootstrap cases failopen, so zero echo removal there. Futuregain÷4 and nonlinear gating still amplify error to-5.54/-7.52dB despite energy guard; changed guard decisions add up to17.7× humanenergy artifacts. NO-GO, no productionintegration/livechanges. Fullowned authored-fixture scripts and compressed scalar case results under experiments/rejected-causal-aec-20261103, REPORT/summary/provenance preserve every limit. No actualroomPCM retained or replayed; room nonlinearDSP remainsunknown. Current1.3.5/d98 remains unchanged/lease released.
-
-
-## Synchronized reference candidate —3Nov2026, not deployed
-
-Native1.3.6/addon3.12.3 candidates add exact owned RAOP sample timing, paired
-Sendspin PCM, a silent Voice PE I2S gate and a fixed generated-only native probe.
-The probe never opens a microphone or HomePod. Production dialogue is not yet
-attached to this reference. Full implementation/limits: docs/superpowers/plans/2026-11-03-reference-bridge.md and experiments/reference-bridge-20261103/README.md.
-Both exact ESPHome2026.10.1 minimal fixtures compile; real overlays pass codegen;
-UBSAN lease checks pass.312duplex tests and246addon tests(20optional skips) pass.
-A single real encrypted240s transport experiment has a preserved FALSE verdict
-(clear+end coalescing criterion); separate clear-only test passes. A7.571352s
-actual-module SDK integration passes with simulated native counters/ACK only.
-Neither experiment proves physical DMA, HomePod alignment, AEC or conversation.
-
-Live baseline remains native1.3.5/d98 andaddon3.12.2, Core2026.6.4 unchanged.
-Deployment preflight:1.6GiB free, mandatorybackup threshold2GiB; no newbackup,
-firmware change, deployment or microphone use. Retention preview identifies
-old unprotected ba75b0ef708.05MB and9edc3711710.38MB; explicit deletion approval
-is still missing. Preserve latest3(b77ec1cd/d9346e31/4fb5ba7f) andprotected27122c9a.
-Continue from concrete reviewed publication and CI, then approved cleanup,
-addon update/safe installed-package metadata, exact target compile and backed-up
-CAS activation. Existing consumed room latch remains immutable.
-Original stutter/self-answer/barge-in/1s goal remains OPEN.
-
-Review correction: stock_sendspin staging is now explicitly rejected before any
-write because its experimental listener replacement silences normal Sendspin
-media. Its YAML/fixture remains a build-only experiment, not a deployable profile.
-Only legacy staging is allowed, and exact installed-package compatibility remains
-a required compile gate. Review also found and corrected zero-progress callback
-busy-loop and HA initialization/probe ownership race. Full review/rulings are in
-docs/evidence/2026-11-03-reference-bridge-review.json.
-
-Final host checks after the review fixes:314duplex tests10.259s PASS;247addon tests7.562s PASS(20optional skips); manifest and diff checks PASS. No live activation.
-
-
-## Reference candidate published; physical activation blocked —3Nov2026
-
-Supersedes the publication-pending notes above. Public source
-54e9bce5d634e34197528ec565d1ed10b98dd01a/tree746ed1ff5d27a67f0f9dd1547842ef33287c5e06
-exactly matches local322a390072d8708f17aa81d3ba1d71071849733f. Push CI41646159996
-completed13:43:08UTC; all8jobs passed including both firmware fixtures, both
-containers and publish-laboratory125954034069 (immutable package/catalog steps
-not skipped). No live update, firmware install or microphone test was performed.
-
-Fresh live report13:39:16UTC: native1.3.5/d98/configured/adapteractive/Core2026.6.4,
-no active dialogue and room isolation false. Storage still1.6GiB versus2GiB
-mandatory backup minimum. Source/proof and exact proposed two cleanup candidates
-are in docs/evidence/2026-11-03-reference-bridge-proof.json. Cleanup authorization
-remains missing for ba75b0ef and9edc3711; none deleted. Preserve newest3 and
-protected27122c9a. Ask only this concrete destructive scope; existing Git/update
-consent persists. After approval recheck retention/CAS/space, delete only named
-backups, then update addon3.12.3 to read safe installed-package metadata.
-Stock_sendspin is explicitly NOT supported for staging; legacy needs exact
-private-target compile before install. Native1.3.6 and silent device probe still
-not activated; timed physical alignment and acoustic acceptance remain open.
-Do not repeat old room134 consent, old135 apply, or the frozen240s experiment.
-
-
-Stock compatibility continuation: owner says backups deleted/freehands; fresh6.7GiB/unlocked, no assistantdeletion. Jarvis3.12.3 updatef1471f98971d4b7eb4636dba7065e58a submittedonce andverified, backup0996fed9, freshversion3.12.3connected/storage6.6. Native1.3.5/d98 untouched; nofirmwarewrite/leaseyet.
-Actualuploadeddeviceconfig hasofficialURLwithout@ref; optionalrefparser bugfixedRED→GREEN for3.12.4candidate. Officialdefaultdev d4e6fa43 inheritsstock; legacyduplicateplayer reproduced, so do notstagelegacy. Newfirmwarestockrouting fixedpublicreference_server_id atboot, preservesnormalstockcallbacks/codecs/delay/unpairedpolicy/32bitnormalmixer; staticidentity avoidsunarmedreferencebecomingaudible.
-Roothostcandidate1.3.6 addsreference_identity control120s (noendpoint/network/mic) tocreate/loadprivatekeyonGreen andreturnpublicid; stage3.12.4 requiresreference_server_id43base64url andsupportsstock. Root317duplex/249addon20skip GREEN; stage7testsGREEN; updatedCIrunsstock_adapter_test.py/hub_config_test.py. Newcriticalgoalproofstillnotperformed.
-Agentreference_stock_coexistence ownsfirmwareonly; bothminimalbuildsPASS, fullimmutableofficialpackagebuildrunning; sourcecounterfixafterself-review pendingtoavoidmetadata-callback teardownwaitonownstack (endmustwaitPCM-only; allcallbacksblockarm). Agentreference_stock_review found0Critical/Important ininitialfrozendelta andwillcheckonlynewcounterfix; report .superpowers/sdd/2026-11-03-reference-bridge/stock-integrated-review.md. Fullbuild+finalbuild-proof.json mustcompletebeforepublish.
-PublicHEADstill54e9bce (all8CI41646159996passed,labpublished); localHEAD2e7041d containsUNPUBLISHEDdocumentationcheckpoint. Current3.12.4+stock+nativeidentity changesuncommitted. NoextraapprovalneededforGit/update/deploy. Nativepayload /tmp/reference-native-deployment/prepare-call.json fromhelperisSTALE after3hostsourcechanges; preserveitsfreshCASbeforeimages, regeneratefromfinalpublishedsourcebeforeapply. Agentreference_deploy_preflight canrebuildit; nolease acquired. Expectedold8filelist __init__,control,manifest,5reference*.py; oldpostfingerprintdbbe575...NOT currentnewcandidate.
-Next: finishcounterfix/fullbuild/targetedreview, finaladdonchecks/manifest/diff, commitallownedchangespluspublicproof, GitCASpublish against54e9bce (exacttree), waitCI; updateaddon3.12.4once/newrequestid andverify. Thennative1.3.6 viaexistinglease/bundle/core_restart andfreshfile/hash/runtime/nativeproof; runreference_identity(nohardware) toobtainPUBLICserverid; freshmetadata/sourceCASstageSTOCKoverlaywithexactpublishedSHA+publicid; compileprivateGreentarget, onlythenbackedupinstall/hashreadback; silentreference_probeonfreshnonce. No oldroommicrophone grant replay/clearing. Acousticmeasurement/fastbarge and1sgoal remainunproved.
-
-Stock compatibility candidate complete for publication:317duplex and249addon(20optional skips) testsPASS. Bothminimalfixtures andFULLimmutableofficialVoicePEpackage compile PASS onfinalsources, includingreentrantcounterfix. All7compiledcomponentfiles byte-match inall3builds. Fullconfig91263d25/RAM149883/flash2847423; finalproofdigestda75271e24914d56a473972dcf245d03bc8bc96f0f6856829d4cf0e01b9833c3. Focusedintegratedreview0Critical/0Important, counterdeltaaccepted; allreviewlimitsretained. New3.12.4/1.3.6 source ready, NOTactiveyet. Nativepublicidentity mustbe preparedbeforestockstage. Existing3123active/0996fed9backup,6.6GiBfree. No furtherdeletionneeded; userfreehandsauthorizationpersists.
-
-## 4 November 2026: owner chooses permanent half duplex
-
-Archive branch archive/homepod-duplex-experiments-20261104 preserves 129149e2.
-Native 1.3.7 candidate uses HalfDuplexSession and removes echo observer/classifier
-from ordinary dialogue. No firmware changes. Details and failed paths:
-docs/experiments/2026-11-04-half-duplex.md. DEPLOYED: half137-apply-20261104 verified/active_verified at 08:15:42 UTC,
-backup b74d6651, native 1.3.7. Exact 4 files read back; native probe and16.416s
-HomePod output passed, zero stops/errors/cleanup pending. Lease released.
-Full proof docs/evidence/2026-11-04-half-duplex.json. CI41797390703 all8jobs
-success. Household wake reliability/audibility and provider latency remain
-unverified; no remote microphone test performed.
-
-## Spoty preparation — 4 November 2026
-Owner approved screen design and TEST OTE pricing, no live operation change.
-New preparation view has live house/grid/battery flows and current OTE prices, preserving all previous views. Controls explicitly disabled pending controller implementation; no fake active AI.
-Private baseline: jarvis_workspace/spot-baseline-20261104.json (HA-exposed settings only; never publish household settings). Capture verified. Zero export offset confirmed20W. Numeric capacity sensor20kWh differs from owner23.5kWh; do not infer stored kWh without resolving.
-OPEN: physical action mapping/tests and rollback, configured export permission/limit, forecast-calibrated plan, interval settlement and week/month totals. Archive status retrying. TEST OTE authorized for simulation; actual contractual price to connect later. Browser QA blocked by missing Chromium download; source tests pass, no claim visual acceptance.
-
-
-## 80 A charging button live verification — 4 Nov 2026 20:02 Prague
-Source79eff534c40d46e661d7b4329e95682fb642bdef deployed via battery80-prepare-20261104 / battery80-apply-20261104. Job verified19:02:36UTC, phase active_verified, runtime sensor idle/version0.3.1; exact3file readbacks match hashes. Backupd6d22db0. Fresh inverter grid charging80 A, maximum charging100 A. Engine requests min(80,inverter max) regardless of previous20/40/80/100 setting, shared80 A report constant. All263local addon tests PASS after installing missing test dependencies;20optional skips. Charging14tests, JS card and day-energy unit tests/manifest checks PASS. GitHub energy-chart job fails at Playwright1.58.2 browser installation on ubuntu26.04 (unsupported runner), before browser tests. No physical test started in this task. Global maximum100→80 action rejected action_not_allowed, remains OPEN; no bypass. Existing10minute/+5SOC/90%/temperature guards retained. Lease release battery80-release-20261104 submitted.
-
-
-## Voice diagnostics step 1 — 4 November 2026
-
-Owner approved sequential repair plan; this change is diagnostics only. Native1.3.8/diagnostics1.1.3 records bounded actual local conversation timelines (8 runs,48events/run,240chars/transcript) in private0600 report; no raw microphone or response text. Native wake hint is metadata, never acoustic proof. Separate direct-verbs path records16 recent decisions including TV-active refusal and continuation flags. Half-duplex, identity grants, TV policy and command decisions are unchanged. Microphone temporarily muted after owner reported spontaneous TV pauses; preserve mute until controlled household test.
-
-Root of earlier missing logs: native-session wrapper emits only outer start/STT/end; internal TurnBridge and Session were unobserved. Root of short-verb closure remains to verify acoustically: direct verbs are explicitly blocked while TV is active, even when a previous Jarvis activation existed. Local source corroborates this branch; do not call it an accepted household fix.
-
-Independent review found2Important: observer failure can skip cleanup, identity errors misclassified as agent. Reproduced with actual extracted dialogue/bridge, fixed RED→GREEN. Callback and diagnostic snapshots isolated; bridge stage errors carry actual duration/type only; response wrapper tagged response, not agent. Per-turn output startup/TTS facts and separate metadata/cancellation events. No unaddressed critical/important findings. Local330+ and addon263(20optional skips) baseline/verification; final counts in deployment evidence. No real private transcript enters Git. Activation still pending publication and CAS backed-up bundle; no new remote microphone test.
+Owner reported last phrase fell back to unverified-voice reply. Evidence: four accepted embeddings remain in expired owner session; last STT began08:04:09UTC before deadline08:04:21, but intent matching began08:04:24 after deadline. Do not ask to repeat the first four. Fresh authenticated control action resume now reopens only the latest unfinished session for the same authorized stable voice_id and fixed satellite, preserving samples and deduplication; completed sessions cannot reopen. Each newly accepted sample refreshes600s inactivity deadline; duplicates/rejects do not. With only five accepted samples, automatic ext…6642 tokens truncated…final counts in deployment evidence. No real private transcript enters Git. Activation still pending publication and CAS backed-up bundle; no new remote microphone test.
 
 
 ### Diagnostics138 publication blocked by automatic approval
@@ -798,3 +643,7 @@ Spot button deployment follow-up: frontend3/3 exact readbacks verified via spotf
 
 ## Spot charge0.6.10 ACTIVE —13 November2026,07:46 Prague
 Supersedes earlier blocked activation. Owner approved three exact older-backup deletions; all verified, newest/protected retained. spotfix-backend-apply-20261113 VERIFIED/active_verified, backup3405a053, Core2026.6.4; charge idle0.6.10 independently confirmed and file SHA matched. Fresh heating runtime charging error empty, no physical charge test started. Final storage3.6GiB. Lease released verified. Detailed receipt docs/evidence/2026-11-13-spot-buttons.md and private jarvis_workspace/spot-buttons-20261113-receipt.json. Do not repeat deletes or deployment; pending only user button/power-flow and phone visual acceptance.
+
+
+## 2026-11-15 finance history read repair
+Owner screenshot: Nov14 closing meter export6.2kWh, historical finance only0.65kWh/2.35CZK, earlier live screenshot20.69CZK/5.70kWh. Confirmed UI requested significant_changes_only while partial monetary sensors remain unknown and known_sale_czk changes only in attributes. Query now explicitly significant_changes_only=0, final15min cumulative closing window with default initial snapshot, four parallel day reads per selection, five-minute promise cache with failed-read eviction. No accounting/inverter/heating settings changed. Targeted regression recreates lost attribute updates and checks partial labels, cumulative multi-day sums, idle closing window, cache and retries. Exact actual Nov14 result still requires authenticated HA history read/client refresh; no fabricated replacement total. Static deployment source and hash readback recorded by deployment job fin-history-prepare/apply-20261115. Browser visual acceptance remains unverified.

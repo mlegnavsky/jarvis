@@ -218,7 +218,22 @@ class Hub{
   const empty={first,last,expected_days:0,available_days:0,quality:start>=now?'future':'partial',sale_czk:null,purchase_czk:null,known_sale_czk:null,known_purchase_czk:null,cash_balance_czk:null,known_cash_balance_czk:null,export_kwh:null,import_kwh:null};if(start>=now)return empty;
   let expected=0;for(let key=first;key<last&&key<=current;key=shiftDate(key,'day',1))expected++;
   const ids=['sensor.jarvis_dnes_prodano_za','sensor.jarvis_dnes_nakoupeno_za'];let rows=[];
-  if(this.period!=='day'||this.date!==current){rows=await this.h.callApi('GET','history/period/'+new Date(start).toISOString()+'?end_time='+encodeURIComponent(new Date(Math.min(end,now)).toISOString())+'&filter_entity_id='+ids.join(',')+'&significant_changes_only');}
+  // These sensors are cumulative for their dated day. Their monetary state can
+  // remain unknown while known_* attributes grow: significant-only history loses it.
+  this.financeDays??=new Map();
+  const keys=[];for(let key=first;key<last&&key<current;key=shiftDate(key,'day',1))keys.push(key);
+  const batches=new Array(keys.length);let cursor=0;
+  const readDay=async key=>{
+   const cached=this.financeDays.get(key);if(cached&&now-cached.at<300000)return cached.promise;
+   const closing=midnight(shiftDate(key,'day',1));
+   const promise=this.h.callApi('GET','history/period/'+new Date(closing-900000).toISOString()+'?end_time='+encodeURIComponent(new Date(closing).toISOString())+'&filter_entity_id='+ids.join(',')+'&significant_changes_only=0');
+   const entry={at:now,promise};this.financeDays.set(key,entry);
+   try{return await promise;}catch(error){if(this.financeDays.get(key)===entry)this.financeDays.delete(key);throw error;}
+  };
+  // Bounded concurrency also keeps a year selection from flooding the recorder.
+  await Promise.all(Array.from({length:Math.min(4,keys.length)},async()=>{while(cursor<keys.length){const i=cursor++;batches[i]=await readDay(keys[i]);}}));
+  rows=ids.map((id,i)=>batches.flatMap(batch=>(batch||[]).flatMap((series,j)=>(series||[]).filter(state=>(state.entity_id||ids[j])===id))));
+  while(this.financeDays.size>400)this.financeDays.delete(this.financeDays.keys().next().value);
   const days=new Map();const add=(state,id)=>{const at=Date.parse(state.last_updated||state.last_changed||''),key=state.attributes?.date||keyOf(at);if(!Number.isFinite(at)||key<first||key>=last||key>current)return;const day=days.get(key)||{};if(!day[id]||at>=day[id].at)day[id]={state,at};days.set(key,day);};
   for(let i=0;i<rows.length;i++)for(const state of rows[i]||[])add(state,state.entity_id||ids[i]);
   if(first<=current&&current<last)for(const id of ids)if(this.h.states[id])add(this.h.states[id],id);
