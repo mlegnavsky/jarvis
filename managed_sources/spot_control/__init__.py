@@ -69,7 +69,7 @@ async def async_setup(hass,config):
         return result
     def report():
         phase=c.record.get('phase','idle')
-        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.6.10','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'purpose':c.record.get('purpose'),'target_w':c.record.get('target_w'),'heaters':c.record.get('heaters'),'charge_amps':c.record.get('amps'),'active':c.active,'connection_grace_s':180,'connection_lost_at':c.offline_since,'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
+        hass.states.async_set('sensor.jarvis_spot_control',phase,{'friendly_name':'Spoty – ruční nabíjení','version':'0.6.11','test_current_limit':TEST_CURRENT_LIMIT,'telemetry':telemetry(),'ready':ready,'purpose':c.record.get('purpose'),'target_w':c.record.get('target_w'),'heaters':c.record.get('heaters'),'charge_amps':c.record.get('amps'),'active':c.active,'connection_grace_s':180,'connection_lost_at':c.offline_since,'start_soc':c.record.get('start_soc'),'target_soc':c.record.get('target'),'deadline':c.record.get('deadline'),'slot':c.record.get('slot'),'charging_observed':c.observed,'error':c.error,'telemetry_fresh':healthy(),'icon':'mdi:battery-charging'})
     async def start(call):
         if not ready or not healthy():raise HomeAssistantError('Čekám na aktuální měření měniče.')
         now=dt_util.now()

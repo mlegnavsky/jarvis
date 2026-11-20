@@ -57,8 +57,42 @@ class Tests(unittest.IsolatedAsyncioTestCase):
   c.write=mutate
   with self.assertRaises(ValueError):await c.start(960)
   self.assertNotIn('Grid',[v for e,v in self.calls])
- async def test_deadline_and_target(self):
-  c=self.controller();await c.start(960);c.clock=lambda:701;await c.tick();self.assertFalse(c.active)
+ async def test_no_short_test_deadline(self):
+  c=self.controller();await c.start(960);c.clock=lambda:3700
+  self.s['sensor.inverter_battery']='49'
+  await c.tick();self.assertTrue(c.active)
+  self.s['sensor.inverter_battery']='74'
+  await c.tick();self.assertFalse(c.active);self.assertEqual(self.s[CURRENT],self.before[CURRENT])
+ async def test_full_charge_does_not_stop_at_98(self):
+  self.s['sensor.inverter_battery']='71';c=self.controller();await c.start(960)
+  self.assertEqual(c.record['target'],100)
+  for soc in ('98','99'):
+   self.s['sensor.inverter_battery']=soc;await c.tick();self.assertTrue(c.active)
+  self.s['sensor.inverter_battery']='100';await c.tick();self.assertFalse(c.active)
+ def test_goal_is_30_percentage_points_capped_at_full(self):
+  for start,goal in ((0,30),(44,74),(55,85),(69,99),(70,100),(98,100),(99,100)):
+   self.s['sensor.inverter_battery']=str(start)
+   self.assertEqual(plan(self.s,960)[1],goal)
+  self.s['sensor.inverter_battery']='100'
+  with self.assertRaises(ValueError):plan(self.s,960)
+ async def test_native_target_survives_program_rollover_and_restores(self):
+  c=self.controller();await c.start(960)
+  for i in range(1,7):
+   self.assertEqual(float(self.s[f'number.inverter_program_{i}_soc']),74)
+   self.assertEqual(self.s[f'select.inverter_program_{i}_charging'],'Grid')
+  self.calls=[];await c.stop();self.assertEqual(self.s,self.before)
+  selectors=[n for n,(e,v) in enumerate(self.calls) if e.startswith('select.')]
+  targets=[n for n,(e,v) in enumerate(self.calls) if e.startswith('number.')]
+  self.assertLess(max(selectors),min(targets))
+ def test_never_lowers_native_floor_or_overwrites_existing_charge(self):
+  self.s['number.inverter_program_2_soc']='80'
+  with self.assertRaises(ValueError):plan(self.s,960)
+  self.s['number.inverter_program_2_soc']='30'
+  self.s['select.inverter_program_2_charging']='Grid'
+  with self.assertRaises(ValueError):plan(self.s,960)
+ async def test_legacy_transaction_deadline_remains_effective(self):
+  c=self.controller();await c.start(960);c.record['deadline']=101;c.clock=lambda:102
+  await c.tick();self.assertFalse(c.active)
  async def test_temperature_stops_and_restores(self):
   c=self.controller();await c.start(960);self.s['sensor.inverter_battery_temperature']='45'
   await c.tick();self.assertFalse(c.active);self.assertEqual(self.s[CURRENT],self.before[CURRENT])

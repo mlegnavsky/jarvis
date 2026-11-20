@@ -1,9 +1,9 @@
 start_test:
   name: Dobít baterii ze sítě
-  description: Spustí omezený nabíjecí test a ověří skutečné nabíjení.
+  description: Dobije o 30 procentních bodů od spuštění, nejvýše do 100 %, a obnoví původní nastavení.
 stop_restore:
-  name: Ukončit nabíjecí test
-  description: Ukončí test a obnoví potvrzené původní nastavení.
+  name: Ukončit dobíjení
+  description: Ukončí dobíjení a obnoví potvrzené původní nastavení.
 start_sale:
   name: Spustit vlastní prodej
   description: Spustí prodej z vybraného zdroje s ověřenými limity.

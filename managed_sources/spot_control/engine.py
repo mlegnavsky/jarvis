@@ -28,7 +28,7 @@ def plan(states,minute):
     if states.get('select.inverter_time_of_use') not in ('Week','Enabled'):
         raise ValueError('Časový program není aktivní pro celý týden.')
     soc=finite(states.get('sensor.inverter_battery'))
-    if soc is None or not 0<=soc<90: raise ValueError('Nabití baterie musí být známé a pod 90 %.')
+    if soc is None or not 0<=soc<100: raise ValueError('Nabití baterie musí být známé a pod 100 %.')
     starts=[]
     for i in range(1,7):
         t=states.get(f'time.inverter_program_{i}_time','')
@@ -38,13 +38,20 @@ def plan(states,minute):
         starts.append(v)
     if starts!=sorted(set(starts)): raise ValueError('Časový program není vzestupný.')
     slot=max((i+1 for i,t in enumerate(starts) if t<=minute),default=6)
-    charge=f'select.inverter_program_{slot}_charging'; target=f'number.inverter_program_{slot}_soc'
-    if states.get(charge)!='Disabled': raise ValueError('V tomto intervalu už je nastavené nabíjení.')
-    amps=finite(states.get(CURRENT)); oldsoc=finite(states.get(target))
-    if amps is None or amps<=0 or oldsoc is None or states.get(SWITCH) not in ('on','off'):
+    amps=finite(states.get(CURRENT))
+    if amps is None or amps<=0 or states.get(SWITCH) not in ('on','off'):
         raise ValueError('Nastavení nabíjení není dostupné.')
-    goal=min(90,math.floor(soc+5))
-    return [(CURRENT,str(min(TEST_CURRENT_LIMIT,float(states['number.inverter_battery_max_charging_current'])))),(target,str(goal)),(SWITCH,'on'),(charge,'Grid')],goal,slot
+    goal=min(100,math.ceil(soc+30))
+    targets=[];charges=[]
+    # Own all slots until completion so a time-slot boundary cannot end charging.
+    # Targets are bounded by the inverter/BMS; never lower an existing reserve.
+    for i in range(1,7):
+        charge=f'select.inverter_program_{i}_charging';target=f'number.inverter_program_{i}_soc'
+        oldsoc=finite(states.get(target))
+        if states.get(charge)!='Disabled' or oldsoc is None or not 30<=oldsoc<=goal:
+            raise ValueError('Předchozí nabíjení nebo bezpečná rezerva není potvrzena.')
+        targets.append((target,str(goal)));charges.append((charge,'Grid'))
+    return [(CURRENT,str(min(TEST_CURRENT_LIMIT,float(states['number.inverter_battery_max_charging_current'])))),*targets,(SWITCH,'on'),*charges],goal,slot
 
 def equal(a,b):
     x,y=finite(a),finite(b)
@@ -83,7 +90,7 @@ class Controller(HeatingChargeMixin):
             if self.active: raise ValueError('Nejprve zastav předchozí test a obnov nastavení.')
             self.offline_since=None
             states=self.read(); steps,goal,slot=plan(states,minute)
-            self.record={'before':{e:states[e] for e,v in steps},'steps':steps,'deadline':self.clock()+600,'target':goal,'slot':slot,'phase':'starting'}
+            self.record={'before':{e:states[e] for e,v in steps},'steps':steps,'deadline':None,'start_soc':finite(states.get('sensor.inverter_battery')),'target':goal,'slot':slot,'phase':'starting'}
             await self.save(self.record) # durable before any inverter write
             try:
                 for e,v in steps:
@@ -108,6 +115,7 @@ class Controller(HeatingChargeMixin):
         failures=[]
         # Grid permission first, target second, then current; preserve original switch.
         order=[e for e,v in reversed(self.record['steps'])]
+        order=[e for e in order if e.startswith('select.')] + [e for e in order if not e.startswith('select.')]
         for e in order:
             v=self.record['before'][e]
             try:
@@ -130,10 +138,12 @@ class Controller(HeatingChargeMixin):
     async def tick(self,healthy=True):
         if self.record.get('purpose')=='heating':return await self.tick_heating(healthy)
         if not self.active:return
-        if self.connection_grace() and self.clock()<self.record.get('deadline',0):return
+        deadline=self.record.get('deadline')
+        expired=deadline is not None and self.clock()>=deadline
+        if self.connection_grace() and not expired:return
         s=self.read();soc=finite(s.get('sensor.inverter_battery'))
         grid=finite(s.get('sensor.inverter_grid_power'));batt=finite(s.get('sensor.inverter_battery_power'))
         if grid is not None and batt is not None and grid>100 and batt < -100:self.observed=True
         guard=s.get('select.inverter_work_mode')=='Zero Export To CT' and s.get('switch.inverter_export_surplus')=='off'
-        if not healthy or not charge_limits_ok(s) or not guard or soc is None or soc>=self.record['target'] or self.clock()>=self.record['deadline'] or self.record['phase']=='restoring':
+        if not healthy or not charge_limits_ok(s) or not guard or soc is None or soc>=self.record['target'] or expired or self.record['phase']=='restoring':
             await self.stop()
