@@ -34,8 +34,9 @@ async def async_setup(hass, config):
                 if now - saved.get('last_purge_requested', 0) >= 86400:
                     # Durable marker first: never repeatedly enqueue a heavy purge
                     # after restart or an unknown service outcome.
-                    saved['last_purge_requested'] = now
-                    await store.async_save(saved)
+                    candidate = {**saved, 'last_purge_requested': now}
+                    await store.async_save(candidate)
+                    saved.update(candidate)
                     await hass.services.async_call('recorder', 'purge',
                         {'keep_days': 7, 'repack': False, 'apply_filter': False}, blocking=True)
                 report.update(version='0.1.0', friendly_name='Archiv souhrnů a údržba historie',

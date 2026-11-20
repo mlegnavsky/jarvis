@@ -14,13 +14,13 @@ class RetentionAdapterTests(unittest.IsolatedAsyncioTestCase):
         setup = next(n for n in tree.body if isinstance(n, ast.AsyncFunctionDef) and n.name == 'async_setup')
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.saved = {}; self.calls = []; self.reports = []; self.listeners = {}
+        self.saved = {}; self.calls = []; self.reports = []; self.listeners = {}; self.save_error = save_error
         parent = self
         class Store:
             def __init__(self, *args): pass
             async def async_load(self): return parent.saved
             async def async_save(self, body):
-                if save_error: raise OSError('disk full')
+                if parent.save_error: raise OSError('disk full')
                 parent.saved = dict(body)
         def capture(*args):
             if archive_error: raise ValueError('checksum mismatch')
@@ -56,3 +56,10 @@ class RetentionAdapterTests(unittest.IsolatedAsyncioTestCase):
         await self.setup_adapter(save_error=True)
         await self.maintain()
         self.assertEqual(self.calls, [])
+
+    async def test_storage_recovery_can_retry_an_unpersisted_marker(self):
+        await self.setup_adapter(save_error=True)
+        await self.maintain()
+        self.save_error = False
+        await self.maintain()
+        self.assertEqual(len(self.calls), 1)
