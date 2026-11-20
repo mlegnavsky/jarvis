@@ -1,0 +1,73 @@
+{
+  "status": "active_verified_marin_and_gentle_sarcasm",
+  "homepod_audibility_owner_confirmed": true,
+  "user_request": "pleasant_less_robotic_voice_and_sarcasm",
+  "prior_no_sarcasm_preference_superseded": true,
+  "voice": "marin",
+  "previous_voice": "nova",
+  "pipeline": "01kw4sat65taw1y72xzrv2xyj4",
+  "pipeline_job": "pleasant-voice-marin-setting",
+  "pipeline_revision": "cb91cb92c1282ebb462e7b52c33d220de173211308c8f1906276abf7434bbc61",
+  "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+  "microphone": "assist_satellite.home_assistant_voice_0a8bde_assist_satellite",
+  "dialogue_source_sha256": "d936e67e6a85fd69925775b919463e1981d8f4f26d8e6fb5cc5541c00ef53608",
+  "personality_prompt_sha256": "ad132e880a35e634f06a9bf340f11f47e738cf520e5107c1eab5437962457f36",
+  "style": "natural_spoken_Czech_occasional_kind_dry_sarcasm",
+  "light_commands": "silent",
+  "humor_filter": "existing_permission_cooldown_serious_topic_and_duplicate_suppression_preserved",
+  "tests": {
+    "companion": 63
+  },
+  "homepod_output_route_changed": false,
+  "firmware_changed": false,
+  "voice_naturalness_owner_accepted": false,
+  "remaining_acceptance": [
+    "actual_conversation_followup_interruption",
+    "loud_TV_wake_and_echo_rejection"
+  ],
+  "source_commit": "825f9851ff3c3e68175978ce26c3f693b33eb4ef",
+  "activation": {
+    "job": "pleasant-voice-style-apply",
+    "phase": "active_verified",
+    "finished_at": "2026-11-02T00:37:27.133181+00:00",
+    "backup_slug": "a87833e4",
+    "files_exact": 5,
+    "core_version": "2026.6.4"
+  },
+  "live_companion": {
+    "passed": true,
+    "actual_loaded_prompt_sha256": "ad132e880a35e634f06a9bf340f11f47e738cf520e5107c1eab5437962457f36",
+    "prompt_matches_source": true,
+    "fictional_memory_and_humor_filter": true,
+    "identity_and_device_awareness": true,
+    "physical_actions": false
+  },
+  "live_marin_synthesis": {
+    "passed": true,
+    "reference_seconds": 2.8316875,
+    "peak_dbfs": -9.07,
+    "rms_dbfs": -23.71,
+    "microphone_opened": false
+  },
+  "live_homepod_output": {
+    "status": "passed",
+    "transport": "native_raop_local_file",
+    "started": 1,
+    "completed": 1,
+    "skipped": 0,
+    "last_error": null,
+    "volume": 0.4,
+    "volume_source": "shared_tv",
+    "muted": false,
+    "pending_resource_cleanup": 0,
+    "negotiated_latency_seconds": 1.5,
+    "microphone_opened": false
+  },
+  "ci": {
+    "runs": [
+      41367688270,
+      41367683298
+    ],
+    "conclusion": "success"
+  }
+}

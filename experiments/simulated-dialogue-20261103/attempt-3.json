@@ -1,0 +1,359 @@
+{
+  "schema": 1,
+  "scope": "host_realtime_synthetic_dialogue_fault_injection",
+  "started_utc": "2026-11-03T08:43:48.793924+00:00",
+  "source_fingerprint": "3fb157b46e673a4a5a48ce986ed28345892d0edd6b56dfe70576e373424fe3d4",
+  "runtime_version": "1.3.2",
+  "requested_seconds": 240.0,
+  "wall_seconds": 17.8615,
+  "session": {
+    "stage": "closed",
+    "frames": 1787,
+    "frames_during_output": 410,
+    "completed_turns": 0,
+    "interruptions": 0,
+    "failures": 1,
+    "last_error": "TimeoutError",
+    "truncated": 0,
+    "reason": "silence_timeout",
+    "deferred_turns": 0,
+    "deferred_replaced": 0,
+    "deferred_expired": 0,
+    "suppressed_frames": 0,
+    "input_end": null,
+    "interruption_policy": "completed_transcript_before_stop",
+    "confirmations": 0,
+    "rejected_confirmations": 0,
+    "confirmation_failures": 0
+  },
+  "output": {
+    "owned": false,
+    "started": 1,
+    "completed": 0,
+    "skipped": 0,
+    "stopped": 1,
+    "echo_frames": 0,
+    "overlap_frames": 410,
+    "discarded": 0,
+    "last_stop_s": 0.0,
+    "last_reference_duration_s": 39.168,
+    "last_error": "TimeoutError",
+    "text_echo_suppressed": 0,
+    "tts_generation_ms": 27.5,
+    "first_audio_wait_ms": 1500.2,
+    "transcript_guard": [
+      {
+        "decision": "no_recent_output",
+        "candidate_words": 5,
+        "reference_words": 0,
+        "shared_words": 0,
+        "overlap_ratio": 0.0,
+        "edit_distance": null,
+        "capture_audio_ms": 2620,
+        "output_owned_at_check": false
+      }
+    ],
+    "target": "media_player.homepod_obyvak_homepod_obyvak",
+    "transport": "native_raop_mp3_stream",
+    "volume_decision": {
+      "volume": 0.45,
+      "muted": false,
+      "source": "raop",
+      "busy": false
+    },
+    "negotiated_latency_s": 1.5,
+    "sender_scheduling_delay_s": 1.5,
+    "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+    "pending_resource_cleanup": 0,
+    "streaming": {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 329728,
+      "reference_seconds": 39.168,
+      "first_reference_ms": 5.7,
+      "producer_eof_ms": null,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 4096,
+      "cleanup_pending": false,
+      "error_type": "TimeoutError",
+      "raw_microphone_saved": false
+    }
+  },
+  "observer": {
+    "scope": "active_dialogue_scalar_playback_observations",
+    "frames_seen": 1787,
+    "frames_during_output": 560,
+    "timing_unavailable_frames": 2,
+    "frames_before_sender_estimate": 147,
+    "clipped_frames": 0,
+    "peak_dbfs": null,
+    "max_rms": 0.0,
+    "max_receive_minus_nominal_ms": 10.3,
+    "capture_origin": "first_received_chunk_nominal_sample_count_not_hardware_clock",
+    "observations": [],
+    "latest": null,
+    "turns": [
+      {
+        "timings_ms": {
+          "stt": 550.9,
+          "identity": 0.0,
+          "agent": 150.9
+        },
+        "output": {
+          "owned": false,
+          "started": 1,
+          "completed": 0,
+          "skipped": 0,
+          "stopped": 1,
+          "echo_frames": 0,
+          "overlap_frames": 410,
+          "discarded": 0,
+          "last_stop_s": 0.0,
+          "last_reference_duration_s": 39.168,
+          "last_error": "TimeoutError",
+          "text_echo_suppressed": 0,
+          "tts_generation_ms": 27.5,
+          "first_audio_wait_ms": 1500.2,
+          "transcript_guard": [
+            {
+              "decision": "no_recent_output",
+              "candidate_words": 5,
+              "reference_words": 0,
+              "shared_words": 0,
+              "overlap_ratio": 0.0,
+              "edit_distance": null,
+              "capture_audio_ms": 2620,
+              "output_owned_at_check": false
+            }
+          ],
+          "target": "media_player.homepod_obyvak_homepod_obyvak",
+          "transport": "native_raop_mp3_stream",
+          "volume_decision": {
+            "volume": 0.45,
+            "muted": false,
+            "source": "raop",
+            "busy": false
+          },
+          "negotiated_latency_s": 1.5,
+          "sender_scheduling_delay_s": 1.5,
+          "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+          "pending_resource_cleanup": 0,
+          "streaming": {
+            "transport": "native_raop_mp3_stream",
+            "compressed_bytes": 329728,
+            "reference_seconds": 39.168,
+            "first_reference_ms": 5.7,
+            "producer_eof_ms": null,
+            "producer_done": true,
+            "decoder_done": true,
+            "native_pending_peak": 262144,
+            "reference_pending_peak": 4096,
+            "cleanup_pending": false,
+            "error_type": "TimeoutError",
+            "raw_microphone_saved": false
+          }
+        }
+      }
+    ],
+    "diagnostic_errors": 0,
+    "source_closed": true,
+    "capture_errors": 0,
+    "input_modified": false,
+    "raw_microphone_saved": false,
+    "correlation_is_acoustic_proof": false,
+    "waveform": {
+      "scope": "raw_PCM_similarity_only_not_input_decision",
+      "observations": [
+        {
+          "elapsed_capture_s": 4.68,
+          "status": "invalid_timing",
+          "comparisons": 0,
+          "processing_ms": 0.006,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 5.69,
+          "status": "invalid_timing",
+          "comparisons": 0,
+          "processing_ms": 0.008,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 6.69,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.68,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 7.7,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 2.153,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 8.71,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.713,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        },
+        {
+          "elapsed_capture_s": 9.71,
+          "status": "no_variation",
+          "comparisons": 0,
+          "processing_ms": 1.732,
+          "kernel": "audioop_findfactor",
+          "acoustic_echo_proof": false
+        }
+      ],
+      "latest": {
+        "elapsed_capture_s": 9.71,
+        "status": "no_variation",
+        "comparisons": 0,
+        "processing_ms": 1.732,
+        "kernel": "audioop_findfactor",
+        "acoustic_echo_proof": false
+      },
+      "scheduled": 6,
+      "busy_skips": 0,
+      "errors": 0,
+      "stale_results": 0,
+      "pending": false,
+      "raw_audio_saved": false,
+      "input_modified": false
+    }
+  },
+  "source_closed": true,
+  "input_frame_lateness_peak_ms": 21.282,
+  "gate_buffer_peak_bytes": 24960,
+  "injected_frames": {
+    "human_frames": 168
+  },
+  "reader_exceptions": [
+    {
+      "pipe": "reference",
+      "requested_bytes": 49197,
+      "pending_bytes": 0,
+      "elapsed_ms": 5000.085,
+      "error_type": "TimeoutError",
+      "message": ""
+    }
+  ],
+  "stt": [
+    {
+      "event_index": 0,
+      "origin": "human",
+      "fixture_onset_s": 1.0,
+      "transcript": "Tell me a long story.",
+      "at_s": 4.0727
+    }
+  ],
+  "agent": [
+    {
+      "input": "Tell me a long story.",
+      "origin": "human",
+      "event_index": 0,
+      "at_s": 4.0729,
+      "answer": "A small boat left the quiet harbour before sunrise. Anna carried a map, a lantern, and a basket of bread. Her friend Daniel watched the water. They were looking for an island that appeared only on an old family map. The morning wind moved the clouds and the distant shore slowly disappeared. At noon they saw a white tower above the trees. A narrow path led from the beach to a wooden door. Behind the door they found a garden filled with flowers and a friendly keeper who had been waiting for visitors. He offered them tea and explained how people had cared for the island for many years. Every spring they repaired the paths and planted new trees. Anna opened her map and marked the safe route through the rocks. Daniel helped the keeper mend a little bridge. When evening came, the lanterns around the garden began to shine. They sat together and listened to the sea. The next morning they sailed home with a new map and a promise to return. Which part of their journey would you like to hear about next?"
+    }
+  ],
+  "events": [
+    {
+      "at_s": 0.0,
+      "event": "run_start",
+      "duration_s": 240.0,
+      "source_fingerprint": "3fb157b46e673a4a5a48ce986ed28345892d0edd6b56dfe70576e373424fe3d4"
+    },
+    {
+      "at_s": 4.0729,
+      "event": "agent",
+      "origin": "human",
+      "event_index": 0,
+      "input": "Tell me a long story."
+    },
+    {
+      "at_s": 4.2518,
+      "event": "output_start",
+      "answer_index": 1
+    },
+    {
+      "at_s": 9.8525,
+      "event": "output_cancel",
+      "native_bytes": 919424
+    }
+  ],
+  "unwanted_echo_agent_turns": 0,
+  "human_agent_turns": 1,
+  "stream_resources": [
+    {
+      "transport": "native_raop_mp3_stream",
+      "compressed_bytes": 329728,
+      "reference_seconds": 39.168,
+      "first_reference_ms": 5.7,
+      "producer_eof_ms": null,
+      "producer_done": true,
+      "decoder_done": true,
+      "native_pending_peak": 262144,
+      "reference_pending_peak": 4096,
+      "cleanup_pending": false,
+      "error_type": "TimeoutError",
+      "raw_microphone_saved": false,
+      "native_readers": 0,
+      "reference_readers": 0
+    }
+  ],
+  "boundaries": {
+    "real": [
+      "Session",
+      "Segmenter",
+      "TurnBridge",
+      "TextEcho",
+      "HomePodOutput",
+      "PlaybackObserver",
+      "streaming pipes",
+      "miniaudio1.71",
+      "pyatv0.17 audio source"
+    ],
+    "simulated": [
+      "microphone",
+      "VAD probability",
+      "ASR text and 550ms delay",
+      "identity",
+      "agent response and 150ms delay",
+      "TTS provider",
+      "RAOP receiver/1.5s timing",
+      "room impulse response"
+    ],
+    "not_verified": [
+      "real microphone",
+      "real ASR errors",
+      "speaker identity",
+      "provider latency",
+      "HomePod/network",
+      "actual room acceptance"
+    ]
+  },
+  "real_microphone_opened": false,
+  "household_actions": false,
+  "production_files_changed": false,
+  "synthetic_audio_only": true,
+  "acoustic_fix_proved": false,
+  "checks": {
+    "source_unchanged": true,
+    "duration_reached": false,
+    "no_provider_failure": false,
+    "all_workers_done": true,
+    "all_readers_closed": true,
+    "pipes_within_256k_each": true,
+    "no_echo_self_answers": true,
+    "all_seven_human_turns_accepted": false
+  }
+}

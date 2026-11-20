@@ -1,0 +1,611 @@
+[
+  {
+    "entity_id": "sensor.inverter_update_interval"
+  },
+  {
+    "entity_id": "sensor.inverter_today_battery_life_cycles"
+  },
+  {
+    "entity_id": "sensor.inverter_total_battery_life_cycles"
+  },
+  {
+    "entity_id": "sensor.inverter_battery_soh"
+  },
+  {
+    "entity_id": "sensor.inverter_battery_capacity"
+  },
+  {
+    "entity_id": "sensor.inverter_battery_state"
+  },
+  {
+    "entity_id": "sensor.inverter_device"
+  },
+  {
+    "entity_id": "sensor.inverter_device_state"
+  },
+  {
+    "entity_id": "sensor.inverter_today_battery_charge"
+  },
+  {
+    "entity_id": "sensor.inverter_today_battery_discharge"
+  },
+  {
+    "entity_id": "sensor.inverter_total_battery_charge"
+  },
+  {
+    "entity_id": "sensor.inverter_total_battery_discharge"
+  },
+  {
+    "entity_id": "sensor.inverter_today_energy_import"
+  },
+  {
+    "entity_id": "sensor.inverter_today_energy_export"
+  },
+  {
+    "entity_id": "sensor.inverter_total_energy_import"
+  },
+  {
+    "entity_id": "sensor.inverter_total_energy_export"
+  },
+  {
+    "entity_id": "sensor.inverter_today_load_consumption"
+  },
+  {
+    "entity_id": "sensor.inverter_total_load_consumption"
+  },
+  {
+    "entity_id": "sensor.inverter_today_production"
+  },
+  {
+    "entity_id": "sensor.inverter_today_losses"
+  },
+  {
+    "entity_id": "sensor.inverter_total_production"
+  },
+  {
+    "entity_id": "sensor.inverter_total_losses"
+  },
+  {
+    "entity_id": "sensor.inverter_generator_energy_today"
+  },
+  {
+    "entity_id": "sensor.inverter_generator_energy"
+  },
+  {
+    "entity_id": "sensor.inverter_dc_temperature"
+  },
+  {
+    "entity_id": "sensor.inverter_temperature"
+  },
+  {
+    "entity_id": "sensor.inverter_device_relay"
+  },
+  {
+    "entity_id": "sensor.inverter_device_alarm"
+  },
+  {
+    "entity_id": "sensor.inverter_device_fault"
+  },
+  {
+    "entity_id": "sensor.inverter_battery_temperature"
+  },
+  {
+    "entity_id": "sensor.inverter_battery_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_battery"
+  },
+  {
+    "entity_id": "sensor.inverter_battery_power"
+  },
+  {
+    "entity_id": "sensor.inverter_battery_current"
+  },
+  {
+    "entity_id": "sensor.inverter_grid_l1_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_grid_l2_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_grid_l3_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_grid_frequency"
+  },
+  {
+    "entity_id": "sensor.inverter_internal_ct1_current"
+  },
+  {
+    "entity_id": "sensor.inverter_internal_ct2_current"
+  },
+  {
+    "entity_id": "sensor.inverter_internal_ct3_current"
+  },
+  {
+    "entity_id": "sensor.inverter_external_ct1_current"
+  },
+  {
+    "entity_id": "sensor.inverter_external_ct2_current"
+  },
+  {
+    "entity_id": "sensor.inverter_external_ct3_current"
+  },
+  {
+    "entity_id": "sensor.inverter_output_l1_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_output_l2_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_output_l3_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_output_l1_current"
+  },
+  {
+    "entity_id": "sensor.inverter_output_l2_current"
+  },
+  {
+    "entity_id": "sensor.inverter_output_l3_current"
+  },
+  {
+    "entity_id": "sensor.inverter_output_frequency"
+  },
+  {
+    "entity_id": "sensor.inverter_load_l1_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_load_l2_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_load_l3_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_load_frequency"
+  },
+  {
+    "entity_id": "sensor.inverter_load_l1_power"
+  },
+  {
+    "entity_id": "sensor.inverter_load_l2_power"
+  },
+  {
+    "entity_id": "sensor.inverter_load_l3_power"
+  },
+  {
+    "entity_id": "sensor.inverter_load_power"
+  },
+  {
+    "entity_id": "sensor.inverter_generator_l1_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_generator_l2_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_generator_l3_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_generator_l1_power"
+  },
+  {
+    "entity_id": "sensor.inverter_generator_l2_power"
+  },
+  {
+    "entity_id": "sensor.inverter_generator_l3_power"
+  },
+  {
+    "entity_id": "sensor.inverter_generator_power"
+  },
+  {
+    "entity_id": "sensor.inverter_pv1_power"
+  },
+  {
+    "entity_id": "sensor.inverter_pv2_power"
+  },
+  {
+    "entity_id": "sensor.inverter_pv_power"
+  },
+  {
+    "entity_id": "sensor.inverter_pv1_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_pv1_current"
+  },
+  {
+    "entity_id": "sensor.inverter_pv2_voltage"
+  },
+  {
+    "entity_id": "sensor.inverter_pv2_current"
+  },
+  {
+    "entity_id": "sensor.inverter_grid_l1_power"
+  },
+  {
+    "entity_id": "sensor.inverter_grid_l2_power"
+  },
+  {
+    "entity_id": "sensor.inverter_grid_l3_power"
+  },
+  {
+    "entity_id": "sensor.inverter_grid_power"
+  },
+  {
+    "entity_id": "sensor.inverter_output_l1_power"
+  },
+  {
+    "entity_id": "sensor.inverter_output_l2_power"
+  },
+  {
+    "entity_id": "sensor.inverter_output_l3_power"
+  },
+  {
+    "entity_id": "sensor.inverter_power"
+  },
+  {
+    "entity_id": "sensor.inverter_power_losses"
+  },
+  {
+    "entity_id": "sensor.inverter_load_ups_l1_power"
+  },
+  {
+    "entity_id": "sensor.inverter_load_ups_l2_power"
+  },
+  {
+    "entity_id": "sensor.inverter_load_ups_l3_power"
+  },
+  {
+    "entity_id": "sensor.inverter_load_ups_power"
+  },
+  {
+    "entity_id": "sensor.inverter_internal_ct1_power"
+  },
+  {
+    "entity_id": "sensor.inverter_internal_ct2_power"
+  },
+  {
+    "entity_id": "sensor.inverter_internal_ct3_power"
+  },
+  {
+    "entity_id": "sensor.inverter_internal_power"
+  },
+  {
+    "entity_id": "sensor.inverter_external_ct1_power"
+  },
+  {
+    "entity_id": "sensor.inverter_external_ct2_power"
+  },
+  {
+    "entity_id": "sensor.inverter_external_ct3_power"
+  },
+  {
+    "entity_id": "sensor.inverter_external_power"
+  },
+  {
+    "entity_id": "binary_sensor.inverter_connection"
+  },
+  {
+    "entity_id": "binary_sensor.inverter_battery_alarm"
+  },
+  {
+    "entity_id": "binary_sensor.inverter_battery_fault"
+  },
+  {
+    "entity_id": "binary_sensor.inverter"
+  },
+  {
+    "entity_id": "binary_sensor.inverter_grid"
+  },
+  {
+    "entity_id": "binary_sensor.inverter_generator"
+  },
+  {
+    "entity_id": "number.inverter_self_check_time"
+  },
+  {
+    "entity_id": "number.inverter_battery_equalization"
+  },
+  {
+    "entity_id": "number.inverter_battery_absorption"
+  },
+  {
+    "entity_id": "number.inverter_battery_float"
+  },
+  {
+    "entity_id": "number.inverter_battery_capacity"
+  },
+  {
+    "entity_id": "number.inverter_battery_empty"
+  },
+  {
+    "entity_id": "number.inverter_zero_export_power"
+  },
+  {
+    "entity_id": "number.inverter_battery_equalization_cycle"
+  },
+  {
+    "entity_id": "number.inverter_battery_equalization_time"
+  },
+  {
+    "entity_id": "number.inverter_battery_temperature_compensation"
+  },
+  {
+    "entity_id": "number.inverter_battery_max_charging_current"
+  },
+  {
+    "entity_id": "number.inverter_battery_max_discharging_current"
+  },
+  {
+    "entity_id": "number.inverter_battery_resistance"
+  },
+  {
+    "entity_id": "number.inverter_battery_charging_efficiency"
+  },
+  {
+    "entity_id": "number.inverter_battery_shutdown_soc"
+  },
+  {
+    "entity_id": "number.inverter_battery_restart_soc"
+  },
+  {
+    "entity_id": "number.inverter_battery_low_soc"
+  },
+  {
+    "entity_id": "number.inverter_battery_shutdown_voltage"
+  },
+  {
+    "entity_id": "number.inverter_battery_restart_voltage"
+  },
+  {
+    "entity_id": "number.inverter_battery_low_voltage"
+  },
+  {
+    "entity_id": "number.inverter_generator_operating_time"
+  },
+  {
+    "entity_id": "number.inverter_generator_cooling_time"
+  },
+  {
+    "entity_id": "number.inverter_battery_generator_charging_start_voltage"
+  },
+  {
+    "entity_id": "number.inverter_battery_generator_charging_start"
+  },
+  {
+    "entity_id": "number.inverter_battery_generator_charging_current"
+  },
+  {
+    "entity_id": "number.inverter_battery_grid_charging_start_voltage"
+  },
+  {
+    "entity_id": "number.inverter_battery_grid_charging_start"
+  },
+  {
+    "entity_id": "number.inverter_battery_grid_charging_current"
+  },
+  {
+    "entity_id": "number.inverter_smartload_off_voltage"
+  },
+  {
+    "entity_id": "number.inverter_smartload_off"
+  },
+  {
+    "entity_id": "number.inverter_smartload_on_voltage"
+  },
+  {
+    "entity_id": "number.inverter_smartload_on"
+  },
+  {
+    "entity_id": "number.inverter_generator_min_pv_power"
+  },
+  {
+    "entity_id": "number.inverter_export_surplus_power"
+  },
+  {
+    "entity_id": "number.inverter_program_1_power"
+  },
+  {
+    "entity_id": "number.inverter_program_2_power"
+  },
+  {
+    "entity_id": "number.inverter_program_3_power"
+  },
+  {
+    "entity_id": "number.inverter_program_4_power"
+  },
+  {
+    "entity_id": "number.inverter_program_5_power"
+  },
+  {
+    "entity_id": "number.inverter_program_6_power"
+  },
+  {
+    "entity_id": "number.inverter_program_1_voltage"
+  },
+  {
+    "entity_id": "number.inverter_program_2_voltage"
+  },
+  {
+    "entity_id": "number.inverter_program_3_voltage"
+  },
+  {
+    "entity_id": "number.inverter_program_4_voltage"
+  },
+  {
+    "entity_id": "number.inverter_program_5_voltage"
+  },
+  {
+    "entity_id": "number.inverter_program_6_voltage"
+  },
+  {
+    "entity_id": "number.inverter_program_1_soc"
+  },
+  {
+    "entity_id": "number.inverter_program_2_soc"
+  },
+  {
+    "entity_id": "number.inverter_program_3_soc"
+  },
+  {
+    "entity_id": "number.inverter_program_4_soc"
+  },
+  {
+    "entity_id": "number.inverter_program_5_soc"
+  },
+  {
+    "entity_id": "number.inverter_program_6_soc"
+  },
+  {
+    "entity_id": "number.inverter_grid_voltage_protection_high"
+  },
+  {
+    "entity_id": "number.inverter_grid_voltage_protection_low"
+  },
+  {
+    "entity_id": "number.inverter_grid_frequency_protection_high"
+  },
+  {
+    "entity_id": "number.inverter_grid_frequency_protection_low"
+  },
+  {
+    "entity_id": "number.inverter_generator_peak_shaving"
+  },
+  {
+    "entity_id": "number.inverter_grid_peak_shaving"
+  },
+  {
+    "entity_id": "number.inverter_grid_max_export_power"
+  },
+  {
+    "entity_id": "number.inverter_grid_max_import_power"
+  },
+  {
+    "entity_id": "number.inverter_pv_power"
+  },
+  {
+    "entity_id": "number.inverter_grid_power_factor"
+  },
+  {
+    "entity_id": "switch.inverter_access_point"
+  },
+  {
+    "entity_id": "switch.inverter"
+  },
+  {
+    "entity_id": "switch.inverter_battery_wake_up"
+  },
+  {
+    "entity_id": "switch.inverter_battery_generator_charging"
+  },
+  {
+    "entity_id": "switch.inverter_battery_grid_charging"
+  },
+  {
+    "entity_id": "switch.inverter_generator"
+  },
+  {
+    "entity_id": "switch.inverter_export_surplus"
+  },
+  {
+    "entity_id": "switch.inverter_microinverter_export_cut_off"
+  },
+  {
+    "entity_id": "switch.inverter_generator_peak_shaving"
+  },
+  {
+    "entity_id": "switch.inverter_grid_peak_shaving"
+  },
+  {
+    "entity_id": "switch.inverter_generator_on_grid"
+  },
+  {
+    "entity_id": "switch.inverter_off_grid"
+  },
+  {
+    "entity_id": "switch.inverter_generator_grid_side"
+  },
+  {
+    "entity_id": "switch.inverter_export_asymmetry"
+  },
+  {
+    "entity_id": "switch.inverter_mppt_multi_point_scanning"
+  },
+  {
+    "entity_id": "button.inverter_restart"
+  },
+  {
+    "entity_id": "select.inverter_cloud"
+  },
+  {
+    "entity_id": "select.inverter_battery_control_mode"
+  },
+  {
+    "entity_id": "select.inverter_battery_operation_mode"
+  },
+  {
+    "entity_id": "select.inverter_io_mode"
+  },
+  {
+    "entity_id": "select.inverter_grid_voltage"
+  },
+  {
+    "entity_id": "select.inverter_charging_signal"
+  },
+  {
+    "entity_id": "select.inverter_energy_pattern"
+  },
+  {
+    "entity_id": "select.inverter_work_mode"
+  },
+  {
+    "entity_id": "select.inverter_time_of_use"
+  },
+  {
+    "entity_id": "select.inverter_program_1_charging"
+  },
+  {
+    "entity_id": "select.inverter_program_2_charging"
+  },
+  {
+    "entity_id": "select.inverter_program_3_charging"
+  },
+  {
+    "entity_id": "select.inverter_program_4_charging"
+  },
+  {
+    "entity_id": "select.inverter_program_5_charging"
+  },
+  {
+    "entity_id": "select.inverter_program_6_charging"
+  },
+  {
+    "entity_id": "select.inverter_grid_frequency"
+  },
+  {
+    "entity_id": "select.inverter_battery_bms_type"
+  },
+  {
+    "entity_id": "select.inverter_ac_coupling"
+  },
+  {
+    "entity_id": "datetime.inverter_date_time"
+  },
+  {
+    "entity_id": "time.inverter_program_1_time"
+  },
+  {
+    "entity_id": "time.inverter_program_2_time"
+  },
+  {
+    "entity_id": "time.inverter_program_3_time"
+  },
+  {
+    "entity_id": "time.inverter_program_4_time"
+  },
+  {
+    "entity_id": "time.inverter_program_5_time"
+  },
+  {
+    "entity_id": "time.inverter_program_6_time"
+  }
+]

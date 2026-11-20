@@ -1,0 +1,206 @@
+{
+  "schema": 1,
+  "scope": "native_stream_transport_fix_not_acoustic_acceptance",
+  "runtime_version": "1.3.2",
+  "core_version": "2026.6.4",
+  "source": {
+    "public_commit": "0465ee5f0c5f35731effb063f6baf72ee3977e1a",
+    "local_commit": "6b43a96485a33c30ca309d442f90cdb3de48f8a8",
+    "tree": "6b40c04aeb7bfe746e566e482af3c81098f63a4e",
+    "fingerprint": "0188c6b6f946487e975cd7d7cdd8d7ec62610ed32202bc76717831b3b6b99750",
+    "files_exact_on_fresh_postboot_read": 3
+  },
+  "ci": {
+    "push": 41606778449,
+    "pull_request": 41606784540,
+    "conclusion": "success",
+    "laboratory_job": 125819042069,
+    "immutable_publication": "success"
+  },
+  "deployment": {
+    "prepare_id": "stream132-prepare-20261103",
+    "revision": "cb9904aa443597099afe27a2e47070fd254009e1bad9f52fc656763ce3db3921",
+    "apply_id": "stream132-apply-20261103",
+    "state": "verified",
+    "phase": "active_verified",
+    "finished_at": "2026-11-03T09:02:04.203251+00:00",
+    "backup_slug": "90468714",
+    "repeated_apply": false
+  },
+  "native_proof": {
+    "status": "passed",
+    "scope": "native_VAD_and_TTS_reference_no_playback",
+    "native_vad_probability": 0.00439656525850296,
+    "native_vad_warmup_frames": 77,
+    "reference_seconds": 2.8316875,
+    "reference_signal": {
+      "duration_s": 2.832,
+      "silent": false,
+      "peak_dbfs": -9.07,
+      "rms_dbfs": -23.71
+    },
+    "microphone_opened": false,
+    "audible_playback": false,
+    "source_revision": "0188c6b6f946487e975cd7d7cdd8d7ec62610ed32202bc76717831b3b6b99750",
+    "pipeline_signature": "7e4a5a90ac21fdfa8394d3fad1cc682875dec1bf74b5a6baab85ac471fdf5f91",
+    "waveform_probe": {
+      "status": "work_budget_exhausted",
+      "comparisons": 1200,
+      "processing_ms": 25.083,
+      "kernel": "audioop_findfactor",
+      "acoustic_echo_proof": false,
+      "scope": "generated_reference_only_no_microphone"
+    },
+    "calibration_probe": {
+      "status": "passed",
+      "scope": "generated_reference_only_no_microphone",
+      "processing_ms": 669.76,
+      "facts": {
+        "status": "measured",
+        "source_identity_proof": false,
+        "waveform_lag_samples": 20000,
+        "waveform_correlation": 0.999078,
+        "coherence": 1,
+        "frames": 37,
+        "effective_bins": 7.84,
+        "energy_frame_participation": 16.17,
+        "kernel": "numpy",
+        "waveform_boundary_hit": false,
+        "band_lag_samples": 20000,
+        "band_score": 1,
+        "band_peak_margin": 0.517058,
+        "band_runner_exclusion_ms": 100,
+        "band_waveform_correlation": 0.999078,
+        "band_coherence": 1,
+        "processing_ms": 669.668
+      },
+      "acoustic_echo_proof": false
+    }
+  },
+  "native_output": {
+    "request_id": "stream132-output-request-20261103",
+    "write_verified": true,
+    "nonce_matched": true,
+    "status": "passed",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "microphone_opened": false,
+    "native_playback": {
+      "owned": false,
+      "started": 1,
+      "completed": 1,
+      "skipped": 0,
+      "stopped": 0,
+      "echo_frames": 0,
+      "overlap_frames": 0,
+      "discarded": 0,
+      "last_stop_s": null,
+      "last_reference_duration_s": 16.632,
+      "last_error": null,
+      "text_echo_suppressed": 0,
+      "tts_generation_ms": 2127.3,
+      "first_audio_wait_ms": 2504.4,
+      "transcript_guard": [],
+      "target": "media_player.homepod_obyvak_homepod_obyvak",
+      "transport": "native_raop_mp3_stream",
+      "volume_decision": {
+        "volume": 0.45,
+        "muted": false,
+        "source": "raop",
+        "busy": false
+      },
+      "negotiated_latency_s": 1.5,
+      "sender_scheduling_delay_s": 1.5,
+      "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+      "pending_resource_cleanup": 0,
+      "streaming": {
+        "transport": "native_raop_mp3_stream",
+        "compressed_bytes": 266112,
+        "reference_seconds": 16.632,
+        "first_reference_ms": 1930.2,
+        "producer_eof_ms": 4322.1,
+        "producer_done": true,
+        "decoder_done": true,
+        "native_pending_peak": 200576,
+        "reference_pending_peak": 21504,
+        "cleanup_pending": false,
+        "error_type": null,
+        "raw_microphone_saved": false
+      }
+    },
+    "audibility_confirmed": false,
+    "first_audio_is_sender_estimate": true,
+    "ordinary_dialogue_latency_verified": false
+  },
+  "host_simulation": {
+    "evidence": "docs/evidence/2026-11-03-simulated4min-host-proof.json",
+    "wall_seconds": 240.0024,
+    "human_inputs_accepted": 7,
+    "injected_echo_asr_faults_accepted": 2,
+    "session_close_reason": "session_limit",
+    "session_cap_seconds": 240,
+    "transport_control_seconds": 70.1922,
+    "full_minute_answer_completed": true,
+    "no_real_microphone_or_HomePod_in_host_simulation": true
+  },
+  "final_state": {
+    "status": "configured",
+    "adapter": "active",
+    "active_run": null,
+    "sessions": 0,
+    "calibration": {
+      "state": "off",
+      "capture_id": null,
+      "expires_at": null,
+      "captured_seconds": 0,
+      "retained_audio_bytes": 0,
+      "raw_audio_saved": false,
+      "input_modified": false,
+      "error_type": null,
+      "result_file": "jarvis_workspace/local_duplex/calibration-result.json"
+    },
+    "television_integration": "loaded",
+    "updated_at": "2026-11-03T09:04:12.333682+00:00"
+  },
+  "storage": {
+    "deleted_old_unprotected_backup": "86b20d21",
+    "delete_verified": true,
+    "keep_latest": 3,
+    "protected_preserved": true,
+    "before_free_gib": 1.6,
+    "after_prune_free_gib": 2.4,
+    "authorization": "existing owner backup cleanup instruction"
+  },
+  "review": {
+    "critical": 0,
+    "important": 0,
+    "minor": 3,
+    "minor_fixed": 2,
+    "deferred_minor": "deterministic synchronized resumed_at race unit test; ordinary pairedpipe regression and real paced long controls passed",
+    "all_rulings_and_exclusions": "docs/evidence/2026-11-03-simulated4min-host-proof.json",
+    "prior_minors_retained": [
+      "stale cleanup_pending diagnostic flag",
+      "silent reference waveformfit may prefer low-correlation candidate"
+    ]
+  },
+  "rulings": [
+    "New optional waveform diagnostic probe exhausted25ms after1200comparisons: explicit unknown/work_budget_exhausted, not acousticproof and not an inputdecision; no retry-until-green or timeout widening. Mandatory VAD/TTS and separate generated-only calibrationprobe passed.",
+    "Same provider/client/voice/model,256KiB caps, nativeowner100s deadlines, microphone policy/identity/firmware/Core remain unchanged.",
+    "Current native fixed output validates changed codec path on Green;16.632s test is not a four-minute physical-room or one-second dialogue proof."
+  ],
+  "open": {
+    "echo_self_answer": true,
+    "first_syllable_human_interrupt": true,
+    "one_second_natural_response": true,
+    "existing_hard_240s_session_limit": true,
+    "room_acceptance_unverified": true
+  },
+  "operator_closure": {
+    "private_receipt_path": "jarvis_workspace/local_duplex/stream-backpressure-receipt.json",
+    "private_receipt_revision": "0b4230816edd0a68b1f84dbff4d2e128a70a87198296b3da34a6e4f90e39f2cf",
+    "exact_readback": true,
+    "lease_release_id": "stream132-release-20261103",
+    "release_verified_at": "2026-11-03T09:05:02.203153+00:00",
+    "fresh_locked": false,
+    "private_task_lease_file_removed": true
+  }
+}

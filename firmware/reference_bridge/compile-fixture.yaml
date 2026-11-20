@@ -1,0 +1,104 @@
+# Compile-only fixture. No real credentials, OTA credentials, or microphone.
+esphome:
+  name: jarvis-reference-compile
+  build_path: /tmp/jarvis-reference-build
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+psram:
+  mode: octal
+  speed: 80MHz
+wifi:
+  ssid: reference-compile-no-network
+  password: compile-only-no-real-password
+api:
+  encryption: {}  # Provisioning only; fixture is never flashed.
+  actions:
+    - action: jarvis_reference_status
+      supports_response: only
+      then:
+        - api.respond:
+            data: !lambda |-
+              root["status"] = id(reference_gate).status_json();
+    - action: jarvis_reference_arm
+      variables:
+        generation: int
+        owner: string
+        duration_ms: int
+      supports_response: only
+      then:
+        - api.respond:
+            data: !lambda |-
+              root["accepted"] = generation > 0 && duration_ms > 0 &&
+                id(reference_gate).arm(generation, owner, duration_ms);
+              root["status"] = id(reference_gate).status_json();
+    - action: jarvis_reference_cancel
+      variables:
+        generation: int
+      supports_response: only
+      then:
+        - api.respond:
+            data: !lambda |-
+              root["accepted"] = generation > 0 && id(reference_gate).cancel(generation);
+              root["status"] = id(reference_gate).status_json();
+    - action: jarvis_reference_pairing
+      supports_response: only
+      then:
+        - api.respond:
+            data: !lambda |-
+              root["pairing_token"] = id(reference_hub).get_pairing_token().value_or("");
+logger:
+  level: WARN
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [jarvis_reference, i2s_audio, sendspin]
+i2c:
+  sda: GPIO5
+  scl: GPIO6
+i2s_audio:
+  - id: output_bus
+    i2s_lrclk_pin: GPIO7
+    i2s_bclk_pin: GPIO8
+    i2s_mclk_pin: GPIO9
+audio_dac:
+  - platform: aic3204
+    id: reference_dac
+switch:
+  - platform: gpio
+    id: reference_amp
+    internal: true
+    pin: GPIO47
+    restore_mode: ALWAYS_OFF
+speaker:
+  - platform: i2s_audio
+    id: physical_speaker
+    i2s_audio_id: output_bus
+    i2s_dout_pin: GPIO10
+    i2s_mode: secondary
+    dac_type: external
+    channel: stereo
+    sample_rate: 48000
+    bits_per_sample: 32bit
+    buffer_duration: 50ms
+    audio_dac: reference_dac
+  - platform: mixer
+    id: normal_mixer
+    output_speaker: reference_gate
+    num_channels: 2
+    source_speakers:
+      - id: announcement_input
+      - id: media_input
+sendspin:
+  id: reference_hub
+  unpaired_access: false
+jarvis_reference:
+  id: reference_gate
+  output_speaker: physical_speaker
+  dac_id: reference_dac
+  amplifier_id: reference_amp
+  sendspin_id: reference_hub
+  reference_server_id: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA

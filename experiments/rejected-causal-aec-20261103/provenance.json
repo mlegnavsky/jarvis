@@ -1,0 +1,9 @@
+{
+  "raw_json_sha256": "74980dabb405464225a676dd4b040755b17d25eac7556d8e251fc85affd57f95",
+  "gzip_sha256": "df2f9118a5874d8d87b52f4e309d8b98ada8fef2384259affb1ba644133e74b9",
+  "fits": 96,
+  "scalar_rows": 2693,
+  "eligibility": "rejected",
+  "microphone_audio": false,
+  "raw_json_bytes": 1595647
+}

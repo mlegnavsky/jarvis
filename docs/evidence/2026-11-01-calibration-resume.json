@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "source_commit": "719ea2b17565b860eea6a716e5d32f67d170a1b9",
+  "scope": "resume4of5_and_fix_calibration_inactivity_timeout",
+  "deployment_job": {
+    "id": "cal-resume-apply-20261101",
+    "operation": "deployment_apply",
+    "state": "failed",
+    "result": {
+      "error": "runtime_check_failed"
+    },
+    "backup_slug": "bbb7d9bf",
+    "request_id": "cal-resume-apply-20261101",
+    "created_at": "2026-11-01T08:10:47.352032+00:00",
+    "started_at": "2026-11-01T08:10:47.362716+00:00",
+    "finished_at": "2026-11-01T08:14:59.072872+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "runtime_verification": {
+    "version": "1.1.3",
+    "status": "ready",
+    "updated_at": "2026-11-01T08:15:42.303039+00:00",
+    "owner_calibration": {
+      "whole_scores": [
+        0.7633,
+        0.6849,
+        0.7776,
+        0.783
+      ],
+      "within_sample_min_similarity": 0.6539,
+      "status": "collecting",
+      "samples": 4,
+      "required_samples": 5,
+      "expires_in_s": 600,
+      "classification": "owner_supplied_unreviewed",
+      "live_profile_changed": false,
+      "raw_audio_saved": false
+    },
+    "control": {
+      "status": "collecting",
+      "samples": 4,
+      "required_samples": 5,
+      "resumed": true
+    },
+    "authorization": {
+      "authorized_profiles": 1,
+      "anchor_profiles": 1
+    },
+    "native_probe": {
+      "passed": true,
+      "embedding_dimensions": 192,
+      "inference_ms": 1649.3,
+      "scope": "HA HTTP -> real local embedding model -> temporary fictional profile persistence/deletion; no household profiles changed"
+    },
+    "output": {
+      "status": "configured",
+      "volume": 0.45
+    },
+    "source_readbacks": [
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.json",
+        "match": true,
+        "revision": "a042029c8df6472eed9ba2eb1faa61551af49a4ceb6c967c1a6c55a73c4b1597"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.json",
+        "match": true,
+        "revision": "a042029c8df6472eed9ba2eb1faa61551af49a4ceb6c967c1a6c55a73c4b1597"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/__init__.py",
+        "match": true,
+        "revision": "69ef0a2e399f64ee0fe6c619604b164554c5e758ffcdb99e353c6baab3da1501"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/__init__.py",
+        "match": true,
+        "revision": "69ef0a2e399f64ee0fe6c619604b164554c5e758ffcdb99e353c6baab3da1501"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/owner_calibration.py",
+        "match": true,
+        "revision": "0e454befc1d4ec528145c91ae796ebe4fbbcb43ede32c4e0f695e0f3d74226d1"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/owner_calibration.py",
+        "match": true,
+        "revision": "0e454befc1d4ec528145c91ae796ebe4fbbcb43ede32c4e0f695e0f3d74226d1"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.py",
+        "match": true,
+        "revision": "eadee024583064be4daab9651c96873dc4f3c1b2e89baa5275504f834f899c95"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.py",
+        "match": true,
+        "revision": "eadee024583064be4daab9651c96873dc4f3c1b2e89baa5275504f834f899c95"
+      }
+    ]
+  },
+  "tests": {
+    "speaker": 72,
+    "homepod": 44,
+    "companion": 49,
+    "addon": 239,
+    "addon_skipped": 20,
+    "ci_run": 41287681778,
+    "ci": [
+      {
+        "name": "containers (jarvis)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "tests",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "containers (jarvis_updater)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "energy-chart",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "backup-dav",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "publish-laboratory",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "review": "No Critical/Important findings"
+  },
+  "cleanup": {
+    "deleted": "812f3bce",
+    "state": "verified"
+  },
+  "limitations": [
+    "Five samples are unreviewed collection, never automatic identity/profile promotion.",
+    "Cause of prior cancelled/truncated playback is unconfirmed; not claimed repaired.",
+    "Automatic apply check failed near startup; independent ready report and resumed4/5 prove current runtime; no apply retry."
+  ]
+}

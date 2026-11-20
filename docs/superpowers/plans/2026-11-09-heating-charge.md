@@ -1,0 +1,15 @@
+# Coupled manual heating and grid charging
+
+Owner requirements: explicit button bypasses only50% radiator admission. Grid supplies heaters and simultaneously charges battery approximately1000W. Never lower native30% minimum. Stop at shared child sensor>=24C or owner'soff; lastmanualheateroff restores all prior native settings. Two rooms share one charge session. Keep nativeBMS/temperature protections and existing175A standalone test untouched.
+
+Implementation: extend existing owned charge Controller with separate heating purpose; persist snapshot before nativewrites, ~19A from livebatteryvoltage, temporary active-slot goal>=90/Grid (raising a charging target rather than lowering30% reserve), handle slotrollover. Share existing sale/charge mutual exclusion, CASrestore only touchedvalues (GridDisabled before restoringhighercurrent), preserve conflict for reconciliation. Heating ChargeLink requires fresh physical gridimport and negativebatterycharge before ON, independentwatchdog, diagnosticreport. Fix faulty exact30SOC gate; noinstantstartup-power trip.50%ordinarymanual remains protected.
+
+Tests: policy bypassSOC30–49/risingSOC/24/stop/cooldown; chargingwattplanning/durability/partialfailure/rollover/targetreached/sharing/CASconflict/recovery; adapterchargefailurebeforeON/sharedlaststop/cancel-before-arm/stale watchdog; measurementlinkfreshness. Independentreview beforedeploy. Publish throughGit expectedHEAD and CASbundle with backed-upCore restart. Verifyruntime1.3.1/charger0.6.7, exactfiles, then inspect diagnosticreport/physicalproof without falsifying temperature.
+
+State: implementation prepared; deployment pending. Original exact tripcause was not recorded in1.3.0; do not pretend historical cause confirmed. Newlaststop/report preserves it. Native charging target is temporary and restores original30% programme; no promise exactly1000W or safe operation during HAoutage.
+
+Implementation and review complete:778root tests/20skips,59heating,4UI passed. OFF-save/externalOFF/watchdog-blocking/flowproof regressions fixed. Deployment and physicalacceptance next.
+
+
+## Heating and owned1kW charge1.3.1 ACTIVE — 9November2026
+Source7460274e791b64d31dcac3fcafdb4a39d0730ff3; heat131-apply-20261109 verified/active_verified, bothheatingruntimes1.3.1/UIready1.3.1/chargeridle0.6.7, Core2026.6.4 unchanged. Nineexactlivefilematches. Native physical acceptance confirmed real heater consumption AND simultaneous battery gridcharge below50% withSOC30. Subsequent explicitOFF confirmed heater0W, chargeidle/gridchargeOFF, allsixprogrammeSOC30/Disabled andpriorcurrent175 restored. One-shot acceptanceautomation removed; originalautomations.yaml restored byte-for-byte and reloadverified. Raw operational readings and receipts kept privately in jarvis_workspace/heating-charge-131-receipt.json. No artificialtemperature or physical24C forcing; that boundary verified in offlinecontroller/adaptertests. Tests778rootpass/20skips +59heating +4UI. Temporarycharge target>=90 never lowersnative30% protection and isrestored atstop. BothradiatorsOFF after acceptance; owner canuse newtopení+dobíjení1kW button. No persistenttestactions remain.

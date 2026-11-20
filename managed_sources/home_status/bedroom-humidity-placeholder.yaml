@@ -1,0 +1,9 @@
+type: image
+title: 'Ložnice – vlhkost: bez údajů'
+image: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNDAiIGhlaWdodD0iNDAiPjxyZWN0IHdpZHRoPSIyNDAiIGhlaWdodD0iNDAiIHJ4PSI5IiBmaWxsPSIjMDcxYzMyIiBmaWxsLW9wYWNpdHk9Ii45MiIvPjx0ZXh0IHg9IjEyMCIgeT0iMjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE3IiBmaWxsPSJ3aGl0ZSI+Vmxoa29zdDogYmV6IMO6ZGFqxa88L3RleHQ+PC9zdmc+
+tap_action:
+  action: none
+style:
+  left: 80%
+  top: 78%
+  width: 17%

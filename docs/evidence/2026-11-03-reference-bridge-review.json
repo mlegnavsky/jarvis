@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "date": "2026-11-03",
+  "scope": "one fresh whole-change review and one targeted fix pass",
+  "base": "ab276d43d463704ad964113393b823e18ab32d1b",
+  "verdict": "publish dormant diagnostic foundation after fixes; not ready as acoustic repair",
+  "critical": 0,
+  "findings": [
+    {
+      "severity": "Important",
+      "issue": "stock listener replacement silences existing Sendspin media",
+      "ruling": "Accepted. Removed stock_sendspin from staging allowlist; explicit unchanged-source rejection regression RED then GREEN. Stock firmware retained solely as unsupported build experiment. Legacy over stock package fails duplicate player validation; full installed package still requires verification."
+    },
+    {
+      "severity": "Important",
+      "issue": "zero-progress audio callback spins RTOS sync task",
+      "ruling": "Accepted. Bounded yield outside lease mutex on every zero-progress exit; actual adapter-body regression RED then GREEN and fresh firmware compile required."
+    },
+    {
+      "severity": "Important",
+      "issue": "normal input and reference probe overlap across initialization/lock await",
+      "ruling": "Accepted. Recheck probing inside dialogue lock after waits; reference start also refuses an already-held dialogue lock to cover reverse native-session-preparation race. Both await cases RED; reverse guard RED; all six binding tests GREEN."
+    },
+    {
+      "severity": "Minor",
+      "issue": "CI fixtures do not import deployment overlays",
+      "ruling": "Accepted. Run existing real-overlay codegen test in pinned ESPHome CI; include new adapter callback regression."
+    }
+  ],
+  "review_limits_and_rulings": [
+    {
+      "limit": "Full installed private Voice PE package was not compiled",
+      "ruling": "Required before firmware activation; addon safe metadata read precedes profile selection. No stock installation supported."
+    },
+    {
+      "limit": "Real DMA, DAC mute, physical stop and full native runtime untested",
+      "ruling": "No electrical or deployed success claim; silent generated device probe required after backed-up activation."
+    },
+    {
+      "limit": "Clock exchange bounds do not yet compare scheduled presentation to first_signal_dma_us",
+      "ruling": "Generated probe proves only observed signal/cancellation if run on device. Explicit interval comparison and acoustic receiver calibration still required before reference eligibility."
+    },
+    {
+      "limit": "HA Python3.14 aarch64 execution not tested here",
+      "ruling": "Exact constrained wheel closure available; actual install/import/native probe remains deployment gate."
+    },
+    {
+      "limit": "240s clear/end criterion failed, separate clear-only passed",
+      "ruling": "Preserve original FALSE result and independent PASS; no rewriting prior result."
+    },
+    {
+      "limit": "Production HomePod not connected to reference",
+      "ruling": "Intentional staging boundary. production_reference_enabled stays false; original owner goal open."
+    }
+  ],
+  "microphone_opened": false,
+  "production_reference_enabled": false,
+  "deployed": false,
+  "storage_block": {
+    "free_gib": 1.6,
+    "required_backup_min_gib": 2,
+    "cleanup_performed": false
+  }
+}

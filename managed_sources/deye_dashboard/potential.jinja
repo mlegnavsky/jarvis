@@ -1,0 +1,29 @@
+### Nevyužitá výroba · stav výpočtu
+**Chybí sklon a orientace panelů.** Proto zatím nelze poctivě vyčíslit nevyužitý výkon ani dnešní nevyužitou energii.
+
+| Co sledujeme | Hodnota |
+|:--|--:|
+| Skutečný výkon panelů | {{ states('sensor.inverter_pv_power') }} W |
+| Měničem hlášené okamžité ztráty | {{ states('sensor.inverter_power_losses') }} W |
+| Měničem hlášené dnešní ztráty | {{ states('sensor.inverter_today_losses') }} kWh |
+
+**Ztráty nejsou nevyužitý potenciál panelů.** Při omezení přetoků měnič sníží odebíraný proud. Součin napětí × proud proto ukáže skutečně odebraný výkon, nikoli dostupné maximum.
+
+{% set rows=state_attr('sensor.jarvis_pocasi_zitenice','rows') or [] %}
+{% set fetched=as_timestamp(state_attr('sensor.jarvis_pocasi_zitenice','fetched_at'),0) %}
+{% set ts=as_timestamp(now(),0) %}
+{% set ns=namespace(row=none) %}
+{% for row in rows %}
+{% set t=as_timestamp(row.time,0) %}
+{% if t-3600 <= ts < t %}{% set ns.row=row %}{% endif %}
+{% endfor %}
+{% if states('sensor.jarvis_pocasi_zitenice') == 'ready' and 0 <= ts-fetched < 2100 and ns.row is not none and ns.row.shortwave_radiation is number %}
+**Modelové záření na vodorovnou plochu:** {{ ns.row.shortwave_radiation | round(0) }} W/m² · hodinový průměr Open-Meteo pro probíhající hodinu, nikoli čidlo na střeše.
+
+**Referenční výkon při vodorovné ploše a 25 °C článků:** {{ (9900 * ns.row.shortwave_radiation / 1000) | round(0) }} W.
+Toto srovnávací číslo vychází z 22 × 450 W = 9,9 kWp. Nezohledňuje sklon, orientaci, stíny ani teplotu panelů a **není odhadem ztracených wattů**. Od okamžitého výkonu ho neodečítáme: liší se také časové rozlišení.
+{% else %}
+**Model slunečního záření:** nyní chybí čerstvá data. Nezobrazujeme náhradní nulu.
+{% endif %}
+
+**Připravený postup:** záření v rovině každého pole → korekce teploty článků → model dostupného výkonu → porovnání se skutečným výkonem ve stejném časovém intervalu. Omezenou výrobu vyhodnocujeme jen při odpovídajícím provozním stavu. Součet v kWh vznikne až z časové historie; nelze jej zpětně získat z jediné aktuální hodnoty.

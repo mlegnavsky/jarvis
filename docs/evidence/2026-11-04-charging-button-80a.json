@@ -1,0 +1,84 @@
+{
+  "source_commit": "79eff534c40d46e661d7b4329e95682fb642bdef",
+  "deployment": {
+    "id": "battery80-apply-20261104",
+    "operation": "deployment_apply",
+    "state": "verified",
+    "result": {
+      "activation": "core_restart",
+      "checks": [
+        {
+          "entity_id": "sensor.jarvis_spot_control",
+          "state": "idle",
+          "version": "0.3.1"
+        }
+      ],
+      "files": [
+        {
+          "before_revision": "2a73d1043a4dd89f1482d9da9ba1b4d9310b51cd3a3e4da727d777d24d5195bc",
+          "new_lines": 110,
+          "new_sha256": "c9d030dd7b6481a2d330f93aa9fdba5e0a89b9ff01ac848a1c709bd44f27da50",
+          "old_lines": 109,
+          "path": "custom_components/jarvis_spot_control/engine.py"
+        },
+        {
+          "before_revision": "e4502602a8b09eae511c52ba1a46509c1bb60238858f479fd0f52c4e3a0bc691",
+          "new_lines": 80,
+          "new_sha256": "746bbce411362415672bfe3092fe22c0bd63d272d897b14f2ab9ee9a8c359d2c",
+          "old_lines": 80,
+          "path": "custom_components/jarvis_spot_control/__init__.py"
+        },
+        {
+          "before_revision": "f26e87d9491c5cfc8d8fae1158591efaad34d609427c757eabbe6fdc26b6a24e",
+          "new_lines": 1,
+          "new_sha256": "ccaa8971ed7c377eb71eb4bc117d320209b99a7703fdb2636b92f9f754e3fc6a",
+          "old_lines": 1,
+          "path": "custom_components/jarvis_spot_control/manifest.json"
+        }
+      ],
+      "id": "battery80-prepare-20261104",
+      "phase": "active_verified",
+      "receipt": {
+        "checks": [
+          {
+            "entity_id": "sensor.jarvis_spot_control",
+            "state": "idle",
+            "verified": true,
+            "version": "0.3.1"
+          }
+        ],
+        "core_version": "2026.6.4"
+      },
+      "restart_required": true,
+      "revision": "a78c1b0c5f98a00c11ce411e70e8907dbf5e532ea2535449f6ce06936a719fdb",
+      "source_commit": "79eff534c40d46e661d7b4329e95682fb642bdef",
+      "verified": true,
+      "versions": {
+        "files_written": true,
+        "runtime_verified": true,
+        "source_commit": "79eff534c40d46e661d7b4329e95682fb642bdef"
+      }
+    },
+    "backup_slug": "d6d22db0",
+    "request_id": "battery80-apply-20261104",
+    "created_at": "2026-11-04T18:57:45.613124+00:00",
+    "started_at": "2026-11-04T18:57:45.627836+00:00",
+    "finished_at": "2026-11-04T19:02:36.107127+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "grid_current_a": 80,
+  "max_charging_current_a": 100,
+  "physical_charge_test_started": false,
+  "tests": {
+    "passed": 263,
+    "skipped": 20,
+    "charging": 14,
+    "ci_chart": "Playwright runner unsupported"
+  }
+}

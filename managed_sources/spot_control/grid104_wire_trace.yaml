@@ -1,0 +1,37 @@
+id: jarvis_grid104_wire_trace
+alias: Jarvis – jednorázový záznam komunikace 104
+initial_state: true
+description: Patnáctiminutové podrobné logování existujícího transportu; žádný vlastní zápis do měniče.
+triggers:
+  - trigger: time_pattern
+    seconds: "/5"
+conditions:
+  - condition: template
+    value_template: "{{ 1793943369 <= as_timestamp(now()) < 1793944269 }}"
+actions:
+  - action: logger.set_level
+    data:
+      custom_components.solarman.device: debug
+      custom_components.solarman.services: debug
+      custom_components.solarman.pysolarman: debug
+  - action: system_log.write
+    data:
+      logger: jarvis.grid104_trace
+      level: warning
+      message: "GRID104_WIRE_BEGIN"
+  - delay: "00:15:00"
+  - action: logger.set_level
+    data:
+      custom_components.solarman.device: warning
+      custom_components.solarman.services: warning
+      custom_components.solarman.pysolarman: warning
+  - action: system_log.write
+    data:
+      logger: jarvis.grid104_trace
+      level: warning
+      message: "GRID104_WIRE_END"
+  - action: automation.turn_off
+    target:
+      entity_id: automation.jarvis_jednorazovy_zaznam_komunikace_104
+mode: single
+max_exceeded: silent

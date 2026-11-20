@@ -1,0 +1,163 @@
+{
+  "schema": 1,
+  "source_commit": "03fe3f4304a251c9ee3ea7ea07644d4f625e672d",
+  "scope": "owner_started_unreviewed_collection_not_recognition_accuracy",
+  "deployment_job": {
+    "id": "owner-cal-apply-20261101",
+    "operation": "deployment_apply",
+    "state": "failed",
+    "result": {
+      "error": "runtime_check_failed"
+    },
+    "backup_slug": "29a61208",
+    "request_id": "owner-cal-apply-20261101",
+    "created_at": "2026-11-01T07:30:02.584340+00:00",
+    "started_at": "2026-11-01T07:30:02.596699+00:00",
+    "finished_at": "2026-11-01T07:34:14.133125+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "independent_runtime_verification": {
+    "version": "1.1.2",
+    "status": "ready",
+    "native_probe": {
+      "passed": true,
+      "embedding_dimensions": 192,
+      "inference_ms": 1532.8,
+      "scope": "HA HTTP -> real local embedding model -> temporary fictional profile persistence/deletion; no household profiles changed"
+    },
+    "authorization": {
+      "authorized_profiles": 1,
+      "anchor_profiles": 1
+    },
+    "owner_calibration": {
+      "whole_scores": [],
+      "within_sample_min_similarity": null,
+      "status": "collecting",
+      "samples": 0,
+      "required_samples": 5,
+      "expires_in_s": 600,
+      "classification": "owner_supplied_unreviewed",
+      "live_profile_changed": false,
+      "raw_audio_saved": false
+    },
+    "readback": [
+      {
+        "path": "custom_components/jarvis_speaker_identity/__init__.py",
+        "match": true,
+        "revision": "2d5a6765745dbdc5e858dd2caa39ec945b1e09108521bda307ab3578c09bf9e0"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/coordinator.py",
+        "match": true,
+        "revision": "b47c10d1b4d8aa08c79420457a23511aa76c903a4fe2e6e9c80eb3861f9eca2c"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/__init__.py",
+        "match": true,
+        "revision": "2d5a6765745dbdc5e858dd2caa39ec945b1e09108521bda307ab3578c09bf9e0"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.json",
+        "match": true,
+        "revision": "856bd76631fc945ba15431cf76b9114d13324796c5cf36d9428658569d134194"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/coordinator.py",
+        "match": true,
+        "revision": "b47c10d1b4d8aa08c79420457a23511aa76c903a4fe2e6e9c80eb3861f9eca2c"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.json",
+        "match": true,
+        "revision": "856bd76631fc945ba15431cf76b9114d13324796c5cf36d9428658569d134194"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/policy.py",
+        "match": true,
+        "revision": "03779d521c40158d6182d1fc2c90236ed0ffa7f10aabc376cdf4b4e076833679"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/owner_calibration.py",
+        "match": true,
+        "revision": "9346b160a6278c33b4f333909e1cc69775c38564733e63c6e4187a4ff9904457"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.py",
+        "match": true,
+        "revision": "674445488aeff2a77c2f73c15412c022bc24fadb2dbf6ad29e34d60271edac10"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/owner_calibration.py",
+        "match": true,
+        "revision": "9346b160a6278c33b4f333909e1cc69775c38564733e63c6e4187a4ff9904457"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.py",
+        "match": true,
+        "revision": "674445488aeff2a77c2f73c15412c022bc24fadb2dbf6ad29e34d60271edac10"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/policy.py",
+        "match": true,
+        "revision": "03779d521c40158d6182d1fc2c90236ed0ffa7f10aabc376cdf4b4e076833679"
+      }
+    ]
+  },
+  "tests": {
+    "speaker": 68,
+    "companion": 49,
+    "addon": 239,
+    "addon_skipped": 20,
+    "review": "No Critical or Important findings",
+    "ci_run": 41284967281,
+    "ci_jobs": [
+      {
+        "name": "energy-chart",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "tests",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "containers (jarvis_updater)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "containers (jarvis)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "backup-dav",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "publish-laboratory",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "cleanup": {
+    "deleted": "3791071e",
+    "job": "owner-cal-clean3791071e-20261101",
+    "state": "verified"
+  },
+  "limitations": [
+    "No household calibration sample collected by tests.",
+    "No identity grant, live template/anchor change, promotion, threshold adjustment or replay detection.",
+    "Owner must turn TV off and provide five separate clean phrases; control expires in600s.",
+    "Post-restart HomePod output configured but report volume0 and state volume unavailable; physical audible confirmation remains unverified."
+  ]
+}

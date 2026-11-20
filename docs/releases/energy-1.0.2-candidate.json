@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "version": "1.0.2",
+  "state": "prepared_not_installed",
+  "base_commit": "e1e240c6affe3e27cfb0e20789d473280d9265c8",
+  "review_branch": "refactor/ha-control-cleanup-20261106",
+  "files": [
+    {
+      "source": "managed_sources/spot_control/__init__.py",
+      "target": "custom_components/jarvis_spot_control/__init__.py",
+      "sha256": "3514d8fb2b0688283c44a6635cb5f33288affcc37b60e26121c62551738ecfb3",
+      "bytes": 5546
+    },
+    {
+      "source": "managed_sources/spot_control/battery_native.py",
+      "target": "custom_components/jarvis_spot_control/battery_native.py",
+      "sha256": "73e0509297f1a4322f62320c8ad522439efc4447e0efe52d491b6b0f52ed22fe",
+      "bytes": 26824
+    },
+    {
+      "source": "managed_sources/spot_control/commissioning_completion.py",
+      "target": "custom_components/jarvis_spot_control/commissioning_completion.py",
+      "sha256": "0ab7b64974cd102117e674b2a29ff7d2cee3a17bd32503e72af18cf73f22faa0",
+      "bytes": 1257
+    },
+    {
+      "source": "managed_sources/spot_control/daily_override.py",
+      "target": "custom_components/jarvis_spot_control/daily_override.py",
+      "sha256": "d90852b5df2464d8c25dccf5c0e526149ce3b06d1e62d6fa000e62a160f3bc58",
+      "bytes": 2408
+    },
+    {
+      "source": "managed_sources/spot_control/diagnostics.py",
+      "target": "custom_components/jarvis_spot_control/diagnostics.py",
+      "sha256": "d2404e14c1a51bfea7d80f78ae7add5a9e40228272ad474505ac5b9f97ee5f8f",
+      "bytes": 3147
+    },
+    {
+      "source": "managed_sources/spot_control/engine.py",
+      "target": "custom_components/jarvis_spot_control/engine.py",
+      "sha256": "c150a01a82d228ed162ea5c3e70f363e5388f4cdc449257a14876302c4b48453",
+      "bytes": 6129
+    },
+    {
+      "source": "managed_sources/spot_control/finance.py",
+      "target": "custom_components/jarvis_spot_control/finance.py",
+      "sha256": "1b22c2362c2817940216853de933ed584bfbb18871cfce66e9094120cf0459c6",
+      "bytes": 8760
+    },
+    {
+      "source": "managed_sources/spot_control/finance_setup.py",
+      "target": "custom_components/jarvis_spot_control/finance_setup.py",
+      "sha256": "f6619fbfc2e501060b8474711bf42a63a90031af8cf3d5e4ca246a038167828a",
+      "bytes": 5896
+    },
+    {
+      "source": "managed_sources/spot_control/finance_view.py",
+      "target": "custom_components/jarvis_spot_control/finance_view.py",
+      "sha256": "3357269fa8f0ddc8ee759e8dedc07a2436b064bbe8bfec216efd0520955121d5",
+      "bytes": 6361
+    },
+    {
+      "source": "managed_sources/spot_control/history_view.py",
+      "target": "custom_components/jarvis_spot_control/history_view.py",
+      "sha256": "8b5457eed1346128c50a06f258dce1773a40c70905dd7f54949220030c653308",
+      "bytes": 2986
+    },
+    {
+      "source": "managed_sources/spot_control/journal.py",
+      "target": "custom_components/jarvis_spot_control/journal.py",
+      "sha256": "00968b582a2f9823d7b48cd879e13f7b87912a29a16bfc97998b2994cdff80b4",
+      "bytes": 4177
+    },
+    {
+      "source": "managed_sources/spot_control/manifest.json",
+      "target": "custom_components/jarvis_spot_control/manifest.json",
+      "sha256": "2a9a11ed7e8c51702991e3940a40c6cb389e60e846c64d8bfeb2e92246f5726a",
+      "bytes": 219
+    },
+    {
+      "source": "managed_sources/spot_control/native_clock.py",
+      "target": "custom_components/jarvis_spot_control/native_clock.py",
+      "sha256": "24cc64c1be96904b24bd33a0a45c0a61e5065bab0640b56b16e3e0166fb40e07",
+      "bytes": 4737
+    },
+    {
+      "source": "managed_sources/spot_control/native_plan.py",
+      "target": "custom_components/jarvis_spot_control/native_plan.py",
+      "sha256": "fccdec8019c0f68316336f6c1b1961e74a1f3c57822f7c0b03a66f14cd8e0066",
+      "bytes": 11446
+    },
+    {
+      "source": "managed_sources/spot_control/native_snapshot.py",
+      "target": "custom_components/jarvis_spot_control/native_snapshot.py",
+      "sha256": "a2ddba048ac668bff85abe75efd55753858cc2b611a6c1e291016c14c47aefeb",
+      "bytes": 1245
+    },
+    {
+      "source": "managed_sources/spot_control/native_view.py",
+      "target": "custom_components/jarvis_spot_control/native_view.py",
+      "sha256": "46a93522698018a9a408df77e02be2554024705b873587180841acdd9b9ca06c",
+      "bytes": 15467
+    },
+    {
+      "source": "managed_sources/spot_control/native_window.py",
+      "target": "custom_components/jarvis_spot_control/native_window.py",
+      "sha256": "b883cd7ef9cac0f0b300d1d8db725f3d197442990b3d3723cfa6c9969b0da001",
+      "bytes": 10938
+    },
+    {
+      "source": "managed_sources/spot_control/native_zero_target.py",
+      "target": "custom_components/jarvis_spot_control/native_zero_target.py",
+      "sha256": "831005fc9e406cd99850b20eb5428eb56db998721784c166115aafb8a7e13c6a",
+      "bytes": 2907
+    },
+    {
+      "source": "managed_sources/spot_control/number.py",
+      "target": "custom_components/jarvis_spot_control/number.py",
+      "sha256": "902e911fabd9a849eaf6aa7b2a2a8f78e855dea45ac38e6ab9ce064e451ead78",
+      "bytes": 1534
+    },
+    {
+      "source": "managed_sources/spot_control/owner_settings.py",
+      "target": "custom_components/jarvis_spot_control/owner_settings.py",
+      "sha256": "64bb8e51d7436f7f580e84bf008a7b9ac2def6a397968c2209d2b5b5caec8057",
+      "bytes": 1556
+    },
+    {
+      "source": "managed_sources/spot_control/planning.py",
+      "target": "custom_components/jarvis_spot_control/planning.py",
+      "sha256": "d113d8bf5feb83ecb3dd32169a13ad990df03bcd846eb41bd67b0f5e43f87b5b",
+      "bytes": 20381
+    },
+    {
+      "source": "managed_sources/spot_control/planning_setup.py",
+      "target": "custom_components/jarvis_spot_control/planning_setup.py",
+      "sha256": "14e4facaf2d96aebaf6428d407d5a9582d07a2bdd8ee7e92b1d3290ee7956efd",
+      "bytes": 3325
+    },
+    {
+      "source": "managed_sources/spot_control/production_policy.py",
+      "target": "custom_components/jarvis_spot_control/production_policy.py",
+      "sha256": "f1abc289b0cf98978ec7e3703881066f75d58b9e330fe705fe0167979e7129c4",
+      "bytes": 5005
+    },
+    {
+      "source": "managed_sources/spot_control/recovery_watchdog.py",
+      "target": "custom_components/jarvis_spot_control/recovery_watchdog.py",
+      "sha256": "3b8cdf9e58e4881e38b3ffc6810eb4fe0ca976479d5e64aeace264dce9eab7d1",
+      "bytes": 2917
+    },
+    {
+      "source": "managed_sources/spot_control/sale_controller.py",
+      "target": "custom_components/jarvis_spot_control/sale_controller.py",
+      "sha256": "64bc15298be850c56beb34776b30b7be67820386f2685ff42027cf73eaf20a6b",
+      "bytes": 21370
+    },
+    {
+      "source": "managed_sources/spot_control/sale_setup.py",
+      "target": "custom_components/jarvis_spot_control/sale_setup.py",
+      "sha256": "adef1ca55997c83ac681755d325be98190894d180afce2ab991b8389008fd5af",
+      "bytes": 61190
+    },
+    {
+      "source": "managed_sources/spot_control/sale_view.py",
+      "target": "custom_components/jarvis_spot_control/sale_view.py",
+      "sha256": "f41dd16ffeab61a5d8a16b7eb71d317fc8e2cfcd9e5e6786545c97ed8d067505",
+      "bytes": 14456
+    },
+    {
+      "source": "managed_sources/spot_control/sales.py",
+      "target": "custom_components/jarvis_spot_control/sales.py",
+      "sha256": "503ef41c900a6041c4bd0dd0d33ef8a2b2f77a45319d3fd166bc6afe82848d1f",
+      "bytes": 4359
+    },
+    {
+      "source": "managed_sources/spot_control/select.py",
+      "target": "custom_components/jarvis_spot_control/select.py",
+      "sha256": "dada9f0bd5cd66e9c4c1264aea29ac120559116eabf0779fc644361e44a4d125",
+      "bytes": 1244
+    },
+    {
+      "source": "managed_sources/spot_control/services.yaml",
+      "target": "custom_components/jarvis_spot_control/services.yaml",
+      "sha256": "e899763ced3a723b599d92155e0a9dd62580e36ced692879d0ca7517873c080a",
+      "bytes": 1416
+    },
+    {
+      "source": "managed_sources/spot_control/simple_sales.py",
+      "target": "custom_components/jarvis_spot_control/simple_sales.py",
+      "sha256": "e25bd3bcbb051665ecfc662cd5f60470628726082724d47a4b8b55b04af9637d",
+      "bytes": 6529
+    },
+    {
+      "source": "managed_sources/spot_control/solar_inputs.py",
+      "target": "custom_components/jarvis_spot_control/solar_inputs.py",
+      "sha256": "1f2886200594402d983ec3a7a2f39ae58f7d74c9d4e40cab9fce1723e917a7ec",
+      "bytes": 2552
+    },
+    {
+      "source": "managed_sources/spot_control/supervision.py",
+      "target": "custom_components/jarvis_spot_control/supervision.py",
+      "sha256": "d09cff62d4b71a432467727cb2927054dae79a12d769ec241e87b3e601659be1",
+      "bytes": 4993
+    },
+    {
+      "source": "managed_sources/spot_control/switch.py",
+      "target": "custom_components/jarvis_spot_control/switch.py",
+      "sha256": "0a3c8c76b05a0a2c869fbfbdaaf81be242647d98cd785b2f616f6259570269af",
+      "bytes": 1267
+    },
+    {
+      "source": "managed_sources/spot_control/telemetry_health.py",
+      "target": "custom_components/jarvis_spot_control/telemetry_health.py",
+      "sha256": "a0594cfbecedc6b71cd03578af7aa8b46d51c030b8e06d711ac8b7f394e97f61",
+      "bytes": 3320
+    },
+    {
+      "source": "managed_sources/spot_hub/index.html",
+      "target": "www/jarvis-spot-hub.html",
+      "sha256": "19b55e1be8a8c38c0bf8d4be9dd2a3b89cf39adcbbdc1a2939c06ab743e0c4c6",
+      "bytes": 4774
+    },
+    {
+      "source": "managed_sources/spot_hub/hub.css",
+      "target": "www/jarvis-spot-hub.css",
+      "sha256": "e513ec6ffedabbb8060dd904fdc507d89adc0bdf4fa6cd1347fcbe018206c5a8",
+      "bytes": 8501
+    },
+    {
+      "source": "managed_sources/spot_hub/hub.js",
+      "target": "www/jarvis-spot-hub.js",
+      "sha256": "3d9c8c300f97eaeff36545befab765f44379d9e18c4c29682d377f872a19ff66",
+      "bytes": 22366
+    },
+    {
+      "source": "managed_sources/spot_hub/messages.js",
+      "target": "www/jarvis-sale-messages.js",
+      "sha256": "a52228ed95a6c6ca90f15b56be88170322e5dd717ea99b08b0e7a0a34fbd90c1",
+      "bytes": 5805
+    },
+    {
+      "source": "managed_sources/spot_control/confirmed-recovery.yaml",
+      "target": null,
+      "kind": "merge_owned_automation_by_id_if_present",
+      "id": "jarvis_sales_confirmed_recovery",
+      "sha256": "b7d461717f2b4f94b8ae1481fc6e9c6e8a8c372b6545331e9b51150f881015c3",
+      "bytes": 4598
+    }
+  ],
+  "remove_owned_after_activation": [
+    "custom_components/jarvis_spot_control/autonomous_verification.py"
+  ],
+  "keep_all_storage_and_history": true,
+  "ui_view": "regenerate_only_from_current_live_view_using_managed_sources/spot_hub/prepare.py",
+  "live_preconditions": [
+    "explicit_install_command",
+    "fresh_head_and_live_revision_checks",
+    "backup",
+    "confirmed_idle_and_legacy_cleanup_complete"
+  ],
+  "verification": {
+    "python_tests_run": 749,
+    "python_passed": 729,
+    "python_existing_php_skips": 20,
+    "node_unit_dom_suites_passed": 11,
+    "independent_review": "no_unresolved_P1_P2",
+    "browser_acceptance": "blocked_environment_socket_ptrace_EPERM",
+    "live_candidate_operation": "not_installed_not_tested"
+  },
+  "live_preflight_version": "1.0.1",
+  "reconciliation": "retain current bias without obsolete probe prerequisite, business-day completion identities, until_id paging and diagnostics endpoint; strengthen export-only boundary and documented recovery"
+}

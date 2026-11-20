@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "target": "https://laborator.odladeni.cz/",
+  "purpose": "Acceptance test after recreation under isolated jarvis_lab subscription",
+  "requested_on": "2026-10-29",
+  "status": "test_requested_not_yet_verified",
+  "private_backups": "not_verified"
+}

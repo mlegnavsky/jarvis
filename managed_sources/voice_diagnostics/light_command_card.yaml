@@ -1,0 +1,10 @@
+- type: entities
+  title: Hlasové povely bez oslovení
+  show_header_toggle: false
+  entities:
+  - entity: input_boolean.jarvis_povel_rozsvit
+    name: Rozsviť
+  - entity: input_boolean.jarvis_povel_zhasni
+    name: Zhasni
+- type: markdown
+  content: 'Přepínače povolují nové přímé povely; světla samy nezapínají. Bez názvu místnosti se použije místnost mikrofonu. Při aktivní televizi platí stávající požadavek na oslovení Jarvisi. Již přijatý povel může doběhnout.'

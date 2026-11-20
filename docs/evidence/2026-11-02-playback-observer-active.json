@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "phase": "active_verified_diagnostics_only",
+  "version": "1.2.4",
+  "source_commit": "33fbcb08b5a9d7889d8a0ce1c210e92a3a5f64fc",
+  "source_published": false,
+  "source_publication": {
+    "state": "blocked_by_automatic_approval_review",
+    "reason": "public GitHub code egress lacked explicit user-authored approval for this change",
+    "attempts": 1,
+    "not_retried": true
+  },
+  "private_deployment": true,
+  "core_version": "2026.6.4",
+  "apply_job": "echo-observe-apply-20261102",
+  "plan": "echo-observe-prepare-20261102",
+  "backup": "ed38b6e9",
+  "old_unprotected_backup_deleted": "df2a34c6",
+  "keep_newest_three_and_protected": true,
+  "runtime_source": "26f4cdb2ade435ea4a98042548e785ae4c079395bfba93d7db114f82762498aa",
+  "files": [
+    {
+      "before_revision": "0c968ea494a23e662da0c50ada31bc3e3d7f1592ba5368dbf2a374830024b9bf",
+      "new_lines": 465,
+      "new_sha256": "2e00d53680538eb0f93753edaa62e91381c542d39d5712a6bddc07c4e876ab0c",
+      "old_lines": 459,
+      "path": "custom_components/jarvis_local_duplex/__init__.py"
+    },
+    {
+      "before_revision": "053cad838351211eb05ddba5bc6dd80beb923312a73a0c40d5735d987113472a",
+      "new_lines": 1,
+      "new_sha256": "f8e68dbfded68c2f0c61dc18558b14c156c0991be7611f3810bf2182bce03352",
+      "old_lines": 1,
+      "path": "custom_components/jarvis_local_duplex/manifest.json"
+    },
+    {
+      "before_revision": "missing",
+      "new_lines": 108,
+      "new_sha256": "323cce8a2dd8749506ae4752c92fa872b6433ff347f550fa18b04755e5b342a5",
+      "old_lines": 0,
+      "path": "custom_components/jarvis_local_duplex/playback_observer.py"
+    }
+  ],
+  "self_test": {
+    "status": "passed",
+    "scope": "native_VAD_and_TTS_reference_no_playback",
+    "native_vad_probability": 0.00439656525850296,
+    "native_vad_warmup_frames": 77,
+    "reference_seconds": 2.8316875,
+    "reference_signal": {
+      "duration_s": 2.832,
+      "silent": false,
+      "peak_dbfs": -9.07,
+      "rms_dbfs": -23.71
+    },
+    "microphone_opened": false,
+    "audible_playback": false,
+    "source_revision": "26f4cdb2ade435ea4a98042548e785ae4c079395bfba93d7db114f82762498aa",
+    "pipeline_signature": "7e4a5a90ac21fdfa8394d3fad1cc682875dec1bf74b5a6baab85ac471fdf5f91"
+  },
+  "interruption_policy": {
+    "interruptions_enabled": true,
+    "remaining_s": 0,
+    "auto_restore_seconds": 600,
+    "input_during_speech": "normal"
+  },
+  "updated_at": "2026-11-02T21:36:42.617240+00:00",
+  "tests": {
+    "local_duplex": 146,
+    "speaker_identity": 154,
+    "companion": 83,
+    "voice_diagnostics": 30,
+    "addon_total": 242,
+    "addon_skipped": 20,
+    "ci": "not_run_publication_blocked",
+    "manifest_and_diff": "passed"
+  },
+  "review": {
+    "critical": 0,
+    "important_fixed_in_one_pass": 3,
+    "regressions": "enhancer source closure, diagnostic frame clock recovery, valid AsyncIterable without aclose; RED then GREEN",
+    "deferred_minor": "direct cap-overflow retention test"
+  },
+  "no_new_idle_capture": true,
+  "raw_microphone_saved": false,
+  "input_modified": false,
+  "native_aec_deployed": false,
+  "acoustic_acceptance_verified": false,
+  "one_second_response_verified": false,
+  "pending_test": "Džarvisi, řekni mi krátký příběh na tři věty. Nechat odpověď běžet bez dalšího mluvení a poté zkontrolovat report.",
+  "private_source_review_receipt": "jarvis_workspace/local_duplex/observer-deployment-receipt.json"
+}

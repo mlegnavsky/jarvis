@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.superpowers/
+.env*
+options.json
+data/
+*.sqlite*
+*.log
+
+# Generated ESPHome configuration/build metadata
+firmware/reference_bridge/.esphome/

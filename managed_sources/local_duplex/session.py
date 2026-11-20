@@ -1,0 +1,239 @@
+"""Response ownership for a continuously captured, bounded local conversation."""
+import asyncio
+from contextlib import suppress, aclosing
+import time
+
+if __package__:
+    from .segmenter import Segmenter
+    from .runtime_diagnostics import notify
+else:
+    from segmenter import Segmenter
+    from runtime_diagnostics import notify
+
+
+class Session:
+    def __init__(self, *, transcribe, respond, play, stop, idle_seconds=8,
+                 clock=time.monotonic, gate=None, silence_seconds=.7,
+                 max_seconds=240, max_turns=24,on_interrupt=None,input_timeout_seconds=5,playback_active=None,
+                 on_capture=None,interruptions_enabled=None,on_event=None):
+        self.transcribe=transcribe;self.respond=respond;self.play=play;self.stop=stop
+        self.clock=clock;self.gate=gate;self.idle_seconds=idle_seconds
+        self.on_interrupt=on_interrupt
+        self.on_capture=on_capture
+        self.on_event=on_event
+        self.interruptions_enabled=interruptions_enabled or (lambda:True)
+        self.input_suppressed=False;self.suppressed_frames=0
+        self.playback_active=playback_active or (lambda:self.stage=='speaking')
+        self.max_seconds=max_seconds;self.max_turns=max_turns
+        self.input_timeout_seconds=input_timeout_seconds
+        self.segmenter=Segmenter(silence_seconds=silence_seconds)
+        self.task=None;self.confirmation_task=None;self.generation=0
+        self.switch=asyncio.Lock();self.finished=asyncio.Event()
+        self.stage='idle';self.done=False;self.closed=False
+        self.idle_at=clock();self.activity_at=self.idle_at
+        self.session_budget_policy='since_last_accepted_turn'
+        self.frames=0;self.frames_during_output=0
+        self.completed_turns=0;self.accepted_turns=0
+        self.interruptions=0;self.failures=0;self.last_error=None
+        self.truncated=0;self.reason=None;self.input_end=None
+        self._pending=None;self.deferred_turns=0;self.deferred_replaced=0;self.deferred_expired=0
+        self.confirmations=0;self.rejected_confirmations=0;self.confirmation_failures=0
+        self.interruption_policy='completed_transcript_before_stop'
+
+    def input_is_suppressed(self):
+        return self.stage=='speaking' and not self.interruptions_enabled()
+
+    def snapshot(self):
+        return {key:getattr(self,key) for key in ('stage','frames','frames_during_output',
+            'completed_turns','accepted_turns','interruptions','failures','last_error','truncated','reason',
+            'deferred_turns','deferred_replaced','deferred_expired','suppressed_frames','input_end',
+            'interruption_policy','confirmations','rejected_confirmations','confirmation_failures',
+            'session_budget_policy')}
+
+    def request_close(self, reason):
+        notify(self.on_event,'session_end',reason=reason)
+        self.reason=reason;self.done=True;self._pending=None;self.finished.set()
+
+    async def interrupt(self):
+        async with self.switch:
+            self.generation+=1
+            self._pending=None
+            candidate=self.confirmation_task
+            candidate=candidate if candidate is not asyncio.current_task() else None
+            pending=[task for task in (self.task,candidate) if task is not None and not task.done()]
+            for task in pending:task.cancel()
+            old,self.task=self.task,None
+            try:
+                if old is not None and old in pending:
+                    self.interruptions+=1
+                    if self.on_interrupt:self.on_interrupt()
+                    async with asyncio.timeout(3):await self.stop()
+            finally:
+                with suppress(asyncio.CancelledError):
+                    async with asyncio.timeout(3):await asyncio.gather(*pending,return_exceptions=True)
+            if not self.closed:self.stage='idle';self.idle_at=self.clock()
+
+    async def submit(self, audio, voiced, truncated,*,captured_until=None):
+        if self.closed or self.done:return
+        if self.stage=='speaking' and not self.interruptions_enabled():return
+        captured_until=self.clock() if captured_until is None else captured_until
+        if truncated:
+            notify(self.on_event,'capture_rejected',reason='truncated')
+            self.truncated+=1;self.idle_at=self.clock();return
+        confirming=self.confirmation_task is not None and not self.confirmation_task.done()
+        busy=self.task is not None and not self.task.done()
+        if confirming or busy and not self.playback_active():
+            self.deferred_turns+=1
+            if self._pending is not None:self.deferred_replaced+=1
+            self._pending=(audio,voiced,False,captured_until)
+            return
+        if self._pending is not None:
+            self._pending=None;self.deferred_replaced+=1
+        if self.closed or self.done:return
+        if busy:
+            self.confirmation_task=asyncio.create_task(self._confirm(
+                self.generation,self.task,audio,voiced,captured_until))
+            return
+        self.generation+=1;generation=self.generation
+        self.task=asyncio.create_task(self._turn(generation,audio,voiced,captured_until))
+
+    async def _confirm(self,generation,original,audio,voiced,captured_until):
+        # The previous agent/identity work is already finished: only its owned
+        # playback is live. Keep it and the reader alive until the existing
+        # transcript filter has distinguished a new turn from generated speech.
+        self.confirmations+=1
+        try:
+            if self.on_capture:self.on_capture(captured_until)
+            async with asyncio.timeout(30):text=await self.transcribe(audio,voiced,False)
+            if (not text or self.closed or self.done or generation!=self.generation
+                    or self.task is not original or self._pending is not None
+                    or not self.interruptions_enabled()):
+                self.rejected_confirmations+=1;return
+            if not 0<=self.clock()-captured_until<=5:
+                self.deferred_expired+=1;return
+            if self.accepted_turns>=self.max_turns:
+                if not original.done():await self.interrupt()
+                self.request_close('turn_limit');return
+            self.activity_at=self.clock()
+            if not original.done():await self.interrupt()
+            if self.closed or self.done:return
+            if self._pending is not None:
+                self.rejected_confirmations+=1;return
+            if not 0<=self.clock()-captured_until<=5:
+                self.deferred_expired+=1;return
+            self.generation+=1
+            self.task=asyncio.create_task(self._turn(
+                self.generation,audio,voiced,captured_until,text=text))
+        except asyncio.CancelledError:raise
+        except Exception as exc:
+            self.confirmation_failures+=1;self.last_error=type(exc).__name__
+
+    async def _turn(self, generation, audio, voiced,captured_until=None,*,text=None):
+        phase='capture'
+        try:
+            if self.closed or self.done:return
+            if text is None:
+                self.stage='transcribing'
+                phase='stt'
+                notify(self.on_event,'capture_end',voiced_s=voiced,audio_s=len(audio)/32000)
+                if self.on_capture:self.on_capture(self.clock() if captured_until is None else captured_until)
+                async with asyncio.timeout(30):text=await self.transcribe(audio,voiced,False)
+            if generation!=self.generation or self.closed or self.done or not text:return
+            if self.accepted_turns>=self.max_turns:
+                self.request_close('turn_limit');return
+            self.accepted_turns+=1
+            self.activity_at=self.clock()
+            self.stage='thinking'
+            phase='response'
+            async with asyncio.timeout(60):result=await self.respond(text)
+            if generation!=self.generation or self.closed or self.done:return
+            if result.speech:
+                self.stage='speaking'
+                phase='output'
+                notify(self.on_event,'output_start')
+                async with asyncio.timeout(100):await self.play(result.speech)
+                notify(self.on_event,'output_end')
+            if generation!=self.generation or self.closed or self.done:return
+            self.completed_turns+=1
+            notify(self.on_event,'turn_end',turn=self.completed_turns,continuing=result.continuing)
+            if self.completed_turns>=self.max_turns or self.accepted_turns>=self.max_turns:
+                self.request_close('turn_limit')
+            elif not result.continuing and not result.speech and self._pending is None:
+                self.request_close('conversation_finished')
+        except asyncio.CancelledError:
+            notify(self.on_event,'turn_cancelled',stage=phase)
+            raise
+        except Exception as exc:
+            notify(self.on_event,'stage_error',stage=phase,error_type=type(exc).__name__)
+            self.failures+=1;self.last_error=type(exc).__name__
+            if self.failures>=2:self.request_close('repeated_provider_failure')
+        finally:
+            if generation==self.generation and not self.closed:
+                self.stage='idle';self.idle_at=self.clock()
+
+    async def run(self, frames):
+        started=self.clock()
+        async def consume():
+            async with aclosing(aiter(frames)) as source:
+                while True:
+                    try:
+                        async with asyncio.timeout(self.input_timeout_seconds):frame=await anext(source)
+                    except StopAsyncIteration:
+                        self.input_end={'elapsed_s':round(self.clock()-started,3),'stage':self.stage,
+                            'output_active':self.playback_active()}
+                        self.request_close('audio_source_ended');return
+                    except TimeoutError:
+                        self.request_close('audio_source_stalled');return
+                    if self.done:return
+                    self.frames+=1
+                    if self.playback_active():self.frames_during_output+=1
+                    suppress_input=self.input_is_suppressed()
+                    if suppress_input and not self.input_suppressed:
+                        self.segmenter=Segmenter(silence_seconds=self.segmenter.silence_seconds)
+                    self.input_suppressed=suppress_input
+                    if suppress_input:
+                        self.suppressed_frames+=1;qualified=[]
+                    else:qualified=self.gate(frame,self) if self.gate else [(frame.audio,frame.speech_probability)]
+                    for audio,probability in qualified:
+                        for event in self.segmenter.feed(audio,probability or 0):
+                            if event.kind=='onset':notify(self.on_event,'speech_onset')
+                            if event.kind!='onset':
+                                await self.submit(event.audio,event.voiced_s,event.truncated)
+                    busy=any(task is not None and not task.done() for task in (self.task,self.confirmation_task))
+                    confirming=self.confirmation_task is not None and not self.confirmation_task.done()
+                    if (self._pending is not None and not self.done and not confirming
+                            and (not busy or self.playback_active())):
+                        pending,self._pending=self._pending,None
+                        if 0<=self.clock()-pending[3]<=5:await self.submit(*pending[:3],captured_until=pending[3])
+                        else:self.deferred_expired+=1
+                        busy=any(task is not None and not task.done() for task in (self.task,self.confirmation_task))
+                    if not busy and not self.segmenter.active and self.clock()-self.idle_at>=self.idle_seconds:
+                        self.request_close('silence_timeout');return
+                    if self.clock()-self.activity_at>=self.max_seconds:
+                        self.request_close('session_limit');return
+        reader=asyncio.create_task(consume())
+        finished=asyncio.create_task(self.finished.wait())
+        try:
+            # Capture stalls and every provider stage retain their own finite
+            # deadlines. Accepted dialogue renews the watchdog above; session
+            # wall age must not cancel a current answer.
+            ready,_pending=await asyncio.wait({reader,finished},return_when=asyncio.FIRST_COMPLETED)
+            if reader in ready:await reader
+        finally:
+            for task in (reader,finished):
+                if not task.done():task.cancel()
+            await asyncio.gather(reader,finished,return_exceptions=True)
+            await self.close()
+
+    async def close(self):
+        if self.closed:return
+        if self.reason is None:notify(self.on_event,'session_end',reason='closed')
+        self.closed=True;self.generation+=1;self._pending=None;self.finished.set()
+        pending=[t for t in (self.confirmation_task,self.task) if t and not t.done()]
+        for task in pending:task.cancel()
+        try:
+            async with asyncio.timeout(3):await asyncio.gather(*pending,return_exceptions=True)
+        finally:
+            try:
+                async with asyncio.timeout(3):await self.stop()
+            finally:self.stage='closed'

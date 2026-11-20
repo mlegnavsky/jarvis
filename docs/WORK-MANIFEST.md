@@ -1,0 +1,111 @@
+# Pracovní manifest Jarvise
+
+Verze dokumentu 1; stav zjištěný 29. 10. 2026. Vlastník Martin Legnavský. Záměr: práce přes kód, Git a přímé rozhraní, bez opakovaného hledání přístupu a bez přenášení technické práce na uživatele.
+
+## Jednoznačné zdroje
+
+| Oblast | Autorita / cesta |
+|---|---|
+| Repo | mlegnavsky/jarvis |
+| Nasazovaná větev | feat/jarvis-addon; main není zdroj aktuálně instalovaného doplňku |
+| Jarvis | b4b773b1_jarvis, naposledy ověřeno 3.12.0 |
+| Stabilní brána a updater | b4b773b1_jarvis_updater; OAuth a rescue nezávislé na Core |
+| Green | HA Core 2026.6.4; neupgradovat v rámci běžných oprav |
+| Přímý vstup | Jarvis plugin: jarvis_action, jarvis_inventory, update a rescue |
+| Správa | service jarvis.admin, entity_id jarvis.system |
+| Zdroj nativních integrací | managed_sources/<součást> |
+| Nasazené integrace | custom_components/<domain> přes HA config mount |
+| Živý dashboard | jarvis_workspace/hlavni-prehled.yaml |
+| Doplňky a sdílené soubory | admin workspaces addons/share/media |
+
+Autentizaci používej z připojených nástrojů. Repo přístup není automaticky SSH, root ani přístup k libovolnému API Greenu. Secret nikdy nepřenášej do manifestu. Ověřený přístup k firmwaru není automaticky přístup ke správě záloh.
+
+## Schopnosti a skutečné hranice
+
+Strojový soubor operations-manifest.json generuje `python scripts/export_capabilities.py` přímo z povolených polí v kódu. Je to kontrakt implementace, ne důkaz dostupnosti a oprávnění v běžící instalaci.
+
+| Schopnost | Stav a ověření |
+|---|---|
+| Inventář, služby, registry a diagnostika | Přímý plugin; čerstvé čtení, žádné staré stavy při výpadku |
+| HA konfigurační soubory | file read/write/restore/delete, CAS revision a předchozí obsah |
+| Změny integrací | Nativní options/reload a revize; podporované rozsahy podle kontraktu |
+| Automatizace | YAML úprava + automations_reload, potom kontrola entity a výsledku |
+| Aktualizace Jarvise | update_check/update/update_job; úspěch až verified |
+| Zálohy | Výpis, vytvoření, obnova a cílené mazání s CAS implementovány; tři živá mazání verified ve 3.12.0 |
+| Firmware a soukromé wake modely | Přímé compile/install/model_install/restore; živý OTA ověřen 29.10.; cíle výslovně povolené |
+| Mikrofon a hlas | Stav/diagnostika a výslovně aktivované záznamy; nejde o neomezený permanentní přenos |
+| Volné místo, retence a cílené mazání záloh | Čtení místa, preflight a bezpečný náhled retence ve 3.12.0; automatické plošné mazání vypnuté |
+| TV / Discovery | Otevření konkrétního kanálu SledovaniTV neověřeno; nezaměňovat obecnou podporu deep links za funkční odkaz |
+| Libovolný shell, root, DNS/router a účty všech služeb | Neověřeno / tímto manifestem se nezřizuje |
+
+## Přesný způsob nasazení
+
+- Před editací stáhni aktuální obsah a revision; neposílej celý starý konfigurační soubor z paměti.
+- Zdroj nejprve ověř a ulož do Gitu. Při publikaci použij aktuální parent a očekávaný HEAD. Při konfliktu znovu načti cizí změny, nepřepisuj je silou.
+- Kód doplňku vyžaduje konzistentní verzi runtime/config/changelog a updater. Nativní integrace má vlastní manifest a aktivaci. Dokumentační změna nepotřebuje restart ani update.
+- U file_write polluj admin job a potvrď revision. Pokud je třeba aktivace, proveď reload/restart odpovídající součásti, pak živé ověření. Neukončuj úkol na pouhém uložení souboru.
+- Před velkou zálohou ověř prostor, pokud existuje povolené čtení. Když neexistuje, eviduj tuto mezeru; nehádej volné místo.
+- U selhání bez začaté mutace odliš chybu přípravy od neznámého výsledku. Pokud stávající rozhraní vrátí unknown, respektuj ho a proveď reconciliaci pomocí úlohy, logu a aktuálního stavu.
+
+## Historické požadavky — implementace a hranice ve 3.12.0
+
+1. Cílené `backup_delete` pouze pro explicitně schválené slugy; nejprve načíst metadata, blokovat protected a chráněné poslední zálohy, CAS, trvalý request_id, ověřit nepřítomnost po smazání. Žádný plošný příkaz „smaž vše“.
+2. Čtení diskového prostoru a velikostí záloh přímo přes podporované Supervisor API. Vrátit potřebné minimum dat.
+3. Prostorový preflight před zálohou; příprava nesmí nesprávně vypadat jako provedený restart.
+4. Jednoznačný stav nasazení: source_published / file_written / activation_pending / active_verified / blocked, včetně důvodu a potřebného dalšího kroku.
+5. Cílené a testované reloady dalších součástí, kde je podporuje HA; neslibovat obecný hot reload libovolného Pythonu.
+
+Stav implementace a konkrétní hranice popisuje docs/OPERATIONS-3.12.md. Nativní hot reload libovolného Pythonu ani trvale hostovaný testovací HA nejsou hotové. Implementace dalších bodů potřebuje skutečnou dostupnou nasazovací cestu. Je-li nová verze blokována místem a povinnou zálohou, nejprve vyřeš tento bootstrap přes již dostupnou autorizovanou správu. Neobcházej ochranu a nevytvářej další vrstvy kódu bez možnosti je aktivovat.
+
+## Ověřování a rychlost
+
+- Bugfix: reprodukce → cílený test → nejmenší oprava → relevantní suite → živý výsledek.
+- Topení: PYTHONPATH=managed_sources/solar_heating python -m unittest discover -s managed_sources/solar_heating/tests -q
+- Addon: PYTHONPATH=jarvis:jarvis_updater python -m unittest discover -s tests -q (potřebné závislosti z projektu).
+- Release: python scripts/check_manifest.py; git diff --check.
+- Nepouštěj stále znovu stejné kompletní kontroly bez změny. Čtení nezávislých údajů dávkuj. Opakování závislých mutací neparalelizuj.
+- Čekání na úlohu nesmí blokovat krátkou pravdivou informaci o práci. Neposílej prázdné sliby „už skoro“.
+- „Hotovo“ znamená konkrétní ověřenou funkci. Akustické rozpoznání hlasu, spuštění TV kanálu a fyzické výsledky nepředstírej pouze podle přijetí příkazu.
+
+## Aktuální postup od3.12.0
+
+Používej storage a backup_retention před údržbou, deployment_acquire/prepare/apply/read/release pro související změny, explicitní CAS rollback pro soubory a heating_settings pro běžné parametry bez restartu. Testovací simulace a kontejnerové smoke testy běží v GitHub Check Jarvis. Detailní kontrakt: docs/OPERATIONS-3.12.md.
+
+## Laboratoř a archiv vydání
+
+Aktuální provozní postup: docs/LAB-AND-RELEASES.md. Laboratoř laborator.odladeni.cz používá pouze větev lab/plesk-bootstrap-20261029; produkce feat/jarvis-addon. Publikace do Gitu, nasazení souborů a aktivní runtime jsou oddělené důkazy. Zálohy domácnosti nikdy nepatří do veřejného archivu. Plesk webhook a živá publikace ověřeny commitem30348df692f92e6833a926254eba3a9e933669f7 / run40891692482. Privátní HA zálohy musí podle vlastníka na vlastní server. Cílový SFTP účet a soukromá složka dosud nejsou připojené; tato mezera trvá. Podrobnosti v LAB-AND-RELEASES.md.
+
+
+## Hlasový systém — aktualizace 1.11.2026
+
+První živé čtení: jarvis_workspace/voice-system-manifest.json přes jarvis.admin/file. Soubor se sám obnovuje spolu s hlasovým reportem, počítá hashe skutečně instalovaných Python zdrojů a uchovává omezenou historii změn. Obsahuje podporované postupy, stav oprávnění, oddělené učení i skutečná omezení. Nenahrazuje čerstvou kontrolu firmwaru a fyzické testy.
+
+Zdroj managed_sources/speaker_identity (v1.1.0) vyžaduje explicitní jednorázovou autorizaci existujícího profilu; opravnění je navázané na stabilní voice_id. Profil stejného jména po smazání práva nezíská. Hlasová integrace není přihlášení do HA. Příkazy zhlasování LLM nesmějí obejít místní ověřenou cestu. Světla jsou podle mikrofonu, zamkni/odemkni výhradně lock.vstup_zamek_vchod.
+
+Učení: delší kvalitní rozpoznané úseky mohou vytvořit pouze oddělené kandidáty. Originální kotvy se nemění. Chybí-li ověřené nepřehrávané vzorky nebo nezávislé pozitivní a negativní testy, povyšování profilu zůstává vypnuté. Hlasově Vylepši můj hlasový profil zahájí pět zvláštních pozitivních ověřovacích vět; bez cizích hlasů a replay testů tím nevzniká tvrzení o nezaměnitelnosti.
+
+Výslovnost: Nauč se slovo X znamená Y vyžádá druhé výslovné Potvrzuji slovo X znamená Y; pouze pro autorizovaný stabilní profil a čtyři povolené kanonické povely. Slovník nikdy nemění oprávnění.
+
+Výcvik kandidátů Aničko/zamkni/odemkni: training/anicko-20261101. Modely nejsou automaticky nahrány do firmwaru. Krátké přímé detekce zůstávají blokované, dokud nemáme ověřený zvukový úsek pro identitu; neodstraňovat ochranu jen kvůli funkčnímu akustickému modelu.
+
+
+### Hlas 1.1.0 — ověřené nasazení 1.11.2026
+Čti také jarvis_workspace/voice-deployment-receipt.json. Původní job voice11-apply-20261101 skončil runtime_check_failed při startu, ale následné čerstvé ověření potvrdilo 28/28 souborů, report runtime1.1.0/ready, native_intent_guard=true, jeden autorizovaný profil a zachované kotvy. Žádný zápis nebyl opakován. Neopakovat apply pod novým klíčem. Manifest jarvis_workspace/voice-system-manifest.json se sám obnovuje; jeho hashe popisují soubory na disku, nikoli nezávislý důkaz aktivace. Skutečná domácí přesnost a wake modely zůstávají neověřené; detailní meze a výcvikový běh jsou v účtence.
+
+
+## Energetika — povinný rozcestník (4.11.2026)
+Před prací s baterií, historií grafu nebo spoty přečti [ENERGY-DATA-MAP.md](ENERGY-DATA-MAP.md). Obsahuje přesné entity a znaménka, REST/WS zdroje grafu, soukromý 10s archiv a odesílací frontu, dohledaný model Felicity FLA48460-EU, výrobní limity a ověřený průběh ručního testu. Průběžně doplňuj nové údaje s datem a důkazem. Chybějící historická operace v konektoru neznamená, že historie neexistuje. Historické maximum nabíjení ze soláru ještě není vypočtené; nejdřív načti skutečné body a ověř současný tok ze sítě. Hodinový průměr není špička, nastavený proud není hodnota fyzické pojistky.
+
+
+## Backup destination correction — 2026-11-04
+This supersedes earlier statements that no private server destination is connected: live HA inventory confirms the WebDAV integration for jarvis-backup@laborator.odladeni.cz is loaded. SFTP was not the final connection. Delivery of individual administration backups to that server is not verified; current admin backups are created through Supervisor and leave local Green copies. Automatic backup last-success sensor is 2026-10-29, latest attempt 2026-11-04. Investigate upload health before asserting recovery coverage. See docs/evidence/2026-11-04-cleanup-activation.md for verified cleanup and activation evidence.
+
+
+## Prepared energy refactor0.10.0 — 2026-11-06
+
+Source-only candidate on `refactor/ha-control-cleanup-20261106`, based on public060501cd69451f9047cb0baac182dc6c463a591c/energy0.9.3. Not installed; no Green source/config writes, restarts or physical tests during this preparation. See `docs/ENERGY-REFACTOR-0.10.0.md` and `docs/releases/energy-0.10.0-candidate.json`. Installation needs the owner's next explicit command. The private live work manifest remains authoritative for current runtime. Existing recovery/commissioning notes below are historical, not instructions to initiate automatic native tests.
+
+
+## Energy1.0.2 reconciliation — installation authorized
+
+Preflight found concurrently installed1.0.1. Reconciled prepared0.10.0 source with newer20W bias admission, completed-day identities and history API contracts.749 Python tests/20 existing PHP skips/no failures. Read docs/ENERGY-REFACTOR-1.0.2.md and docs/releases/energy-1.0.2-candidate.json. This source note is not an active runtime receipt; consult the private deployment work manifest for actual installation state.

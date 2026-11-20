@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "scope": "owner-attended wake threshold comparison; not an acoustic success claim",
+  "baseline": {
+    "firmware_config_revision": "89dab3881e915eab70e46d23ea9e8e1040944ae42444b60058e4e8da06209b3d",
+    "jarvis_cutoff": 0.98,
+    "device_hash": "1312060e",
+    "explicit_jarvis_runs_observed_after_terminal_recovery": 0,
+    "repeated_suppressed_light_hints": 3
+  },
+  "microphone_test": {
+    "pipeline": "Zaměřený místní asistent",
+    "button_started": true,
+    "run_started_at": "2026-11-01T20:28:34.458383+00:00",
+    "run_ended_at": "2026-11-01T20:28:44.498564+00:00",
+    "duration_s": 6.03,
+    "peak_dbfs": -1.43,
+    "rms_dbfs": -15.31,
+    "clipping_percent": 0,
+    "native_speech_detected": true,
+    "outcome": "stt-no-text-recognized",
+    "outcome_scope": "Speech-to-Phrase limited command grammar did not recognize the deliberately non-command test phrase. This does not establish missing microphone input.",
+    "limits": "Level metrics do not establish intelligibility, user/TV SNR or wake-model scores. Raw recording remains private on Green."
+  },
+  "hypothesis": "The 0.98 private Jarvis cutoff rejects owner activation in the present room. Compare the previously deployed 0.8 setting under the same television conditions before claiming improvement.",
+  "candidate": {
+    "jarvis_cutoff": 0.8,
+    "configuration_revision": "300e51323520226c1dc481243ec8984c6e03ad9bc6e4ff4e63ae8f70d08c1494",
+    "matches_previous_configuration_revision": true,
+    "model_sha256": "8e2b5d19041e7f865e0c7a7c3078732b017dee824484971a9e606b2ec1d6056c",
+    "model_weights_changed": false,
+    "generic_Hey_Jarvis_secondary_enabled": false
+  },
+  "operations": {
+    "lease": "wake-calibration-lease-acquire",
+    "tune": "wake-calibration-cutoff-080",
+    "compile": "wake-calibration-compile-080",
+    "compile_native_job": "752cd28ca5a3",
+    "compile_state": "verified",
+    "compile_finished_at": "2026-11-01T20:35:22.208831+00:00",
+    "install": "wake-calibration-install-080",
+    "install_state": "verified",
+    "backup": "4136623a",
+    "install_finished_at": "2026-11-01T20:38:47.421442+00:00",
+    "activation_performed": true,
+    "acoustic_test_performed": false,
+    "compile_chain": "f70d90a13cf3",
+    "upload_job": "f7dfa7f028ec",
+    "device": {
+      "configuration": "home-assistant-voice-0a8bde.yaml",
+      "deployed_config_hash": "cbdb20ba",
+      "expected_config_hash": "cbdb20ba",
+      "status": "online"
+    },
+    "lease_release_job": "wake-calibration-lease-release"
+  },
+  "cleanup": {
+    "authorized_policy": "Previously accepted preserve newest3 and protected; explicit CAS deletion of one old unprotected candidate only.",
+    "deleted": "15a42412",
+    "job": "wake-calibration-old-backup-delete",
+    "state": "verified",
+    "free_gib_after": 2.6
+  },
+  "limitations": [
+    "No audio or private wake weights published",
+    "Need actual owner Jarvis/Jarvisi response plus TV-only false-trigger observation",
+    "No new ASR, intent or HomePod code change",
+    "No Core/OS version update"
+  ],
+  "live_state": {
+    "captured_at": "2026-11-01T20:39:21.537342+00:00",
+    "microphone": "off",
+    "satellite": "idle",
+    "primary_pipeline": "Jarvis",
+    "primary_wake": "Jarvis",
+    "secondary_wake": "no_wake_word",
+    "backend_direct_adapter_version": 4,
+    "capture_expires_at": "2026-11-01T20:41:39.292511+00:00"
+  },
+  "acceptance": "Awaiting owner Jarvis/Jarvisi test after the confirmed OTA. No explicit post-upload activation observed at 2026-11-01T20:39:18.250757+00:00."
+}

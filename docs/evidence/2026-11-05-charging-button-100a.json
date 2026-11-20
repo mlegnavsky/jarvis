@@ -1,0 +1,91 @@
+{
+  "source_commit": "67f214047774f1243d9759867befa19bdde4cb9a",
+  "deployment": {
+    "id": "charge100-apply-20261105",
+    "operation": "deployment_apply",
+    "state": "verified",
+    "result": {
+      "activation": "core_restart",
+      "checks": [
+        {
+          "entity_id": "sensor.jarvis_spot_control",
+          "state": "idle",
+          "version": "0.3.2"
+        }
+      ],
+      "files": [
+        {
+          "before_revision": "c9d030dd7b6481a2d330f93aa9fdba5e0a89b9ff01ac848a1c709bd44f27da50",
+          "new_lines": 110,
+          "new_sha256": "4808c181b20f4d190cb2cf2516ec75dc9f222ba965b93e82ab1e55610dd19cec",
+          "old_lines": 110,
+          "path": "custom_components/jarvis_spot_control/engine.py"
+        },
+        {
+          "before_revision": "746bbce411362415672bfe3092fe22c0bd63d272d897b14f2ab9ee9a8c359d2c",
+          "new_lines": 80,
+          "new_sha256": "51ec3432911e4f957d43ba6a431f94aa2ae426584cbae694e26d524802f06058",
+          "old_lines": 80,
+          "path": "custom_components/jarvis_spot_control/__init__.py"
+        },
+        {
+          "before_revision": "ccaa8971ed7c377eb71eb4bc117d320209b99a7703fdb2636b92f9f754e3fc6a",
+          "new_lines": 1,
+          "new_sha256": "339fc237be06939949ee64ea2ef23f39cb24b9ea30911a2cd28f1c75917c6100",
+          "old_lines": 1,
+          "path": "custom_components/jarvis_spot_control/manifest.json"
+        }
+      ],
+      "id": "charge100-prepare-20261105",
+      "phase": "active_verified",
+      "receipt": {
+        "checks": [
+          {
+            "entity_id": "sensor.jarvis_spot_control",
+            "state": "idle",
+            "verified": true,
+            "version": "0.3.2"
+          }
+        ],
+        "core_version": "2026.6.4"
+      },
+      "restart_required": true,
+      "revision": "e6f995bf2c6c24059ca19691421007044b146d32082e99f240f7b48b50b6d655",
+      "source_commit": "67f214047774f1243d9759867befa19bdde4cb9a",
+      "verified": true,
+      "versions": {
+        "files_written": true,
+        "runtime_verified": true,
+        "source_commit": "67f214047774f1243d9759867befa19bdde4cb9a"
+      }
+    },
+    "backup_slug": "ee41e116",
+    "request_id": "charge100-apply-20261105",
+    "created_at": "2026-11-05T05:29:46.393758+00:00",
+    "started_at": "2026-11-05T05:29:46.409140+00:00",
+    "finished_at": "2026-11-05T05:34:29.546786+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "readback_three_files_exact": true,
+  "grid_current_a": 100,
+  "inverter_max_charging_a": 100,
+  "physical_charge_test_started": false,
+  "tests": {
+    "charging": 14,
+    "charging_result": "pass",
+    "javascript_card": "pass",
+    "manifest": "pass",
+    "diff": "pass",
+    "local_full": "263 tests: 1 SDK import error, 20 skipped; test_official_sdk_can_initialize_list_and_call cannot import ClientSession from mcp.client",
+    "ci_run": 41974263983,
+    "ci_tests_job": "success",
+    "ci_failure": "energy-chart Chromium installation before browser tests",
+    "other_ci_jobs": "containers, firmware fixtures, backup-dav passed"
+  }
+}

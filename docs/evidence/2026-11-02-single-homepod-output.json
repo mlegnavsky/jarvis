@@ -1,0 +1,298 @@
+{
+  "source_commit": "660a2c92c38483ecd5bcbe08ddda1ededdb5ab1e",
+  "verified_at": "2026-11-02T19:44:05.362399+00:00",
+  "root_cause": "Active local-duplex output copied paused AppleTV shared volume0 and skipped generated speech; fixed operator test at shared50 was owner-confirmed audible.",
+  "runtime": {
+    "version": "1.2.0",
+    "status": "configured",
+    "volume_policy": "homepod_raop_only_tv_pause_separate",
+    "self_test": {
+      "status": "passed",
+      "scope": "native_VAD_and_TTS_reference_no_playback",
+      "native_vad_probability": 0.00439656525850296,
+      "native_vad_warmup_frames": 77,
+      "reference_seconds": 2.8316875,
+      "reference_signal": {
+        "duration_s": 2.832,
+        "silent": false,
+        "peak_dbfs": -9.07,
+        "rms_dbfs": -23.71
+      },
+      "microphone_opened": false,
+      "audible_playback": false,
+      "source_revision": "951d2e63c3ba748525513692bbefeade93784d11f178d75ff5b38af1a687e99e",
+      "pipeline_signature": "7e4a5a90ac21fdfa8394d3fad1cc682875dec1bf74b5a6baab85ac471fdf5f91"
+    },
+    "output_test": {
+      "status": "passed",
+      "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+      "microphone_opened": false,
+      "native_playback": {
+        "owned": false,
+        "started": 1,
+        "completed": 1,
+        "skipped": 0,
+        "stopped": 0,
+        "echo_frames": 0,
+        "overlap_frames": 0,
+        "discarded": 0,
+        "last_stop_s": null,
+        "last_reference_duration_s": 2.8316875,
+        "last_error": null,
+        "text_echo_suppressed": 0,
+        "target": "media_player.homepod_obyvak_homepod_obyvak",
+        "transport": "native_raop_local_file",
+        "volume_decision": {
+          "volume": 0.45,
+          "muted": false,
+          "source": "raop",
+          "busy": false
+        },
+        "negotiated_latency_s": 1.5,
+        "pending_resource_cleanup": 0
+      },
+      "audibility_confirmed": false
+    },
+    "source_revision": "951d2e63c3ba748525513692bbefeade93784d11f178d75ff5b38af1a687e99e"
+  },
+  "cleanup": {
+    "source_lines_removed": 1277,
+    "source_lines_added": 39,
+    "legacy_runtime_removed": [
+      {
+        "path": "custom_components/jarvis_homepod_output/__init__.py",
+        "state": "verified",
+        "result": {
+          "activation_performed": false,
+          "backup_id": "audio-cleanup-retire-0-20261102",
+          "path": "custom_components/jarvis_homepod_output/__init__.py",
+          "revision": "missing",
+          "verified": true
+        }
+      },
+      {
+        "path": "custom_components/jarvis_homepod_output/interrupt.py",
+        "state": "verified",
+        "result": {
+          "activation_performed": false,
+          "backup_id": "audio-cleanup-retire-1-20261102",
+          "path": "custom_components/jarvis_homepod_output/interrupt.py",
+          "revision": "missing",
+          "verified": true
+        }
+      },
+      {
+        "path": "custom_components/jarvis_homepod_output/manifest.json",
+        "state": "verified",
+        "result": {
+          "activation_performed": false,
+          "backup_id": "audio-cleanup-retire-2-20261102",
+          "path": "custom_components/jarvis_homepod_output/manifest.json",
+          "revision": "missing",
+          "verified": true
+        }
+      },
+      {
+        "path": "custom_components/jarvis_homepod_output/routing.py",
+        "state": "verified",
+        "result": {
+          "activation_performed": false,
+          "backup_id": "audio-cleanup-retire-3-20261102",
+          "path": "custom_components/jarvis_homepod_output/routing.py",
+          "revision": "missing",
+          "verified": true
+        }
+      },
+      {
+        "path": "custom_components/jarvis_homepod_output/tv_session.py",
+        "state": "verified",
+        "result": {
+          "activation_performed": false,
+          "backup_id": "audio-cleanup-retire-4-20261102",
+          "path": "custom_components/jarvis_homepod_output/tv_session.py",
+          "revision": "missing",
+          "verified": true
+        }
+      }
+    ],
+    "legacy_report": "retired; replaced_by local_duplex/report.json",
+    "active_report": "jarvis_workspace/local_duplex/report.json",
+    "wake_slots_preserved": {
+      "select.home_assistant_voice_0a8bde_probouzeci_slovo": "Jarvis",
+      "select.home_assistant_voice_0a8bde_probouzeci_slovo_2": "Hey Jarvis"
+    }
+  },
+  "checks": {
+    "local_duplex": 129,
+    "speaker": 154,
+    "companion": 76,
+    "diagnostics": 30,
+    "addon": {
+      "run": 242,
+      "skipped": 20,
+      "passed": 222
+    },
+    "initial_environment_failures": "Missing Jinja2/MCP; resolved by installing pinned requirements-test and full suite reran green.",
+    "independent_review": "No Important/Critical findings; reviewer reran129active tests",
+    "pr_ci": 41511641307,
+    "push_ci": "41511629075",
+    "laboratory": {
+      "format": "jarvis-release-v1",
+      "source_commit": "660a2c92c38483ecd5bcbe08ddda1ededdb5ab1e",
+      "packages": [
+        {
+          "app": "jarvis",
+          "version": "3.12.2",
+          "source_commit": "660a2c92c38483ecd5bcbe08ddda1ededdb5ab1e",
+          "file": "jarvis-3.12.2-660a2c92c38483ecd5bcbe08ddda1ededdb5ab1e.zip",
+          "sha256": "afc0a4dceeadc888ce50fc6ec957382d9940f187f09196918e425f626a3ff026",
+          "bytes": 66120,
+          "kind": "source_package_not_built_image"
+        },
+        {
+          "app": "jarvis_updater",
+          "version": "1.0.0",
+          "source_commit": "660a2c92c38483ecd5bcbe08ddda1ededdb5ab1e",
+          "file": "jarvis_updater-1.0.0-660a2c92c38483ecd5bcbe08ddda1ededdb5ab1e.zip",
+          "sha256": "f2438acebbf3428bb78c1296f4ed4ad2abf8dbaf8d97b610cec37d4e4edaae16",
+          "bytes": 19378,
+          "kind": "source_package_not_built_image"
+        }
+      ],
+      "verified_at": "2026-11-02T19:40:02.772679+00:00",
+      "workflow_run": "41511629075",
+      "checks": "tests_and_container_builds_passed"
+    },
+    "postboot": [
+      {
+        "path": "custom_components/jarvis_local_duplex/__init__.py",
+        "exact": true,
+        "revision": "88235e85e4cb8f059cf5f4ac346937453fe03bd5c6fa2e5cc989719a6c3b24f2"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/homepod_io.py",
+        "exact": true,
+        "revision": "0b5318b8b46444edd6e29267651e766ba4145524d884905032dd040f501e8a8f"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/manifest.json",
+        "exact": true,
+        "revision": "244e2953ce104dc83acf534d96dfa0064d7a6431402aedff98c602006582b93b"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.py",
+        "exact": true,
+        "revision": "02b9bd50bdcbf9d5f17e8696b8e95e7df75d66f33602014439504d1a6961cd60"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/tv_session.py",
+        "exact": true,
+        "revision": "41dc57f70cbf511932b81c763f5f9943a5fb64a05f365a397e1828662b4f1d7b"
+      }
+    ]
+  },
+  "deployment": {
+    "job": {
+      "id": "audio-cleanup-apply-20261102",
+      "operation": "deployment_apply",
+      "state": "verified",
+      "result": {
+        "activation": "core_restart",
+        "checks": [
+          {
+            "entity_id": "sensor.jarvis_prerusitelny_hlas",
+            "state": "configured",
+            "version": "1.2.0"
+          }
+        ],
+        "files": [
+          {
+            "before_revision": "288b95f8ffbfe6fa0be7ccf9db388a428047185786d54d89b32cec34d21591fb",
+            "new_lines": 412,
+            "new_sha256": "88235e85e4cb8f059cf5f4ac346937453fe03bd5c6fa2e5cc989719a6c3b24f2",
+            "old_lines": 417,
+            "path": "custom_components/jarvis_local_duplex/__init__.py"
+          },
+          {
+            "before_revision": "d5955a0d36bb40a7f455054a3e4f323c8559251ab218acbf11c37acd1c9a85b8",
+            "new_lines": 164,
+            "new_sha256": "0b5318b8b46444edd6e29267651e766ba4145524d884905032dd040f501e8a8f",
+            "old_lines": 167,
+            "path": "custom_components/jarvis_local_duplex/homepod_io.py"
+          },
+          {
+            "before_revision": "c66cfafec4856be91d95c9f8e33efe665e7b8f8ca73198a4e52e94e587db8781",
+            "new_lines": 1,
+            "new_sha256": "244e2953ce104dc83acf534d96dfa0064d7a6431402aedff98c602006582b93b",
+            "old_lines": 1,
+            "path": "custom_components/jarvis_local_duplex/manifest.json"
+          },
+          {
+            "before_revision": "6952cfed9184fbc5df93a045549eb790bb027bbfb85d656d3da30eb950b59efb",
+            "new_lines": 47,
+            "new_sha256": "02b9bd50bdcbf9d5f17e8696b8e95e7df75d66f33602014439504d1a6961cd60",
+            "old_lines": 47,
+            "path": "custom_components/jarvis_speaker_identity/manifest.py"
+          },
+          {
+            "before_revision": "missing",
+            "new_lines": 77,
+            "new_sha256": "41dc57f70cbf511932b81c763f5f9943a5fb64a05f365a397e1828662b4f1d7b",
+            "old_lines": 0,
+            "path": "custom_components/jarvis_local_duplex/tv_session.py"
+          },
+          {
+            "before_revision": "3e41dcf0dcbbb9a85a8293f4f8de5d97e3237f9862a083489ab862b24db092aa",
+            "new_lines": 1,
+            "new_sha256": "98736a67eaed556b633900926a9953ffc83ec2fbb3d45e07b972f9aa411d7735",
+            "old_lines": 1,
+            "path": "jarvis_workspace/local_duplex/control.json"
+          }
+        ],
+        "id": "audio-cleanup-prepare-20261102",
+        "phase": "active_verified",
+        "receipt": {
+          "checks": [
+            {
+              "entity_id": "sensor.jarvis_prerusitelny_hlas",
+              "state": "configured",
+              "verified": true,
+              "version": "1.2.0"
+            }
+          ],
+          "core_version": "2026.6.4"
+        },
+        "restart_required": true,
+        "revision": "f336503d1e4ad83e6b7dfb4e838568967f12c39a38001d6ef2dd68736f00a88c",
+        "source_commit": "660a2c92c38483ecd5bcbe08ddda1ededdb5ab1e",
+        "verified": true,
+        "versions": {
+          "files_written": true,
+          "runtime_verified": true,
+          "source_commit": "660a2c92c38483ecd5bcbe08ddda1ededdb5ab1e"
+        }
+      },
+      "backup_slug": "0989c12e",
+      "request_id": "audio-cleanup-apply-20261102",
+      "created_at": "2026-11-02T19:38:01.649310+00:00",
+      "started_at": "2026-11-02T19:38:01.702766+00:00",
+      "finished_at": "2026-11-02T19:42:16.018034+00:00",
+      "summary": {
+        "changed_fields": [],
+        "expected_version": null,
+        "operation": "deployment_apply",
+        "restore_from": null,
+        "target": null
+      }
+    },
+    "lease_released": true,
+    "old_backup_deleted": "85f97361",
+    "latest_three_protected_preserved": true
+  },
+  "limits": {
+    "postfix_native_output_audibility": "software playback completed; owner confirmed pre-fix control test, post-fix acoustic confirmation pending",
+    "tv_zero_effect": "unit regression proves TV0/mute cannot override HomePod; postboot output verified sourceRAOP",
+    "wake_accuracy": "not changed or claimed fixed",
+    "no_extra_provider_firmware_core_upgrade": true
+  }
+}

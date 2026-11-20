@@ -1,0 +1,8 @@
+{
+  "local_only": true,
+  "reason": "psutil cannot find own PID in restricted /proc; CMake helper uses its documented Linux os.getppid fallback",
+  "path_suffix": "idf_component_manager/prepare_components/cmake_pid.py",
+  "before_sha256": "f626ae76d90bdd22c4c75fef5bd10b6d138c49ca4ea390953b8967bd0cf74132",
+  "after_sha256": "e41106e519d557bea784556124adcec648750d36a501abf93de524bd590891fd",
+  "runtime_firmware_modified_by_workaround": false
+}

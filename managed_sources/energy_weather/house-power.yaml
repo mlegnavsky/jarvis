@@ -1,0 +1,40 @@
+triggers:
+  - trigger: state
+    entity_id:
+      - select.inverter_work_mode
+      - sensor.inverter_load_power
+      - sensor.inverter_power
+      - sensor.inverter_external_power
+  - trigger: time_pattern
+    seconds: "/5"
+sensor:
+  - name: Jarvis spotreba domu
+    unique_id: jarvis_spotreba_domu
+    icon: mdi:home-lightning-bolt
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    availability: >-
+      {% set selling = is_state('select.inverter_work_mode', 'Export First') %}
+      {% set mode_ok = states('select.inverter_work_mode') in ['Export First', 'Zero Export To CT', 'Zero Export To Load'] %}
+      {% set ids = ['sensor.inverter_power', 'sensor.inverter_external_power'] if selling else ['sensor.inverter_load_power'] %}
+      {% set ns = namespace(ok=mode_ok, stamps=[]) %}
+      {% for id in ids %}
+        {% set s = states[id] %}
+        {% set t = as_timestamp(s.last_reported or s.last_updated, 0) %}
+        {% if not is_number(states(id)) or not (0 <= as_timestamp(now()) - t < 30) %}{% set ns.ok = false %}{% endif %}
+        {% set ns.stamps = ns.stamps + [t] %}
+      {% endfor %}
+      {% set p = (states('sensor.inverter_power')|float(0) + states('sensor.inverter_external_power')|float(0)) if selling else states('sensor.inverter_load_power')|float(0) %}
+      {{ ns.ok and (ns.stamps|max - ns.stamps|min <= 10) and 0 <= p <= 36000 }}
+    state: >-
+      {% if is_state('select.inverter_work_mode', 'Export First') %}
+        {{ (states('sensor.inverter_power')|float(0) + states('sensor.inverter_external_power')|float(0))|round(0) }}
+      {% else %}
+        {{ states('sensor.inverter_load_power')|float(0)|round(0) }}
+      {% endif %}
+    attributes:
+      measurement_method: >-
+        {{ 'ac_output_plus_external_grid' if is_state('select.inverter_work_mode', 'Export First') else 'inverter_load_register' }}
+      measurement_note: Bilance AC výkonu měniče a externího měření sítě při prodeji; v ostatních režimech spotřeba hlášená měničem. DC/AC ztráty nejsou spotřebiče.
+      native_unreliable_since: '2026-11-05T19:55:03+00:00'

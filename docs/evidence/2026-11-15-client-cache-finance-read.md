@@ -1,0 +1,9 @@
+# 15 November 2026 — stale client and blocked finance verification
+
+Owner screenshot still shows the pre-repair money reader: Nov14 0.65kWh/2.35CZK versus meter6.2kWh, with +1.20CZK representing sale minus1.15CZK purchase. No actual final Nov14 revenue was obtained.
+
+Source7604480c7f723d47feefd54c0e8a4473e6960883 introduces immutable finance-20261115b HTML/JS addresses and an append-only dashboard marker. Admin fin2-static-prepare-20261115 / fin2-static-apply-20261115 verified file_written; all five files exactly read back. No Core restart or control changes. New iframe /local/jarvis-spot-hub-finance-20261115b.html. Root dashboard262023bytes is near the256KiB write cap; do not append large blocks.
+
+Jarvis3.12.12 source adds a strict date-scoped energy_finance read of one already-materialized private archive row through a fixed Core state GET, returning only whitelisted numeric fields.55 targeted Admin/MCP/updater/date/cache tests pass with pinned mcp2.3.0; manifest/diff checks pass. Independent review found no important issue. This management version is NOT installed: runtime3.12.11 remains active.
+
+Live Supervisor logs explicitly reject GitRepo.pull/store reload for all repositories due disk_free1.2GiB. No update was attempted after identifying this block; no disk protection bypass. Current backups inventory contains only three protected tiny backups, no safe useful deletion candidate. Inspected share/media/local-addon inventories also have no large expendable candidate. Nothing deleted, unprotected or purged. Need supported storage diagnosis/recovery before installing the read-only query and verifying actual Nov14 totals. Permanent Jarvis connection works; browser login is not the remedy. Refresh needed to load immutable client. Exact actual Nov14 revenue remains independently unverified.

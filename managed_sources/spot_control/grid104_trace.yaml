@@ -1,0 +1,33 @@
+id: jarvis_grid104_trace
+alias: Jarvis – dočasná diagnostika registru 104
+description: Pasivní záznam služeb Solarman a změn cíle; bez zápisů do měniče.
+initial_state: true
+triggers:
+  - trigger: event
+    event_type: call_service
+    id: service
+  - trigger: state
+    entity_id: number.inverter_zero_export_power
+    id: value
+conditions:
+  - condition: template
+    value_template: "{{ as_timestamp(now()) < 1793942881 }}"
+  - condition: template
+    value_template: >-
+      {{ trigger.id == 'value' or
+         (trigger.event.data.get('domain') == 'solarman' and 'write' in trigger.event.data.get('service', '')) or
+         (trigger.event.data.get('domain') == 'number' and trigger.event.data.get('service') == 'set_value' and 'number.inverter_zero_export_power' in (trigger.event.data.get('service_data', {}).get('entity_id', []) | string)) }}
+actions:
+  - action: system_log.write
+    data:
+      level: warning
+      logger: jarvis.grid104_trace
+      message: >-
+        {% if trigger.id == 'value' %}
+        GRID104 value {{ trigger.from_state.state if trigger.from_state else 'missing' }} -> {{ trigger.to_state.state if trigger.to_state else 'missing' }} context={{ trigger.to_state.context.id if trigger.to_state else '' }} parent={{ trigger.to_state.context.parent_id if trigger.to_state else '' }}
+        {% else %}
+        GRID104 service {{ trigger.event.data.get('domain') }}.{{ trigger.event.data.get('service') }} data={{ trigger.event.data.get('service_data') | to_json }} context={{ trigger.event.context.id }} parent={{ trigger.event.context.parent_id }}
+        {% endif %}
+mode: queued
+max: 20
+max_exceeded: silent

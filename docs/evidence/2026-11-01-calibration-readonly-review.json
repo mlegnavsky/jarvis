@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "source_commit": "acae1885687c1cf0b6b7cbf3e1364742245dc1ce",
+  "scope": "read_only_candidate_rejected_no_profile_activation",
+  "deployment_job": {
+    "id": "review-apply-20261101",
+    "operation": "deployment_apply",
+    "state": "unknown",
+    "result": {
+      "error": "admin_upstream_outcome_unknown",
+      "retry_with_new_key": false
+    },
+    "backup_slug": "22ac13c5",
+    "request_id": "review-apply-20261101",
+    "created_at": "2026-11-01T08:50:25.263098+00:00",
+    "started_at": "2026-11-01T08:50:25.275038+00:00",
+    "finished_at": "2026-11-01T08:54:25.693398+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "runtime": {
+    "version": "1.1.4",
+    "status": "ready",
+    "updated_at": "2026-11-01T08:54:32.996619+00:00",
+    "candidate_status": "rejected",
+    "baseline_owner_accepts": 0,
+    "candidate_owner_accepts": 3,
+    "candidate_other_accepts": 0,
+    "samples_per_holdout_group": 5,
+    "live_profile_changed": false,
+    "threshold": 0.75,
+    "margin": 0.12,
+    "window_validation": "not_performed",
+    "replay_detection": "not_installed"
+  },
+  "source_readbacks": [
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.json",
+      "match": true,
+      "revision": "7b389a73c697a0737df4c487df5a5fa8a49970b71f13735a20207b8a06bf896c"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/manifest.json",
+      "match": true,
+      "revision": "7b389a73c697a0737df4c487df5a5fa8a49970b71f13735a20207b8a06bf896c"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/__init__.py",
+      "match": true,
+      "revision": "e62490b2e8b5b2d17e5fbdb16430374db3dfa7a38b57103f0291466e03aa0f9d"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/__init__.py",
+      "match": true,
+      "revision": "e62490b2e8b5b2d17e5fbdb16430374db3dfa7a38b57103f0291466e03aa0f9d"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/manifest.py",
+      "match": true,
+      "revision": "ab37287fcc778366b83f7a276b3feb667b7b2b496c4220d5d85760f9d9745b23"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.py",
+      "match": true,
+      "revision": "ab37287fcc778366b83f7a276b3feb667b7b2b496c4220d5d85760f9d9745b23"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/review.py",
+      "match": true,
+      "revision": "8eb1530a54eba95e4ea95edf5de7ba888ae85f25d3935b3c10b855e1f298c0c1"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/review.py",
+      "match": true,
+      "revision": "8eb1530a54eba95e4ea95edf5de7ba888ae85f25d3935b3c10b855e1f298c0c1"
+    }
+  ],
+  "tests": {
+    "speaker": 77,
+    "homepod": 44,
+    "companion": 49,
+    "addon": 239,
+    "addon_skipped": 20,
+    "review": "Mixed-dimension bug fixed and retested; no remaining Important findings",
+    "ci": [
+      {
+        "name": "tests",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "energy-chart",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "containers (jarvis_updater)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "backup-dav",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "containers (jarvis)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "publish-laboratory",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "ci_run": 41290450787
+  },
+  "cleanup": {
+    "deleted": "29a61208",
+    "state": "verified"
+  },
+  "next_requirement": "Improve template/matching proposal without reusing validation as training; current fixed candidate fails5of5 acceptance criterion; no automatic promotion or threshold relaxation."
+}

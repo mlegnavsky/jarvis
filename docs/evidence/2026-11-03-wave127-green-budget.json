@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "status": "native_diagnostic_budget_exhausted_not_complete",
+  "version": "1.2.7",
+  "source_commit": "8e173ad7da1bed740ca3f92da941b024b99d76b9",
+  "runtime_source": "6ff5306e219145c8431e8cd2863a06b161da021472c03da3a0881dae88ccad4a",
+  "activation": {
+    "id": "wave127-apply-20261103",
+    "operation": "deployment_apply",
+    "state": "verified",
+    "result": {
+      "activation": "core_restart",
+      "checks": [
+        {
+          "entity_id": "sensor.jarvis_prerusitelny_hlas",
+          "state": "configured",
+          "version": "1.2.7"
+        }
+      ],
+      "files": [
+        {
+          "before_revision": "1f99a9b16d92a2807ae88bfef195fab840f997bb1f595cbd492c1272b4ea129d",
+          "new_lines": 475,
+          "new_sha256": "d9f9ea3ea52eafa38f1c1a168094fba4c25b155068c800864e93ccc0d8d0d328",
+          "old_lines": 466,
+          "path": "custom_components/jarvis_local_duplex/__init__.py"
+        },
+        {
+          "before_revision": "8ef575644b6eeb44a0872778fe3da9f8b70fc8631927afa7f6f4e62995675848",
+          "new_lines": 1,
+          "new_sha256": "e0cb4390fc7defc23eb86cca9ef69829080ec53fd8aa207fa9ef3b19645ad60e",
+          "old_lines": 1,
+          "path": "custom_components/jarvis_local_duplex/manifest.json"
+        },
+        {
+          "before_revision": "64bc37f2aa4f0ed697ee15661f20ed11b1f0ef86e4a198b2e2a90a6d9802653b",
+          "new_lines": 117,
+          "new_sha256": "cf23f25cf34bb1dc1031e1dab4cab08269d7a326ea1e9e62e0704c613e9c79e9",
+          "old_lines": 116,
+          "path": "custom_components/jarvis_local_duplex/segmenter.py"
+        },
+        {
+          "before_revision": "2e85c79d38ba85be3682469eea64de21999d15828cb6443cc3e26c5f5dc17691",
+          "new_lines": 160,
+          "new_sha256": "fc34f6943a7b20e087db5e78f75c4e768cff4f9c4165119092b55bc7af82dd24",
+          "old_lines": 114,
+          "path": "custom_components/jarvis_local_duplex/playback_observer.py"
+        },
+        {
+          "before_revision": "missing",
+          "new_lines": 70,
+          "new_sha256": "fc9b7e707097db69421ca4e9facb597e5e7d0e305d2fa08492ab4b4686bc5d8d",
+          "old_lines": 0,
+          "path": "custom_components/jarvis_local_duplex/waveform_observer.py"
+        },
+        {
+          "before_revision": "missing",
+          "new_lines": 48,
+          "new_sha256": "868d5b61b210731064e56bf10279fc2114d2ad87671f683be3cacb7cdfb78ec5",
+          "old_lines": 0,
+          "path": "jarvis_workspace/local_duplex/waveform-observation-receipt.json"
+        }
+      ],
+      "id": "wave127-prepare-20261103",
+      "phase": "active_verified",
+      "receipt": {
+        "checks": [
+          {
+            "entity_id": "sensor.jarvis_prerusitelny_hlas",
+            "state": "configured",
+            "verified": true,
+            "version": "1.2.7"
+          }
+        ],
+        "core_version": "2026.6.4"
+      },
+      "restart_required": true,
+      "revision": "50384624a8d09b4b8972f7fb8a494f9b97108252893c4ea493b6fa6d7f136d82",
+      "source_commit": "8e173ad7da1bed740ca3f92da941b024b99d76b9",
+      "verified": true,
+      "versions": {
+        "files_written": true,
+        "runtime_verified": true,
+        "source_commit": "8e173ad7da1bed740ca3f92da941b024b99d76b9"
+      }
+    },
+    "backup_slug": "cf7385ba",
+    "request_id": "wave127-apply-20261103",
+    "created_at": "2026-11-03T05:11:53.733050+00:00",
+    "started_at": "2026-11-03T05:11:53.745202+00:00",
+    "finished_at": "2026-11-03T05:16:12.613449+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "native_probe": {
+    "status": "passed",
+    "scope": "native_VAD_and_TTS_reference_no_playback",
+    "native_vad_probability": 0.00439656525850296,
+    "native_vad_warmup_frames": 77,
+    "reference_seconds": 2.8316875,
+    "reference_signal": {
+      "duration_s": 2.832,
+      "silent": false,
+      "peak_dbfs": -9.07,
+      "rms_dbfs": -23.71
+    },
+    "microphone_opened": false,
+    "audible_playback": false,
+    "source_revision": "6ff5306e219145c8431e8cd2863a06b161da021472c03da3a0881dae88ccad4a",
+    "pipeline_signature": "7e4a5a90ac21fdfa8394d3fad1cc682875dec1bf74b5a6baab85ac471fdf5f91",
+    "waveform_probe": {
+      "status": "work_budget_exhausted",
+      "comparisons": 288,
+      "processing_ms": 25.223,
+      "acoustic_echo_proof": false,
+      "scope": "generated_reference_only_no_microphone"
+    }
+  },
+  "recording_enabled": false,
+  "input_decisions_changed": false,
+  "next": "Use existing Core2026.6.4 audioop-lts0.2.2 findfactor kernel, preserve normalization/bounds and validate on Green; no new dependency."
+}

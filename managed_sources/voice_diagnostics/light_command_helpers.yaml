@@ -1,0 +1,8 @@
+# Standalone light commands; restore each user's choice across restarts.
+input_boolean:
+  jarvis_povel_rozsvit:
+    name: Hlasový povel rozsviť
+    icon: mdi:lightbulb-on
+  jarvis_povel_zhasni:
+    name: Hlasový povel zhasni
+    icon: mdi:lightbulb-off

@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "scope": "deployed_runtime_and_native_resolution_not_physical_acoustic_acceptance",
+  "source_commit": "b5d379ca8f65b6734515815e93acaef42e0b5c4e",
+  "branch": "feat/jarvis-addon",
+  "root_causes": [
+    "STT infinitive Rozsvítit světlo v obýváku was not recognized by the local command parser; it incurred identity/LLM/TTS instead",
+    "Existing acoustic light detections were rejected as direct-command-wake-disabled"
+  ],
+  "changes": [
+    "Leading Czech light infinitives normalized in shared command contract1.0.1",
+    "Exact installed acoustic rozsvit/zhasni detections route to existing native intent with contextual light-only grant, no STT or identity inference",
+    "Single-use target binding, exposed-room scoping, quote rejection and protected locks preserved",
+    "Preparation/validation cancellation closes native run and removes only owned context; optional identity backend outage does not block lighting"
+  ],
+  "tests": {
+    "companion": {
+      "run": 56,
+      "passed": 56
+    },
+    "speaker": {
+      "run": 152,
+      "passed": 152
+    },
+    "homepod": {
+      "run": 51,
+      "passed": 51
+    },
+    "diagnostics": {
+      "run": 21,
+      "passed": 21
+    },
+    "addon": {
+      "run": 244,
+      "passed": 224,
+      "skipped": 20
+    },
+    "native_core_methods": {
+      "core": "2026.6.4",
+      "passed": true,
+      "boundary": "actual pinned execute/validate, real coordinator/VoiceGate/room executor with simulated HA device boundary",
+      "no_stt": true,
+      "no_embedding": true,
+      "no_tts": true,
+      "physical_latency_claimed": false
+    },
+    "ci": [
+      {
+        "id": 41340241063,
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 41340235983,
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "review": "One independent review; two Important findings fixed with failing-then-passing regressions and full relevant suite"
+  },
+  "deployment": {
+    "job": "speakerfast-apply-20261101",
+    "state": "verified",
+    "phase": "active_verified",
+    "finished_at": "2026-11-01T19:14:31.591337+00:00",
+    "backup": "43f425d5",
+    "core": "2026.6.4",
+    "files": [
+      {
+        "path": "custom_components/jarvis_voice_common/__init__.py",
+        "exact": true,
+        "revision": "95c8b75ecbc9cecd77942fcf582c4ed3a4bf5449ba08d6c16ceb09719bc9224c"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_common/__init__.py",
+        "exact": true,
+        "revision": "95c8b75ecbc9cecd77942fcf582c4ed3a4bf5449ba08d6c16ceb09719bc9224c"
+      },
+      {
+        "path": "custom_components/jarvis_voice_common/manifest.json",
+        "exact": true,
+        "revision": "c4585796fb7e1aeae3f1d12439500fd38cb96d88d899a4df5a85ccce720d3515"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_common/manifest.json",
+        "exact": true,
+        "revision": "c4585796fb7e1aeae3f1d12439500fd38cb96d88d899a4df5a85ccce720d3515"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/direct_wake.py",
+        "exact": true,
+        "revision": "5e76299b98451cda5fe61a1a62e6e6419b7ed5dbc9d1016b07578ac564784115"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_diagnostics/direct_wake.py",
+        "exact": true,
+        "revision": "5e76299b98451cda5fe61a1a62e6e6419b7ed5dbc9d1016b07578ac564784115"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/manifest.json",
+        "exact": true,
+        "revision": "4d3f705bd192595055af10f03915d0419575a2cdd72468fdd28c1af90502c451"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_diagnostics/manifest.json",
+        "exact": true,
+        "revision": "4d3f705bd192595055af10f03915d0419575a2cdd72468fdd28c1af90502c451"
+      },
+      {
+        "path": "custom_components/extended_openai_conversation/room_commands.py",
+        "exact": true,
+        "revision": "97da0f7c8dff631b0803e6fa593943bf784e69d1bcb1c2981b57de70e392fb53"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/extended_openai_conversation/room_commands.py",
+        "exact": true,
+        "revision": "97da0f7c8dff631b0803e6fa593943bf784e69d1bcb1c2981b57de70e392fb53"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/release.json",
+        "exact": true,
+        "revision": "f423e2ae3510802aa5a1ca5ee2ec2f95fabf9fcfcfe9b3845a7fad4fc3d1db7b"
+      }
+    ],
+    "lease_release": "verified",
+    "removed_old_backup": "5deec9b6",
+    "cleanup_scope": "one old unprotected backup under accepted keep-latest-three-and-protected cleanup"
+  },
+  "runtime": {
+    "speaker_ready": true,
+    "speaker_adapter": "active",
+    "shared_command_contract": "1.0.1",
+    "native_intent_guard": true,
+    "direct": {
+      "status": "public_light_fast_path",
+      "version": 2,
+      "commands": 0,
+      "blocked": 0,
+      "scope": "public_local_lights_native_intent_only",
+      "identity_inference": false,
+      "speech_to_text": false,
+      "commands_count_handoffs_not_physical_confirmation": true
+    },
+    "room_cases": [
+      {
+        "text": "Rozsvítit světlo v obýváku.",
+        "service": "turn_on",
+        "entity_ids": [
+          "light.aqara_wall_switch_eu_2"
+        ],
+        "area_id": "obyvak",
+        "area_name": "Obývák",
+        "error": null
+      },
+      {
+        "text": "Zhasnout světlo",
+        "service": "turn_off",
+        "entity_ids": [
+          "light.aqara_wall_switch_eu_2"
+        ],
+        "area_id": "obyvak",
+        "area_name": "Obývák",
+        "error": null
+      }
+    ],
+    "native_probe": "passed",
+    "output": "configured",
+    "satellite": "idle",
+    "mute": "off",
+    "profile_count": 1
+  },
+  "limits": {
+    "physical_post_deploy_voice_command": "pending ordinary use",
+    "acoustic_false_triggers": "not eliminated; installed acoustic models and firmware sensitivity unchanged",
+    "long_named_room_commands": "use ordinary Jarvis wake followed by full command",
+    "arbitrary_speech_barge_in": false,
+    "no_new_recording": true
+  }
+}

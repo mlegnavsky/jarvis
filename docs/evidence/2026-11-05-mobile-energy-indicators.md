@@ -1,0 +1,5 @@
+# Mobile energy indicators
+
+The Energie view's mobile-only plain house image, four duplicate tiles and two entity rows were replaced with an exact deep copy of Domov's six-indicator picture-elements composite. Mobile visibility and full-width grid options retained. All other cards and views compare equal after YAML parsing; surrounding source bytes retained. Uses existing canonical house consumption sensor and grid-direction animations. No inverter settings, integration restart or Core restart.
+
+Source commit: 66aaed02231d7a0531ac8f59aff6a73abcf947b9. Transformation script verified against the fresh live parent YAML. Deployment file_write job mobile-energy-indicators-write-20261105 returned state verified. Fresh independent file read matched the entire expected content exactly; revision b65bfecae94a77e0ee7277ad8a229f7aa92ffafff31532a99ee3e5f655e64da5. Parent YAML mtime changes on write, invalidating the standard Lovelace YAML cache on next fetch. Phone visual acceptance has not been observed; reload the page to fetch the updated dashboard.

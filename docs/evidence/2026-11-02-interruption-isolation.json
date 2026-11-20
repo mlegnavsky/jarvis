@@ -1,0 +1,34 @@
+{
+  "scope": "temporary_operator_requested_test_not_acoustic_fix",
+  "source_commit": "acc8ec5e0ac40e48ab5e5df5945872443ec4e9ea",
+  "runtime_version": "1.2.1",
+  "owner_observation": "isolated_fixed_HomePod_speech_clear_conversation_choppy",
+  "hypothesis": "microphone_interruption_false_positive_not_yet_proven",
+  "controls": [
+    "suspend_interruptions",
+    "resume_interruptions"
+  ],
+  "suspension_seconds": 600,
+  "automatic_restore": "monotonic_deadline_or_restart",
+  "during_speech": "discard_input_no_replay",
+  "after_speech": "normal_followup",
+  "tests": {
+    "local_duplex": 132,
+    "addon_run": 242,
+    "addon_skipped": 20,
+    "manifest": "passed",
+    "diff_check": "passed",
+    "red_before_fix": "overlap_cancelled_answer_and_retained_audio"
+  },
+  "ci": {
+    "run": 41513971179,
+    "conclusion": "success"
+  },
+  "deployment_job": "interrupt-test-apply-20261102",
+  "activation": "active_verified",
+  "acoustic_result": "pending_owner_test",
+  "backup": "8c59a22b",
+  "active_source_revision": "6c834d5dacda04d0b57da7e47740b15219b41e04ca1a24040ee924b671f58ea9",
+  "postboot_probe": "passed",
+  "suspend_request": "interrupt-suspend-20261102"
+}

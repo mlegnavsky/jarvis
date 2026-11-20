@@ -1,0 +1,93 @@
+{
+  "scope": "host_software_verification_not_room_acceptance",
+  "version": "1.3.1",
+  "runtime_fingerprint": "4aaf4cb1a9b4ddf799ed061b039dce74acfc0ab8f203daae47cf3b8d61f6c2bc",
+  "review": {
+    "model": "gpt-6-astra/high",
+    "base": "92a311208733842cd73fd4aaa820c21f7833709f",
+    "head": "147c72a2b8f56ebb2f57fc83b86a703c08359142",
+    "critical": 0,
+    "important": 2,
+    "minor": 1,
+    "material_findings": [
+      {
+        "issue": "discard could rearm a delayed claim",
+        "reproduction": "pending executor claim; discard; claim completion; attach returned recorder",
+        "resolution": "arm generation invalidated by discard/close, rechecked after claim and before activation"
+      },
+      {
+        "issue": "expired queued analysis retained PCM until executor started",
+        "reproduction": "queued worker, expiry,96000 bytes still retained",
+        "resolution": "locked queued/running ownership; immediate queued wipe and worker pre-read abort check; running worker cooperative abort retained"
+      }
+    ],
+    "one_material_red_green_pass": true,
+    "deferred_minor": {
+      "issue": "audioop findfit can prefer a silent reference candidate with gain0",
+      "reason": "visible zero/low waveform correlation plus separate band branch; scalar observation only, no human gate; interpret waveform lag as unproved when correlation is low"
+    },
+    "declined_to_judge_rulings": [
+      {
+        "area": "prior streaming/codec/RAOP teardown",
+        "ruling": "accept exclusion from this diff; existing native streaming evidence retained; new prefix linkage tested"
+      },
+      {
+        "area": "unchanged echo gate, identity, model/provider/volume/firmware",
+        "ruling": "accept unchanged scope; no authority change or acoustic acceptance inferred"
+      },
+      {
+        "area": "room acoustics, source identity, physical latency",
+        "ruling": "remains OPEN; actual next normally initiated capture required; synthetic fit is not acceptance"
+      },
+      {
+        "area": "deployment/live Green/public Git",
+        "ruling": "root owns exact-tree CI/CAS/nativeproof/receipt/release; not yet completed in this host receipt"
+      }
+    ]
+  },
+  "verification": {
+    "duplex": {
+      "run": 230,
+      "skip": 0,
+      "real_miniaudio": "1.71 via existing host mirror"
+    },
+    "identity": {
+      "run": 154,
+      "skip": 0
+    },
+    "companion": {
+      "run": 83,
+      "skip": 0
+    },
+    "diagnostics": {
+      "run": 30,
+      "skip": 0
+    },
+    "addon": {
+      "run": 242,
+      "skip": 20
+    },
+    "manifest": "passed",
+    "diff": "passed"
+  },
+  "privacy": {
+    "default_off": true,
+    "arm_seconds": 120,
+    "max_mic_seconds": 30,
+    "max_retained_pcm_bytes": 3145728,
+    "expiry_seconds": 150,
+    "analysis_cooperative_seconds": 30,
+    "audio_serialized": false,
+    "audio_exported": false,
+    "no_extra_microphone": true,
+    "consumed_nonce_restart_guard": true,
+    "native_generated_probe_required_before_arm": true
+  },
+  "acceptance": {
+    "live_activated": false,
+    "capture_armed": false,
+    "mic_collected": false,
+    "stutter_fixed": false,
+    "one_second_response_proved": false
+  }
+}

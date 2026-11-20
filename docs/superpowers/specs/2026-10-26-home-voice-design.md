@@ -1,0 +1,11 @@
+# Jarvis home voice preparation
+
+Martin selected a separate home assistant named Jarvis using OpenAI, local wake word “Hey Jarvis”, and Green home control. Mobile remains ChatGPT/Anička. He authorized preparation now, with real installation when home access/hardware is available.
+
+Choose native HA Assist + Voice Preview Edition rather than a new custom audio daemon. Device microWakeWord detects locally; HA pipeline uses an open-ended STT, native OpenAI conversation agent and Czech Piper TTS. Speech-to-Phrase is not a general conversation recognizer. OpenAI STT availability on reported Core 2026.6.4 must be checked; existing Whisper is a slower fallback to test, not a promised low-latency solution. No API calls, billing activation or new hardware purchases during this preparation.
+
+Native Assist exposure is a separate authorization boundary from Jarvis MCP allowlists. Start read-only; expose one safe light for first control test. Do not claim MCP policy protects native Assist. Prompt instructions are behavior guidance, not an authorization mechanism. No access to locks/alarms/critical heating/power equipment initially.
+
+Prepare reusable HA blueprint to lower one selected playing television's volume after satellite enters listening. Only finite known volume, supported volume_set, nonmuted state and original volume above quiet threshold may change. Keep original in single active automation run through listening/processing/responding; restore only after successful wait for idle, 2-second continuous-idle debounce, still playing/nonmuted and current volume equals configured quiet volume. Latch an observed unavailable/unknown during waiting and do not restore on subsequent reconnect. On timeout/disconnection/restart do not perform delayed volume increases. Startup/off/unavailable transitions must not initiate ducking; require trigger from idle. Optional and disabled in supplied example. This does not cancel television speech acoustically or prevent its initial false wake.
+
+Deliver prompt, operator memory guidance (no automatic memory claims), setup profile, version checks, TV/wake acceptance matrix and troubleshooting. No speaker recognition or “never triggered by TV” claim. Actual Czech pronunciation, idle/continuation behavior, TV integration, HA schema and latency require hardware acceptance.

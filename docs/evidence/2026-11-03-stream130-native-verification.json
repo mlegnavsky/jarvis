@@ -1,0 +1,277 @@
+{
+  "schema": 1,
+  "status": "active_streamed_speech_verified_acoustic_failure_unresolved",
+  "version": "1.3.0",
+  "source_commit": "6b94da8f5c1475f0d8a3f1d8e6cc2e87b2483a36",
+  "reviewed_local_commit": "c55d702d3606b57dd6332397a877328e7bec0287",
+  "published_local_commit": "7aa5236592f31c1ec3b3a5ff6b91e57d43792758",
+  "source_tree": "3d6d517b1314852f48dc145be8db72a93260eff7",
+  "runtime_source_revision": "ca5a6fc62ce3ab6f9162da042b059dcf0b330ace19202e9b8e2df91e6fa2a781",
+  "core_version": "2026.6.4",
+  "purpose": "remove_complete_TTS_buffering_using_same_configured_client_and_one_RAOP_stream",
+  "acoustic_input_decisions_changed": false,
+  "raw_microphone_saved": false,
+  "microphone_opened_by_operator_tests": false,
+  "tests": {
+    "duplex": 206,
+    "identity": 154,
+    "companion": 83,
+    "diagnostics": 30,
+    "addon": 242,
+    "addon_skipped": 20
+  },
+  "review": {
+    "critical": 0,
+    "important": 0,
+    "minor": 1,
+    "independent_stream_and_homepod_tests": 28,
+    "deferred_minor": "cleanup_pending flag may remain true after late decoder completion; diagnostics only, playback unaffected"
+  },
+  "ci": [
+    {
+      "id": 41589805119,
+      "event": "pull_request",
+      "conclusion": "success"
+    },
+    {
+      "id": 41589800453,
+      "event": "push",
+      "conclusion": "success"
+    }
+  ],
+  "laboratory_job": {
+    "id": 125764115706,
+    "conclusion": "success",
+    "immutable_publication_step": "success"
+  },
+  "activation": {
+    "plan": "stream130-prepare-20261103",
+    "apply_job": "stream130-apply-20261103",
+    "state": "verified",
+    "phase": "active_verified",
+    "backup_slug": "9edc3711",
+    "finished_at": "2026-11-03T06:32:41.064561+00:00",
+    "runtime_files_exact_on_fresh_read": 4
+  },
+  "native_probe": {
+    "status": "passed",
+    "scope": "native_VAD_and_TTS_reference_no_playback",
+    "native_vad_probability": 0.00439656525850296,
+    "native_vad_warmup_frames": 77,
+    "reference_seconds": 2.8316875,
+    "reference_signal": {
+      "duration_s": 2.832,
+      "silent": false,
+      "peak_dbfs": -9.07,
+      "rms_dbfs": -23.71
+    },
+    "microphone_opened": false,
+    "audible_playback": false,
+    "source_revision": "ca5a6fc62ce3ab6f9162da042b059dcf0b330ace19202e9b8e2df91e6fa2a781",
+    "pipeline_signature": "7e4a5a90ac21fdfa8394d3fad1cc682875dec1bf74b5a6baab85ac471fdf5f91",
+    "waveform_probe": {
+      "status": "measured",
+      "comparisons": 1216,
+      "processing_ms": 19.72,
+      "kernel": "audioop_findfactor",
+      "acoustic_echo_proof": false,
+      "correlation": 1,
+      "offset_ms": 1250,
+      "peak_margin": 0.7777,
+      "alternative_count": 1195,
+      "reference_window_sample": 0,
+      "window_ms": 400,
+      "search_ms": 2000,
+      "sample_rate": 500,
+      "scope": "generated_reference_only_no_microphone"
+    }
+  },
+  "fixed_output": {
+    "status": "passed",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "microphone_opened": false,
+    "native_playback": {
+      "owned": false,
+      "started": 1,
+      "completed": 1,
+      "skipped": 0,
+      "stopped": 0,
+      "echo_frames": 0,
+      "overlap_frames": 0,
+      "discarded": 0,
+      "last_stop_s": null,
+      "last_reference_duration_s": 17.376,
+      "last_error": null,
+      "text_echo_suppressed": 0,
+      "tts_generation_ms": 2405.6,
+      "first_audio_wait_ms": 2062,
+      "transcript_guard": [],
+      "target": "media_player.homepod_obyvak_homepod_obyvak",
+      "transport": "native_raop_mp3_stream",
+      "volume_decision": {
+        "volume": 0.05,
+        "muted": false,
+        "source": "raop",
+        "busy": false
+      },
+      "negotiated_latency_s": 1.5,
+      "sender_scheduling_delay_s": 1.5,
+      "latency_origin": "pyatv_stream_context_not_receiver_negotiation",
+      "pending_resource_cleanup": 0,
+      "streaming": {
+        "transport": "native_raop_mp3_stream",
+        "compressed_bytes": 278016,
+        "reference_seconds": 17.376,
+        "first_reference_ms": 2395.4,
+        "producer_eof_ms": 3728.2,
+        "producer_done": true,
+        "decoder_done": true,
+        "native_pending_peak": 212480,
+        "reference_pending_peak": 66422,
+        "cleanup_pending": false,
+        "error_type": null,
+        "raw_microphone_saved": false
+      }
+    },
+    "audibility_confirmed": false
+  },
+  "timing_interpretation": {
+    "tts_generation_ms_scope": "first_reference_ready_not_complete_TTS",
+    "fixed_test_sender_first_audio_from_TTS_start_ms": 4467.6,
+    "sender_first_packet_from_TTS_start_ms_estimate": 2967.6,
+    "producer_eof_ms": 3728.2,
+    "first_audio_is_sender_estimate_not_audibility": true,
+    "ordinary_turn_latency_measured": false,
+    "one_second_target_met": false
+  },
+  "final_states": [
+    {
+      "entity_id": "media_player.homepod_obyvak_homepod_obyvak",
+      "state": "off",
+      "last_changed": "2026-11-03T06:32:30.312743+00:00",
+      "last_updated": "2026-11-03T06:32:30.312743+00:00",
+      "attributes": {
+        "friendly_name": "HomePod Obývák",
+        "supported_features": 448439
+      }
+    },
+    {
+      "entity_id": "media_player.obyvaci_pokoj_obyvaci_pokoj",
+      "state": "playing",
+      "last_changed": "2026-11-03T06:37:46.838724+00:00",
+      "last_updated": "2026-11-03T06:37:46.840710+00:00",
+      "attributes": {
+        "volume_level": 0.05,
+        "friendly_name": "Obývací pokoj",
+        "supported_features": 450487
+      }
+    },
+    {
+      "entity_id": "switch.home_assistant_voice_0a8bde_mute",
+      "state": "off",
+      "last_changed": "2026-11-03T06:32:31.452105+00:00",
+      "last_updated": "2026-11-03T06:32:31.452105+00:00",
+      "attributes": {
+        "friendly_name": "Hlasový terminál - Obývák Mute"
+      }
+    },
+    {
+      "entity_id": "assist_satellite.home_assistant_voice_0a8bde_assist_satellite",
+      "state": "idle",
+      "last_changed": "2026-11-03T06:32:31.424111+00:00",
+      "last_updated": "2026-11-03T06:32:31.424111+00:00",
+      "attributes": {
+        "friendly_name": "Hlasový terminál - Obývák Assist satellite",
+        "supported_features": 3
+      }
+    }
+  ],
+  "recording_check": {
+    "capture_expires_at": null,
+    "checked_at": "2026-11-03T06:37:55.044001+00:00"
+  },
+  "interruption_policy": {
+    "interruptions_enabled": true,
+    "remaining_s": 0,
+    "auto_restore_seconds": 600,
+    "input_during_speech": "normal"
+  },
+  "rejected_acoustic_candidate": {
+    "path": "experiments/rejected-acoustic-verifier-20261103",
+    "own_room_filtered_accepts": 1,
+    "own_total": 15,
+    "human_rejections": 0,
+    "human_total": 30,
+    "deployed": false
+  },
+  "cleanup": {
+    "deleted_unprotected_backup": "776ecedb",
+    "job": "stream130-prune-776ecedb-20261103",
+    "verified": true,
+    "newest_three_and_protected_preserved": true
+  },
+  "limits": {
+    "own_echo_room_acceptance": false,
+    "first_syllable_human_interruption": false,
+    "one_second_response": false,
+    "latest_fixed_audibility_confirmed": false,
+    "raw_calibration_consent": "pending_owner_explicit_agreement"
+  },
+  "calibration_proposal": "docs/superpowers/specs/2026-11-03-paired-room-calibration-proposal.md",
+  "lease_release_job_id": "stream130-release-20261103",
+  "receipt": {
+    "path": "jarvis_workspace/local_duplex/streamed-speech-receipt.json",
+    "revision": "9ec011e0fcbe538f24bcc1f20a3a09fa8ec2cd65916f02902733135bfdc802af",
+    "exact_readback": true,
+    "job": "stream130-receipt-write-20261103"
+  },
+  "lease_release": {
+    "id": "stream130-release-20261103",
+    "state": "verified",
+    "finished_at": "2026-11-03T06:39:20.500530+00:00",
+    "final_locked": false,
+    "private_token_removed": true
+  },
+  "rulings": [
+    {
+      "decision": "Preserve delegated inline execution and existing publication/deployment authorization",
+      "reason": "Owner opted out of repeated questionnaires",
+      "cost": "Physical acceptance cannot be inferred from software verification"
+    },
+    {
+      "decision": "Allow completed nonsilent outputs under400ms only after decoderEOF",
+      "reason": "Preserve very short answers",
+      "cost": "No full400ms acoustic window on those answers; existing fail-open semantics"
+    },
+    {
+      "decision": "Use equivalent explicit worktree/ledger commands when cloud skill scripts are unavailable",
+      "reason": "No filesystem helper scripts exposed",
+      "cost": "Manual ledger formatting"
+    },
+    {
+      "decision": "Reject acoustic verifier after failed held-out positives",
+      "reason": "1/15 is insufficient source coverage",
+      "cost": "Self-interruption remains unresolved"
+    },
+    {
+      "decision": "Keep room human/echo classification outside code review claim",
+      "reason": "Needs actual paired room evidence",
+      "cost": "Physical calibration still required"
+    },
+    {
+      "decision": "Root verifies Git/CI/CAS/native operation separately",
+      "reason": "Reviewer inspected software only",
+      "cost": "No active claim until durable verified jobs and readbacks"
+    },
+    {
+      "decision": "Do not infer audibility, exact physical delay or one-second response from native sender test",
+      "reason": "Sender timing and fixed text omit ordinary agent/STT and room",
+      "cost": "No acoustic or latency SLA"
+    },
+    {
+      "decision": "Do not repeat review of unchanged1.2.8",
+      "reason": "Existing reviews and regressions remain",
+      "cost": "No new confidence claim over unchanged behavior"
+    }
+  ]
+}

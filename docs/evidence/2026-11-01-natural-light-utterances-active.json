@@ -1,0 +1,372 @@
+{
+  "schema": 1,
+  "source_commit": "3552622112d5c96e48da1c61ad5a6571a1e37129",
+  "repository": "mlegnavsky/jarvis",
+  "branch": "feat/jarvis-addon",
+  "root_causes": [
+    "Acoustic keyword execution stopped capture before the room suffix",
+    "Immediate HA state check spoke uncertainty before actual state report; physical observations lagged140–141ms",
+    "Standalone internal models and generic Hey Jarvis exposed television/audio false activation"
+  ],
+  "behavior": {
+    "whole_utterance": true,
+    "continuation_s": 0.75,
+    "native_vad_owns_end_of_speech": true,
+    "explicit_transcript_verb_overrides_hint": true,
+    "ambiguous_continuation_never_defaults_to_current_room": true,
+    "bare_fallback_requires_consumed_silent_window_and_no_VAD_start": true,
+    "accepted_light_actions_silent_including_pending_state": true,
+    "actual_service_errors_still_reported": true,
+    "public_exposed_lights_only": true,
+    "locks_policy_unchanged": true,
+    "media_active_requires_explicit_Jarvis": true,
+    "generic_Hey_Jarvis_disabled": true,
+    "suppressed_activations_cannot_pause_TV_or_cancel_HomePod": true
+  },
+  "tests": {
+    "companion": {
+      "run": 61,
+      "passed": 61
+    },
+    "identity": {
+      "run": 154,
+      "passed": 154
+    },
+    "diagnostics": {
+      "run": 18,
+      "passed": 18
+    },
+    "homepod": {
+      "run": 53,
+      "passed": 53
+    },
+    "addon": {
+      "run": 244,
+      "passed": 224,
+      "skipped": 20
+    },
+    "source_git_blobs_exact": 20,
+    "ci": [
+      {
+        "id": 41342593814,
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 41342588609,
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "native_composition_probe": {
+      "passed": true,
+      "cases": [
+        "complete child-room suffix",
+        "explicit verb overrides conflicting activation hint; speech starts0.6s and continues past0.75s window",
+        "bare command after verified0.8s silent audio",
+        "native VAD speech at0.55 with garbled text cannot fall back",
+        "TV-on hint consumes no audio and invokes no service"
+      ],
+      "scope": "actual pinned Core2026.6.4 Input.execute/validate,VAD,STT stream; real adapters,Coordinator,VoiceGate,CompanionRuntime,agent methods; simulated provider/device boundaries; no acoustic accuracy claim"
+    },
+    "review": {
+      "independent": true,
+      "fixed_with_red_green": [
+        "native VAD evidence rather than identification voiced threshold",
+        "suppressed run event must also bypass Router.activate"
+      ]
+    },
+    "physical_service_checks": [
+      {
+        "key": "living",
+        "action": "off",
+        "before": "on",
+        "after": "off",
+        "verified": true,
+        "confirmation_ms": 141
+      },
+      {
+        "key": "living",
+        "action": "restore_on",
+        "after": "on",
+        "verified": true
+      },
+      {
+        "key": "child",
+        "action": "off",
+        "before": "on",
+        "after": "off",
+        "verified": true,
+        "confirmation_ms": 140
+      },
+      {
+        "key": "child",
+        "action": "restore_on",
+        "after": "on",
+        "verified": true
+      }
+    ]
+  },
+  "software": {
+    "job": "natural-utterance-apply",
+    "state": "verified",
+    "phase": "active_verified",
+    "finished_at": "2026-11-01T19:42:30.395638+00:00",
+    "backup": "60a8e25e",
+    "core": "2026.6.4",
+    "files_exact": [
+      {
+        "path": "custom_components/extended_openai_conversation/room_commands.py",
+        "sha256": "9ebbda47d734c579a4eb6cbf0a630606769bb41d1c88a9a1c41af6f05eed7f13"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/extended_openai_conversation/room_commands.py",
+        "sha256": "9ebbda47d734c579a4eb6cbf0a630606769bb41d1c88a9a1c41af6f05eed7f13"
+      },
+      {
+        "path": "custom_components/jarvis_homepod_output/__init__.py",
+        "sha256": "a01da6781fbf1c933940117cc2976a4220e310c8c0c6d2ef5075466da639b27b"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/__init__.py",
+        "sha256": "a01da6781fbf1c933940117cc2976a4220e310c8c0c6d2ef5075466da639b27b"
+      },
+      {
+        "path": "custom_components/jarvis_homepod_output/manifest.json",
+        "sha256": "c5dda0b5d52978b1da974ae86b0068ea5cf0c5c886adddb5120a481761600347"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/manifest.json",
+        "sha256": "c5dda0b5d52978b1da974ae86b0068ea5cf0c5c886adddb5120a481761600347"
+      },
+      {
+        "path": "custom_components/jarvis_homepod_output/routing.py",
+        "sha256": "2eabd57d78ef8090231a4da766c5d91aed6d15fa0bc1c9e1e5030f82f05375c1"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/routing.py",
+        "sha256": "2eabd57d78ef8090231a4da766c5d91aed6d15fa0bc1c9e1e5030f82f05375c1"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/__init__.py",
+        "sha256": "c3e05f15a2e4a7281f80d4499f1ced776bc2c1a2d01e034a1e2bd9e066371007"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/__init__.py",
+        "sha256": "c3e05f15a2e4a7281f80d4499f1ced776bc2c1a2d01e034a1e2bd9e066371007"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/hooks.py",
+        "sha256": "fc32e440230b5d38ac8754515bd1c294a2e3f317701a5f4a9393b0a5dab7d692"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/hooks.py",
+        "sha256": "fc32e440230b5d38ac8754515bd1c294a2e3f317701a5f4a9393b0a5dab7d692"
+      },
+      {
+        "path": "custom_components/jarvis_speaker_identity/manifest.json",
+        "sha256": "6eb950d035c38836ef8c1a67f3aadfa3cdc7943e481994e6df40c489d7b680b6"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.json",
+        "sha256": "6eb950d035c38836ef8c1a67f3aadfa3cdc7943e481994e6df40c489d7b680b6"
+      },
+      {
+        "path": "custom_components/jarvis_voice_common/__init__.py",
+        "sha256": "2e4a052ac3cb7f2c3718bdcee06c70259d9d593453dcff3ba68b08698867ec9d"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_common/__init__.py",
+        "sha256": "2e4a052ac3cb7f2c3718bdcee06c70259d9d593453dcff3ba68b08698867ec9d"
+      },
+      {
+        "path": "custom_components/jarvis_voice_common/manifest.json",
+        "sha256": "c527d51361e87b9fcc24dbf60e81db5dd49d6a9b925075c95ff3ca5a4d072679"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_common/manifest.json",
+        "sha256": "c527d51361e87b9fcc24dbf60e81db5dd49d6a9b925075c95ff3ca5a4d072679"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/__init__.py",
+        "sha256": "6cf6f670b69d168004fd34facfce834c800f855d3aeb5fc4125ef2add2a1f3c0"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_diagnostics/__init__.py",
+        "sha256": "6cf6f670b69d168004fd34facfce834c800f855d3aeb5fc4125ef2add2a1f3c0"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/direct_wake.py",
+        "sha256": "492d8264fc5164d57e007baf694a8876d30c40f090f28b6d03f1b4f792cc31ea"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_diagnostics/direct_wake.py",
+        "sha256": "492d8264fc5164d57e007baf694a8876d30c40f090f28b6d03f1b4f792cc31ea"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/manifest.json",
+        "sha256": "76f830ce7b9746ccbad92aca9867b3b659f9eb668b2b562d0ff0421960045716"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_diagnostics/manifest.json",
+        "sha256": "76f830ce7b9746ccbad92aca9867b3b659f9eb668b2b562d0ff0421960045716"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/turn_taking.py",
+        "sha256": "3b9e67063441a02d4272cc1a4af9c53b5eea4c18173cb4827b446559d660861e"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_voice_diagnostics/turn_taking.py",
+        "sha256": "3b9e67063441a02d4272cc1a4af9c53b5eea4c18173cb4827b446559d660861e"
+      },
+      {
+        "path": "jarvis_workspace/voice_release/release.json",
+        "sha256": "e6dc6b1cae171047be5860c0bb4a1d98002a708a3f5ccf0f5b8924ac120a7e1b"
+      }
+    ],
+    "native_probe": {
+      "status": "passed",
+      "scope": "synthetic PCM + actual Core VAD/stream; no acoustic or provider test",
+      "cases": [
+        {
+          "wait_s": 0.75,
+          "speech_at_s": null,
+          "input_audio_s": 0.8,
+          "silence_expired": true,
+          "passed": true
+        },
+        {
+          "wait_s": 0.75,
+          "speech_at_s": 0.6,
+          "input_audio_s": 14,
+          "silence_expired": false,
+          "passed": true
+        },
+        {
+          "wait_s": 3,
+          "speech_at_s": null,
+          "input_audio_s": 3,
+          "silence_expired": true,
+          "passed": true
+        },
+        {
+          "wait_s": 6,
+          "speech_at_s": null,
+          "input_audio_s": 6,
+          "silence_expired": true,
+          "passed": true
+        },
+        {
+          "wait_s": 3,
+          "speech_at_s": 2.8,
+          "input_audio_s": 14,
+          "silence_expired": false,
+          "passed": true
+        },
+        {
+          "wait_s": 6,
+          "speech_at_s": 5.8,
+          "input_audio_s": 14,
+          "silence_expired": false,
+          "passed": true
+        }
+      ],
+      "name_tts_boundary": {
+        "input": "Jmenuji se Jarvis. O Jarvisovi.",
+        "tts_message": "Jmenuji se Džárvis. O Džárvisovi.",
+        "passed": true
+      }
+    },
+    "speaker": {
+      "version": "1.4.1",
+      "status": "ready",
+      "shared_contract": "1.0.2",
+      "native_guard": true,
+      "profiles": 1
+    },
+    "output": {
+      "version": "1.1.1",
+      "status": "configured"
+    },
+    "child_resolution": [
+      {
+        "text": "Zhasni v dětském pokoji",
+        "service": "turn_off",
+        "entity_ids": [
+          "light.aqara_wall_switch_eu"
+        ],
+        "area_id": "jidelna",
+        "area_name": "Dětský pokoj",
+        "error": null
+      },
+      {
+        "text": "Můžeš prosím zhasnout v dětském pokoji?",
+        "service": "turn_off",
+        "entity_ids": [
+          "light.aqara_wall_switch_eu"
+        ],
+        "area_id": "jidelna",
+        "area_name": "Dětský pokoj",
+        "error": null
+      }
+    ],
+    "direct": {
+      "status": "whole_utterance_lights",
+      "version": 3,
+      "commands": 0,
+      "blocked": 0,
+      "scope": "whole_light_utterance_after_acoustic_hint",
+      "continuation_wait_s": 0.75,
+      "television_policy": "explicit_Jarvis_required_while_media_active",
+      "identity_inference": false,
+      "speech_to_text": true,
+      "commands_count_handoffs_not_physical_confirmation": true
+    }
+  },
+  "firmware": {
+    "tune_job": "natural-tv-wake-threshold",
+    "compile_job": "natural-tv-wake-compile",
+    "install_job": "natural-tv-wake-install",
+    "state": "verified",
+    "finished_at": "2026-11-01T19:53:34.683590+00:00",
+    "backup": "4ef03063",
+    "device": {
+      "configuration": "home-assistant-voice-0a8bde.yaml",
+      "deployed_config_hash": "1312060e",
+      "expected_config_hash": "1312060e",
+      "status": "online"
+    },
+    "upload": {
+      "completed_at": "2026-11-01T19:53:23.453260+00:00",
+      "configuration": "home-assistant-voice-0a8bde.yaml",
+      "created_at": "2026-11-01T19:50:47.732833+00:00",
+      "depends_on": "bd88a02dfcc7",
+      "exit_code": 0,
+      "job_id": "ca296c830be1",
+      "job_type": "upload",
+      "progress": 100,
+      "status": "completed"
+    },
+    "cutoff_before": 0.8,
+    "cutoff_after": 0.98,
+    "weights_unchanged": true,
+    "model_sha256": "8e2b5d19041e7f865e0c7a7c3078732b017dee824484971a9e606b2ec1d6056c",
+    "policy_basis": "restore previously tuned0.98 threshold described in verification-direct-light-wakes-2026-10-29.md; not new household accuracy evidence"
+  },
+  "cleanup": {
+    "leases_released": true,
+    "deleted_old_unprotected": [
+      "9f916d44",
+      "8bae64d7"
+    ],
+    "latest_three_and_protected_preserved": true,
+    "temporary_status_file_deleted": true
+  },
+  "limits": {
+    "post_update_physical_microphone_and_tv_acceptance": "pending owner test",
+    "arbitrary_speech_barge_in": false,
+    "acoustic_false_positive_rate_not_certified": true,
+    "new_household_recording": false,
+    "private_voice_weights_published": false
+  }
+}

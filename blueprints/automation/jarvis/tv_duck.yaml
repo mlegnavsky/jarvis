@@ -1,0 +1,118 @@
+blueprint:
+  name: Jarvis — ztlumení TV během hlasového rozhovoru
+  description: >-
+    Volitelně sníží hlasitost jedné hrající TV po probuzení satelitu.
+    Po návratu do idle ji obnoví jen při splnění kontrol.
+    Neodfiltruje televizní řeč a nebrání falešnému probuzení.
+    Při timeoutu nebo restartu se hlasitost automaticky nezvyšuje.
+  domain: automation
+  homeassistant:
+    min_version: "2026.6.0"
+  input:
+    satellite:
+      name: Hlasový satelit Jarvis
+      selector:
+        entity:
+          filter:
+            - domain: assist_satellite
+    television:
+      name: Televize nebo soundbar s řízením hlasitosti
+      selector:
+        entity:
+          filter:
+            - domain: media_player
+    quiet_volume:
+      name: Hlasitost během rozhovoru
+      description: Absolutní úroveň 0–1. Tišší televizi nezvyšuje.
+      default: 0.15
+      selector:
+        number:
+          min: 0
+          max: 0.5
+          step: 0.01
+          mode: slider
+variables:
+  satellite: !input satellite
+  tv: !input television
+  quiet_volume: !input quiet_volume
+triggers:
+  - trigger: state
+    entity_id: !input satellite
+    from: idle
+    to: listening
+conditions:
+  - condition: template
+    value_template: >-
+      {% set volume = state_attr(tv, 'volume_level') -%}
+      {{ is_state(tv, 'playing')
+         and not state_attr(tv, 'is_volume_muted')
+         and volume is number and volume is not boolean
+         and 0 <= volume <= 1
+         and 0 <= quiet_volume <= 0.5
+         and volume > quiet_volume
+         and ((state_attr(tv, 'supported_features') | int(0)) | bitwise_and(4)) != 0 }}
+actions:
+  - variables:
+      original_volume: "{{ state_attr(tv, 'volume_level') }}"
+  - action: media_player.volume_set
+    target:
+      entity_id: "{{ tv }}"
+    data:
+      volume_level: "{{ quiet_volume }}"
+  - variables:
+      finish_by: "{{ as_timestamp(now()) + 120 }}"
+      ready_to_restore: false
+      disconnected_at_start: >-
+        {{ not (is_state(satellite, 'idle') or is_state(satellite, 'listening')
+                or is_state(satellite, 'processing') or is_state(satellite, 'responding')) }}
+  - if:
+      - condition: template
+        value_template: "{{ is_state(satellite, 'idle') }}"
+    then:
+      - delay: "00:00:02"
+      - variables:
+          ready_to_restore: >-
+            {{ is_state(satellite, 'idle') and as_timestamp(now()) < finish_by
+               and as_timestamp(now()) - as_timestamp(states[satellite].last_changed) >= 2 }}
+    else:
+      - wait_for_trigger:
+          - trigger: state
+            entity_id: !input satellite
+            to: idle
+            for:
+              seconds: 2
+            id: ready
+          - trigger: state
+            entity_id: !input satellite
+            to:
+              - unavailable
+              - unknown
+            id: disconnected
+        timeout: "{{ [1, (finish_by - as_timestamp(now())) | int(0)] | max }}"
+        continue_on_timeout: true
+      - variables:
+          ready_to_restore: >-
+            {{ wait.completed and wait.trigger is not none and wait.trigger.id == 'ready' }}
+  - if:
+      - condition: template
+        value_template: >-
+          {% set volume = state_attr(tv, 'volume_level') -%}
+          {{ ready_to_restore and not disconnected_at_start
+             and as_timestamp(now()) < finish_by
+             and is_state(satellite, 'idle')
+             and is_state(tv, 'playing')
+             and not state_attr(tv, 'is_volume_muted')
+             and volume is number and volume is not boolean
+             and 0 <= volume <= 1
+             and original_volume is number and original_volume is not boolean
+             and quiet_volume < original_volume <= 1
+             and (volume - quiet_volume) | abs < 0.005
+             and ((state_attr(tv, 'supported_features') | int(0)) | bitwise_and(4)) != 0 }}
+    then:
+      - action: media_player.volume_set
+        target:
+          entity_id: "{{ tv }}"
+        data:
+          volume_level: "{{ original_volume }}"
+mode: single
+max_exceeded: silent

@@ -1,0 +1,61 @@
+name: Publish archive accounting
+on:
+  push:
+    branches: [feat/jarvis-addon]
+    paths:
+      - testing/energy-archive/**
+      - managed_sources/spot_hub/accounting.js
+      - tests/accounting_integration.cjs
+      - tests/accounting_browser.cjs
+      - .github/workflows/archive-accounting.yml
+permissions:
+  contents: write
+jobs:
+  accounting:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: jarvis-laboratory-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: source
+      - name: Verify interval accounting and private archive
+        working-directory: source
+        run: |
+          php -l testing/energy-archive/index.php
+          php -l testing/energy-archive/finance.php
+          python -m unittest tests.test_energy_archive_server -v
+          node tests/interval_accounting.cjs
+          node tests/accounting_integration.cjs
+          node tests/spot_hub_dom.cjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify actual desktop and mobile chart rendering
+        working-directory: source
+        run: |
+          npm install --prefix /tmp/jarvis-chart-test playwright@1.58.2
+          node /tmp/jarvis-chart-test/node_modules/playwright/cli.js install --with-deps chromium
+          NODE_PATH=/tmp/jarvis-chart-test/node_modules node tests/accounting_browser.cjs
+      - uses: actions/checkout@v4
+        with:
+          ref: lab/plesk-bootstrap-20261029
+          path: public
+      - name: Publish only verified archive endpoint code
+        run: |
+          head=$(git -C source ls-remote origin refs/heads/feat/jarvis-addon | cut -f1)
+          test "$head" = "$GITHUB_SHA"
+          cp source/testing/energy-archive/index.php public/energy-archive/index.php
+          cp source/testing/energy-archive/finance.php public/energy-archive/finance.php
+          cd public
+          git config user.name 'Jarvis Laboratory'
+          git config user.email 'jarvis-lab@users.noreply.github.com'
+          git add energy-archive/index.php energy-archive/finance.php
+          git diff --cached --quiet || git commit -m "archive: verified interval accounting $GITHUB_SHA"
+          git push origin HEAD:lab/plesk-bootstrap-20261029
+      - name: Activate on existing laboratory server
+        env:
+          LAB_WEBHOOK: ${{ secrets.PLESK_LAB_WEBHOOK }}
+        run: python source/scripts/notify_plesk.py

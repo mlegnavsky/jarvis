@@ -1,0 +1,76 @@
+{
+  "source_commit": "d136f27dcd320113753e42921e911987dbe5e822",
+  "runtime_version": "1.2.3",
+  "deployment_job": "fastvoice-apply-20261102",
+  "activation": "active_verified",
+  "tests": {
+    "companion": 83,
+    "duplex": 136,
+    "addon_run": 242,
+    "addon_skipped": 20,
+    "manifest": "passed",
+    "diff": "passed"
+  },
+  "review": "fresh independent; FIFO and longer output budget fixed RED->GREEN; no remaining Important/Critical",
+  "scope": "primary voice model-only policy, concise default, local time after identity/TV guards; no new household rights",
+  "echo_status": "AEC not implemented; own speech classification/human barge-in still pending",
+  "speed_target_s": 1,
+  "speed_target_verified": false,
+  "latency_label": "sender scheduling delay, not proven receiver negotiated floor",
+  "retention_delete": "43f425d5 CAS verified; latest3/protected retained",
+  "deferred_minor": "direct integration coverage for operator voice probe TV wiring; underlying lease covered",
+  "activated_at": "2026-11-02T20:34:25.040158+00:00",
+  "backup": "776ecedb",
+  "source_files_exact": 9,
+  "postboot_source_revision": "51c197dab466ffd10eafed784df113a28520356ba6b9b5b559310f450ddc09c6",
+  "postboot_probe": "passed",
+  "ci": {
+    "run": 41519686587,
+    "conclusion": "success"
+  },
+  "model_audit": [
+    {
+      "model": "gpt-4o-mini",
+      "greeting_ms": 1636.2
+    },
+    {
+      "model": "gpt-4.1-mini",
+      "greeting_ms": 773.7
+    }
+  ],
+  "full_household_fixed_story": [
+    {
+      "model": "gpt-4o-mini",
+      "agent_ms": 2510.9,
+      "provider_ms": 2291.2,
+      "speech_chars": 206
+    },
+    {
+      "model": "gpt-4.1-mini",
+      "agent_ms": 1789,
+      "provider_ms": 1604.8,
+      "speech_chars": 143
+    }
+  ],
+  "comparison_limit": "one greeting/story per model; output lengths differ; not a household latency distribution",
+  "selected_policy": {
+    "schema": 1,
+    "model": "gpt-4.1-mini"
+  },
+  "selected_policy_job": "fastvoice-select-model-20261102",
+  "selected_policy_revision": "45d3c5d2bd3467a5e3f9616894961700490e906df109bb18d4b73dcdf6ceb48f",
+  "max_output_tokens": 512,
+  "controls": "time local after input/identity preparation; text and other voice clients retain configured model; no new rights",
+  "fixed_output": {
+    "status": "passed",
+    "started": 1,
+    "completed": 1,
+    "skipped": 0,
+    "error": null,
+    "own_volume": 0.45,
+    "tts_cached_ms": 37.3,
+    "estimated_first_audio_wait_ms": 2083.9,
+    "sender_scheduling_delay_s": 1.5
+  },
+  "interruption_state": "enabled; prior bounded suspension expired; AEC remains pending"
+}

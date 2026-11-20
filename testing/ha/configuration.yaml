@@ -1,0 +1,5 @@
+default_config:
+http:
+  server_host: 0.0.0.0
+# Isolated HA: no production credentials, no imported config entries,
+# no real Matter, Apple TV, solar, locks or heating devices.

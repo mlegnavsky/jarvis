@@ -1,0 +1,146 @@
+{
+  "status": "homepod_1.1.0_active_output_completed_acoustic_acceptance_pending",
+  "runtime": "1.1.0",
+  "source_commit": "37a12da5829e9824057e72791276a7d739582446",
+  "native_audit": {
+    "messages": 133,
+    "audio_messages": 26,
+    "audio_errors": 0,
+    "logging_restored": true,
+    "local_playback_started": 1,
+    "local_playback_completed": 1,
+    "signal_silent": false,
+    "audibility_confirmed": false
+  },
+  "homepod_tts_test": {
+    "request_id": "homepod-independent-voice-output-20261102",
+    "outcome": "upstream_unavailable_no_retry",
+    "core_error": "miniaudio.DecodeError failed to init decoder",
+    "path": "pyatv InternetSource.open",
+    "speech_heard": false
+  },
+  "hypothesis": "Failure fetching/decoding a speech URL must be separated from actual audio output. Valid in-memory PCM is insufficient evidence of a valid playback resource.",
+  "comparison": {
+    "file": "media:jarvis_repair/audio-probe.wav",
+    "sha256": "6a607fedaad63a992ae2cd952105be94cf88af874ce213e3731cb93a0f3f4dee",
+    "size": 35244,
+    "kind": "synthetic_two_tones_not_a_recording",
+    "method": "Temporary one-shot automation after automation_reloaded; self-disable without stopping its own actions; play local media file to HomePod, then local Voice PE announcement. Remove after evidence. HomePod resolves local media to a filesystem path rather than InternetSource.",
+    "core_restart": false,
+    "first_run": "skipped_active_dialogue_owner_heard_nothing",
+    "second_run": {
+      "begin": "2026-11-01T23:21:24.352+00:00",
+      "precondition": "activeFalse_satelliteidle",
+      "homepod_completed": "2026-11-01T23:21:27.872+00:00",
+      "native_completed": "2026-11-01T23:21:34.890+00:00",
+      "new_decoder_error": false,
+      "acoustic_outcome": "not_confirmed"
+    },
+    "temporary_automation_removed": true
+  },
+  "microphone_opened": false,
+  "firmware_changed": false,
+  "volume_changed": false,
+  "confirmed_root_cause": "response_starvation_and_followup_lifecycle",
+  "confirmed_defects": [
+    "Raw VAD onset cancels STT/LLM/TTS preparation before actual playback; real run29interruptions and0completed turns",
+    "Spoken providerFalse response closes followup immediately",
+    "Truncated candidate could cancel current output before being rejected"
+  ],
+  "repairs": {
+    "runtime": "1.0.4",
+    "actual_playback_barge_in": true,
+    "preparation_input_queue": "latest_only_max5s",
+    "spoken_followup_seconds": 8,
+    "silent_light_actions": "close_without_audio",
+    "speech_source": "canonical_complete_local_media_WAV",
+    "generated_speech_files": "max4_600s_stale_0600_0700_release_on_success_failure_cancel",
+    "firmware_or_wake_threshold_changed": false
+  },
+  "tests": {
+    "duplex": 97,
+    "companion": 63,
+    "homepod": 64,
+    "manifest": "pass",
+    "fresh_review": "2Important_fixed_RED_GREEN_0Critical_0Minor",
+    "fresh_homepod_review": "0Critical_3Important_fixed_RED_GREEN_0Minor"
+  },
+  "native_1.0.4": {
+    "source_commit": "a918bf1b428242fdc307b543e7cef8b1fc55a1dd",
+    "job": "conversation-audio-v104-apply",
+    "active_verified": true,
+    "backup_slug": "7f9f9dc2",
+    "files_exact": 13,
+    "ci": "both_success",
+    "native_output_completed": true,
+    "owner_heard_audio": false,
+    "route_superseded_by_owner": true
+  },
+  "homepod_repair": {
+    "version": "1.1.0",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "microphone": "assist_satellite.home_assistant_voice_0a8bde_assist_satellite",
+    "speech_source": "canonical_local_WAV_resolved_to_native_filesystem_path",
+    "protocol": "existing_native_RAOP_interface",
+    "startup_volume": "explicit_owner_45_percent_once",
+    "later_volume": "preserve_current_zero_and_mute",
+    "stop": "cancel_and_drain_only_owned_native_file_task",
+    "resource_cleanup": "retain_WAV_until_owned_native_task_ends_including_timeout",
+    "tv_ownership": "generation_invalidated_on_foreign_playback",
+    "voice_pe_spoken_fallback": false,
+    "legacy_output_domain_enabled": false,
+    "legacy_volume_automations": "off_verified",
+    "physical_acceptance_verified": false,
+    "activation": "active_verified"
+  },
+  "source_revision": "24dedd90740cf94ca9ed32578a063a3ce008da4f960546f699f3e771736e92a0",
+  "activation": {
+    "job": "homepod-conversation-v110-apply",
+    "finished_at": "2026-11-02T00:17:30.493052+00:00",
+    "backup_slug": "ed793462",
+    "files_exact": 13,
+    "core_version": "2026.6.4",
+    "mode": "local_microphone_homepod_speech",
+    "speaker": "media_player.homepod_obyvak_homepod_obyvak",
+    "startup_volume": 0.45,
+    "legacy_volume_rules": "both_off",
+    "unrelated_heating": "on"
+  },
+  "live_probe": {
+    "native_VAD": "passed",
+    "synthetic_warmup_frames": 77,
+    "reference_seconds": 2.507,
+    "reference_peak_dbfs": -3.61,
+    "reference_rms_dbfs": -20.43,
+    "microphone_opened": false
+  },
+  "homepod_output_test": {
+    "status": "passed",
+    "target": "media_player.homepod_obyvak_homepod_obyvak",
+    "transport": "native_raop_local_file",
+    "started": 1,
+    "completed": 1,
+    "skipped": 0,
+    "stopped": 0,
+    "last_error": null,
+    "volume": 0.45,
+    "muted": false,
+    "negotiated_latency_s": 1.5,
+    "reference_seconds": 2.507,
+    "pending_resource_cleanup": 0,
+    "microphone_opened": false,
+    "audibility_confirmed": false
+  },
+  "ci": {
+    "runs": [
+      41365884224,
+      41365879329
+    ],
+    "conclusion": "success"
+  },
+  "remaining_acceptance": [
+    "physical_HomePod_audibility",
+    "ordinary_conversation_followup_interruption",
+    "loud_TV_wake_and_echo_rejection"
+  ]
+}

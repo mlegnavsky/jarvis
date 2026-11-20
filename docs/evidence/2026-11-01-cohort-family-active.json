@@ -1,0 +1,213 @@
+{
+  "schema": 1,
+  "source_commit": "d8b2d592a7c3aaec1486b14ff7034edee425a2b9",
+  "deployment_job": {
+    "id": "cohort12-apply-20261101",
+    "operation": "deployment_apply",
+    "state": "failed",
+    "result": {
+      "error": "runtime_check_failed"
+    },
+    "backup_slug": "8bae64d7",
+    "request_id": "cohort12-apply-20261101",
+    "created_at": "2026-11-01T13:33:31.052382+00:00",
+    "started_at": "2026-11-01T13:33:31.067245+00:00",
+    "finished_at": "2026-11-01T13:37:42.505087+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "source_readback": [
+    {
+      "path": "custom_components/jarvis_speaker_identity/policy.py",
+      "match": true,
+      "revision": "6be07ce5e0a0c87a4c540bc6dbce142b7575065ef935c3c07923db0629eeba14"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/policy.py",
+      "match": true,
+      "revision": "6be07ce5e0a0c87a4c540bc6dbce142b7575065ef935c3c07923db0629eeba14"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/coordinator.py",
+      "match": true,
+      "revision": "4553f8a73e31c0e9e7d190f601b978544b32d30a4705f0ac056342a2303181cb"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/coordinator.py",
+      "match": true,
+      "revision": "4553f8a73e31c0e9e7d190f601b978544b32d30a4705f0ac056342a2303181cb"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/review.py",
+      "match": true,
+      "revision": "bc2cdaf6209a7f92351cfca7dd4b8fd6acb2425025f830f8761bc084256b930c"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/review.py",
+      "match": true,
+      "revision": "bc2cdaf6209a7f92351cfca7dd4b8fd6acb2425025f830f8761bc084256b930c"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/cohort_review.py",
+      "match": true,
+      "revision": "4421d80228852654b2353b75663a35cd230695dc54b6dd72c55647379754aaf8"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/cohort_review.py",
+      "match": true,
+      "revision": "4421d80228852654b2353b75663a35cd230695dc54b6dd72c55647379754aaf8"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/family_enrollment.py",
+      "match": true,
+      "revision": "d65116efdebfb4a7c45b155d7307b66e86f6fbc458b44ab32b801e4eec6a55da"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/family_enrollment.py",
+      "match": true,
+      "revision": "d65116efdebfb4a7c45b155d7307b66e86f6fbc458b44ab32b801e4eec6a55da"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/family_questions.py",
+      "match": true,
+      "revision": "4f75080b8f18f0314e85d08668a1b05fedcd965c64e0bf48176e920bdaad8a52"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/family_questions.py",
+      "match": true,
+      "revision": "4f75080b8f18f0314e85d08668a1b05fedcd965c64e0bf48176e920bdaad8a52"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/family_control.py",
+      "match": true,
+      "revision": "85be780c193bcbc554fd4ea1832efa1e2dfa033574439a021734182dd5bb5b85"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/family_control.py",
+      "match": true,
+      "revision": "85be780c193bcbc554fd4ea1832efa1e2dfa033574439a021734182dd5bb5b85"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/__init__.py",
+      "match": true,
+      "revision": "daa09285a026a57d7dac029532ea1b2becffed64173cf5ec592bf65b7a93eded"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/__init__.py",
+      "match": true,
+      "revision": "daa09285a026a57d7dac029532ea1b2becffed64173cf5ec592bf65b7a93eded"
+    },
+    {
+      "path": "custom_components/jarvis_speaker_identity/manifest.json",
+      "match": true,
+      "revision": "3d2c2764d1cfb06b096068c32416afd91d7f5103e378fee2a2c8a2b3fbd98ad6"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_speaker_identity/manifest.json",
+      "match": true,
+      "revision": "3d2c2764d1cfb06b096068c32416afd91d7f5103e378fee2a2c8a2b3fbd98ad6"
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/routing.py",
+      "match": true,
+      "revision": "2adec69cd0df82e7124eaf11ab339f41308dee7ca65c410b9397cd0c88cbb83b"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/routing.py",
+      "match": true,
+      "revision": "2adec69cd0df82e7124eaf11ab339f41308dee7ca65c410b9397cd0c88cbb83b"
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/__init__.py",
+      "match": true,
+      "revision": "f8ee3e7d89ee76e485bcd6c94c1a18ab1080f89dd02ee19efa3da3ad570e90d9"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/__init__.py",
+      "match": true,
+      "revision": "f8ee3e7d89ee76e485bcd6c94c1a18ab1080f89dd02ee19efa3da3ad570e90d9"
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/manifest.json",
+      "match": true,
+      "revision": "7755077f38f15b324ff3d73d4c458086a94acd1152e52b9805e4c87c9295a630"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/manifest.json",
+      "match": true,
+      "revision": "7755077f38f15b324ff3d73d4c458086a94acd1152e52b9805e4c87c9295a630"
+    }
+  ],
+  "verified_runtime": {
+    "speaker_version": "1.2.0",
+    "status": "ready",
+    "updated_at": "2026-11-01T13:44:30.701261+00:00",
+    "matching_control": {
+      "status": "activated",
+      "verified": true,
+      "current_profile_revision": "c18052f5d63d3d9e825e23ab5448442813fe73cdb0d50b3b4763e6b4729a82d4",
+      "active_policy": "cohort_margin_v1",
+      "original_anchors_preserved": true,
+      "permissions_changed": false
+    },
+    "active_policy": "cohort_margin_v1",
+    "current_profile_revision": "c18052f5d63d3d9e825e23ab5448442813fe73cdb0d50b3b4763e6b4729a82d4",
+    "authorization": {
+      "authorized_profiles": 1,
+      "anchor_profiles": 1
+    },
+    "family": {
+      "status": "idle",
+      "raw_audio_saved": false,
+      "approvals": []
+    },
+    "homepod_version": "1.1.0",
+    "homepod_status": "configured",
+    "terminal_tts_start_policy": "withheld_for_external_output"
+  },
+  "stored_evidence": {
+    "owner_holdouts": 5,
+    "owner_count": 5,
+    "comparison_accepts": 0,
+    "comparison_count": 5,
+    "comparison_method": "leave_one_utterance_out",
+    "min_owner_exclusion_margin": 0.3428,
+    "positive_negative_gap": 0.34,
+    "physical_validation": "pending_ordinary_use",
+    "household_accuracy_verified": false,
+    "replay_detection": "not_installed",
+    "new_owner_recordings_requested": false
+  },
+  "tests": {
+    "speaker": 127,
+    "homepod": 51,
+    "companion": 49,
+    "independent_review": "Important actual-rival validation issue fixed; no remaining Important/Critical findings",
+    "local_addon_suite": "interrupted after stall in unchanged official MCP SDK integration test",
+    "ci": {
+      "workflow_runs": [
+        {
+          "id": 41311819409,
+          "name": "Check Jarvis",
+          "status": "in_progress",
+          "conclusion": null,
+          "run_number": 339,
+          "jobs_url": "https://api.github.com/repos/mlegnavsky/jarvis/actions/runs/41311819409/jobs",
+          "logs_url": "https://api.github.com/repos/mlegnavsky/jarvis/actions/runs/41311819409/logs",
+          "workflow_id": 397132359
+        }
+      ]
+    }
+  },
+  "rollback": "Matching bank before-image retained. Restore structured banks for ALL affected profiles before legacy-code rollback, or restore complete pre-deployment backup8bae64d7. Never perform code-only rollback after cohort family profiles exist.",
+  "remaining": [
+    "Ordinary acoustic operation still requires observation; do not claim perfect identification.",
+    "Arbitrary human-speech barge-in not implemented; physical button remains available.",
+    "Training heat/TV phrases does not add unavailable device actions; family operator approvals are lights-only."
+  ]
+}

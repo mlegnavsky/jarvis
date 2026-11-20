@@ -1,0 +1,20 @@
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+const classes={},timers=new Map();let id=0;const calls=[];
+vm.runInNewContext(fs.readFileSync('managed_sources/home_status/card.js','utf8'),{HTMLElement:class{constructor(){this.style={setProperty(){}};}attachShadow(){return this.shadowRoot={button:{},querySelector(){return this.button;}};}},setTimeout:(fn,ms)=>{timers.set(++id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id),customElements:{get:n=>classes[n],define:(n,c)=>classes[n]=c}});
+(async()=>{
+ const c=new classes['jarvis-device-status'];c.setConfig({entity:'switch.radiator',heating_entity:'sensor.jarvis_topeni_child',tap_action:{action:'toggle'}});
+ c.h={states:{'switch.radiator':{state:'off'},'sensor.jarvis_topeni_child':{attributes:{mode:'auto'}}},callService:async(...a)=>calls.push(a)};
+ c.onpointerdown({button:0,pointerId:1,clientX:10,clientY:10});assert.equal(calls.length,0);assert.equal([...timers.values()][0].ms,3000);
+ [...timers.values()][0].fn();await Promise.resolve();assert.equal(calls[0][2].mode,'grid_manual');assert.equal(c.held,true);
+ c.onpointerup({});c.onpointerdown({button:0,clientX:10,clientY:10});c.onpointercancel({});assert.equal(timers.size,0);
+ c.onpointerdown({button:0,clientX:10,clientY:10});c.onpointermove({clientX:40,clientY:10});assert.equal(timers.size,0);
+ calls.length=0;c.h.states['switch.radiator'].state='unavailable';await c.activateGrid();assert.equal(calls.length,0);
+ c.h.states['switch.radiator'].state='on';await c.activateGrid();assert.equal(calls.length,0);
+ c.h.states['switch.radiator'].state='off';c.render();const before=c.shadowRoot.innerHTML;
+ c.onpointerdown({button:0,clientX:10,clientY:10});c.actionError='Blokováno rezervou';c.hass=c.h;
+ assert.equal(c.shadowRoot.innerHTML,before,'hass refresh must not replace held button');
+ c.held=true;c.onpointerup({});assert.match(c.shadowRoot.innerHTML,/Blokováno rezervou/);
+ c.shadowRoot.button.onclick();await Promise.resolve();assert.equal(calls.length,0,'release click must not turn the radiator off/on again');
+ c.onpointerdown({button:0,clientX:10,clientY:10});c.onpointerup({});c.shadowRoot.button.onclick();await Promise.resolve();assert.equal(calls[0][2].mode,'manual','short click preserved');
+ console.log('Heating 3-second hold, movement/cancel, offline and on-state checks: PASS');
+})().catch(e=>{console.error(e);process.exitCode=1;});

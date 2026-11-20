@@ -1,0 +1,182 @@
+{
+  "source_commit": "4e02af8f972aa1f60dd2ad74888b449108bffda5",
+  "explicit_owner_authorized_scope": "add permission for maximum charging current and set 150 A charging including test button",
+  "permission_change": {
+    "added": [
+      "number.inverter_battery_max_charging_current"
+    ],
+    "removed": [],
+    "servicesUnchanged": true
+  },
+  "permission_job": {
+    "id": "charge150-grant-specific-20261105",
+    "operation": "addon_options",
+    "state": "verified",
+    "result": {
+      "activation_performed": true,
+      "addon": {
+        "auto_update": false,
+        "available": true,
+        "boot": "auto",
+        "name": "Jarvis",
+        "repository": "b4b773b1",
+        "slug": "b4b773b1_jarvis",
+        "state": "started",
+        "update_available": false,
+        "version": "3.12.4",
+        "version_latest": "3.12.4"
+      },
+      "options_revision": "c3042e3a23b653f288bf54d19a7e9b26adc834108d171f4206e7275d7ba1b393",
+      "verified": true
+    },
+    "backup_slug": "4458baa6",
+    "request_id": "charge150-grant-specific-20261105",
+    "created_at": "2026-11-05T05:59:46.596331+00:00",
+    "started_at": "2026-11-05T05:59:46.611656+00:00",
+    "finished_at": "2026-11-05T06:00:07.193712+00:00",
+    "summary": {
+      "before_revision": "a462adfb2d630eba8b6bec494ab82b88e4d9106828c792010d8a1ed62cc4d18b",
+      "changed_fields": [
+        "allowed_entities"
+      ],
+      "expected_version": null,
+      "operation": "addon_options",
+      "restore_from": null,
+      "target": "b4b773b1_jarvis"
+    }
+  },
+  "deployment": {
+    "id": "charge150-apply-20261105",
+    "operation": "deployment_apply",
+    "state": "verified",
+    "result": {
+      "activation": "core_restart",
+      "checks": [
+        {
+          "entity_id": "sensor.jarvis_spot_control",
+          "state": "idle",
+          "version": "0.3.3"
+        }
+      ],
+      "files": [
+        {
+          "before_revision": "4808c181b20f4d190cb2cf2516ec75dc9f222ba965b93e82ab1e55610dd19cec",
+          "new_lines": 110,
+          "new_sha256": "962d84119dba0cd05e2ef5dd0ef5c5c110f7319be4dde7f8eadaa45e78dd2ad9",
+          "old_lines": 110,
+          "path": "custom_components/jarvis_spot_control/engine.py"
+        },
+        {
+          "before_revision": "51ec3432911e4f957d43ba6a431f94aa2ae426584cbae694e26d524802f06058",
+          "new_lines": 80,
+          "new_sha256": "5ab88b3736fc73fa51773624b9da493cddb7fa96ddacbd14444b238ca9e03e07",
+          "old_lines": 80,
+          "path": "custom_components/jarvis_spot_control/__init__.py"
+        },
+        {
+          "before_revision": "339fc237be06939949ee64ea2ef23f39cb24b9ea30911a2cd28f1c75917c6100",
+          "new_lines": 1,
+          "new_sha256": "fc90f7be0f2e09ff956c1e18acb4f925ccef9b045bcc70efe081b9576c756489",
+          "old_lines": 1,
+          "path": "custom_components/jarvis_spot_control/manifest.json"
+        }
+      ],
+      "id": "charge150-prepare-20261105",
+      "phase": "active_verified",
+      "receipt": {
+        "checks": [
+          {
+            "entity_id": "sensor.jarvis_spot_control",
+            "state": "idle",
+            "verified": true,
+            "version": "0.3.3"
+          }
+        ],
+        "core_version": "2026.6.4"
+      },
+      "restart_required": true,
+      "revision": "cf3d6fd9656e11ae30355e8af31480416ad1c65e6753a759cf40c0239748ef3f",
+      "source_commit": "4e02af8f972aa1f60dd2ad74888b449108bffda5",
+      "verified": true,
+      "versions": {
+        "files_written": true,
+        "runtime_verified": true,
+        "source_commit": "4e02af8f972aa1f60dd2ad74888b449108bffda5"
+      }
+    },
+    "backup_slug": "af6196a4",
+    "request_id": "charge150-apply-20261105",
+    "created_at": "2026-11-05T06:01:28.618945+00:00",
+    "started_at": "2026-11-05T06:01:28.633934+00:00",
+    "finished_at": "2026-11-05T06:05:58.696438+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "readback_three_files_exact": true,
+  "post_restart_limits": {
+    "max_charging_a": 150,
+    "grid_charging_a": 150
+  },
+  "runtime": {
+    "version": "0.3.3",
+    "state": "idle"
+  },
+  "physical_charge_test_started": false,
+  "tests": {
+    "regression_red": "7 expected failures at old 100 A",
+    "charging_green": 14,
+    "js_card": "pass",
+    "manifest": "pass",
+    "diff": "pass",
+    "lower_cap_cases": "25 A and 100 A honored, 200 A cap still requests only 150 A",
+    "local_full": "263 tests, 1 existing SDK import error, 20 skips",
+    "ci_run": 41977640690,
+    "ci_jobs": [
+      {
+        "name": "tests",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "reference-firmware (compile-fixture-stock.yaml)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "energy-chart",
+        "status": "completed",
+        "conclusion": "failure"
+      },
+      {
+        "name": "containers (jarvis)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "backup-dav",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "reference-firmware (compile-fixture.yaml)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "containers (jarvis_updater)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "publish-laboratory",
+        "status": "completed",
+        "conclusion": "skipped"
+      }
+    ]
+  }
+}

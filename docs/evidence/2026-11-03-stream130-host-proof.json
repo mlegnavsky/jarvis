@@ -1,0 +1,35 @@
+{
+  "transport": "native_raop_mp3_stream",
+  "compressed_bytes": 192768,
+  "reference_seconds": 12.048,
+  "first_reference_ms": 832.6,
+  "producer_eof_ms": 2470.4,
+  "producer_done": true,
+  "decoder_done": true,
+  "native_pending_peak": 65600,
+  "reference_pending_peak": 65590,
+  "cleanup_pending": false,
+  "error_type": null,
+  "raw_microphone_saved": false,
+  "first_native_ms": 843.1,
+  "reference_exact": true,
+  "reference_bytes": 385536,
+  "native_bytes": 2125268,
+  "native_exact": true,
+  "native_expected_bytes": 2125268,
+  "first_difference": null,
+  "context_events": [
+    "open",
+    "close"
+  ],
+  "native_readers": 0,
+  "reference_readers": 0,
+  "scope": "host_generated_MP3_public_native_source_no_microphone_no_real_HomePod",
+  "hardware_acceptance": false,
+  "one_second_dialogue_claim": false,
+  "reference_matches_actual_native_short_fixture": {
+    "bytes": 50688,
+    "sha256": "6d279f916834b928e7bafa3c004ec43604a6c060059ef108999dc713158d23ab"
+  },
+  "source_commit_under_review": "c55d702d3606b57dd6332397a877328e7bec0287"
+}

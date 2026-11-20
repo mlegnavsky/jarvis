@@ -1,0 +1,189 @@
+{
+  "source_sha": "54e9bce5d634e34197528ec565d1ed10b98dd01a",
+  "source_tree": "746ed1ff5d27a67f0f9dd1547842ef33287c5e06",
+  "local_commit": "322a390072d8708f17aa81d3ba1d71071849733f",
+  "ci_run": 41646159996,
+  "live_baseline": {
+    "runtime_version": "1.3.5",
+    "core_version": "2026.6.4",
+    "status": "configured",
+    "adapter": "active",
+    "source_revision": "d98c0d748d5d5ed5c3414889f54c805594a20a57d90ddba7c98502f7ca286f7f",
+    "updated_at": "2026-11-03T13:39:16.456674+00:00",
+    "active": null,
+    "room_isolated": false
+  },
+  "storage": {
+    "disk_free": 1.6,
+    "disk_total": 28,
+    "disk_used": 25.2,
+    "unit": "GiB",
+    "backup_minimum_free_gib": 2,
+    "backup_ready": false
+  },
+  "cleanup_candidates": [
+    {
+      "slug": "9edc3711",
+      "name": "Jarvis before remote administration",
+      "date": "2026-11-03T06:28:16.971033+00:00",
+      "size": 710.38,
+      "protected": false,
+      "type": "partial",
+      "revision": "aedd487e82fa360c1caf880588bc475753104717fff4a604af36ac95db05cd79"
+    },
+    {
+      "slug": "ba75b0ef",
+      "name": "Jarvis before remote administration",
+      "date": "2026-11-03T05:45:54.730663+00:00",
+      "size": 708.05,
+      "protected": false,
+      "type": "partial",
+      "revision": "56e23e94c070cacd7ec079d1322e94baa82298dfb01e35244b2c24e5b592cab9"
+    }
+  ],
+  "preserved": [
+    {
+      "slug": "b77ec1cd",
+      "protected": false
+    },
+    {
+      "slug": "d9346e31",
+      "protected": false
+    },
+    {
+      "slug": "4fb5ba7f",
+      "protected": false
+    },
+    {
+      "slug": "27122c9a",
+      "protected": true
+    }
+  ],
+  "deployed": false,
+  "production_reference_enabled": false,
+  "acoustic_verified": false,
+  "stage": "addon3123_verified_stock_candidate_ready_for_publication",
+  "ci": {
+    "run_id": 41646159996,
+    "url": "https://github.com/mlegnavsky/jarvis/actions/runs/41646159996",
+    "all_jobs_passed": true,
+    "jobs": [
+      {
+        "id": 125951922604,
+        "name": "energy-chart",
+        "conclusion": "success"
+      },
+      {
+        "id": 125951923046,
+        "name": "backup-dav",
+        "conclusion": "success"
+      },
+      {
+        "id": 125951923074,
+        "name": "containers (jarvis)",
+        "conclusion": "success"
+      },
+      {
+        "id": 125951923184,
+        "name": "tests",
+        "conclusion": "success"
+      },
+      {
+        "id": 125951923220,
+        "name": "reference-firmware (compile-fixture.yaml)",
+        "conclusion": "success"
+      },
+      {
+        "id": 125951923289,
+        "name": "containers (jarvis_updater)",
+        "conclusion": "success"
+      },
+      {
+        "id": 125951923339,
+        "name": "reference-firmware (compile-fixture-stock.yaml)",
+        "conclusion": "success"
+      },
+      {
+        "id": 125954034069,
+        "name": "publish-laboratory",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "host_verification": {
+    "duplex": {
+      "tests": 314,
+      "passed": true,
+      "duration_s": 10.259
+    },
+    "addon": {
+      "tests": 247,
+      "skipped": 20,
+      "passed": true,
+      "duration_s": 7.562
+    },
+    "manifest": true,
+    "diff_check": true,
+    "firmware_fixtures_compiled": true
+  },
+  "physical_test_performed": false,
+  "original_goal_resolved": false,
+  "owner_followup": "Owner reports backups deleted and authorizes continuing; independently verified free space.",
+  "storage_after_owner_cleanup": {
+    "disk_free": 6.7,
+    "unit": "GiB",
+    "backup_ready": true,
+    "remaining_backup_slugs": [
+      "4136623a",
+      "27122c9a"
+    ],
+    "assistant_deleted_any": false
+  },
+  "addon_update": {
+    "request_id": "reference-bridge-addon3123-20261103",
+    "id": "f1471f98971d4b7eb4636dba7065e58a",
+    "version": "3.12.3",
+    "last_observed_state": "verified",
+    "submitted_once": true,
+    "backup_slug": "0996fed9",
+    "fresh_runtime_version": "3.12.3"
+  },
+  "storage_after_addon_update": {
+    "disk_free": 6.6,
+    "unit": "GiB",
+    "backup_ready": true
+  },
+  "compatibility": {
+    "initial_metadata_public_package": null,
+    "initial_metadata_top_level_sendspin": false,
+    "actual_official_url_has_explicit_ref": false,
+    "default_branch": "dev",
+    "observed_default_commit": "d4e6fa43d6a1a7d342b7d4d403567e06516719de",
+    "inherited_stock_sendspin": true,
+    "legacy_duplicate_player_reproduced": true,
+    "selected_profile": "stock_sendspin",
+    "new_preservation_candidate_review_and_full_build_pending": false
+  },
+  "cleanup_not_required_after_owner_action": true,
+  "candidate_update": {
+    "addon": "3.12.4",
+    "native": "1.3.6",
+    "stock_profile": "identity_pinned_normal_listener_preserved",
+    "host_tests": {
+      "duplex": 317,
+      "addon": 249,
+      "addon_optional_skips": 20,
+      "passed": true
+    },
+    "review_critical": 0,
+    "review_important": 0,
+    "review_counter_fix_accepted": true,
+    "all_three_final_firmware_builds_passed": true,
+    "public_package_sha": "d4e6fa43d6a1a7d342b7d4d403567e06516719de",
+    "private_target_compile_done": false,
+    "native_deployed": false,
+    "firmware_deployed": false,
+    "electrical_probe_done": false,
+    "acoustic_verified": false
+  }
+}

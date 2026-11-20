@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "scope": "shared_Apple_TV_HomePod_volume_repair_not_acoustic_acceptance",
+  "source_commit": "199e3f40256caa0c2db740b45100e12e8c91deae",
+  "core_version": "2026.6.4",
+  "integration_version": "1.1.2",
+  "deployment": {
+    "id": "shared-volume-apply",
+    "finished_at": "2026-11-01T20:57:17.925037+00:00",
+    "backup_slug": "8eba6f27",
+    "plan_revision": "14666fd377fb8321b5b1fd6902b74a89a763d68e8ef63eca290161d34fff8e54",
+    "phase": "active_verified",
+    "runtime_checks": [
+      {
+        "entity_id": "sensor.jarvis_hlasovy_vystup",
+        "state": "configured",
+        "verified": true,
+        "version": "1.1.2"
+      },
+      {
+        "entity_id": "switch.home_assistant_voice_0a8bde_mute",
+        "state": "off",
+        "verified": true,
+        "version": null
+      },
+      {
+        "entity_id": "select.home_assistant_voice_0a8bde_asistent",
+        "state": "Jarvis",
+        "verified": true,
+        "version": null
+      },
+      {
+        "entity_id": "select.home_assistant_voice_0a8bde_probouzeci_slovo_2",
+        "state": "no_wake_word",
+        "verified": true,
+        "version": null
+      }
+    ]
+  },
+  "readback": [
+    {
+      "path": "custom_components/jarvis_homepod_output/__init__.py",
+      "expected": "0679dc181cc75c9652424b023cef66a022ad26f15e3fb76c1bc1d13082a93340",
+      "actual": "0679dc181cc75c9652424b023cef66a022ad26f15e3fb76c1bc1d13082a93340",
+      "verified": true
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/__init__.py",
+      "expected": "0679dc181cc75c9652424b023cef66a022ad26f15e3fb76c1bc1d13082a93340",
+      "actual": "0679dc181cc75c9652424b023cef66a022ad26f15e3fb76c1bc1d13082a93340",
+      "verified": true
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/routing.py",
+      "expected": "1a7bd29150ad83f12ac24ff85fe0db4197b09eb74424578a9c768d570e52ccf7",
+      "actual": "1a7bd29150ad83f12ac24ff85fe0db4197b09eb74424578a9c768d570e52ccf7",
+      "verified": true
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/routing.py",
+      "expected": "1a7bd29150ad83f12ac24ff85fe0db4197b09eb74424578a9c768d570e52ccf7",
+      "actual": "1a7bd29150ad83f12ac24ff85fe0db4197b09eb74424578a9c768d570e52ccf7",
+      "verified": true
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/tv_session.py",
+      "expected": "4fc3e824a125dcd13ecf0904542baa790488cbd020dc8c4d3ab45898cfa0bfe5",
+      "actual": "4fc3e824a125dcd13ecf0904542baa790488cbd020dc8c4d3ab45898cfa0bfe5",
+      "verified": true
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/tv_session.py",
+      "expected": "4fc3e824a125dcd13ecf0904542baa790488cbd020dc8c4d3ab45898cfa0bfe5",
+      "actual": "4fc3e824a125dcd13ecf0904542baa790488cbd020dc8c4d3ab45898cfa0bfe5",
+      "verified": true
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/manifest.json",
+      "expected": "573343ba68640d08819a797f332ead9b3185e8fdf8f040d6bfcadcdbc20a6541",
+      "actual": "573343ba68640d08819a797f332ead9b3185e8fdf8f040d6bfcadcdbc20a6541",
+      "verified": true
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/manifest.json",
+      "expected": "573343ba68640d08819a797f332ead9b3185e8fdf8f040d6bfcadcdbc20a6541",
+      "actual": "573343ba68640d08819a797f332ead9b3185e8fdf8f040d6bfcadcdbc20a6541",
+      "verified": true
+    },
+    {
+      "path": "jarvis_workspace/voice_release/release.json",
+      "expected": "d67313a18ee075bd15f18704bca813eeac086ebbb220d8935f0e9db0b03eaea0",
+      "actual": "d67313a18ee075bd15f18704bca813eeac086ebbb220d8935f0e9db0b03eaea0",
+      "verified": true
+    },
+    {
+      "path": "configuration.yaml",
+      "expected": "cffa37a786cad254e6c25bfd942d46115fd8149e13fc6eba79f0f6cb877dfa30",
+      "actual": "cffa37a786cad254e6c25bfd942d46115fd8149e13fc6eba79f0f6cb877dfa30",
+      "verified": true
+    }
+  ],
+  "validation": {
+    "homepod_tests": 60,
+    "identity_tests": 154,
+    "diagnostic_tests": 20,
+    "addon_tests": 244,
+    "addon_skipped": 20,
+    "source_ci": [
+      41348956150,
+      41348949775
+    ],
+    "ci_conclusion": "success",
+    "review": "no_remaining_P1_P2; Core2026.6.4_native_mute_getter_independently_checked"
+  },
+  "behavior": {
+    "explicit_shared_volume_source": "media_player.obyvaci_pokoj_obyvaci_pokoj",
+    "only_owned_paused_same_session": true,
+    "zero_and_explicit_mute_preserved": true,
+    "skipped_output_not_counted_completed": true
+  },
+  "limits": {
+    "audible_owner_acceptance": false,
+    "noisy_wake_owner_report": "fails_during_loud_TV; succeeds_during_silence",
+    "followup_owner_report": "stops_accepting_answer_after_assistant_question",
+    "new_recordings_armed": false,
+    "firmware_changed": false
+  }
+}

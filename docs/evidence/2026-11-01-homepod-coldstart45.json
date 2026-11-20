@@ -1,0 +1,196 @@
+{
+  "schema": 1,
+  "source_commit": "916e02c4a0e83aa99530162fa195e3cca6a380fa",
+  "scope": "cold_start_volume45_verified_by_runtime_readback_not_acoustic_test",
+  "deployment": {
+    "id": "cold45-apply-20261101",
+    "operation": "deployment_apply",
+    "state": "verified",
+    "result": {
+      "activation": "core_restart",
+      "checks": [
+        {
+          "entity_id": "sensor.jarvis_hlasovy_vystup",
+          "state": "configured",
+          "version": null
+        }
+      ],
+      "files": [
+        {
+          "before_revision": "abb0da1771b998cddfba0448ac29394629ac45d6ae34b74d2a67a48d2308f58f",
+          "new_lines": 155,
+          "new_sha256": "53f62e61abfa510b41668d7265add8237c3cc1121cce8d54aba71eecd6fbd8cc",
+          "old_lines": 131,
+          "path": "custom_components/jarvis_homepod_output/routing.py"
+        },
+        {
+          "before_revision": "abb0da1771b998cddfba0448ac29394629ac45d6ae34b74d2a67a48d2308f58f",
+          "new_lines": 155,
+          "new_sha256": "53f62e61abfa510b41668d7265add8237c3cc1121cce8d54aba71eecd6fbd8cc",
+          "old_lines": 131,
+          "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/routing.py"
+        },
+        {
+          "before_revision": "fdb38989880bdf28366ef95e0b18c281c1c95fb8ed1c1db9bc5d179697981510",
+          "new_lines": 1,
+          "new_sha256": "1ee96c38460c78c91b95a74cc09217553f171e5489363b53d4e9fb7964660d24",
+          "old_lines": 1,
+          "path": "custom_components/jarvis_homepod_output/manifest.json"
+        },
+        {
+          "before_revision": "fdb38989880bdf28366ef95e0b18c281c1c95fb8ed1c1db9bc5d179697981510",
+          "new_lines": 1,
+          "new_sha256": "1ee96c38460c78c91b95a74cc09217553f171e5489363b53d4e9fb7964660d24",
+          "old_lines": 1,
+          "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/manifest.json"
+        },
+        {
+          "before_revision": "d7d43d7c83837a165b7f7e2635923efd9bb3487f5d13efbb99676921783ce2bb",
+          "new_lines": 187,
+          "new_sha256": "2a4c2fcf166cf039bf4b0e2f4ce13b32c1503089d555dae02160bb3b131ccebf",
+          "old_lines": 175,
+          "path": "custom_components/jarvis_homepod_output/__init__.py"
+        },
+        {
+          "before_revision": "d7d43d7c83837a165b7f7e2635923efd9bb3487f5d13efbb99676921783ce2bb",
+          "new_lines": 187,
+          "new_sha256": "2a4c2fcf166cf039bf4b0e2f4ce13b32c1503089d555dae02160bb3b131ccebf",
+          "old_lines": 175,
+          "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/__init__.py"
+        }
+      ],
+      "id": "cold45-prepare-20261101",
+      "phase": "active_verified",
+      "receipt": {
+        "checks": [
+          {
+            "entity_id": "sensor.jarvis_hlasovy_vystup",
+            "state": "configured",
+            "verified": true,
+            "version": null
+          }
+        ],
+        "core_version": "2026.6.4"
+      },
+      "restart_required": true,
+      "revision": "9084bc47d63efeb3b602958f4b462f59196c255523f9778f8ea7708538b5c725",
+      "source_commit": "916e02c4a0e83aa99530162fa195e3cca6a380fa",
+      "verified": true,
+      "versions": {
+        "files_written": true,
+        "runtime_verified": true,
+        "source_commit": "916e02c4a0e83aa99530162fa195e3cca6a380fa"
+      }
+    },
+    "backup_slug": "c7148cff",
+    "request_id": "cold45-apply-20261101",
+    "created_at": "2026-11-01T07:49:17.165625+00:00",
+    "started_at": "2026-11-01T07:49:17.181301+00:00",
+    "finished_at": "2026-11-01T07:53:37.640001+00:00",
+    "summary": {
+      "changed_fields": [],
+      "expected_version": null,
+      "operation": "deployment_apply",
+      "restore_from": null,
+      "target": null
+    }
+  },
+  "output": {
+    "version": "1.0.2",
+    "status": "configured",
+    "updated_at": "2026-11-01T07:53:35.141239+00:00",
+    "observed_volume": 0.45,
+    "startup_volume": {
+      "status": "applied",
+      "target": 0.45,
+      "observed_volume": 0.45
+    },
+    "volume_policy": "startup_45_then_follow_homepod_raop"
+  },
+  "readback": [
+    {
+      "path": "custom_components/jarvis_homepod_output/routing.py",
+      "match": true,
+      "revision": "53f62e61abfa510b41668d7265add8237c3cc1121cce8d54aba71eecd6fbd8cc"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/routing.py",
+      "match": true,
+      "revision": "53f62e61abfa510b41668d7265add8237c3cc1121cce8d54aba71eecd6fbd8cc"
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/manifest.json",
+      "match": true,
+      "revision": "1ee96c38460c78c91b95a74cc09217553f171e5489363b53d4e9fb7964660d24"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/manifest.json",
+      "match": true,
+      "revision": "1ee96c38460c78c91b95a74cc09217553f171e5489363b53d4e9fb7964660d24"
+    },
+    {
+      "path": "custom_components/jarvis_homepod_output/__init__.py",
+      "match": true,
+      "revision": "2a4c2fcf166cf039bf4b0e2f4ce13b32c1503089d555dae02160bb3b131ccebf"
+    },
+    {
+      "path": "jarvis_workspace/voice_release/files/custom_components/jarvis_homepod_output/__init__.py",
+      "match": true,
+      "revision": "2a4c2fcf166cf039bf4b0e2f4ce13b32c1503089d555dae02160bb3b131ccebf"
+    }
+  ],
+  "tests": {
+    "homepod": 44,
+    "speaker": 68,
+    "companion": 49,
+    "addon": 239,
+    "addon_skipped": 20,
+    "review": "Startup/answer takeover race fixed and retested; no remaining Important findings",
+    "ci_run": 41286284709,
+    "ci": [
+      {
+        "name": "backup-dav",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "containers (jarvis_updater)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "containers (jarvis)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "energy-chart",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "tests",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "publish-laboratory",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "cleanup": {
+    "deleted": [
+      "6dfcd769",
+      "ecf775a7"
+    ],
+    "state": "verified",
+    "protected_and_three_previous_latest": "preserved"
+  },
+  "limitations": [
+    "No physical acoustic playback confirmation inferred.",
+    "Voice profile accuracy/calibration remain separate; no templates, anchors or permissions changed.",
+    "Cold-start write is attempted once; an unconfirmed result is not automatically retried."
+  ]
+}

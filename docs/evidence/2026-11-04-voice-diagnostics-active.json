@@ -1,0 +1,195 @@
+{
+  "source_commit": "ab32375aed41caecb77f4cdd24b38a2ac11b2bac",
+  "source_tree": "f06b7749a3a2db2710eab6af01015893c773e190",
+  "scope": "approved plan step1 diagnostics only",
+  "deployment": {
+    "job": "voice138-apply-20261104",
+    "state": "verified",
+    "phase": "active_verified",
+    "backup_slug": "8f98d4a5",
+    "readbacks": [
+      {
+        "path": "custom_components/jarvis_local_duplex/__init__.py",
+        "verified": true,
+        "revision": "d92af586f7e26c9a8d527245d638d258266c1212427ee43729904bdf387a57f8"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/bridge.py",
+        "verified": true,
+        "revision": "64e1811f25a9504be72f870fd766d3741631c861cb81599490c772998fa33801"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/session.py",
+        "verified": true,
+        "revision": "13e0d8675270b190198580688cbda7f501ceeaeeebeceb7ab77451cf8c861f5b"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/manifest.json",
+        "verified": true,
+        "revision": "11fbac7ac6761fe271c3103148b90629254e83b4a173343d2a443063cebaf44c"
+      },
+      {
+        "path": "custom_components/jarvis_local_duplex/runtime_diagnostics.py",
+        "verified": true,
+        "revision": "fb6cf8cf6cbcb023f5f1477799679ea2184ee4ef03b587812828ccc26a384b77"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/__init__.py",
+        "verified": true,
+        "revision": "18bb4c356454e6ae8cecd5ffb8f9a38153e9feab28adcf50dd65aeb45d88e791"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/manifest.json",
+        "verified": true,
+        "revision": "645a0b0cb4b0bbe780280d54bea77e3913eece6d162576b04a09944f5672a97b"
+      },
+      {
+        "path": "custom_components/jarvis_voice_diagnostics/direct_wake.py",
+        "verified": true,
+        "revision": "bd649f7c77d9bdf212116a2f18e9340e87d66400eee72d9c4268b24f37e99c79"
+      }
+    ],
+    "lease_release_state": "verified"
+  },
+  "runtime": {
+    "version": "1.3.8",
+    "source_revision": "56cb4885872ed27d13f7643b144ab8ba8ff6de31db617e1e34cf7a6af844055d",
+    "adapter": "active",
+    "status": "configured",
+    "diagnostic_schema": 1,
+    "diagnostic_version": "1.1.3",
+    "direct_wake_version": 7,
+    "probe": {
+      "status": "passed",
+      "microphone_opened": false,
+      "audible_playback": false,
+      "scope": "generated native VAD and TTS reference only; no microphone, STT, agent or household action",
+      "warmup_frames": 77,
+      "reference_duration_s": 2.8316875
+    },
+    "microphone_mute": "on",
+    "satellite": "idle"
+  },
+  "tests": {
+    "local_duplex": {
+      "count": 332,
+      "skips": 5,
+      "result": "OK"
+    },
+    "voice_diagnostics": {
+      "count": 33,
+      "result": "OK"
+    },
+    "addon": {
+      "count": 263,
+      "skips": 20,
+      "result": "OK"
+    }
+  },
+  "ci": [
+    {
+      "name": "publish-laboratory",
+      "status": "completed",
+      "conclusion": "skipped",
+      "id": 126886992890
+    },
+    {
+      "name": "publish-laboratory",
+      "status": "completed",
+      "conclusion": "skipped",
+      "id": 126886812656
+    },
+    {
+      "name": "containers (jarvis)",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884953748
+    },
+    {
+      "name": "energy-chart",
+      "status": "completed",
+      "conclusion": "failure",
+      "id": 126884953702
+    },
+    {
+      "name": "containers (jarvis_updater)",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884953676
+    },
+    {
+      "name": "reference-firmware (compile-fixture.yaml)",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884953527
+    },
+    {
+      "name": "reference-firmware (compile-fixture-stock.yaml)",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884953460
+    },
+    {
+      "name": "backup-dav",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884953458
+    },
+    {
+      "name": "tests",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884953304
+    },
+    {
+      "name": "backup-dav",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884935883
+    },
+    {
+      "name": "reference-firmware (compile-fixture.yaml)",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884935810
+    },
+    {
+      "name": "energy-chart",
+      "status": "completed",
+      "conclusion": "failure",
+      "id": 126884935571
+    },
+    {
+      "name": "containers (jarvis_updater)",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884935563
+    },
+    {
+      "name": "reference-firmware (compile-fixture-stock.yaml)",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884935525
+    },
+    {
+      "name": "containers (jarvis)",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884935516
+    },
+    {
+      "name": "tests",
+      "status": "completed",
+      "conclusion": "success",
+      "id": 126884935134
+    }
+  ],
+  "ci_limitation": "Energy chart job fails during Playwright1.58.2 browser install on ubuntu26.04 before browser tests; prior known issue, not modified. Laboratory publication consequently skipped. Both tests, containers, firmware fixtures and backup-dav passed. No claim all CI is green.",
+  "acceptance": {
+    "actual_microphone_test_performed": false,
+    "actual_transcript_rows_observed": false,
+    "false_wakes_fixed": false,
+    "slow_command_fixed": false,
+    "next": "Controlled household test and step2 TV trigger repair. Microphone remains muted."
+  }
+}
